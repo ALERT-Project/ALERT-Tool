@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+      <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -68,7 +68,7 @@
                     </div>
                     <div class="md:col-span-2">
                          <label for="admissionReason" class="block font-medium text-gray-600">Reason for ICU Admission:</label>
-                        <textarea id="admissionReason" rows="3" class="form-input"></textarea>
+                        <textarea id="admissionReason" rows="2" class="form-input"></textarea>
                     </div>
                      <div>
                         <label for="dischargeDate" class="block font-medium text-gray-600">Discharge Date:</label>
@@ -78,6 +78,41 @@
                         <label for="assessmentDateTime" class="block font-medium text-gray-600">Assessment Date & Time:</label>
                         <input type="datetime-local" id="assessmentDateTime" class="form-input">
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Narrative Details Section -->
+        <div class="bg-white rounded-xl shadow-lg mb-6 p-6">
+            <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Narrative Details for EMR</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                <div class="md:col-span-2">
+                    <label for="pmh" class="block font-medium text-gray-600">Past Medical History (PMH):</label>
+                    <textarea id="pmh" rows="3" class="form-input" placeholder="e.g., # HFreEF, # T2DM..."></textarea>
+                </div>
+                <div class="md:col-span-2">
+                    <label for="icuSummary" class="block font-medium text-gray-600">ICU Summary / Timeline:</label>
+                    <textarea id="icuSummary" rows="4" class="form-input" placeholder="e.g., 07/08: Admitted, intubated...&#10;10/08: Extubated..."></textarea>
+                </div>
+                 <div>
+                    <label for="keyBloods" class="block font-medium text-gray-600">Key Blood Results:</label>
+                    <textarea id="keyBloods" rows="4" class="form-input" placeholder="e.g., Mg 0.97, K 5.2 (3.5)..."></textarea>
+                </div>
+                <div>
+                    <label for="deviceSpecifics" class="block font-medium text-gray-600">Device Specifics:</label>
+                    <textarea id="deviceSpecifics" rows="4" class="form-input" placeholder="e.g., CVC Rt IJ external length 5.5cm..."></textarea>
+                </div>
+                 <div class="md:col-span-2">
+                    <label for="aeAssessment" class="block font-medium text-gray-600">A-E Assessment / ADDS Breakdown:</label>
+                    <textarea id="aeAssessment" rows="4" class="form-input" placeholder="e.g., ADDS 2 for SBP 98&#10;A: patent&#10;B: RR 25-29..."></textarea>
+                </div>
+                <div>
+                    <label for="wounds" class="block font-medium text-gray-600">Wounds:</label>
+                    <textarea id="wounds" rows="3" class="form-input" placeholder="e.g., Chest, subcostal wounds dressed, clean and dry..."></textarea>
+                </div>
+                <div>
+                    <label for="impression" class="block font-medium text-gray-600">Impression:</label>
+                    <textarea id="impression" rows="3" class="form-input" placeholder="e.g., Stable since stepdown from ICU to ward..."></textarea>
                 </div>
             </div>
         </div>
@@ -92,7 +127,7 @@
                         <h3 class="module-title bg-rose-200 text-rose-800">Critical Risk Factors</h3>
                         <div class="space-y-2 p-4">
                             <label class="flex items-center"><input type="checkbox" class="score-input" data-score="15" data-id="crit_met"> <span class="ml-2">Currently in MET criteria (+15)</span></label>
-                            <label class="flex items-center"><input type="checkbox" class="score-input" data-score="10" data-id="crit_adds4"> <span class="ml-2">ADDS Score ≥ 4 (+10)</span></label>
+                            <label class="flex items-center"><input type="checkbox" class="score-input" data-score="10" data-id="crit_adds4" id="crit_adds4_checkbox"> <span class="ml-2">ADDS Score ≥ 4 (+10)</span></label>
                             <label class="flex items-center"><input type="checkbox" class="score-input" data-score="10" data-id="crit_lactate_high"> <span class="ml-2">Lactate ≥ 3.5 mmol/L (+10)</span></label>
                             <label class="flex items-center"><input type="checkbox" class="score-input" data-score="10" data-id="crit_af"> <span class="ml-2">Unstable Atrial Fibrillation (+10)</span></label>
                             <label class="flex items-center"><input type="checkbox" class="score-input" data-score="10" data-id="crit_bleeding"> <span class="ml-2">Falling Hb / Active Bleeding (+10)</span></label>
@@ -102,12 +137,12 @@
                     <div class="rounded-lg module-bg-b">
                         <h3 class="module-title bg-blue-200 text-blue-800">Physiological & Respiratory Stability</h3>
                         <div class="space-y-2 p-4">
-                            <label class="flex items-center"><input type="radio" name="adds_score" class="score-input" data-score="0" data-id="adds_0" checked> <span class="ml-2">Current ADDS Score 0 (+0)</span></label>
-                            <label class="flex items-center"><input type="radio" name="adds_score" class="score-input" data-score="1" data-id="adds_1-2"> <span class="ml-2">Current ADDS Score 1-2 (+1)</span></label>
-                            <label class="flex items-center"><input type="radio" name="adds_score" class="score-input" data-score="5" data-id="adds_3"> <span class="ml-2">Current ADDS Score 3 (+5)</span></label>
+                            <label class="flex items-center"><input type="radio" name="adds_score" class="score-input" data-score="0" data-id="adds_0" id="adds_0_radio" checked> <span class="ml-2">Current ADDS Score 0 (+0)</span></label>
+                            <label class="flex items-center"><input type="radio" name="adds_score" class="score-input" data-score="1" data-id="adds_1-2" id="adds_1-2_radio"> <span class="ml-2">Current ADDS Score 1-2 (+1)</span></label>
+                            <label class="flex items-center"><input type="radio" name="adds_score" class="score-input" data-score="5" data-id="adds_3" id="adds_3_radio"> <span class="ml-2">Current ADDS Score 3 (+5)</span></label>
                             <label class="flex items-center"><input type="checkbox" class="score-input" data-score="5" data-id="adds_worsening"> <span class="ml-2">Worsening ADDS Trend (last 12-24h) (+5)</span></label>
                             <hr class="my-3">
-                            <label class="flex items-center"><input type="checkbox" class="score-input" data-score="10" data-id="resp_increasing_o2"> <span class="ml-2">Increasing O₂ requirements in last 12h (+10)</span></label>
+                            <label class="flex items-center"><input type="checkbox" class="score-input" data-score="10" data-id="resp_increasing_o2"> <span class="ml-2">Increasing O2 requirements in last 12h (+10)</span></label>
                             <label class="flex items-center"><input type="checkbox" class="score-input" data-score="6" data-id="resp_rapid_wean"> <span class="ml-2">Rapid weaning of respiratory support in last 4h (e.g. from high-flow >30L/min to low-flow nasal prongs) (+6)</span></label>
                         </div>
                     </div>
@@ -206,17 +241,9 @@
         <div class="bg-white rounded-xl shadow-lg mt-6 p-6">
             <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">EMR Summary Generator</h2>
             <div class="space-y-3 mb-4">
-                <div>
-                    <label class="block font-medium text-gray-600 text-sm">Review Type:</label>
-                    <div class="flex items-center space-x-4 mt-1">
-                        <label class="flex items-center"><input type="radio" name="review_type" value="pre" checked> <span class="ml-2">Pre ICU Stepdown Review</span></label>
-                        <label class="flex items-center"><input type="radio" name="review_type" value="post"> <span class="ml-2">Post ICU Review on Ward - Day:</span></label>
-                        <input type="number" id="reviewDay" min="1" class="ml-1 w-16 rounded-md border-gray-300 shadow-sm text-sm" disabled>
-                    </div>
-                </div>
                  <div>
-                    <label for="emrAdditionalNotes" class="block font-medium text-gray-600 text-sm">Additional Notes for EMR:</label>
-                    <textarea id="emrAdditionalNotes" rows="3" class="form-input" placeholder="Type any other relevant notes here..."></textarea>
+                    <label for="emrAdditionalNotes" class="block font-medium text-gray-600 text-sm">Additional Plan Notes:</label>
+                    <textarea id="emrAdditionalNotes" rows="3" class="form-input" placeholder="Type any other specific plan items here..."></textarea>
                 </div>
             </div>
             <div class="flex space-x-4 mb-4">
@@ -247,11 +274,12 @@
             const nursingConcernText = document.getElementById('nursingConcernText');
             const linesCvcRadio = document.querySelector('input[name="lines_score"][data-score="5"]');
             const mandatoryActionCheckbox = document.getElementById('mandatory_action_checkbox');
+            const aeAssessmentInput = document.getElementById('aeAssessment');
 
             // --- Care Plan Logic ---
             const carePlanMap = {
-                'resp_increasing_o2': 'Medical review to investigate cause of increasing O₂ demand.',
-                'resp_rapid_wean': 'Close monitoring of respiratory rate and SpO₂. Consider ABG if signs of fatigue.',
+                'resp_increasing_o2': 'Medical review to investigate cause of increasing O2 demand.',
+                'resp_rapid_wean': 'Close monitoring of respiratory rate and SpO2. Consider ABG if signs of fatigue.',
                 'bloods_electrolytes': 'Review electrolyte trends and ensure replacement plan is adequate.',
                 'bloods_lactate_mid': 'Consider serial lactate measurements to ensure clearance.',
                 'bloods_creatinine': 'Monitor fluid balance and renal function. Review nephrotoxic medications.',
@@ -339,6 +367,13 @@
                 document.getElementById('roomNumber').value = '';
                 document.getElementById('reviewDay').value = '';
                 document.getElementById('emrAdditionalNotes').value = '';
+                document.getElementById('pmh').value = '';
+                document.getElementById('icuSummary').value = '';
+                document.getElementById('keyBloods').value = '';
+                document.getElementById('deviceSpecifics').value = '';
+                document.getElementById('aeAssessment').value = '';
+                document.getElementById('wounds').value = '';
+                document.getElementById('impression').value = '';
                 emrSummaryEl.value = '';
                 toggleReviewDayInput();
                 toggleNursingConcernText();
@@ -355,57 +390,52 @@
                     summaryText += `ALERT CNS post ICU review on ward - Day ${day}\n`;
                 }
 
-                const patientInitials = document.getElementById('patientInitials').value || 'N/A';
-                const urnLast4 = document.getElementById('urnLast4').value || 'N/A';
-                const los = document.getElementById('losDays').value || 'N/A';
-                const ward = document.getElementById('ward').value || 'N/A';
-                const roomNumber = document.getElementById('roomNumber').value || 'N/A';
+                const los = document.getElementById('losDays').value;
+                if(los) summaryText += `ICU LOS ${los} days\n`;
+
+                const admissionReason = document.getElementById('admissionReason').value.trim();
+                if(admissionReason) summaryText += `Admitted to ICU with ${admissionReason}\n`;
+
+                summaryText += '\n';
+
+                const pmh = document.getElementById('pmh').value.trim();
+                if (pmh) summaryText += `PMH\n${pmh}\n\n`;
+
+                const icuSummary = document.getElementById('icuSummary').value.trim();
+                if (icuSummary) summaryText += `Summary\n${icuSummary}\n\n`;
+
                 const totalScore = totalScoreEl.textContent;
                 const categoryText = riskCategoryEl.textContent; 
+                summaryText += `ALERT Score: ${totalScore} -> ${categoryText}\n\n`;
 
-                summaryText += `Patient Initials: ${patientInitials}, Last 4 Digits of URN: ${urnLast4}\n`;
-                summaryText += `Ward: ${ward}, Room: ${roomNumber}\n`;
-                summaryText += `ICU LOS: ${los} days\n`;
-                summaryText += `Risk Score: ${totalScore} -> ${categoryText}\n\n`;
+                const keyBloods = document.getElementById('keyBloods').value.trim();
+                if (keyBloods) summaryText += `Bloods\n${keyBloods}\n\n`;
                 
-                summaryText += `ADDS:\nA: \nB: \nC: \nD: \nE: \n\n`;
+                const deviceSpecifics = document.getElementById('deviceSpecifics').value.trim();
+                if (deviceSpecifics) summaryText += `Devices\n${deviceSpecifics}\n\n`;
+
+                const wounds = document.getElementById('wounds').value.trim();
+                if (wounds) summaryText += `Wounds\n${wounds}\n\n`;
+
+                const aeAssessment = document.getElementById('aeAssessment').value.trim();
+                if (aeAssessment) summaryText += `${aeAssessment}\n\n`;
+
+                const impression = document.getElementById('impression').value.trim();
+                if (impression) summaryText += `Imp:\n${impression}\n\n`;
                 
-                summaryText += `Identified Risk Factors:\n`;
-                let riskFactorsFound = false;
+                summaryText += `Plan\n`;
                 const carePlanItems = new Set();
-
                 scoreInputs.forEach(input => {
                      if (input.checked && input.dataset.score !== "0") {
-                        const label = input.closest('label');
-                        if (label) {
-                            let text = label.textContent.trim().replace(/\(\+\d+\)/, '').trim();
-                            if (input.name === 'concern_score' && input.dataset.score === '5') {
-                                const concernDetail = nursingConcernText.value.trim();
-                                if (concernDetail) {
-                                    text += `: ${concernDetail}`;
-                                }
-                            }
-                            summaryText += `• ${text}\n`;
-                            riskFactorsFound = true;
-                            
-                            if (carePlanMap[input.dataset.id]) {
-                                carePlanItems.add(carePlanMap[input.dataset.id]);
-                            }
+                        if (carePlanMap[input.dataset.id]) {
+                            carePlanItems.add(carePlanMap[input.dataset.id]);
                         }
                     }
                 });
-
-                if (mandatoryActionCheckbox.checked) {
-                    summaryText += `• CTS/Cardiac History: Plan needed for K+ and Mg++ targets.\n`;
+                 if (mandatoryActionCheckbox.checked) {
                     carePlanItems.add('Liaise with medical team to confirm K+ and Mg++ replacement plan is charted.');
-                    riskFactorsFound = true;
                 }
 
-                if (!riskFactorsFound) {
-                    summaryText += `• None identified.\n`;
-                }
-                
-                summaryText += `\nRecommended Plan of Care:\n`;
                 if(carePlanItems.size > 0) {
                     carePlanItems.forEach(item => {
                         summaryText += `• ${item}\n`;
@@ -416,7 +446,7 @@
 
                 const additionalNotes = document.getElementById('emrAdditionalNotes').value.trim();
                 if (additionalNotes) {
-                    summaryText += `\nAdditional Notes:\n${additionalNotes}\n`;
+                    summaryText += `${additionalNotes}\n`;
                 }
 
                 emrSummaryEl.value = summaryText;
@@ -465,6 +495,30 @@
                 }
             }
 
+            function handleADDSInput() {
+                const text = aeAssessmentInput.value;
+                const match = text.match(/adds\s*:?\s*(\d+)/i);
+                
+                if (match && match[1]) {
+                    const score = parseInt(match[1], 10);
+                    
+                    document.getElementById('crit_adds4_checkbox').checked = false;
+                    
+                    if (score === 0) {
+                        document.getElementById('adds_0_radio').checked = true;
+                    } else if (score >= 1 && score <= 2) {
+                        document.getElementById('adds_1-2_radio').checked = true;
+                    } else if (score === 3) {
+                        document.getElementById('adds_3_radio').checked = true;
+                    } else if (score >= 4) {
+                        document.getElementById('crit_adds4_checkbox').checked = true;
+                        // Uncheck the radio buttons as this is now a critical factor
+                        document.querySelector('input[name="adds_score"]:checked').checked = false;
+                    }
+                    calculateScore();
+                }
+            }
+
             scoreInputs.forEach(input => input.addEventListener('change', calculateScore));
             resetButton.addEventListener('click', resetForm);
             generateSummaryButton.addEventListener('click', generateSummary);
@@ -472,6 +526,7 @@
             losDaysInput.addEventListener('input', handleLosInput);
             reviewTypeRadios.forEach(radio => radio.addEventListener('change', toggleReviewDayInput));
             nursingConcernRadios.forEach(radio => radio.addEventListener('change', toggleNursingConcernText));
+            aeAssessmentInput.addEventListener('input', handleADDSInput);
 
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
