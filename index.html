@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -198,8 +198,8 @@
                             <label class="flex items-center"><input type="radio" name="pain_score" class="score-input" data-score="5" data-id="pain_pca"> <span class="ml-2">Pain: Poorly controlled / PCA (+5)</span></label>
                             <hr class="my-2">
                             <label class="flex items-center"><input type="radio" name="fluid_status_score" class="score-input" data-score="0" data-id="fluid_0" checked> <span class="ml-2 text-gray-500">Fluid Status: Euvolaemic</span></label>
-                            <label class="flex items-center"><input type="radio" name="fluid_status_score" class="score-input" data-score="2" data-id="fluid_mild"> <span class="ml-2">Mild Dehydration/Oedema (e.g., dry mucous membranes, +1 oedema) (+2)</span></label>
-                            <label class="flex items-center"><input type="radio" name="fluid_status_score" class="score-input" data-score="4" data-id="fluid_sig"> <span class="ml-2">Significant Dehydration/Oedema (e.g., poor turgor, +2 oedema, FBC +>2L/24h) (+4)</span></label>
+                            <label class="flex items-center"><input type="radio" name="fluid_status_score" class="score-input" data-score="2" data-id="fluid_mild"> <span class="ml-2">Mild Dehydration/Overload (e.g., dry mucous membranes, +1 oedema, FBC +/- >1L) (+2)</span></label>
+                            <label class="flex items-center"><input type="radio" name="fluid_status_score" class="score-input" data-score="4" data-id="fluid_sig"> <span class="ml-2">Significant Dehydration/Overload (e.g., poor turgor, +2 oedema, FBC +/- >2L) (+4)</span></label>
                             <hr class="my-2">
                             <label class="flex items-center"><input type="radio" name="diet_score" class="score-input" data-score="0" data-id="diet_0" checked> <span class="ml-2 text-gray-500">Diet: Eating & Drinking Normally</span></label>
                             <label class="flex items-center"><input type="radio" name="diet_score" class="score-input" data-score="2" data-id="diet_modified"> <span class="ml-2">Diet: Supplements / Modified (+2)</span></label>
@@ -415,7 +415,7 @@
             document.querySelectorAll('input[type="radio"]').forEach(input => {
                  const group = document.querySelectorAll(`input[name="${input.name}"]`);
                  group.forEach(rb => {
-                     if (rb.dataset.score === "0" || rb.value === 'pre') {
+                     if (rb.dataset.score === "0") {
                          rb.checked = true;
                      }
                  });
