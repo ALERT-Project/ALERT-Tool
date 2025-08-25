@@ -40,10 +40,9 @@
 <body class="p-4 sm:p-6 md:p-8">
 
     <div class="max-w-4xl mx-auto">
-        <!-- Header -->
         <div class="bg-white rounded-xl shadow-lg mb-6 overflow-hidden">
             <div class="header-gradient p-6 flex items-center justify-center text-white">
-                 <div class="bg-white/20 rounded-full p-2 mr-4">
+                  <div class="bg-white/20 rounded-full p-2 mr-4">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-bold">ALERT Nursing Risk Assessment Tool</h1>
@@ -73,10 +72,8 @@
             </div>
         </div>
         
-        <!-- Clinical Parameters -->
         <div class="bg-white rounded-xl shadow-lg mb-6 p-6">
             <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Clinical Parameters (for auto-scoring)</h2>
-            <!-- A-E Assessment -->
             <div class="mb-6 bg-gray-200 p-4 rounded-lg border border-gray-300">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="font-semibold text-gray-700">A-E Assessment</h3>
@@ -142,7 +139,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Fluid Balance & Neuro -->
             <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-gray-200 p-4 rounded-lg border border-gray-300">
                     <h3 class="font-semibold text-gray-700 mb-2">Fluid Balance</h3>
@@ -165,7 +161,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Key Bloods -->
             <div class="bg-gray-200 p-4 rounded-lg border border-gray-300">
                 <h3 class="font-semibold text-gray-700 mb-2">Key Bloods</h3>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -180,12 +175,10 @@
             </div>
         </div>
 
-        <!-- Scoring section container -->
         <div id="scoringContainer">
             <div class="bg-white rounded-xl shadow-lg mb-6 p-6">
                 <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">RISK SCORING ASSESSMENT</h2>
                 <div class="space-y-6">
-                    <!-- Critical Risk Factors -->
                     <div class="p-4 rounded-lg module-bg-a">
                         <h3 class="module-title bg-rose-200 text-rose-800">Critical Risk Factors</h3>
                         <div class="space-y-2 p-4">
@@ -196,7 +189,6 @@
                             <label class="flex items-center"><input type="checkbox" class="score-input" data-score="10" data-id="crit_bleeding" id="crit_bleeding_checkbox"> <span class="ml-2">Falling Hb / Active Bleeding (+10)</span></label>
                         </div>
                     </div>
-                    <!-- Physiological & Respiratory -->
                     <div class="rounded-lg module-bg-b">
                         <h3 class="module-title bg-blue-200 text-blue-800">Physiological & Respiratory Stability</h3>
                         <div class="space-y-2 p-4">
@@ -209,7 +201,6 @@
                             <label class="flex items-center"><input type="checkbox" class="score-input" data-score="6" data-id="resp_rapid_wean"> <span class="ml-2">Rapid weaning of respiratory support in last 4h (e.g. from high-flow >30L/min to low-flow nasal prongs) (+6)</span></label>
                         </div>
                     </div>
-                    <!-- Bloods -->
                     <div class="p-4 rounded-lg module-bg-c">
                         <h3 class="module-title bg-green-200 text-green-800">Bloods</h3>
                         <div class="space-y-2 p-4">
@@ -221,7 +212,6 @@
                             <label class="flex items-center"><input type="checkbox" class="score-input" data-score="3" data-id="bloods_anaemia" id="bloods_anaemia_checkbox"> <span class="ml-2">Anaemia (Hb < 80 g/L) (+3)</span></label>
                         </div>
                     </div>
-                    <!-- Clinical -->
                     <div class="p-4 rounded-lg module-bg-d">
                         <h3 class="module-title bg-yellow-200 text-yellow-800">Clinical</h3>
                         <div class="space-y-2 p-4">
@@ -261,8 +251,7 @@
                             </div>
                         </div>
                     </div>
-                     <!-- Systemic -->
-                    <div class="p-4 rounded-lg module-bg-e">
+                     <div class="p-4 rounded-lg module-bg-e">
                         <h3 class="module-title bg-red-200 text-red-800">Systemic</h3>
                         <div class="space-y-2 p-4">
                             <label class="flex items-center"><input type="checkbox" id="losCheckbox" class="score-input" data-score="4" data-id="systemic_los"> <span class="ml-2">LOS > 72 hours (+4)</span></label>
@@ -277,7 +266,6 @@
             </div>
         </div>
 
-        <!-- Final Review -->
         <div class="bg-white rounded-xl shadow-lg mb-6 p-6">
             <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">FINAL REVIEW & STRATIFICATION</h2>
             <div class="space-y-4">
@@ -286,7 +274,7 @@
                     <div class="flex items-center">
                         <input id="mandatory_action_checkbox" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
                         <label for="mandatory_action_checkbox" class="ml-3 block text-sm font-medium text-gray-700">
-                           Confirm plan is in place to target <strong>K+ ~4.0</strong> and <strong>Mg++ ~1.0</strong>.
+                            Confirm plan is in place to target <strong>K+ ~4.0</strong> and <strong>Mg++ ~1.0</strong>.
                         </label>
                     </div>
                 </div>
@@ -307,7 +295,6 @@
             </div>
         </div>
         
-        <!-- Optional Narrative Details Section -->
         <div class="bg-white rounded-xl shadow-lg mb-6 p-6">
             <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Optional Narrative Details for DMR</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
@@ -342,7 +329,6 @@
             </div>
         </div>
 
-        <!-- DMR Summary Section -->
         <div class="bg-white rounded-xl shadow-lg mt-6 p-6">
             <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">DMR Summary Generator</h2>
             <div class="flex space-x-4 mb-4">
@@ -357,355 +343,374 @@
     </div>
 
     <script>
-        const scoreInputs = document.querySelectorAll('.score-input');
-        const totalScoreEl = document.getElementById('totalScore');
-        const riskCategoryEl = document.getElementById('riskCategory');
-        const resetButton = document.getElementById('resetButton');
-        const generateSummaryButton = document.getElementById('generateSummaryButton');
-        const copySummaryButton = document.getElementById('copySummaryButton');
-        const emrSummaryEl = document.getElementById('emrSummary');
-        const losDaysInput = document.getElementById('losDays');
-        const losCheckbox = document.getElementById('losCheckbox');
-        const nursingConcernRadios = document.querySelectorAll('input[name="concern_score"]');
-        const nursingConcernText = document.getElementById('nursingConcernText');
-        const mandatoryActionCheckbox = document.getElementById('mandatory_action_checkbox');
-        const vitalInputs = document.querySelectorAll('.vital-input');
-        const bloodInputs = document.querySelectorAll('.blood-input');
-        const fluidInputs = document.querySelectorAll('.fluid-input');
-        const calculatedADDSEl = document.getElementById('calculatedADDSScore');
-        
-        const categoryMap = {
-            'unsafe': 'Unsafe for Ward: Immediate senior review required',
-            'category-1-high': 'Category 1 - High Risk: Escalate to ALERT medical rounding team',
-            'category-1': 'Category 1: Enhanced follow-up for 72 hours',
-            'category-2': 'Category 2: Standard follow-up'
-        };
+        document.addEventListener('DOMContentLoaded', () => {
+            const scoreInputs = document.querySelectorAll('.score-input');
+            const totalScoreEl = document.getElementById('totalScore');
+            const riskCategoryEl = document.getElementById('riskCategory');
+            const resetButton = document.getElementById('resetButton');
+            const generateSummaryButton = document.getElementById('generateSummaryButton');
+            const copySummaryButton = document.getElementById('copySummaryButton');
+            const emrSummaryEl = document.getElementById('emrSummary');
+            const losDaysInput = document.getElementById('losDays');
+            const losCheckbox = document.getElementById('losCheckbox');
+            const nursingConcernRadios = document.querySelectorAll('input[name="concern_score"]');
+            const nursingConcernText = document.getElementById('nursingConcernText');
+            const mandatoryActionCheckbox = document.getElementById('mandatory_action_checkbox');
+            const vitalInputs = document.querySelectorAll('.vital-input');
+            const bloodInputs = document.querySelectorAll('.blood-input');
+            const fluidInputs = document.querySelectorAll('.fluid-input');
+            const calculatedADDSEl = document.getElementById('calculatedADDSScore');
+            
+            const categoryMap = {
+                'unsafe': 'Unsafe for Ward: Immediate senior review required',
+                'category-1-high': 'Category 1 - High Risk: Escalate to ALERT medical rounding team',
+                'category-1': 'Category 1: Enhanced follow-up for 72 hours',
+                'category-2': 'Category 2: Standard follow-up'
+            };
 
-        const carePlanMap = {
-            'resp_increasing_o2': 'Respiratory Risk: Perform focused respiratory assessment. Escalate to medical team for review of increasing O2 demand.',
-            'resp_rapid_wean': 'Respiratory Risk: Increase frequency of respiratory observations. Monitor for signs of fatigue. Liaise with medical team to consider ABG if concerned.',
-            'bloods_electrolytes': 'Biochemical Risk: Monitor electrolyte trends. Ensure replacement therapy is charted and administered. Escalate any ongoing abnormalities to medical team.',
-            'bloods_lactate_mid': 'Biochemical Risk: Liaise with medical team to consider serial lactate measurements to ensure clearance. Continue close monitoring of perfusion.',
-            'bloods_creatinine': 'Renal Risk: Maintain strict fluid balance chart. Monitor renal function. Liaise with medical team and pharmacy regarding nephrotoxic medications.',
-            'bloods_albumin': 'Nutritional Risk: Refer to Dietitian for nutritional assessment. Monitor for signs of oedema and poor wound healing. Discuss albumin replacement with medical team if clinically indicated.',
-            'bloods_crp': 'Infection/Inflammatory Risk: Continue vigilant monitoring for signs of infection/inflammation. Ensure timely administration of antibiotics and follow-up on microbiology.',
-            'bloods_anaemia': 'Bleeding Risk: Monitor for any signs of active bleeding. Discuss transfusion threshold and plan with medical team.',
-            'pain_iv': 'Pain Management: Perform comprehensive pain assessment. Ensure regular and PRN analgesia is administered effectively. Escalate to Acute Pain Service if pain remains poorly controlled.',
-            'pain_pca': 'Pain Management: Perform comprehensive pain assessment. Ensure regular and PRN analgesia is administered effectively. Escalate to Acute Pain Service if pain remains poorly controlled.',
-            'fluid_mild': 'Fluid Balance Risk: Maintain strict fluid balance chart. Perform clinical fluid assessment (mucous membranes, skin turgor, oedema). Escalate findings to medical team for review of fluid management plan.',
-            'fluid_sig': 'Fluid Balance Risk: Maintain strict fluid balance chart. Perform clinical fluid assessment (mucous membranes, skin turgor, oedema). Escalate findings to medical team for review of fluid management plan.',
-            'diet_modified': 'Nutritional Risk: Ensure appropriate referrals to Dietitian and Speech Pathology are in place. Monitor nutritional intake and tolerance.',
-            'diet_nbm': 'Nutritional Risk: Ensure appropriate referrals to Dietitian and Speech Pathology are in place. Monitor nutritional intake and tolerance.',
-            'bowels_issue': 'Gastrointestinal Risk: Implement bowel management plan as per protocol. Monitor for signs of ileus. Escalate to medical team if no result or concerns arise.',
-            'delirium_mild': 'Cognitive Risk: Implement non-pharmacological delirium prevention/management strategies (e.g., orientation, sleep hygiene). Liaise with medical team to review medication chart for deliriogenic drugs.',
-            'delirium_mod': 'Cognitive Risk: Implement non-pharmacological delirium prevention/management strategies (e.g., orientation, sleep hygiene). Liaise with medical team to review medication chart for deliriogenic drugs.',
-            'mobility_assisted': 'Mobility Deficit: Ensure Physiotherapy referral is active and plan is communicated. Implement pressure injury prevention strategies. Facilitate and support engagement with physiotherapy recommendations.',
-            'mobility_bedbound': 'Mobility Deficit: Ensure Physiotherapy referral is active and plan is communicated. Implement pressure injury prevention strategies. Facilitate and support engagement with physiotherapy recommendations.',
-            'airway_weak': 'Airway Clearance Risk: Collaborate with Physiotherapy on secretion management plan. Encourage effective coughing and deep breathing exercises.',
-            'airway_altered': 'Airway Risk: Confirm ward staff are competent and confident with tracheostomy/laryngectomy care. Ensure necessary equipment is at the bedside. Liaise with Speech Pathology as required.',
-            'lines_cvc': 'Infection Risk: Daily review of CVC necessity with medical team. Maintain strict aseptic non-touch technique (ANTT) for all access.',
-            'drains_high_risk': 'Drain Management: Maintain vigilance over drain patency and output. Immediately escalate any changes (e.g., volume, colour) to the parent surgical/medical team.',
-            'concern_present': 'Nursing Concern: Articulate and document specific nursing concerns. Escalate directly to senior nursing/medical staff for \'fresh eyes\' review.',
-            'frailty_mild': 'Frailty Risk: Ensure appropriate referrals are in place (Geriatrics, OT, Physio). Focus on safe mobilization and comprehensive discharge planning.',
-            'frailty_mod': 'Frailty Risk: Ensure appropriate referrals are in place (Geriatrics, OT, Physio). Focus on safe mobilization and comprehensive discharge planning.',
-            'systemic_comorbid': 'Systemic Risk: Confirm that all relevant specialty teams have been consulted and that a clear, consolidated management plan is in place.',
-            'systemic_ooh': 'Systemic Risk: Provide a detailed, structured handover to the after-hours team, highlighting specific risks and the follow-up plan.',
-            'crit_met': 'Critical Risk: Patient is in MET criteria. Initiate MET call and immediate resuscitation as required.',
-            'crit_adds4': 'Critical Risk: Patient has a high ADDS score. Escalate for urgent medical review within 30 minutes. Increase frequency of observations.',
-            'crit_lactate_high': 'Critical Risk: Patient is critically unwell. Escalate for immediate senior medical review to manage shock state.',
-            'crit_af': 'Critical Risk: Patient is in unstable AF. Escalate for urgent cardiology/medical review. Monitor haemodynamics closely.',
-            'crit_bleeding': 'Critical Risk: Patient has signs of active bleeding. Escalate for urgent medical/surgical review. Monitor haemodynamics and consider need for massive transfusion protocol.'
-        };
+            const carePlanMap = {
+                'resp_increasing_o2': 'Respiratory Risk: Perform focused respiratory assessment. Escalate to medical team for review of increasing O2 demand.',
+                'resp_rapid_wean': 'Respiratory Risk: Increase frequency of respiratory observations. Monitor for signs of fatigue. Liaise with medical team to consider ABG if concerned.',
+                'bloods_electrolytes': 'Biochemical Risk: Monitor electrolyte trends. Ensure replacement therapy is charted and administered. Escalate any ongoing abnormalities to medical team.',
+                'bloods_lactate_mid': 'Biochemical Risk: Liaise with medical team to consider serial lactate measurements to ensure clearance. Continue close monitoring of perfusion.',
+                'bloods_creatinine': 'Renal Risk: Maintain strict fluid balance chart. Monitor renal function. Liaise with medical team and pharmacy regarding nephrotoxic medications.',
+                'bloods_albumin': 'Nutritional Risk: Refer to Dietitian for nutritional assessment. Monitor for signs of oedema and poor wound healing. Discuss albumin replacement with medical team if clinically indicated.',
+                'bloods_crp': 'Infection/Inflammatory Risk: Continue vigilant monitoring for signs of infection/inflammation. Ensure timely administration of antibiotics and follow-up on microbiology.',
+                'bloods_anaemia': 'Bleeding Risk: Monitor for any signs of active bleeding. Discuss transfusion threshold and plan with medical team.',
+                'pain_iv': 'Pain Management: Perform comprehensive pain assessment. Ensure regular and PRN analgesia is administered effectively. Escalate to Acute Pain Service if pain remains poorly controlled.',
+                'pain_pca': 'Pain Management: Perform comprehensive pain assessment. Ensure regular and PRN analgesia is administered effectively. Escalate to Acute Pain Service if pain remains poorly controlled.',
+                'fluid_mild': 'Fluid Balance Risk: Maintain strict fluid balance chart. Perform clinical fluid assessment (mucous membranes, skin turgor, oedema). Escalate findings to medical team for review of fluid management plan.',
+                'fluid_sig': 'Fluid Balance Risk: Maintain strict fluid balance chart. Perform clinical fluid assessment (mucous membranes, skin turgor, oedema). Escalate findings to medical team for review of fluid management plan.',
+                'diet_modified': 'Nutritional Risk: Ensure appropriate referrals to Dietitian and Speech Pathology are in place. Monitor nutritional intake and tolerance.',
+                'diet_nbm': 'Nutritional Risk: Ensure appropriate referrals to Dietitian and Speech Pathology are in place. Monitor nutritional intake and tolerance.',
+                'bowels_issue': 'Gastrointestinal Risk: Implement bowel management plan as per protocol. Monitor for signs of ileus. Escalate to medical team if no result or concerns arise.',
+                'delirium_mild': 'Cognitive Risk: Implement non-pharmacological delirium prevention/management strategies (e.g., orientation, sleep hygiene). Liaise with medical team to review medication chart for deliriogenic drugs.',
+                'delirium_mod': 'Cognitive Risk: Implement non-pharmacological delirium prevention/management strategies (e.g., orientation, sleep hygiene). Liaise with medical team to review medication chart for deliriogenic drugs.',
+                'mobility_assisted': 'Mobility Deficit: Ensure Physiotherapy referral is active and plan is communicated. Implement pressure injury prevention strategies. Facilitate and support engagement with physiotherapy recommendations.',
+                'mobility_bedbound': 'Mobility Deficit: Ensure Physiotherapy referral is active and plan is communicated. Implement pressure injury prevention strategies. Facilitate and support engagement with physiotherapy recommendations.',
+                'airway_weak': 'Airway Clearance Risk: Collaborate with Physiotherapy on secretion management plan. Encourage effective coughing and deep breathing exercises.',
+                'airway_altered': 'Airway Risk: Confirm ward staff are competent and confident with tracheostomy/laryngectomy care. Ensure necessary equipment is at the bedside. Liaise with Speech Pathology as required.',
+                'lines_cvc': 'Infection Risk: Daily review of CVC necessity with medical team. Maintain strict aseptic non-touch technique (ANTT) for all access.',
+                'drains_high_risk': 'Drain Management: Maintain vigilance over drain patency and output. Immediately escalate any changes (e.g., volume, colour) to the parent surgical/medical team.',
+                'concern_present': 'Nursing Concern: Articulate and document specific nursing concerns. Escalate directly to senior nursing/medical staff for \'fresh eyes\' review.',
+                'frailty_mild': 'Frailty Risk: Ensure appropriate referrals are in place (Geriatrics, OT, Physio). Focus on safe mobilization and comprehensive discharge planning.',
+                'frailty_mod': 'Frailty Risk: Ensure appropriate referrals are in place (Geriatrics, OT, Physio). Focus on safe mobilization and comprehensive discharge planning.',
+                'systemic_comorbid': 'Systemic Risk: Confirm that all relevant specialty teams have been consulted and that a clear, consolidated management plan is in place.',
+                'systemic_ooh': 'Systemic Risk: Provide a detailed, structured handover to the after-hours team, highlighting specific risks and the follow-up plan.',
+                'crit_met': 'Critical Risk: Patient is in MET criteria. Initiate MET call and immediate resuscitation as required.',
+                'crit_adds4': 'Critical Risk: Patient has a high ADDS score. Escalate for urgent medical review within 30 minutes. Increase frequency of observations.',
+                'crit_lactate_high': 'Critical Risk: Patient is critically unwell. Escalate for immediate senior medical review to manage shock state.',
+                'crit_af': 'Critical Risk: Patient is in unstable AF. Escalate for urgent cardiology/medical review. Monitor haemodynamics closely.',
+                'crit_bleeding': 'Critical Risk: Patient has signs of active bleeding. Escalate for urgent medical/surgical review. Monitor haemodynamics and consider need for massive transfusion protocol.'
+            };
 
-        function calculateScore() {
-            let total = 0;
-            scoreInputs.forEach(input => {
-                if (input.checked && input.dataset.score !== "0") {
-                    total += parseInt(input.dataset.score, 10);
-                }
-            });
-            totalScoreEl.textContent = total;
-            updateRiskCategory(total);
-        }
-
-        function updateRiskCategory(score) {
-            riskCategoryEl.classList.remove('category-2', 'category-1', 'category-1-high', 'unsafe');
-            let categoryKey = 'category-2';
-            if (score > 40) {
-                categoryKey = 'unsafe';
-            } else if (score >= 30) {
-                categoryKey = 'category-1-high';
-            } else if (score >= 12) {
-                categoryKey = 'category-1';
+            function calculateScore() {
+                let total = 0;
+                scoreInputs.forEach(input => {
+                    if (input.checked && input.dataset.score !== "0") {
+                        total += parseInt(input.dataset.score, 10);
+                    }
+                });
+                totalScoreEl.textContent = total;
+                updateRiskCategory(total);
             }
-            riskCategoryEl.textContent = categoryMap[categoryKey];
-            riskCategoryEl.classList.add(categoryKey);
-        }
-        
-        function resetForm() {
-            document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(input => input.value = '');
-            document.querySelectorAll('input[type="checkbox"]').forEach(input => input.checked = false);
-            document.querySelectorAll('input[type="radio"]').forEach(input => {
-                 const group = document.querySelectorAll(`input[name="${input.name}"]`);
-                 group.forEach(rb => {
-                     if (rb.dataset.score === "0") {
-                         rb.checked = true;
+
+            function updateRiskCategory(score) {
+                riskCategoryEl.classList.remove('category-2', 'category-1', 'category-1-high', 'unsafe');
+                let categoryKey = 'category-2';
+                if (score > 40) {
+                    categoryKey = 'unsafe';
+                } else if (score >= 30) {
+                    categoryKey = 'category-1-high';
+                } else if (score >= 12) {
+                    categoryKey = 'category-1';
+                }
+                riskCategoryEl.textContent = categoryMap[categoryKey];
+                riskCategoryEl.classList.add(categoryKey);
+            }
+            
+            function resetForm() {
+                document.querySelectorAll('input[type="text"], input[type="number"], textarea, select').forEach(el => {
+                    if(el.type === 'select-one') {
+                        el.selectedIndex = 0;
+                    } else {
+                        el.value = '';
+                    }
+                });
+                document.querySelectorAll('input[type="checkbox"]').forEach(input => input.checked = false);
+                document.querySelectorAll('input[type="radio"]').forEach(input => {
+                     const group = document.querySelectorAll(`input[name="${input.name}"]`);
+                     group.forEach(rb => {
+                         if (rb.dataset.score === "0") {
+                             rb.checked = true;
+                         }
+                     });
+                });
+                document.getElementById('airway_input').value = 'Patent';
+                toggleNursingConcernText();
+                calculateADDS();
+            }
+
+            function generateSummary() {
+                let summaryText = '';
+                summaryText += 'ALERT CNS post ICU review on ward\n';
+
+                const los = document.getElementById('losDays').value;
+                if(los) summaryText += `ICU LOS ${los} days\n`;
+
+                const admissionReason = document.getElementById('admissionReason').value.trim();
+                if(admissionReason) summaryText += `Admitted to ICU with ${admissionReason}\n`;
+
+                summaryText += '\n';
+
+                const pmh = document.getElementById('pmh').value.trim();
+                if (pmh) summaryText += `PMH\n${pmh}\n\n`;
+
+                const icuSummary = document.getElementById('icuSummary').value.trim();
+                if (icuSummary) summaryText += `Summary\n${icuSummary}\n\n`;
+
+                const totalScore = totalScoreEl.textContent;
+                const categoryText = riskCategoryEl.textContent; 
+                summaryText += `ALERT Score: ${totalScore} -> ${categoryText}\n\n`;
+                
+                const bloods = [];
+                const k = document.getElementById('k_input').value;
+                const mg = document.getElementById('mg_input').value;
+                const lac = document.getElementById('lactate_input').value;
+                const cr = document.getElementById('creatinine_input').value;
+                const hb = document.getElementById('hb_input').value;
+                const crp = document.getElementById('crp_input').value;
+                const albumin = document.getElementById('albumin_input').value;
+                if(k) bloods.push(`K ${k}`);
+                if(mg) bloods.push(`Mg ${mg}`);
+                if(lac) bloods.push(`Lac ${lac}`);
+                if(cr) bloods.push(`Cr ${cr}`);
+                if(hb) bloods.push(`Hb ${hb}`);
+                if(crp) bloods.push(`CRP ${crp}`);
+                if(albumin) bloods.push(`Albumin ${albumin}`);
+                if(bloods.length > 0) summaryText += `Bloods\n${bloods.join(', ')}\n\n`;
+                
+                const deviceSpecifics = document.getElementById('deviceSpecifics').value.trim();
+                if (deviceSpecifics) summaryText += `Devices\n${deviceSpecifics}\n\n`;
+
+                const wounds = document.getElementById('wounds').value.trim();
+                if (wounds) summaryText += `Wounds\n${wounds}\n\n`;
+                
+                let aeText = '';
+                aeText += `ADDS ${calculatedADDSEl.textContent}\n`;
+                aeText += `A: ${document.getElementById('airway_input').value}\n`;
+                
+                // ### START: CORRECTED CODE ###
+                const rr = document.getElementById('rr_input').value;
+                const spo2 = document.getElementById('spo2_input').value;
+                const o2Flow = document.getElementById('o2_flow_input').value;
+                const o2UnitEl = document.getElementById('o2_unit_input');
+                const o2Unit = o2UnitEl.options[o2UnitEl.selectedIndex].text;
+
+                let o2DeliveryInfo = 'RA'; // Default to Room Air
+                if (o2Flow && o2Flow > 0) {
+                    o2DeliveryInfo = `${o2Flow} ${o2Unit}`;
+                }
+
+                if(rr || spo2) aeText += `B: RR ${rr || 'N/A'}, SpO2 ${spo2 || 'N/A'}% on ${o2DeliveryInfo}\n`;
+                // ### END: CORRECTED CODE ###
+
+                const hr = document.getElementById('hr_input').value;
+                const sbp = document.getElementById('sbp_input').value;
+                const dbp = document.getElementById('dbp_input').value;
+                if(hr || sbp) aeText += `C: HR ${hr || 'N/A'}, NIBP ${sbp || 'N/A'}/${dbp || 'N/A'}\n`;
+                const consciousnessEl = document.getElementById('consciousness_input');
+                const consciousness = consciousnessEl.options[consciousnessEl.selectedIndex].text;
+                if(consciousness) aeText += `D: AVPU - ${consciousness}\n`;
+                const temp = document.getElementById('temp_input').value;
+                if(temp) aeText += `E: Temp ${temp}°C\n`;
+                const amt = document.getElementById('amt_score_input').value;
+                if(amt) aeText += `AMT: ${amt}\n`;
+                summaryText += `${aeText}\n`;
+
+                const impression = document.getElementById('impression').value.trim();
+                if (impression) summaryText += `Imp:\n${impression}\n\n`;
+                
+                summaryText += `Plan\n`;
+                const carePlanItems = new Set();
+                scoreInputs.forEach(input => {
+                     if (input.checked && input.dataset.score !== "0") {
+                         if (carePlanMap[input.dataset.id]) {
+                             carePlanItems.add(carePlanMap[input.dataset.id]);
+                         }
                      }
-                 });
-            });
-            document.getElementById('consciousness_input').value = '0';
-            document.getElementById('airway_input').value = 'Patent';
-            toggleNursingConcernText();
-            calculateADDS();
-        }
+                });
+                 if (mandatoryActionCheckbox.checked) {
+                     carePlanItems.add('Liaise with medical team to confirm K+ and Mg++ replacement plan is charted.');
+                 }
 
-        function generateSummary() {
-            let summaryText = '';
-            summaryText += 'ALERT CNS post ICU review on ward\n';
+                if(carePlanItems.size > 0) {
+                    carePlanItems.forEach(item => {
+                        summaryText += `• ${item}\n`;
+                    });
+                } else {
+                    summaryText += `• Standard ward cares.\n`;
+                }
 
-            const los = document.getElementById('losDays').value;
-            if(los) summaryText += `ICU LOS ${los} days\n`;
+                const additionalNotes = document.getElementById('emrAdditionalNotes').value.trim();
+                if (additionalNotes) {
+                    summaryText += `${additionalNotes}\n`;
+                }
 
-            const admissionReason = document.getElementById('admissionReason').value.trim();
-            if(admissionReason) summaryText += `Admitted to ICU with ${admissionReason}\n`;
+                emrSummaryEl.value = summaryText;
+            }
 
-            summaryText += '\n';
-
-            const pmh = document.getElementById('pmh').value.trim();
-            if (pmh) summaryText += `PMH\n${pmh}\n\n`;
-
-            const icuSummary = document.getElementById('icuSummary').value.trim();
-            if (icuSummary) summaryText += `Summary\n${icuSummary}\n\n`;
-
-            const totalScore = totalScoreEl.textContent;
-            const categoryText = riskCategoryEl.textContent; 
-            summaryText += `ALERT Score: ${totalScore} -> ${categoryText}\n\n`;
+            function copySummary() {
+                emrSummaryEl.select();
+                try {
+                    document.execCommand('copy');
+                    copySummaryButton.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copySummaryButton.textContent = 'Copy to Clipboard';
+                    }, 2000);
+                } catch (err) {
+                    console.error('Fallback: Unable to copy', err);
+                    alert('Could not copy text. Please select and copy manually.');
+                }
+            }
             
-            const bloods = [];
-            const k = document.getElementById('k_input').value;
-            const mg = document.getElementById('mg_input').value;
-            const lac = document.getElementById('lactate_input').value;
-            const cr = document.getElementById('creatinine_input').value;
-            const hb = document.getElementById('hb_input').value;
-            const crp = document.getElementById('crp_input').value;
-            const albumin = document.getElementById('albumin_input').value;
-            if(k) bloods.push(`K ${k}`);
-            if(mg) bloods.push(`Mg ${mg}`);
-            if(lac) bloods.push(`Lac ${lac}`);
-            if(cr) bloods.push(`Cr ${cr}`);
-            if(hb) bloods.push(`Hb ${hb}`);
-            if(crp) bloods.push(`CRP ${crp}`);
-            if(albumin) bloods.push(`Albumin ${albumin}`);
-            if(bloods.length > 0) summaryText += `Bloods\n${bloods.join(', ')}\n\n`;
+            function handleLosInput() {
+                const days = parseFloat(losDaysInput.value);
+                losCheckbox.checked = days > 3;
+                losCheckbox.dispatchEvent(new Event('change'));
+            }
             
-            const deviceSpecifics = document.getElementById('deviceSpecifics').value.trim();
-            if (deviceSpecifics) summaryText += `Devices\n${deviceSpecifics}\n\n`;
+            function toggleNursingConcernText() {
+                const significantConcernRadio = document.querySelector('input[name="concern_score"][data-score="5"]');
+                nursingConcernText.style.display = significantConcernRadio.checked ? 'block' : 'none';
+                if (!significantConcernRadio.checked) nursingConcernText.value = '';
+            }
 
-            const wounds = document.getElementById('wounds').value.trim();
-            if (wounds) summaryText += `Wounds\n${wounds}\n\n`;
-            
-            let aeText = '';
-            aeText += `ADDS ${calculatedADDSEl.textContent}\n`;
-            aeText += `A: ${document.getElementById('airway_input').value}\n`;
-            const rr = document.getElementById('rr_input').value;
-            const spo2 = document.getElementById('spo2_input').value;
-            const o2Device = document.getElementById('o2_device_input').value;
-            if(rr || spo2) aeText += `B: RR ${rr || 'N/A'}, SpO2 ${spo2 || 'N/A'}% on ${o2Device || 'RA'}\n`;
-            const hr = document.getElementById('hr_input').value;
-            const sbp = document.getElementById('sbp_input').value;
-            const dbp = document.getElementById('dbp_input').value;
-            if(hr || sbp) aeText += `C: HR ${hr || 'N/A'}, NIBP ${sbp || 'N/A'}/${dbp || 'N/A'}\n`;
-            const consciousnessEl = document.getElementById('consciousness_input');
-            const consciousness = consciousnessEl.options[consciousnessEl.selectedIndex].text;
-            if(consciousness) aeText += `D: AVPU - ${consciousness}\n`;
-            const temp = document.getElementById('temp_input').value;
-            if(temp) aeText += `E: Temp ${temp}°C\n`;
-            const amt = document.getElementById('amt_score_input').value;
-            if(amt) aeText += `AMT: ${amt}\n`;
-            summaryText += `${aeText}\n`;
+            function calculateADDS() {
+                let adds = 0;
+                const rr = parseInt(document.getElementById('rr_input').value, 10);
+                const spo2 = parseInt(document.getElementById('spo2_input').value, 10);
+                const o2Flow = parseFloat(document.getElementById('o2_flow_input').value);
+                const o2Unit = document.getElementById('o2_unit_input').value;
+                const hr = parseInt(document.getElementById('hr_input').value, 10);
+                const sbp = parseInt(document.getElementById('sbp_input').value, 10);
+                const consciousness = parseInt(document.getElementById('consciousness_input').value, 10);
+                const temp = parseFloat(document.getElementById('temp_input').value);
+                
+                let met = false;
 
-            const impression = document.getElementById('impression').value.trim();
-            if (impression) summaryText += `Imp:\n${impression}\n\n`;
-            
-            summaryText += `Plan\n`;
-            const carePlanItems = new Set();
-            scoreInputs.forEach(input => {
-                 if (input.checked && input.dataset.score !== "0") {
-                    if (carePlanMap[input.dataset.id]) {
-                        carePlanItems.add(carePlanMap[input.dataset.id]);
+                if (!isNaN(rr)) {
+                    if (rr >= 36) { met = true; }
+                    else if (rr >= 30 && rr <= 35) { adds += 3; }
+                    else if (rr >= 25 && rr <= 29) { adds += 2; }
+                    else if (rr >= 21 && rr <= 24) { adds += 1; }
+                }
+                if (!isNaN(spo2)) {
+                    if (spo2 <= 89) { met = true; }
+                    else if (spo2 >= 90 && spo2 <= 93) { adds += 2; }
+                }
+                if (!isNaN(o2Flow)) {
+                    if (o2Unit === 'lpm') {
+                        if (o2Flow > 10) { adds += 3; }
+                        else if (o2Flow >= 5) { adds += 2; }
+                        else if (o2Flow >= 2) { adds += 1; }
+                    } else { // fio2
+                        if (o2Flow >= 40) { adds += 3; }
+                        else if (o2Flow >= 29) { adds += 2; }
+                        else if (o2Flow <= 28) { adds += 1; }
                     }
                 }
-            });
-             if (mandatoryActionCheckbox.checked) {
-                carePlanItems.add('Liaise with medical team to confirm K+ and Mg++ replacement plan is charted.');
-            }
-
-            if(carePlanItems.size > 0) {
-                carePlanItems.forEach(item => {
-                    summaryText += `• ${item}\n`;
-                });
-            } else {
-                summaryText += `• Standard ward cares.\n`;
-            }
-
-            const additionalNotes = document.getElementById('emrAdditionalNotes').value.trim();
-            if (additionalNotes) {
-                summaryText += `${additionalNotes}\n`;
-            }
-
-            emrSummaryEl.value = summaryText;
-        }
-
-        function copySummary() {
-            emrSummaryEl.select();
-            try {
-                document.execCommand('copy');
-                copySummaryButton.textContent = 'Copied!';
-                setTimeout(() => {
-                    copySummaryButton.textContent = 'Copy to Clipboard';
-                }, 2000);
-            } catch (err) {
-                console.error('Fallback: Unable to copy', err);
-                alert('Could not copy text. Please select and copy manually.');
-            }
-        }
-        
-        function handleLosInput() {
-            const days = parseFloat(losDaysInput.value);
-            losCheckbox.checked = days > 3;
-            losCheckbox.dispatchEvent(new Event('change'));
-        }
-        
-        function toggleNursingConcernText() {
-            const significantConcernRadio = document.querySelector('input[name="concern_score"][data-score="5"]');
-            nursingConcernText.style.display = significantConcernRadio.checked ? 'block' : 'none';
-            if (!significantConcernRadio.checked) nursingConcernText.value = '';
-        }
-
-        function calculateADDS() {
-            let adds = 0;
-            const rr = parseInt(document.getElementById('rr_input').value, 10);
-            const spo2 = parseInt(document.getElementById('spo2_input').value, 10);
-            const o2Flow = parseFloat(document.getElementById('o2_flow_input').value);
-            const o2Unit = document.getElementById('o2_unit_input').value;
-            const hr = parseInt(document.getElementById('hr_input').value, 10);
-            const sbp = parseInt(document.getElementById('sbp_input').value, 10);
-            const consciousness = parseInt(document.getElementById('consciousness_input').value, 10);
-            const temp = parseFloat(document.getElementById('temp_input').value);
-            
-            let met = false;
-
-            if (!isNaN(rr)) {
-                if (rr > 35) { met = true; }
-                else if (rr >= 30 && rr <= 35) { adds += 3; }
-                else if (rr >= 25 && rr <= 29) { adds += 2; }
-                else if (rr >= 21 && rr <= 24) { adds += 1; }
-            }
-            if (!isNaN(spo2)) {
-                if (spo2 <= 89) { met = true; }
-                else if (spo2 >= 90 && spo2 <= 93) { adds += 2; }
-            }
-            if (!isNaN(o2Flow)) {
-                if (o2Unit === 'lpm') { // Low flow
-                    if (o2Flow > 10) { adds += 3; }
-                    else if (o2Flow >= 5) { adds += 2; }
-                    else if (o2Flow >= 2) { adds += 1; }
-                } else { // High flow
-                    if (o2Flow >= 40) { adds += 3; }
-                    else if (o2Flow >= 29) { adds += 2; }
-                    else if (o2Flow < 29) { adds += 1; }
+                if (!isNaN(hr)) {
+                    if (hr >= 130) { adds += 3; }
+                    else if (hr >= 110 && hr <= 129) { adds += 2; }
                 }
+                if (!isNaN(sbp)) {
+                    if (sbp <= 89) { met = true; }
+                    else if (sbp >= 200) { adds += 3; }
+                    else if (sbp >= 170 && sbp <= 199) { adds += 2; }
+                    else if (sbp >= 160 && sbp <= 169) { adds += 1; }
+                }
+                if (!isNaN(consciousness)) { 
+                    adds += consciousness;
+                    if (consciousness === 3) met = true;
+                }
+                if (!isNaN(temp)) {
+                    if (temp < 35.0) { adds += 3; }
+                    else if ((temp >= 35.1 && temp <= 36.0) || temp >= 38.6) { adds += 2; }
+                    else if (temp >= 38.1 && temp <= 38.5) { adds += 1; }
+                }
+                
+                calculatedADDSEl.textContent = met ? 'MET' : adds;
+                if(met) { calculatedADDSEl.classList.add('text-red-600'); } else { calculatedADDSEl.classList.remove('text-red-600'); }
+                document.getElementById('crit_met_checkbox').checked = met;
+                
+                document.getElementById('crit_adds4_checkbox').checked = false;
+                document.getElementById('adds_0_radio').checked = false;
+                document.getElementById('adds_1-2_radio').checked = false;
+                document.getElementById('adds_3_radio').checked = false;
+
+                if (adds >= 4) {
+                    document.getElementById('crit_adds4_checkbox').checked = true;
+                } else if (adds === 3) {
+                    document.getElementById('adds_3_radio').checked = true;
+                } else if (adds >= 1) {
+                    document.getElementById('adds_1-2_radio').checked = true;
+                } else {
+                    document.getElementById('adds_0_radio').checked = true;
+                }
+                calculateScore();
             }
-            if (!isNaN(hr)) {
-                if (hr >= 130) { adds += 3; }
-                else if (hr >= 110 && hr <= 129) { adds += 2; }
+
+            function handleBloodInputs() {
+                const lactate = parseFloat(document.getElementById('lactate_input').value);
+                document.getElementById('crit_lactate_high_checkbox').checked = lactate >= 3.5;
+                document.getElementById('bloods_lactate_mid_checkbox').checked = lactate >= 2.0 && lactate < 3.5;
+
+                const creatinine = parseFloat(document.getElementById('creatinine_input').value);
+                document.getElementById('bloods_creatinine_checkbox').checked = creatinine > 200;
+
+                const albumin = parseFloat(document.getElementById('albumin_input').value);
+                document.getElementById('bloods_albumin_checkbox').checked = albumin < 25;
+
+                const crp = parseFloat(document.getElementById('crp_input').value);
+                document.getElementById('bloods_crp_checkbox').checked = crp > 100;
+
+                const hb = parseFloat(document.getElementById('hb_input').value);
+                document.getElementById('bloods_anaemia_checkbox').checked = hb < 80;
+                document.getElementById('crit_bleeding_checkbox').checked = hb < 80;
+
+                calculateScore();
             }
-            if (!isNaN(sbp)) {
-                if (sbp <= 89) { met = true; }
-                else if (sbp >= 200) { adds += 3; }
-                else if (sbp >= 170 && sbp <= 199) { adds += 2; }
-                else if ((sbp >= 100 && sbp <= 109) || (sbp >= 160 && sbp <= 169)) { adds += 1; }
+
+            function handleFluidBalance() {
+                const fbc24 = parseFloat(document.getElementById('fbc_24hr_input').value);
+                const fbcTotal = parseFloat(document.getElementById('fbc_total_input').value);
+
+                const isSig = (!isNaN(fbc24) && Math.abs(fbc24) > 2) || (!isNaN(fbcTotal) && Math.abs(fbcTotal) > 2);
+                const isMild = (!isNaN(fbc24) && Math.abs(fbc24) > 1) || (!isNaN(fbcTotal) && Math.abs(fbcTotal) > 1);
+
+                if (isSig) {
+                    document.getElementById('fluid_sig_radio').checked = true;
+                } else if (isMild) {
+                    document.getElementById('fluid_mild_radio').checked = true;
+                } else {
+                    document.getElementById('fluid_0_radio').checked = true;
+                }
+                calculateScore();
             }
-            if (!isNaN(consciousness)) { 
-                adds += consciousness;
-                if (consciousness === 3) met = true;
-            }
-            if (!isNaN(temp)) {
-                if (temp < 35.0) { adds += 3; }
-                else if ((temp >= 35.1 && temp <= 36.0) || temp >= 38.6) { adds += 2; }
-                else if (temp >= 38.1 && temp <= 38.5) { adds += 1; }
-            }
+
+            scoreInputs.forEach(input => input.addEventListener('change', calculateScore));
+            resetButton.addEventListener('click', resetForm);
+            generateSummaryButton.addEventListener('click', generateSummary);
+            copySummaryButton.addEventListener('click', copySummary);
+            losDaysInput.addEventListener('input', handleLosInput);
+            nursingConcernRadios.forEach(radio => radio.addEventListener('change', toggleNursingConcernText));
+            vitalInputs.forEach(input => input.addEventListener('input', calculateADDS));
+            bloodInputs.forEach(input => input.addEventListener('input', handleBloodInputs));
+            fluidInputs.forEach(input => input.addEventListener('input', handleFluidBalance));
             
-            calculatedADDSEl.textContent = met ? 'MET' : adds;
-            if(met) { calculatedADDSEl.classList.add('text-red-600'); } else { calculatedADDSEl.classList.remove('text-red-600'); }
-            document.getElementById('crit_met_checkbox').checked = met;
-            
-            document.getElementById('crit_adds4_checkbox').checked = false;
-            document.getElementById('adds_0_radio').checked = false;
-            document.getElementById('adds_1-2_radio').checked = false;
-            document.getElementById('adds_3_radio').checked = false;
-
-            if (adds >= 4) {
-                document.getElementById('crit_adds4_checkbox').checked = true;
-            } else if (adds === 3) {
-                document.getElementById('adds_3_radio').checked = true;
-            } else if (adds >= 1) {
-                document.getElementById('adds_1-2_radio').checked = true;
-            } else {
-                document.getElementById('adds_0_radio').checked = true;
-            }
-            calculateScore();
-        }
-
-        function handleBloodInputs() {
-            const lactate = parseFloat(document.getElementById('lactate_input').value);
-            document.getElementById('crit_lactate_high_checkbox').checked = lactate >= 3.5;
-            document.getElementById('bloods_lactate_mid_checkbox').checked = lactate >= 2.0 && lactate < 3.5;
-
-            const creatinine = parseFloat(document.getElementById('creatinine_input').value);
-            document.getElementById('bloods_creatinine_checkbox').checked = creatinine > 200;
-
-            const albumin = parseFloat(document.getElementById('albumin_input').value);
-            document.getElementById('bloods_albumin_checkbox').checked = albumin < 25;
-
-            const crp = parseFloat(document.getElementById('crp_input').value);
-            document.getElementById('bloods_crp_checkbox').checked = crp > 100;
-
-            const hb = parseFloat(document.getElementById('hb_input').value);
-            document.getElementById('bloods_anaemia_checkbox').checked = hb < 80;
-            document.getElementById('crit_bleeding_checkbox').checked = hb < 80;
-
-            calculateScore();
-        }
-
-        function handleFluidBalance() {
-            const fbc24 = parseFloat(document.getElementById('fbc_24hr_input').value);
-            const fbcTotal = parseFloat(document.getElementById('fbc_total_input').value);
-
-            const isSig = (!isNaN(fbc24) && Math.abs(fbc24) > 2) || (!isNaN(fbcTotal) && Math.abs(fbcTotal) > 2);
-            const isMild = (!isNaN(fbc24) && Math.abs(fbc24) > 1) || (!isNaN(fbcTotal) && Math.abs(fbcTotal) > 1);
-
-            if (isSig) {
-                document.getElementById('fluid_sig_radio').checked = true;
-            } else if (isMild) {
-                document.getElementById('fluid_mild_radio').checked = true;
-            } else {
-                document.getElementById('fluid_0_radio').checked = true;
-            }
-            calculateScore();
-        }
-
-        scoreInputs.forEach(input => input.addEventListener('change', calculateScore));
-        resetButton.addEventListener('click', resetForm);
-        generateSummaryButton.addEventListener('click', generateSummary);
-        copySummaryButton.addEventListener('click', copySummary);
-        losDaysInput.addEventListener('input', handleLosInput);
-        nursingConcernRadios.forEach(radio => radio.addEventListener('change', toggleNursingConcernText));
-        vitalInputs.forEach(input => input.addEventListener('input', calculateADDS));
-        bloodInputs.forEach(input => input.addEventListener('input', handleBloodInputs));
-        fluidInputs.forEach(input => input.addEventListener('input', handleFluidBalance));
-        
-        calculateADDS();
+            calculateADDS();
+        });
     </script>
 </body>
 </html>
