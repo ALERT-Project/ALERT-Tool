@@ -621,7 +621,7 @@
                         if (o2Flow > 10) { adds += 3; }
                         else if (o2Flow >= 5 && o2Flow <= 9) { adds += 2; }
                         else if (o2Flow >= 2 && o2Flow <= 4) { adds += 1; }
-                        // Score for 0-1 L/min is 0, so no 'else if' is needed.
+                        // Score for <2 L/min is 0, so no 'else if' is needed.
                     } else { // unit is 'fio2'
                         // Scoring based on original FiO2 sticker logic
                         if (o2Flow >= 40) { adds += 3; }
@@ -642,7 +642,7 @@
 
                 // Systolic Blood Pressure
                 if (!isNaN(sbp)) {
-                    if (sbp < 89) { met = true; }
+                    if (sbp < 90) { met = true; }
                     else if (sbp >= 190 && sbp <= 199) { adds += 3; }
                     else if (sbp >= 180 && sbp <= 189) { adds += 2; }
                     else if (sbp >= 150 && sbp <= 179) { adds += 1; }
