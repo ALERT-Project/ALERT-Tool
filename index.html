@@ -22,10 +22,10 @@
             background-color: #134E4A;
         }
         .form-input {
-            @apply mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 text-sm;
+            @apply mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 text-sm transition-colors duration-150;
         }
         .sub-label {
-            @apply block text-sm font-medium text-gray-600;
+            @apply block text-sm font-medium text-gray-700;
         }
         .module-bg-a { background-color: #fff1f2; }
         .module-bg-b { background-color: #f0f9ff; }
@@ -54,135 +54,141 @@
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-bold">ALERT Nursing Risk Assessment Tool</h1>
             </div>
-            <div class="p-6 bg-gray-100 border-t-4 border-teal-100 border rounded-b-xl">
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-                    <div>
-                        <label for="patientInitials" class="block font-medium text-gray-700">Patient Initials:</label>
-                        <input type="text" id="patientInitials" class="form-input bg-white">
-                    </div>
-                    <div>
-                        <label for="urnLast4" class="block font-medium text-gray-700">Last 4 Digits of URN:</label>
-                        <input type="text" id="urnLast4" class="form-input bg-white">
-                    </div>
+            <div class="p-6 bg-gray-50/50">
+                <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-6">Patient Details</h2>
+                 <div class="grid grid-cols-1 gap-y-4 text-sm">
                      <div>
-                        <label for="ward" class="block font-medium text-gray-700">Ward & Room No.:</label>
-                        <div class="flex space-x-2">
-                            <input type="text" id="ward" class="form-input bg-white" placeholder="Ward">
-                            <input type="text" id="roomNumber" class="form-input bg-white" placeholder="Room">
-                        </div>
-                    </div>
-                    <div>
-                        <label for="losDays" class="block font-medium text-gray-700">ICU LOS (days):</label>
-                        <input type="number" id="losDays" min="0" class="form-input bg-white">
-                    </div>
-                </div>
+                         <label for="patientInitials" class="block font-medium text-gray-700">Patient Initials:</label>
+                         <input type="text" id="patientInitials" class="form-input bg-gray-100">
+                     </div>
+                     <div>
+                         <label for="urnLast4" class="block font-medium text-gray-700">Last 4 Digits of URN:</label>
+                         <input type="text" id="urnLast4" class="form-input bg-gray-100">
+                     </div>
+                      <div>
+                         <label for="wardAndRoom" class="block font-medium text-gray-700">Ward & Room No.:</label>
+                         <input type="text" id="wardAndRoom" class="form-input bg-gray-100" placeholder="e.g. Ward 5A, Room 12">
+                     </div>
+                     <div>
+                         <label for="losDays" class="block font-medium text-gray-700">ICU LOS (days):</label>
+                         <input type="number" id="losDays" min="0" class="form-input bg-gray-100">
+                     </div>
+                 </div>
             </div>
         </div>
         
         <div class="bg-white rounded-xl shadow-lg mb-6 p-6">
-            <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Clinical Parameters (for auto-scoring)</h2>
+            <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Clinical Parameters</h2>
             <div class="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-semibold text-gray-700">A-E Assessment</h3>
-                    <div class="text-right">
-                        <span class="text-sm font-medium text-gray-500">Calculated ADDS:</span>
-                        <span id="calculatedADDSScore" class="font-bold text-lg text-teal-600">0</span>
+                <h3 class="font-semibold text-gray-700 mb-4">A-E Assessment</h3>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div><label class="sub-label">Airway</label><input type="text" id="airway_input" class="form-input" value="Patent"></div>
+                        <div><label class="sub-label">Resp Rate</label><input type="number" id="rr_input" class="form-input vital-input"></div>
+                        <div><label class="sub-label">SpO2 (%)</label><input type="number" id="spo2_input" class="form-input vital-input"></div>
+                        <div>
+                            <label class="sub-label">Oxygen Delivery</label>
+                            <div class="flex items-center space-x-2">
+                                 <input type="number" id="o2_flow_input" class="form-input vital-input" placeholder="Value">
+                                 <select id="o2_unit_input" class="form-input vital-input"><option value="lpm">L/min</option><option value="fio2">% FiO2</option></select>
+                            </div>
+                        </div>
+                        <div><label class="sub-label">Heart Rate</label><input type="number" id="hr_input" class="form-input vital-input"></div>
+                        <div><label class="sub-label">SBP (mmHg)</label><input type="number" id="sbp_input" class="form-input vital-input"></div>
+                        <div><label class="sub-label">DBP (mmHg)</label><input type="number" id="dbp_input" class="form-input"></div>
+                        <div><label class="sub-label">Consciousness</label><select id="consciousness_input" class="form-input vital-input"><option value="0">Alert</option><option value="1">Voice</option><option value="2">Pain</option><option value="3">Unresponsive</option></select></div>
+                        <div><label class="sub-label">Temp (°C)</label><input type="number" step="0.1" id="temp_input" class="form-input vital-input"></div>
                     </div>
-                </div>
-                <div class="flex flex-wrap gap-x-6 gap-y-4">
-                    <div class="flex-grow basis-24 min-w-[120px]"><label class="sub-label">Airway</label><input type="text" id="airway_input" class="form-input" value="Patent"></div>
-                    <div class="flex-grow basis-24 min-w-[120px]"><label class="sub-label">Resp Rate</label><input type="number" id="rr_input" class="form-input vital-input"></div>
-                    <div class="flex-grow basis-24 min-w-[120px]"><label class="sub-label">SpO2 (%)</label><input type="number" id="spo2_input" class="form-input vital-input"></div>
-                    <div class="flex items-end space-x-2 flex-grow basis-48 min-w-[220px]">
-                        <div><label class="sub-label">O2 Flow</label><input type="number" id="o2_flow_input" class="form-input vital-input w-24" placeholder="Value"></div>
-                        <div><label class="sub-label">Unit</label><select id="o2_unit_input" class="form-input vital-input w-28"><option value="lpm">L/min</option><option value="fio2">% FiO2</option></select></div>
+                    <div class="bg-teal-50 p-4 rounded-lg text-center border border-teal-200">
+                        <span class="text-sm font-medium text-gray-500">CALCULATED ADDS</span>
+                        <div id="calculatedADDSScore" class="font-bold text-5xl text-teal-600 my-2">0</div>
+                        <div id="addsBreakdown" class="text-xs text-gray-600 min-h-[3em]">Normal Parameters</div>
                     </div>
-                    <div class="flex-grow basis-24 min-w-[120px]"><label class="sub-label">Heart Rate</label><input type="number" id="hr_input" class="form-input vital-input"></div>
-                    <div class="flex-grow basis-24 min-w-[120px]"><label class="sub-label">SBP (mmHg)</label><input type="number" id="sbp_input" class="form-input vital-input"></div>
-                    <div class="flex-grow basis-24 min-w-[120px]"><label class="sub-label">DBP (mmHg)</label><input type="number" id="dbp_input" class="form-input"></div>
-                    <div class="flex-grow basis-24 min-w-[120px]"><label class="sub-label">Consciousness</label><select id="consciousness_input" class="form-input vital-input"><option value="0">Alert</option><option value="1">Voice</option><option value="2">Pain</option><option value="3">Unresponsive</option></select></div>
-                    <div class="flex-grow basis-24 min-w-[120px]"><label class="sub-label">Temp (°C)</label><input type="number" step="0.1" id="temp_input" class="form-input vital-input"></div>
                 </div>
             </div>
              <div class="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 class="font-semibold text-gray-700 mb-2">ADDS Modifications</h3>
+                <h3 class="font-semibold text-gray-700 mb-2">Modifications</h3>
                 <div class="space-y-2">
                     <label class="flex items-center"><input type="checkbox" id="addsModificationCheckbox" class="vital-input"> <span class="ml-2 text-sm">Apply MODS to ADDS</span></label>
                     <div id="addsModificationDetails" class="hidden ml-6 mt-4 space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                             <div class="space-y-1">
                                 <label class="flex items-center text-sm"><input type="checkbox" name="mod_param" value="RR"> <span class="ml-2 font-medium">Resp Rate</span></label>
-                                <div class="hidden mod-details flex items-center space-x-2 pl-5">
-                                    <select data-param="rr" class="mod-operator form-input w-auto p-1 text-sm"><option value="between">between</option><option value="less_than">&lt;</option><option value="greater_than">&gt;</option></select>
-                                    <input type="number" id="mod_rr_val1" placeholder="Min RR" class="form-input w-20 p-1">
-                                    <span class="mod-val2-container" id="mod_rr_val2_container">- <input type="number" id="mod_rr_val2" placeholder="Max RR" class="form-input w-20 p-1"></span>
+                                <div class="hidden mod-details space-y-2 pl-5 pt-2">
+                                    <select data-param="rr" class="mod-operator form-input"><option value="between">Between</option><option value="less_than">Less than</option><option value="greater_than">Greater than</option></select>
+                                    <div class="flex items-center space-x-2">
+                                        <input type="number" id="mod_rr_val1" placeholder="Min" class="form-input w-full">
+                                        <span class="mod-val2-container" id="mod_rr_val2_container"><input type="number" id="mod_rr_val2" placeholder="Max" class="form-input w-full"></span>
+                                    </div>
+                                </div>
+                            </div>
+                             <div class="space-y-1">
+                                <label class="flex items-center text-sm"><input type="checkbox" name="mod_param" value="HR"> <span class="ml-2 font-medium">Heart Rate</span></label>
+                                <div class="hidden mod-details space-y-2 pl-5 pt-2">
+                                    <select data-param="hr" class="mod-operator form-input"><option value="between">Between</option><option value="less_than">Less than</option><option value="greater_than">Greater than</option></select>
+                                    <div class="flex items-center space-x-2">
+                                        <input type="number" id="mod_hr_val1" placeholder="Min" class="form-input w-full">
+                                        <span class="mod-val2-container" id="mod_hr_val2_container"><input type="number" id="mod_hr_val2" placeholder="Max" class="form-input w-full"></span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="space-y-1">
                                 <label class="flex items-center text-sm"><input type="checkbox" name="mod_param" value="SpO2"> <span class="ml-2 font-medium">SpO2</span></label>
-                                <div class="hidden mod-details flex items-center space-x-2 pl-5">
-                                    <span class="text-sm">Target &gt;</span>
-                                    <input type="number" id="mod_spo2_lower" placeholder="e.g. 88" class="form-input w-24 p-1">
+                                <div class="hidden mod-details flex items-center space-x-2 pl-5 pt-2">
+                                    <span class="text-sm font-semibold">Target &gt;</span>
+                                    <input type="number" id="mod_spo2_lower" placeholder="e.g. 88" class="form-input w-full">
                                     <span class="text-sm">%</span>
-                                </div>
-                            </div>
-                            <div class="space-y-1">
-                                <label class="flex items-center text-sm"><input type="checkbox" name="mod_param" value="HR"> <span class="ml-2 font-medium">Heart Rate</span></label>
-                                <div class="hidden mod-details flex items-center space-x-2 pl-5">
-                                    <select data-param="hr" class="mod-operator form-input w-auto p-1 text-sm"><option value="between">between</option><option value="less_than">&lt;</option><option value="greater_than">&gt;</option></select>
-                                    <input type="number" id="mod_hr_val1" placeholder="Min HR" class="form-input w-20 p-1">
-                                    <span class="mod-val2-container" id="mod_hr_val2_container">- <input type="number" id="mod_hr_val2" placeholder="Max HR" class="form-input w-20 p-1"></span>
                                 </div>
                             </div>
                             <div class="space-y-1">
                                 <label class="flex items-center text-sm"><input type="checkbox" name="mod_param" value="SBP"> <span class="ml-2 font-medium">SBP</span></label>
-                                <div class="hidden mod-details flex items-center space-x-2 pl-5">
-                                    <span class="text-sm">Target &gt;</span>
-                                    <input type="number" id="mod_sbp_lower" placeholder="e.g. 90" class="form-input w-24 p-1">
+                                <div class="hidden mod-details flex items-center space-x-2 pl-5 pt-2">
+                                    <span class="text-sm font-semibold">Target &gt;</span>
+                                    <input type="number" id="mod_sbp_lower" placeholder="e.g. 90" class="form-input w-full">
                                 </div>
                             </div>
-                            <div class="space-y-1">
+                            <div class="space-y-1 col-span-1 md:col-span-2">
                                 <label class="flex items-center text-sm"><input type="checkbox" name="mod_param" value="FiO2"> <span class="ml-2 font-medium">FiO2</span></label>
-                                <div class="hidden mod-details flex items-center space-x-2 pl-5">
-                                    <span class="text-sm">Target &lt;</span>
-                                    <input type="number" id="mod_fio2_upper" placeholder="e.g. 60" class="form-input w-24 p-1">
-                                    <span class="text-sm">%</span>
+                                <div class="hidden mod-details flex items-center space-x-2 pl-5 pt-2">
+                                    <span class="text-sm font-semibold">FiO2 &lt;</span>
+                                    <input type="number" id="mod_fio2_upper" placeholder="e.g. 40" class="form-input w-48">
+                                     <span class="text-sm">%</span>
                                 </div>
                             </div>
                         </div>
-                        <div>
+                        <div class="pt-4">
                             <label for="addsModificationText" class="sub-label">Modification Rationale:</label>
                             <textarea id="addsModificationText" rows="2" class="form-input"></textarea>
                         </div>
                     </div>
                 </div>
             </div>
-             <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div class="grid grid-cols-1 gap-4">
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <h3 class="font-semibold text-gray-700 mb-2">Fluid Balance</h3>
-                    <div class="flex flex-wrap gap-4">
-                        <div><label class="sub-label">24hr Fluid Balance (mL)</label><input type="number" id="fbc_24hr_input" class="form-input fluid-input w-36" placeholder="+/- mL" step="500"></div>
-                        <div><label class="sub-label">Total ICU Balance (mL)</label><input type="number" id="fbc_total_input" class="form-input fluid-input w-36" placeholder="+/- mL" step="500"></div>
+                    <div class="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
+                        <div><label class="sub-label">24hr Fluid Balance (mL)</label><input type="number" id="fbc_24hr_input" class="form-input fluid-input" placeholder="+/- mL" step="500"></div>
+                        <div><label class="sub-label">Total ICU Balance (mL)</label><input type="number" id="fbc_total_input" class="form-input fluid-input" placeholder="+/- mL" step="500"></div>
                     </div>
                 </div>
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <h3 class="font-semibold text-gray-700 mb-2">Cognition</h3>
                     <div>
                         <label class="sub-label">AMT Score</label>
-                        <select id="amt_score_input" class="form-input w-48"><option value="Unable to assess">Unable to assess</option><option value="4/4">4/4</option><option value="3/4">3/4</option><option value="2/4">2/4</option><option value="1/4">1/4</option><option value="0/4">0/4</option></select>
+                        <select id="amt_score_input" class="form-input w-full sm:w-48"><option value="Unable to assess">Unable to assess</option><option value="4/4">4/4</option><option value="3/4">3/4</option><option value="2/4">2/4</option><option value="1/4">1/4</option><option value="0/4">0/4</option></select>
                     </div>
                 </div>
             </div>
-             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+             <div class="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <h3 class="font-semibold text-gray-700 mb-2">Key Bloods</h3>
-                <div class="flex flex-wrap gap-x-6 gap-y-4 items-end">
-                    <div class="flex items-end space-x-2"><div class="w-24"><label class="sub-label">Lactate</label><input type="number" step="0.1" id="lactate_input" class="form-input blood-input" placeholder="Current"></div><div class="w-24"><input type="number" step="0.1" id="lactate_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div class="flex items-end space-x-2"><div class="w-24"><label class="sub-label">Creatinine</label><input type="number" id="creatinine_input" class="form-input blood-input" placeholder="Current"></div><div class="w-24"><input type="number" id="creatinine_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div class="flex items-end space-x-2"><div class="w-24"><label class="sub-label">Albumin</label><input type="number" id="albumin_input" class="form-input blood-input" placeholder="Current"></div><div class="w-24"><input type="number" id="albumin_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div class="flex items-end space-x-2"><div class="w-24"><label class="sub-label">CRP</label><input type="number" id="crp_input" class="form-input blood-input" placeholder="Current"></div><div class="w-24"><input type="number" id="crp_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div class="flex items-end space-x-2"><div class="w-24"><label class="sub-label">Hb</label><input type="number" id="hb_input" class="form-input blood-input" placeholder="Current"></div><div class="w-24"><input type="number" id="hb_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div class="flex items-end space-x-2"><div class="w-24"><label class="sub-label">K+</label><input type="number" step="0.1" id="k_input" class="form-input blood-input" placeholder="Current"></div><div class="w-24"><input type="number" step="0.1" id="k_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div class="flex items-end space-x-2"><div class="w-24"><label class="sub-label">Mg++</label><input type="number" step="0.1" id="mg_input" class="form-input blood-input" placeholder="Current"></div><div class="w-24"><input type="number" step="0.1" id="mg_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div><label class="sub-label">Lactate</label><div class="flex space-x-2"><input type="number" step="0.1" id="lactate_input" class="form-input blood-input" placeholder="Current"><input type="number" step="0.1" id="lactate_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label">Creatinine</label><div class="flex space-x-2"><input type="number" id="creatinine_input" class="form-input blood-input" placeholder="Current"><input type="number" id="creatinine_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label">Albumin</label><div class="flex space-x-2"><input type="number" id="albumin_input" class="form-input blood-input" placeholder="Current"><input type="number" id="albumin_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label">CRP</label><div class="flex space-x-2"><input type="number" id="crp_input" class="form-input blood-input" placeholder="Current"><input type="number" id="crp_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label">Hb</label><div class="flex space-x-2"><input type="number" id="hb_input" class="form-input blood-input" placeholder="Current"><input type="number" id="hb_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label">K+</label><div class="flex space-x-2"><input type="number" step="0.1" id="k_input" class="form-input blood-input" placeholder="Current"><input type="number" step="0.1" id="k_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label">Mg++</label><div class="flex space-x-2"><input type="number" step="0.1" id="mg_input" class="form-input blood-input" placeholder="Current"><input type="number" step="0.1" id="mg_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
                 </div>
                  <div class="mt-4 pt-4 border-t border-gray-300">
                     <label class="flex items-center">
@@ -207,81 +213,80 @@
         </div>
 
         <div class="bg-white rounded-xl shadow-lg mb-6 p-6">
-            <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">FINAL REVIEW & STRATIFICATION</h2>
-            <div class="space-y-4">
-                <div class="p-4 rounded-lg module-bg-f">
-                    <h3 class="module-title bg-purple-200 text-purple-800">Post-ICU Syndrome (PICS) Screening</h3>
-                    <div class="space-y-2 p-4">
-                        <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-                            <label class="flex items-center text-sm"><input type="radio" name="pics_status" value="negative" checked> <span class="ml-2">Negative</span></label>
-                            <label class="flex items-center text-sm"><input type="radio" name="pics_status" value="positive"> <span class="ml-2">Positive</span></label>
-                            <label class="flex items-center text-sm"><input type="radio" name="pics_status" value="unable"> <span class="ml-2">Unable to assess</span></label>
-                        </div>
-                        <div id="pics_unable_details" class="hidden ml-6 mt-2">
-                            <label for="pics_unable_notes" class="sub-label">Reason:</label>
-                            <textarea id="pics_unable_notes" rows="2" class="form-input"></textarea>
-                        </div>
+            <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Post-ICU Syndrome (PICS) Screening</h2>
+            <div class="p-4 rounded-lg module-bg-f">
+                <div class="space-y-2 p-4">
+                    <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+                        <label class="flex items-center text-sm"><input type="radio" name="pics_status" value="negative" checked> <span class="ml-2">Negative</span></label>
+                        <label class="flex items-center text-sm"><input type="radio" name="pics_status" value="positive"> <span class="ml-2">Positive</span></label>
+                        <label class="flex items-center text-sm"><input type="radio" name="pics_status" value="unable"> <span class="ml-2">Unable to assess</span></label>
+                    </div>
+                    <div id="pics_unable_details" class="hidden ml-6 mt-2">
+                        <label for="pics_unable_notes" class="sub-label">Reason:</label>
+                        <textarea id="pics_unable_notes" rows="2" class="form-input"></textarea>
                     </div>
                 </div>
-                <div class="final-score-bg text-white rounded-xl shadow-lg p-6">
-                     <div class="flex flex-col sm:flex-row justify-between items-center text-center">
-                        <div class="mb-4 sm:mb-0"><span class="text-lg font-medium text-gray-400">TOTAL SCORE</span><div id="totalScore" class="text-5xl font-bold">0</div></div>
-                        <div class="w-full sm:w-auto"><span class="text-lg font-medium text-gray-400">FINAL CATEGORY & ACTION</span><div id="riskCategory" class="text-xl font-bold p-3 rounded-md mt-1 transition-all duration-300">Category 2: Standard follow-up</div></div>
-                    </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg mb-6 p-6">
+            <div class="final-score-bg text-white rounded-xl shadow-lg p-6">
+                 <div class="flex flex-col sm:flex-row justify-between items-center text-center">
+                    <div class="mb-4 sm:mb-0"><span class="text-lg font-medium text-gray-400">TOTAL SCORE</span><div id="totalScore" class="text-5xl font-bold">0</div></div>
+                    <div class="w-full sm:w-auto"><span class="text-lg font-medium text-gray-400">FINAL CATEGORY & ACTION</span><div id="riskCategory" class="text-xl font-bold p-3 rounded-md mt-1 transition-all duration-300">Category 2: Standard follow-up</div></div>
                 </div>
             </div>
         </div>
         
         <div class="bg-white rounded-xl shadow-lg mb-6 p-6">
             <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Optional Narrative Details for DMR</h2>
-            <div class="grid grid-cols-1 gap-6 text-sm">
-                <div><label for="admissionReason" class="block font-medium text-gray-600">Reason for ICU Admission:</label><textarea id="admissionReason" rows="2" class="form-input"></textarea></div>
-                <div><label for="pmh" class="block font-medium text-gray-600">Past Medical History (PMH):</label><textarea id="pmh" rows="3" class="form-input"></textarea></div>
-                <div><label for="icuSummary" class="block font-medium text-gray-600">ICU Summary / Timeline:</label><textarea id="icuSummary" rows="6" class="form-input"></textarea></div>
+            <div class="space-y-6 text-sm">
+                <div><label for="admissionReason" class="block font-medium text-gray-600">Reason for ICU Admission:</label><textarea id="admissionReason" rows="3" class="form-input"></textarea></div>
+                <div><label for="pmh" class="block font-medium text-gray-600">Past Medical History (PMH):</label><textarea id="pmh" rows="5" class="form-input"></textarea></div>
+                <div><label for="icuSummary" class="block font-medium text-gray-600">ICU Summary / Timeline:</label><textarea id="icuSummary" rows="10" class="form-input"></textarea></div>
                 
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h3 class="font-semibold text-gray-700 mb-2">Lines, Drains & Wounds</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <h3 class="font-semibold text-gray-700 mb-4">Lines, Drains & Wounds</h3>
+                    <div class="grid grid-cols-1 gap-8">
                         <div>
-                            <h4 class="font-medium text-gray-600 mb-2">Vascular Access</h4>
-                            <div class="space-y-2">
+                            <h4 class="font-medium text-gray-600 mb-2">Vascular Access & Fixed Devices</h4>
+                            <div class="space-y-4">
                                 <label class="flex items-center"><input type="checkbox" id="device_cvc"> <span class="ml-2">CVC</span></label>
                                 <label class="flex items-center"><input type="checkbox" id="device_picc"> <span class="ml-2">PICC</span></label>
                                 <label class="flex items-center"><input type="checkbox" id="device_vascath"> <span class="ml-2">Vascath</span></label>
+                                <label class="flex items-center"><input type="checkbox" id="device_idc"> <span class="ml-2">IDC</span></label>
+                                <label class="flex items-center"><input type="checkbox" id="device_ng"> <span class="ml-2">NG Tube</span></label>
+                                <label class="flex items-center"><input type="checkbox" id="device_pacing_wire"> <span class="ml-2">Epicardial Pacing Wires</span></label>
+                                
                                 <div class="pt-2">
                                     <h5 class="font-medium text-gray-600 mb-2 text-sm">PIVCs</h5>
                                     <div id="pivcs_container" class="space-y-2"></div>
                                     <button type="button" id="addPivcButton" class="mt-2 text-sm bg-blue-100 text-blue-800 hover:bg-blue-200 px-3 py-1 rounded-md">+ Add PIVC</button>
                                 </div>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 class="font-medium text-gray-600 mb-2">Other Devices</h4>
-                            <div class="space-y-2">
-                                <label class="flex items-center"><input type="checkbox" id="device_idc"> <span class="ml-2">IDC</span></label>
-                                <label class="flex items-center"><input type="checkbox" id="device_ng"> <span class="ml-2">NG Tube</span></label>
-                                <label class="flex items-center"><input type="checkbox" id="device_pacing_wire"> <span class="ml-2">Epicardial Pacing Wires</span></label>
-                                <div class="flex items-center space-x-2 pt-1">
-                                    <input type="checkbox" id="device_other">
-                                    <input type="text" id="device_other_text" placeholder="Other device..." class="text-sm p-1 border rounded-md w-full">
+                                <div class="pt-2">
+                                    <h5 class="font-medium text-gray-600 mb-2 text-sm">Other Devices</h5>
+                                    <div id="other_devices_container" class="space-y-2"></div>
+                                    <button type="button" id="addOtherDeviceButton" class="mt-2 text-sm bg-indigo-100 text-indigo-800 hover:bg-indigo-200 px-3 py-1 rounded-md">+ Add Other Device</button>
                                 </div>
                             </div>
                         </div>
-                         <div>
-                            <h4 class="font-medium text-gray-600 mb-2">Drains</h4>
-                            <div id="drains_container" class="space-y-2"></div>
-                            <button type="button" id="addDrainButton" class="mt-2 text-sm bg-teal-100 text-teal-800 hover:bg-teal-200 px-3 py-1 rounded-md">+ Add Drain</button>
-                        </div>
-                        <div>
-                            <h4 class="font-medium text-gray-600 mb-2">Wounds</h4>
-                            <div id="wounds_container" class="space-y-2"></div>
-                            <button type="button" id="addWoundButton" class="mt-2 text-sm bg-pink-100 text-pink-800 hover:bg-pink-200 px-3 py-1 rounded-md">+ Add Wound</button>
+                        <div class="space-y-6">
+                             <div>
+                                <h4 class="font-medium text-gray-600 mb-2">Drains</h4>
+                                <div id="drains_container" class="space-y-2"></div>
+                                <button type="button" id="addDrainButton" class="mt-2 text-sm bg-teal-100 text-teal-800 hover:bg-teal-200 px-3 py-1 rounded-md">+ Add Drain</button>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-600 mb-2">Wounds</h4>
+                                <div id="wounds_container" class="space-y-2"></div>
+                                <button type="button" id="addWoundButton" class="mt-2 text-sm bg-pink-100 text-pink-800 hover:bg-pink-200 px-3 py-1 rounded-md">+ Add Wound</button>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <div><label for="impression" class="block font-medium text-gray-600">Impression:</label><textarea id="impression" rows="3" class="form-input"></textarea></div>
-                <div><label for="emrAdditionalNotes" class="block font-medium text-gray-600">Additional Plan Notes:</label><textarea id="emrAdditionalNotes" rows="3" class="form-input"></textarea></div>
+                <div><label for="impression" class="block font-medium text-gray-600">Impression:</label><textarea id="impression" rows="4" class="form-input"></textarea></div>
+                <div><label for="emrAdditionalNotes" class="block font-medium text-gray-600">Additional Plan Notes:</label><textarea id="emrAdditionalNotes" rows="4" class="form-input"></textarea></div>
             </div>
         </div>
 
@@ -293,9 +298,9 @@
         </div>
     </div>
     
-    <div class="text-center mt-8 text-gray-500 text-sm">Major update version 3 28/8/25</div>
+    <div class="text-center mt-8 text-gray-500 text-sm">Major update version 2.3 - Professional Format III</div>
 
-     <script>
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Element References ---
             const scoreInputs = document.querySelectorAll('.score-input');
@@ -307,6 +312,7 @@
             const emrSummaryEl = document.getElementById('emrSummary');
             const bloodInputs = document.querySelectorAll('.blood-input');
             const calculatedADDSEl = document.getElementById('calculatedADDSScore');
+            const addsBreakdownEl = document.getElementById('addsBreakdown');
             const addsModCheckbox = document.getElementById('addsModificationCheckbox');
             const addsModDetails = document.getElementById('addsModificationDetails');
             const addDrainButton = document.getElementById('addDrainButton');
@@ -315,6 +321,8 @@
             const woundsContainer = document.getElementById('wounds_container');
             const addPivcButton = document.getElementById('addPivcButton');
             const pivcsContainer = document.getElementById('pivcs_container');
+            const addOtherDeviceButton = document.getElementById('addOtherDeviceButton');
+            const otherDevicesContainer = document.getElementById('other_devices_container');
             const picsRadios = document.querySelectorAll('input[name="pics_status"]');
             const picsUnableDetails = document.getElementById('pics_unable_details');
             const vitalInputs = document.querySelectorAll('.vital-input');
@@ -323,9 +331,44 @@
             const nursingConcernRadios = document.querySelectorAll('input[name="concern_score"]');
             const nursingConcernText = document.getElementById('nursingConcernText');
             
-            // --- Data Maps & Constants ---
+            // --- Data Maps & State ---
+            let currentAddsBreakdown = 'Normal Parameters';
             const categoryMap = {'unsafe':'Unsafe for Ward: Immediate senior review required','category-1-high':'Category 1 - High Risk: Escalate to ALERT medical rounding team','category-1':'Category 1: Enhanced follow-up for 72 hours','category-2':'Category 2: Standard follow-up'};
-            const carePlanMap = {'resp_increasing_o2':'Respiratory Risk: Perform focused respiratory assessment. Escalate for review of increasing O2 demand.','resp_rapid_wean':'Respiratory Risk: Increase frequency of respiratory observations. Monitor for signs of fatigue.','bloods_electrolytes':'Biochemical Risk: Monitor electrolyte trends. Ensure replacement therapy is charted and administered.','bloods_lactate_mid':'Biochemical Risk: Liaise with medical team for serial lactate measurements to ensure clearance.','bloods_creatinine':'Renal Risk: Maintain strict fluid balance chart. Monitor renal function. Review nephrotoxic medications.','bloods_albumin':'Nutritional Risk: Refer to Dietitian for nutritional assessment. Monitor for oedema and poor wound healing.','bloods_crp':'Infection/Inflammatory Risk: Continue vigilant monitoring for signs of infection. Ensure timely antibiotics.','bloods_anaemia':'Bleeding Risk: Monitor for signs of active bleeding. Discuss transfusion threshold with medical team.','pain_iv':'Pain Management: Perform comprehensive pain assessment. Escalate to Acute Pain Service if poorly controlled.','pain_pca':'Pain Management: Perform comprehensive pain assessment. Escalate to Acute Pain Service if poorly controlled.','fluid_mild':'Fluid Balance Risk: Maintain strict fluid balance chart. Perform clinical fluid assessment.','fluid_sig':'Fluid Balance Risk: Maintain strict fluid balance chart. Perform clinical fluid assessment.','diet_modified':'Nutritional Risk: Ensure referrals to Dietitian/Speech Pathology are in place. Monitor intake.','diet_nbm':'Nutritional Risk: Ensure referrals to Dietitian/Speech Pathology are in place. Monitor intake.','bowels_issue':'Gastrointestinal Risk: Implement bowel management plan. Monitor for signs of ileus.','delirium_mild':'Cognitive Risk: Implement non-pharmacological delirium prevention/management strategies.','delirium_mod':'Cognitive Risk: Implement non-pharmacological delirium prevention/management strategies.','mobility_assisted':'Mobility Deficit: Ensure Physiotherapy referral is active. Implement pressure injury prevention strategies.','mobility_bedbound':'Mobility Deficit: Ensure Physiotherapy referral is active. Implement pressure injury prevention strategies.','mobility_limited':'Mobility Deficit: Liaise with Physiotherapy to create a safe mobilisation plan that accounts for complex device management. Ensure adequate staff assistance for transfers.','airway_weak':'Airway Clearance Risk: Collaborate with Physiotherapy on secretion management plan.','airway_altered':'Airway Risk: Confirm ward staff competency with tracheostomy/laryngectomy care.','lines_cvc':'Infection Risk: Daily review of Central Line necessity with medical team. Maintain strict ANTT for all access.','drains_high_risk':'Drain Management: Maintain vigilance over drain patency and output. Escalate any changes.','concern_present':"Nursing Concern: Articulate and escalate specific concerns to senior staff for 'fresh eyes' review.",'frailty_mild':'Frailty Risk: Ensure appropriate referrals (Geriatrics, OT, Physio). Focus on safe mobilization.','frailty_mod':'Frailty Risk: Ensure appropriate referrals (Geriatrics, OT, Physio). Focus on safe mobilization.','systemic_comorbid':'Systemic Risk: Confirm relevant specialty teams have been consulted and a consolidated plan is in place.','systemic_ooh':'Systemic Risk: Provide a detailed, structured handover to the after-hours team.','crit_met':'Critical Risk: Patient is in MET criteria. Initiate MET call and immediate resuscitation.','crit_adds4':'Critical Risk: Patient has high ADDS score. Escalate for urgent medical review (<30 mins).','crit_lactate_high':'Critical Risk: Patient is critically unwell. Escalate for immediate senior medical review for shock.','crit_af':'Critical Risk: Patient is in unstable AF. Escalate for urgent cardiology/medical review.','crit_hb_drop':'Critical Risk: Significant Hb drop or active bleeding. Escalate for urgent medical/surgical review.'};
+            const carePlanMap = {
+                'crit_met': 'CRITICAL: Patient is in MET criteria. Initiate MET call and immediate resuscitation as per local protocol.',
+                'crit_adds4': 'CRITICAL: High ADDS score indicates significant physiological distress. Escalate for urgent medical review (<30 mins).',
+                'crit_lactate_high': 'CRITICAL: Lactate >3.5 suggests severe tissue hypoperfusion. Escalate for immediate senior medical review for management of shock.',
+                'crit_af': 'CRITICAL: Unstable AF requires urgent intervention. Escalate for cardiology/medical review, prepare for 12-lead ECG and potential cardioversion.',
+                'crit_hb_drop': 'CRITICAL: Significant Hb drop or active bleeding requires urgent investigation. Escalate for urgent medical/surgical review, consider cross-match.',
+                'resp_increasing_o2': 'Assess for new signs of respiratory distress (work of breathing, accessory muscle use, auscultation). Liaise with medical team to consider CXR/ABG.',
+                'resp_rapid_wean': 'Increase frequency of respiratory observations (RR, SpO2, WOB) for next 4-6 hours to monitor for signs of fatigue or impending failure.',
+                'bloods_electrolytes': 'Monitor electrolyte trends and ensure replacement therapy is prescribed and administered in a timely manner. Consider cardiac monitoring for severe K+ abnormalities.',
+                'bloods_lactate_mid': 'Liaise with medical team for serial lactate measurements (e.g., 4-6 hourly) to ensure clearance, indicating response to resuscitation/treatment.',
+                'bloods_creatinine': 'Maintain strict fluid balance chart, ensuring accurate measurement of urine output (>0.5ml/kg/hr). Liaise with pharmacy to review for nephrotoxic medications.',
+                'bloods_albumin': 'Ensure active dietitian referral for nutritional assessment. Monitor closely for peripheral/pulmonary oedema and signs of poor wound healing.',
+                'bloods_crp': 'Continue vigilant monitoring for signs of sepsis (Sepsis Kills pathway). Ensure timely administration of antibiotics if prescribed and follow up on microbiology.',
+                'bloods_anaemia': 'Monitor for signs of occult bleeding (melaena, haematemesis) or haemodynamic instability. Liaise with medical team to clarify transfusion threshold.',
+                'pain_iv': 'Perform comprehensive pain assessment using a validated tool. Ensure multimodal analgesia is optimised to reduce opioid load. Escalate to Acute Pain Service if poorly controlled.',
+                'pain_pca': 'Perform comprehensive pain assessment, including sedation scoring. Ensure regular checks of respiratory rate and naloxone availability. Escalate to APS if pain remains severe.',
+                'fluid_sig': 'Maintain strict FBC, including daily weights. Perform clinical fluid assessment (JVP, peripheral oedema, lung auscultation). Liaise with medical team to review fluid orders/consider diuretics.',
+                'fluid_mild': 'Maintain strict fluid balance chart and perform twice-daily clinical fluid assessment to monitor trend.',
+                'diet_nbm': 'Confirm feeding plan with medical team and dietitian, including caloric/protein targets. Ensure meticulous NG/PEG care and monitor for signs of intolerance.',
+                'diet_modified': 'Ensure appropriate referrals to Dietitian/Speech Pathology are active. Closely monitor and document oral intake and tolerance.',
+                'delirium_mod': 'Implement delirium care bundle: Frequent reorientation, maintain day/night cycle, encourage family presence, review chart for deliriogenic agents (e.g. anticholinergics, benzodiazepines).',
+                'delirium_mild': 'Implement delirium prevention strategies. Screen formally with CAM-ICU/4AT. Minimise tethers and promote early mobilisation.',
+                'mobility_bedbound': 'Implement pressure injury prevention bundle: Regular turns (2-4 hourly), pressure-relieving mattress, skin assessment. Liaise with physio for in-bed exercise plan.',
+                'mobility_assisted': 'Ensure Physiotherapy referral is active and recommendations are followed. Implement falls risk mitigation strategies.',
+                'mobility_limited': 'Liaise with Physiotherapy for a safe mobilisation plan that accounts for device management. Ensure adequate staff assistance is planned for all transfers.',
+                'airway_altered': 'Confirm ward staff competency with tracheostomy/laryngectomy care. Ensure emergency equipment (e.g., spare tube, obturator) is present at bedside.',
+                'lines_cvc': 'Perform daily review of Central Line necessity with medical team (line days). Maintain strict ANTT for all access and monitor site for signs of infection.',
+                'drains_high_risk': 'Maintain vigilance over drain patency and output characteristics/volume. Escalate any sudden changes or signs of blockage to the parent surgical/medical team.',
+                'bowels_issue': 'Implement institutional bowel management protocol. Monitor for abdominal distension and listen for bowel sounds. Escalate if signs of ileus develop.',
+                'concern_present': "Articulate specific nursing concerns and escalate to senior nursing/medical staff for a 'fresh eyes' review of the patient's trajectory.",
+                'frailty_mod': 'Ensure comprehensive geriatric assessment referrals are in place (Geriatrics, OT, Physio). Focus on safe mobilisation, nutritional support, and cognitive stimulation.',
+                'frailty_mild': 'Focus on preventing deconditioning through active engagement with physiotherapy. Be mindful of increased risk of falls and delirium.',
+                'systemic_comorbid': 'Confirm relevant specialty teams have been consulted and a consolidated, communicated management plan is in place to avoid conflicting treatments.',
+                'systemic_ooh': 'Provide a detailed, structured handover to the after-hours team, highlighting key risks and specific parameters for escalation (e.g., "Call if SBP < 100 or RR > 24").'
+            };
             const assessmentNarrativeMap = {'crit_met':'currently in MET criteria','crit_adds4':'a high ADDS score','crit_lactate_high':'a critically high lactate','crit_af':'unstable atrial fibrillation','crit_hb_drop':'a significant drop in haemoglobin or active bleeding','adds_worsening':'a worsening trend in observations','resp_increasing_o2':'increasing oxygen requirements','resp_rapid_wean':'a recent rapid wean of respiratory support','bloods_lactate_mid':'a moderately elevated lactate','bloods_creatinine':'a significant renal impairment','bloods_albumin':'hypoalbuminaemia, indicating nutritional risk','bloods_crp':'a significant inflammatory response (CRP > 100)','pain_pca':'poorly controlled pain requiring advanced analgesia','fluid_sig':'a significant fluid imbalance','diet_nbm':'is receiving no oral nutrition (NBM/NG/TPN)','delirium_mod':'moderate to severe delirium','mobility_bedbound':'is currently bed-bound with significant mobility deficits', 'mobility_limited':'mobility is limited by devices/attachments', 'airway_altered':'a surgically altered airway (tracheostomy/laryngectomy)','concern_present':'specific concerns raised by the bedside nurse'};
             const standardScores = { getRrScore(rr) { let s=0,m=false; if(rr>=36||rr<5)m=true;else if(rr>=30&&rr<=35)s=3;else if(rr>=25&&rr<=29)s=2;else if(rr>=21&&rr<=24)s=1;else if(rr>=5&&rr<=9)s=3; return {score:s, isMet:m}; }, getSpo2Score(spo2) { let s=0,m=false; if(spo2<=84)m=true;else if(spo2>=85&&spo2<=90)s=2;else if(spo2>=91&&spo2<=93)s=1; return {score:s, isMet:m}; }, getO2Score(o2Flow, o2Unit) { let s=0; if(o2Unit==='lpm'){if(o2Flow>10)s=3;else if(o2Flow>=5&&o2Flow<=9)s=2;else if(o2Flow>=2&&o2Flow<=4)s=1}else{if(o2Flow>=40)s=3;else if(o2Flow>=29)s=2;else if(o2Flow>=21)s=1} return {score:s, isMet:false}; }, getHrScore(hr) { let s=0,m=false; if(hr>=140||hr<30)m=true;else if(hr>=130&&hr<=139)s=3;else if(hr>=120&&hr<=129)s=2;else if(hr>=100&&hr<=119)s=1;else if(hr>=40&&hr<=49)s=1;else if(hr>=30&&hr<=39)s=2; return {score:s, isMet:m}; }, getSbpScore(sbp) { let s=0,m=false; if(sbp<90)m=true;else if(sbp>=190&&sbp<=199)s=3;else if(sbp>=180&&sbp<=189)s=2;else if(sbp>=150&&sbp<=179)s=1;else if(sbp>=80&&sbp<=99)s=1;else if(sbp>=70&&sbp<=79)s=2; return {score:s, isMet:m}; } };
             
@@ -337,119 +380,193 @@
                 if (el && el.selectedIndex > -1) { return el.options[el.selectedIndex].text; }
                 return '';
             };
-            const getTrend = (current, previous, tolerance, higherIsWorse = true) => { if (isNaN(current) || isNaN(previous)) return ''; if (Math.abs(current - previous) <= tolerance) return ' (static)'; if (higherIsWorse) { return current > previous ? ' (worsening)' : ' (improving)'; } else { return current < previous ? ' (worsening)' : ' (improving)'; } };
-            
+            const getTrendText = (current, previous, higherIsWorse = true) => {
+                const curr = parseFloat(current);
+                const prev = parseFloat(previous);
+                if (isNaN(curr) || isNaN(prev)) return '';
+                if (Math.abs(curr - prev) < (curr * 0.05) && Math.abs(curr - prev) < 1) return '(static)';
+                if (higherIsWorse) {
+                    return curr > prev ? '(worsening)' : '(improving)';
+                } else {
+                    return curr < prev ? '(worsening)' : '(improving)';
+                }
+            };
+            const generateImpression = () => {
+                const narratives = [];
+                scoreInputs.forEach(input => {
+                    if (input.checked && input.dataset.score !== "0") {
+                        const id = input.dataset.id;
+                        if (assessmentNarrativeMap[id]) narratives.push(assessmentNarrativeMap[id]);
+                    }
+                });
+                if (narratives.length === 0) return 'Patient appears clinically stable with no major risk factors identified on review. Continue routine ward monitoring.';
+                let impression = `Patient presents with an elevated risk score, primarily driven by: ${narratives.join(', ')}. `;
+                const concernText = safeGet('nursingConcernText');
+                if (safeIsChecked('concern_present') && concernText.trim()) {
+                    impression += `Bedside team has also flagged specific concerns regarding: "${concernText.trim()}". `;
+                }
+                impression += 'Requires close monitoring and adherence to the plan below to mitigate risk of deterioration.';
+                return impression;
+            };
+
             // --- Core Functions ---
             function generateSummary() {
                 try {
                     const output = [];
-                    const initials = safeGet('patientInitials').toUpperCase(), urn = safeGet('urnLast4'), ward = safeGet('ward'), room = safeGet('roomNumber'), los = safeGet('losDays');
-                    output.push(`ALERT ASSESSMENT: ${initials || '??'} (URN: ...${urn || 'XXXX'}) - ${ward || 'WARD'} Rm ${room || '??'}`);
-                    if (los) output.push(`Post-ICU Day ${los}`);
+                    const los = safeGet('losDays');
+                    const now = new Date();
+                    const timeOfReview = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    
+                    const getDischargeCategory = () => {
+                        const text = riskCategoryEl.textContent;
+                        if (text.includes('Unsafe')) return 'Unsafe for Ward Discharge';
+                        if (text.includes('Category 1 - High Risk')) return 'Cat 1 High Risk Discharge';
+                        if (text.includes('Category 1:')) return 'Cat 1 Discharge';
+                        return 'Cat 2 Standard Discharge';
+                    };
+
+                    // ==== HEADER ====
+                    output.push('ALERT CNS post ICU review');
+                    if (los) output.push(`ICU LOS: ${los} days`);
+                    output.push(getDischargeCategory());
+                    output.push(`Time of review: ${timeOfReview}`);
                     output.push('');
-                    output.push(`RISK SCORE: ${totalScoreEl.textContent} (${riskCategoryEl.textContent})`);
-                    const impression = safeGet('impression');
-                    if (impression.trim()) {
-                        output.push('\nIMPRESSION:');
-                        output.push(impression);
+                    
+                    const admissionReason = safeGet('admissionReason').trim();
+                    const pmh = safeGet('pmh').trim();
+                    const userImpression = safeGet('impression').trim();
+                    if (admissionReason) output.push(`Reason for admission: ${admissionReason}`);
+                    if (pmh) output.push(`PMH: ${pmh}`);
+                    output.push(`Impression: ${userImpression || generateImpression()}`);
+                    output.push('');
+
+                    // ==== ADDS/MODS ====
+                    let addsLine = `ADDS: ${calculatedADDSEl.textContent}`;
+                    if (currentAddsBreakdown && currentAddsBreakdown !== 'Normal Parameters') {
+                        addsLine += ` (Triggers: ${currentAddsBreakdown})`;
+                    }
+                    output.push(addsLine);
+                    if (safeIsChecked('addsModificationCheckbox')) {
+                        output.push(`MODS Active: ${safeGet('addsModificationText') || 'Rationale not specified.'}`);
                     }
                     output.push('');
-                    const riskNarratives = [], carePlanItems = [];
+                    
+                    // ==== SYSTEMS REVIEW ====
+                    output.push('---- SYSTEMS REVIEW ----');
+
+                    // A-E Assessment re-added here
+                    const airway = safeGet('airway_input');
+                    const rr = safeGet('rr_input'), spo2 = safeGet('spo2_input'), o2_flow = safeGet('o2_flow_input'), o2_unit = safeGet('o2_unit_input');
+                    let o2_delivery = 'on Room Air.';
+                    if (o2_flow && parseFloat(o2_flow) > 0) {
+                        o2_delivery = `on ${o2_flow}${o2_unit === 'lpm' ? 'L via Nasal Prongs' : '% FiO2'}.`;
+                    }
+                    const hr = safeGet('hr_input'), sbp = safeGet('sbp_input'), dbp = safeGet('dbp_input');
+                    const consciousness = getSelectText('consciousness_input');
+                    const temp = safeGet('temp_input');
+                    const amt = getSelectText('amt_score_input');
+                    
+                    output.push('Clinical Observations:');
+                    output.push(`  A: ${airway}`);
+                    output.push(`  B: RR ${rr || 'N/A'}, SpO2 ${spo2 || 'N/A'}% ${o2_delivery}`);
+                    output.push(`  C: HR ${hr || 'N/A'}, BP ${sbp || 'N/A'}/${dbp || 'N/A'} mmHg.`);
+                    output.push(`  D: AVPU-${consciousness}. AMT ${amt}.`);
+                    output.push(`  E: Temp ${temp || 'N/A'} C.`);
+                    
+                    const bloods = [];
+                    const formatBlood = (label, currId, prevId, unit, higherIsWorse = true, normalRange = null) => {
+                        const curr = safeGet(currId), prev = safeGet(prevId);
+                        if (!curr) return;
+                        let interpretation = '';
+                        if (normalRange) {
+                            const val = parseFloat(curr);
+                            if (val < normalRange[0]) interpretation = ' (low)';
+                            if (val > normalRange[1]) interpretation = ' (high)';
+                        }
+                        bloods.push(`  - ${label}: ${curr}${unit} ${getTrendText(curr, prev, higherIsWorse)}${interpretation}`);
+                    };
+                    formatBlood('Hb', 'hb_input', 'hb_input_prev', ' g/L', false, [115, 165]);
+                    formatBlood('K+', 'k_input', 'k_input_prev', ' mmol/L', true, [3.5, 5.2]);
+                    formatBlood('Creatinine', 'creatinine_input', 'creatinine_input_prev', ' umol/L', true, [60, 110]);
+                    formatBlood('Lactate', 'lactate_input', 'lactate_input_prev', ' mmol/L', true, [0.5, 2.0]);
+                    formatBlood('CRP', 'crp_input', 'crp_input_prev', ' mg/L', true, [0, 5]);
+                    formatBlood('Albumin', 'albumin_input', 'albumin_input_prev', ' g/L', false, [35, 50]);
+                    if (bloods.length > 0) {
+                        output.push('Bloods:');
+                        output.push(...bloods);
+                    }
+                    
+                    const fbc24 = safeGet('fbc_24hr_input'), fbcTotal = safeGet('fbc_total_input');
+                    if (fbc24 || fbcTotal) {
+                        let fluidText = 'Fluid Balance: ';
+                        if (fbc24) fluidText += `24hr: ${parseFloat(fbc24) >= 0 ? '+' : ''}${fbc24}mL. `;
+                        if (fbcTotal) fluidText += `Cumulative: ${parseFloat(fbcTotal) >= 0 ? '+' : ''}${fbcTotal}mL.`;
+                        output.push(fluidText);
+                    }
+                    
+                    const devices = [], pivcs = [], drains = [], wounds = [];
+                    document.querySelectorAll('#device_cvc, #device_picc, #device_vascath, #device_idc, #device_ng, #device_pacing_wire').forEach(el => { if(el.checked) devices.push(el.nextElementSibling.textContent); });
+                    document.querySelectorAll('#other_devices_container input').forEach(el => { if (el.value.trim()) devices.push(el.value.trim()); });
+                    document.querySelectorAll('#pivcs_container input').forEach(el => { if (el.value.trim()) pivcs.push(el.value.trim()); });
+                    document.querySelectorAll('#drains_container input').forEach(el => { if (el.value.trim()) drains.push(el.value.trim()); });
+                    document.querySelectorAll('#wounds_container input').forEach(el => { if (el.value.trim()) wounds.push(el.value.trim()); });
+                    if (devices.length > 0 || pivcs.length > 0 || drains.length > 0 || wounds.length > 0) {
+                         output.push('Lines, Drains & Wounds:');
+                         if (pivcs.length > 0) output.push(`  - PIVCs: ${pivcs.join(', ')}.`);
+                         if (devices.length > 0) output.push(`  - Devices: ${devices.join(', ')}.`);
+                         if (drains.length > 0) output.push(`  - Drains: ${drains.join(', ')}.`);
+                         if (wounds.length > 0) output.push(`  - Wounds: ${wounds.join(', ')}.`);
+                    }
+                    
+                    const picsStatus = document.querySelector('input[name="pics_status"]:checked').value;
+                    if (picsStatus !== 'negative') {
+                        let picsLine = 'PICS Screen: Positive.';
+                        if (picsStatus === 'unable') picsLine = `PICS Screen: Unable to assess. Reason: ${safeGet('pics_unable_notes') || 'Not specified.'}`;
+                        output.push(picsLine);
+                    }
+                    output.push('');
+                    
+                    // ==== PLAN ====
+                    output.push('---- PLAN ----');
+                    const planItems = {};
+                    const planCategoryMap = {'crit_': 'CRITICAL RISKS - IMMEDIATE ACTION', 'resp_': 'Respiratory Plan', 'adds_': 'Observations Plan', 'bloods_': 'Biochemical / Haematology Plan', 'fluid_': 'Fluid Management Plan', 'pain_': 'Pain Management', 'diet_': 'Nutrition Plan', 'bowels_': 'Bowel Management', 'delirium_': 'Cognitive Support', 'mobility_': 'Mobility & Pressure Care', 'airway_': 'Airway Management', 'lines_': 'Line & Device Management', 'drains_': 'Drain Management', 'concern_': 'Nursing Concerns', 'systemic_': 'Systemic / Other', 'frailty_': 'Frailty Plan'};
                     scoreInputs.forEach(input => {
                         if (input.checked && input.dataset.score !== "0") {
                             const id = input.dataset.id;
-                            if (assessmentNarrativeMap[id]) riskNarratives.push(assessmentNarrativeMap[id]);
-                            if (carePlanMap[id]) carePlanItems.push(carePlanMap[id]);
+                            if (carePlanMap[id]) {
+                                for (const prefix in planCategoryMap) {
+                                    if (id.startsWith(prefix)) {
+                                        const category = planCategoryMap[prefix];
+                                        if (!planItems[category]) planItems[category] = [];
+                                        planItems[category].push(`- ${carePlanMap[id]}`);
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     });
-                    if (riskNarratives.length > 0) {
-                        output.push('KEY RISKS IDENTIFIED:');
-                        output.push(`Patient has ${riskNarratives.join(', ')}.`);
-                        const concern = safeGet('nursingConcernText');
-                        if (safeIsChecked('concern_present') && concern.trim()) output.push(`Specific Nursing Concern: ${concern}`);
-                        output.push('');
-                    }
-                    output.push('PLAN & FOCUS:');
-                    if (carePlanItems.length > 0) {
-                        carePlanItems.forEach(item => output.push(`- ${item}`));
+
+                    const sortedCategories = Object.keys(planItems).sort((a, b) => a.includes('CRITICAL') ? -1 : 1);
+                    if (sortedCategories.length > 0) {
+                        sortedCategories.forEach(category => {
+                            output.push(category + ':');
+                            output.push(...planItems[category]);
+                        });
                     } else {
-                        output.push('- Continue standard ward-based care.');
+                        output.push('- Continue with standard ward-based care and observations.');
                     }
-                    const additionalNotes = safeGet('emrAdditionalNotes');
-                    if (additionalNotes.trim()) output.push(`- Additional Notes: ${additionalNotes}`);
+
+                    const additionalNotes = safeGet('emrAdditionalNotes').trim();
+                    if (additionalNotes) {
+                        output.push('Additional Plan Notes:');
+                        additionalNotes.split('\n').forEach(line => output.push(`- ${line}`));
+                    }
                     output.push('');
-                    output.push('A-E ASSESSMENT:');
-                    output.push(`- Airway: ${safeGet('airway_input') || 'Not assessed'}`);
-                    const o2_flow = safeGet('o2_flow_input');
-                    const o2_delivery = (o2_flow && parseFloat(o2_flow) > 0) ? `${o2_flow} ${getSelectText('o2_unit_input')}` : 'Room Air';
-                    output.push(`- Breathing: RR ${safeGet('rr_input') || 'N/A'}, SpO2 ${safeGet('spo2_input') || 'N/A'}% on ${o2_delivery}`);
-                    output.push(`- Circulation: HR ${safeGet('hr_input') || 'N/A'}, BP ${safeGet('sbp_input') || 'N/A'}/${safeGet('dbp_input') || 'N/A'}`);
-                    output.push(`- Disability: ${getSelectText('consciousness_input') || 'N/A'}`);
-                    output.push(`- Exposure: Temp ${safeGet('temp_input') || 'N/A'}°C`);
-                    let addsLine = `- ADDS Score: ${calculatedADDSEl.textContent}`;
-                    if (safeIsChecked('addsModificationCheckbox')) {
-                        const rationale = safeGet('addsModificationText');
-                        if (rationale.trim()) addsLine += ` (MODS active: ${rationale})`;
-                    }
-                    output.push(addsLine);
-                    output.push('');
-                    const bloodLines = [];
-                    const formatBlood = (name, id_curr, id_prev, tol, higherIsWorse=true) => {
-                        const currVal = safeGet(id_curr);
-                        if (!currVal) return;
-                        const curr = parseFloat(currVal), prev = parseFloat(safeGet(id_prev));
-                        const trend = getTrend(curr, prev, tol, higherIsWorse);
-                        const prevText = isNaN(prev) ? '' : ` (prev ${prev})`;
-                        bloodLines.push(`- ${name}: ${curr}${prevText}${trend}`);
-                    };
-                    formatBlood('Lactate', 'lactate_input', 'lactate_input_prev', 0.2);
-                    formatBlood('Creatinine', 'creatinine_input', 'creatinine_input_prev', 10);
-                    formatBlood('Albumin', 'albumin_input', 'albumin_input_prev', 2, false);
-                    formatBlood('CRP', 'crp_input', 'crp_input_prev', 10);
-                    formatBlood('Hb', 'hb_input', 'hb_input_prev', 5, false);
-                    formatBlood('K+', 'k_input', 'k_input_prev', 0.2);
-                    formatBlood('Mg++', 'mg_input', 'mg_input_prev', 0.1);
-                    if (bloodLines.length > 0) {
-                        output.push('KEY BLOODS:');
-                        output.push(...bloodLines);
-                        output.push('');
-                    }
-                    const deviceLines = [];
-                    const centralLines = ['device_cvc', 'device_picc', 'device_vascath'].filter(safeIsChecked).map(id => id.split('_')[1].toUpperCase());
-                    if(centralLines.length > 0) deviceLines.push(`- Vascular Access: ${centralLines.join(', ')}`);
-                    const pivcs = [];
-                    document.querySelectorAll('#pivcs_container input[type="text"]').forEach(i => { if (i.value.trim()) pivcs.push(i.value.trim()); });
-                    if (pivcs.length > 0) deviceLines.push(`- PIVCs: ${pivcs.join('; ')}`);
-                    const otherDevices = ['device_idc', 'device_ng', 'device_pacing_wire'].filter(safeIsChecked).map(id => document.getElementById(id).nextElementSibling.textContent.trim());
-                    const otherDeviceText = safeGet('device_other_text');
-                    if (safeIsChecked('device_other') && otherDeviceText.trim()) otherDevices.push(otherDeviceText);
-                    if(otherDevices.length > 0) deviceLines.push(`- Other Devices: ${otherDevices.join(', ')}`);
-                    const drains = [];
-                    document.querySelectorAll('#drains_container input[type="text"]').forEach(i => { if (i.value.trim()) drains.push(i.value.trim()); });
-                    if (drains.length > 0) deviceLines.push(`- Drains: ${drains.join('; ')}`);
-                    const wounds = [];
-                    document.querySelectorAll('#wounds_container input[type="text"]').forEach(i => { if (i.value.trim()) wounds.push(i.value.trim()); });
-                    if (wounds.length > 0) deviceLines.push(`- Wounds: ${wounds.join('; ')}`);
-                    if (deviceLines.length > 0) {
-                        output.push('LINES, DRAINS & WOUNDS:');
-                        output.push(...deviceLines);
-                        output.push('');
-                    }
-                    const admissionReason = safeGet('admissionReason'), pmh = safeGet('pmh'), icuSummary = safeGet('icuSummary');
-                    if (admissionReason.trim() || pmh.trim()) {
-                        output.push('BACKGROUND:');
-                        if (admissionReason.trim()) output.push(`- Admission: ${admissionReason}`);
-                        if (pmh.trim()) output.push(`- PMH: ${pmh}`);
-                        output.push('');
-                    }
-                    if(icuSummary.trim()) {
-                        output.push('ICU SUMMARY:');
-                        output.push(icuSummary);
-                        output.push('');
-                    }
+                    output.push('Reviewed by ALERT CNS. Please escalate any concerns.');
+
                     emrSummaryEl.value = output.join('\n');
                 } catch (error) {
-                    emrSummaryEl.value = `An error occurred while generating the summary. Please check the console for details.\n\nError: ${error.message}`;
+                    emrSummaryEl.value = `An error occurred while generating the summary. Please check your inputs.\n\nError: ${error.message}`;
                     console.error("Summary generation failed:", error);
                 }
             }
@@ -485,6 +602,7 @@
                 drainsContainer.innerHTML=''; addDynamicInput(drainsContainer, 'Drain type & site...');
                 woundsContainer.innerHTML=''; addDynamicInput(woundsContainer, 'Wound location & description...');
                 pivcsContainer.innerHTML=''; addDynamicInput(pivcsContainer, 'e.g., Pink 20G Lt forearm...');
+                otherDevicesContainer.innerHTML = ''; addDynamicInput(otherDevicesContainer, 'Other device...');
                 picsUnableDetails.classList.add('hidden'); document.getElementById('pics_unable_notes').value = '';
                 document.querySelectorAll('.mod-details').forEach(el => el.classList.add('hidden'));
                 emrSummaryEl.value = '';
@@ -492,17 +610,58 @@
             }
             function calculateADDS() {
                 let adds = 0; let met = false;
+                const breakdownReasons = [];
                 const modsActive = safeIsChecked('addsModificationCheckbox');
                 const getMod = (name) => modsActive && document.querySelector(`input[name="mod_param"][value="${name}"]`).checked;
-                const rr = parseInt(safeGet('rr_input'),10); if (!isNaN(rr)) { if (getMod('RR')) { const op = document.querySelector('[data-param="rr"]').value; const v1 = parseFloat(safeGet('mod_rr_val1')); const v2 = parseFloat(safeGet('mod_rr_val2')); let breach = false; if (op==='between'&&(!isNaN(v1)&&rr<v1||!isNaN(v2)&&rr>v2)) breach=true; if (op==='less_than'&&!isNaN(v1)&&rr>=v1) breach=true; if (op==='greater_than'&&!isNaN(v1)&&rr<=v1) breach=true; if(breach){ const res = standardScores.getRrScore(rr); adds+=res.score; met=met||res.isMet; } } else { const res = standardScores.getRrScore(rr); adds+=res.score; met=met||res.isMet; } }
-                const spo2 = parseInt(safeGet('spo2_input'),10); const o2Flow = parseFloat(safeGet('o2_flow_input')); const o2Unit = safeGet('o2_unit_input'); if (getMod('SpO2')) { const l = parseFloat(safeGet('mod_spo2_lower')); if(!isNaN(spo2) && !isNaN(l) && spo2 < l) { const res = standardScores.getSpo2Score(spo2); adds+=res.score; met=met||res.isMet; } } else if (!isNaN(spo2)) { const res = standardScores.getSpo2Score(spo2); adds+=res.score; met=met||res.isMet; }
-                if (getMod('FiO2')) { if (o2Unit === 'fio2') { const u = parseFloat(safeGet('mod_fio2_upper')); if (!isNaN(o2Flow) && !isNaN(u) && o2Flow > u) { const res = standardScores.getO2Score(o2Flow, o2Unit); adds+=res.score; } } } else if (!isNaN(o2Flow) && o2Flow > 0 && !getMod('SpO2')) { const res = standardScores.getO2Score(o2Flow, o2Unit); adds+=res.score; }
-                const hr = parseInt(safeGet('hr_input'),10); if (!isNaN(hr)) { if (getMod('HR')) { const op = document.querySelector('[data-param="hr"]').value; const v1 = parseFloat(safeGet('mod_hr_val1')); const v2 = parseFloat(safeGet('mod_hr_val2')); let breach = false; if (op==='between'&&(!isNaN(v1)&&hr<v1||!isNaN(v2)&&hr>v2)) breach=true; if (op==='less_than'&&!isNaN(v1)&&hr>=v1) breach=true; if (op==='greater_than'&&!isNaN(v1)&&hr<=v1) breach=true; if(breach){ const res = standardScores.getHrScore(hr); adds+=res.score; met=met||res.isMet; } } else { const res = standardScores.getHrScore(hr); adds+=res.score; met=met||res.isMet; } }
-                const sbp = parseInt(safeGet('sbp_input'),10); if (!isNaN(sbp)) { if (getMod('SBP')) { const l = parseFloat(safeGet('mod_sbp_lower')); if (!isNaN(l) && sbp < l) { const res = standardScores.getSbpScore(sbp); adds+=res.score; met=met||res.isMet; } } else { const res = standardScores.getSbpScore(sbp); adds+=res.score; met=met||res.isMet; } }
-                const temp = parseFloat(safeGet('temp_input')); if (!isNaN(temp)) { if(temp>=38.6||temp<35.1)adds+=2;else if((temp>=38&&temp<=38.5)||(temp>=35.1&&temp<=36))adds+=1; }
-                const consciousness = parseInt(safeGet('consciousness_input'),10); if (!isNaN(consciousness)) { if(consciousness===3)met=true;else adds+=consciousness; }
+                
+                const rr = parseInt(safeGet('rr_input'), 10);
+                if (!isNaN(rr)) {
+                    let applyScore = true;
+                    if (getMod('RR')) {
+                        const op = document.querySelector('[data-param="rr"]').value;
+                        const v1 = parseFloat(safeGet('mod_rr_val1'));
+                        const v2 = parseFloat(safeGet('mod_rr_val2'));
+                        if (op === 'between' && !isNaN(v1) && !isNaN(v2) && (rr >= v1 && rr <= v2)) applyScore = false;
+                        if (op === 'less_than' && !isNaN(v1) && rr < v1) applyScore = false;
+                        if (op === 'greater_than' && !isNaN(v1) && rr > v1) applyScore = false;
+                    }
+                    if (applyScore) {
+                        const res = standardScores.getRrScore(rr);
+                        adds += res.score;
+                        met = met || res.isMet;
+                        if (res.score > 0) breakdownReasons.push(`RR ${rr} (+${res.score})`);
+                    }
+                }
+
+                const hr = parseInt(safeGet('hr_input'), 10);
+                if (!isNaN(hr)) {
+                    let applyScore = true;
+                     if (getMod('HR')) {
+                        const op = document.querySelector('[data-param="hr"]').value;
+                        const v1 = parseFloat(safeGet('mod_hr_val1'));
+                        const v2 = parseFloat(safeGet('mod_hr_val2'));
+                        if (op === 'between' && !isNaN(v1) && !isNaN(v2) && (hr >= v1 && hr <= v2)) applyScore = false;
+                        if (op === 'less_than' && !isNaN(v1) && hr < v1) applyScore = false;
+                        if (op === 'greater_than' && !isNaN(v1) && hr > v1) applyScore = false;
+                    }
+                    if (applyScore) {
+                        const res = standardScores.getHrScore(hr);
+                        adds += res.score;
+                        met = met || res.isMet;
+                        if (res.score > 0) breakdownReasons.push(`HR ${hr} (+${res.score})`);
+                    }
+                }
+                
+                const sbp = parseInt(safeGet('sbp_input'),10); if (!isNaN(sbp)) { let applyScore = true; if(getMod('SBP')) { const l = parseFloat(safeGet('mod_sbp_lower')); if(!isNaN(l) && sbp >= l) applyScore = false; } if(applyScore) { const res = standardScores.getSbpScore(sbp); adds+=res.score; met=met||res.isMet; if(res.score > 0) breakdownReasons.push(`SBP ${sbp} (+${res.score})`);} }
+                const spo2 = parseInt(safeGet('spo2_input'),10); if (!isNaN(spo2)) { let applyScore = true; if(getMod('SpO2')) { const l = parseFloat(safeGet('mod_spo2_lower')); if(!isNaN(l) && spo2 >= l) applyScore = false; } if(applyScore) { const res = standardScores.getSpo2Score(spo2); adds+=res.score; met=met||res.isMet; if(res.score > 0) breakdownReasons.push(`SpO2 ${spo2}% (+${res.score})`);} }
+                const o2Flow = parseFloat(safeGet('o2_flow_input')); const o2Unit = safeGet('o2_unit_input'); if (!isNaN(o2Flow) && o2Flow > 0) { let applyScore = true; if(getMod('FiO2')) { const u = parseFloat(safeGet('mod_fio2_upper')); if(!isNaN(u) && o2Flow < u) applyScore = false; } if(applyScore) { const res = standardScores.getO2Score(o2Flow, o2Unit); adds+=res.score; if(res.score > 0) breakdownReasons.push(`O2 ${o2Flow}${o2Unit === 'lpm' ? 'L/min' : '%'} (+${res.score})`);} }
+                const temp = parseFloat(safeGet('temp_input')); if (!isNaN(temp)) { let tempScore = 0; if(temp>=38.6||temp<35.1) tempScore=2; else if((temp>=38&&temp<=38.5)||(temp>=35.1&&temp<=36)) tempScore=1; if(tempScore > 0) { adds+=tempScore; breakdownReasons.push(`Temp ${temp}C (+${tempScore})`);}}
+                const consciousness = parseInt(safeGet('consciousness_input'),10); if (!isNaN(consciousness)) { if(consciousness===3)met=true;else if (consciousness > 0) { adds+=consciousness; breakdownReasons.push(`${getSelectText('consciousness_input')} (+${consciousness})`);} }
+                
                 calculatedADDSEl.textContent = met ? 'MET' : adds; calculatedADDSEl.classList.remove('mod-score', 'text-red-600', 'text-teal-600');
                 if (met) { calculatedADDSEl.classList.add('text-red-600'); } else if (modsActive) { calculatedADDSEl.textContent = `MODS ${adds}`; calculatedADDSEl.classList.add('mod-score'); } else { calculatedADDSEl.classList.add('text-teal-600'); }
+                if (breakdownReasons.length > 0) { currentAddsBreakdown = breakdownReasons.join(', '); } else { currentAddsBreakdown = 'Normal Parameters'; }
+                addsBreakdownEl.textContent = currentAddsBreakdown;
                 document.getElementById('crit_met_checkbox').checked=met;document.getElementById('crit_adds4_checkbox').checked=false;document.getElementById('adds_0_radio').checked=false;document.getElementById('adds_1-2_radio').checked=false;document.getElementById('adds_3_radio').checked=false;
                 if(!met&&adds>=4)document.getElementById('crit_adds4_checkbox').checked=true;else if(!met&&adds===3)document.getElementById('adds_3_radio').checked=true;else if(!met&&adds>=1)document.getElementById('adds_1-2_radio').checked=true;else if(!met)document.getElementById('adds_0_radio').checked=true;
                 calculateScore();
@@ -520,7 +679,8 @@
             addDrainButton.addEventListener('click', () => addDynamicInput(drainsContainer, 'Drain type & site...'));
             addWoundButton.addEventListener('click', () => addDynamicInput(woundsContainer, 'Wound location & description...'));
             addPivcButton.addEventListener('click', () => addDynamicInput(pivcsContainer, 'e.g., Pink 20G Lt forearm...'));
-            [drainsContainer, woundsContainer, pivcsContainer].forEach(c => c.addEventListener('click', e => { if (e.target.classList.contains('remove-btn')) e.target.parentElement.remove(); }));
+            addOtherDeviceButton.addEventListener('click', () => addDynamicInput(otherDevicesContainer, 'Other device...'));
+            [drainsContainer, woundsContainer, pivcsContainer, otherDevicesContainer].forEach(c => c.addEventListener('click', e => { if (e.target.classList.contains('remove-btn')) e.target.parentElement.remove(); }));
             bloodInputs.forEach(input => input.addEventListener('input', handleBloodInputs));
             scoreInputs.forEach(input => input.addEventListener('change', calculateScore));
             nursingConcernRadios.forEach(radio => radio.addEventListener('change', () => { nursingConcernText.style.display = safeIsChecked('concern_present') ? 'block' : 'none'; if (!safeIsChecked('concern_present')) nursingConcernText.value = ''; }));
