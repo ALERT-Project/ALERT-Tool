@@ -22,7 +22,10 @@
             background-color: #134E4A;
         }
         .form-input, .form-select {
-            @apply mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 text-sm transition-colors duration-150;
+            @apply mt-1 block w-full rounded-md border-2 border-gray-300 bg-white shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 text-sm transition-colors duration-150;
+        }
+        .form-textarea {
+             @apply mt-1 block w-full rounded-md border-2 border-gray-400 bg-gray-100 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 text-sm transition-colors duration-150;
         }
         .sub-label {
             @apply block text-sm font-medium text-gray-700;
@@ -37,7 +40,6 @@
             border-color: #ef4444 !important;
             background-color: #fee2e2 !important;
         }
-        /* Class for highlighting selected critical risk items */
         .risk-item-selected-critical {
             border-left: 4px solid #ef4444;
             background-color: #fee2e2;
@@ -93,35 +95,35 @@
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                       <div class="md:col-span-2">
                         <label for="reviewType" class="block font-medium text-gray-700">Type of Review:</label>
-                        <select id="reviewType" class="form-select bg-gray-100">
+                        <select id="reviewType" class="form-select">
                             <option value="post">Post-ICU stepdown review on ward</option>
                             <option value="pre">Pre-ICU stepdown review</option>
                         </select>
                       </div>
                       <div>
                           <label for="patientInitials" class="block font-medium text-gray-700">Patient Initials:</label>
-                          <input type="text" id="patientInitials" class="form-input bg-gray-100">
+                          <input type="text" id="patientInitials" class="form-input">
                       </div>
                       <div>
                           <label for="urnLast4" class="block font-medium text-gray-700">Last 4 Digits of URN:</label>
-                          <input type="text" id="urnLast4" class="form-input bg-gray-100">
+                          <input type="text" id="urnLast4" class="form-input">
                       </div>
                       <div>
                           <label for="wardAndRoom" class="block font-medium text-gray-700">Ward & Room No.:</label>
-                          <input type="text" id="wardAndRoom" class="form-input bg-gray-100">
+                          <input type="text" id="wardAndRoom" class="form-input">
                       </div>
                       <div>
                           <label for="losDays" class="block font-medium text-gray-700">ICU LOS (days):</label>
-                          <input type="number" id="losDays" min="0" class="form-input bg-gray-100">
+                          <input type="number" id="losDays" min="0" class="form-input">
                       </div>
                        <div id="postStepdownFields" class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 pt-2 border-t mt-2">
                          <div>
                             <label for="icuStepdownDate" class="block font-medium text-gray-700">ICU Stepdown Date:</label>
-                            <input type="date" id="icuStepdownDate" class="form-input bg-gray-100 time-input">
+                            <input type="date" id="icuStepdownDate" class="form-input time-input">
                         </div>
                         <div>
                             <label for="icuStepdownTime" class="block font-medium text-gray-700">ICU Stepdown Time:</label>
-                            <select id="icuStepdownTime" class="form-select bg-gray-100 time-input">
+                            <select id="icuStepdownTime" class="form-select time-input">
                                 <option value="09:00" data-ooh="false">Morning (0600-1159)</option>
                                 <option value="15:00" data-ooh="false">Afternoon (1200-1759)</option>
                                 <option value="21:00" data-ooh="true">Evening (1800-2359)</option>
@@ -137,29 +139,52 @@
             <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Clinical Parameters</h2>
             <div class="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <h3 class="font-semibold text-gray-700 mb-4">A-E Assessment</h3>
-                <div class="grid grid-cols-1 gap-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div><label class="sub-label">Airway</label><input type="text" id="airway_input" class="form-input" value="Patent"></div>
-                        <div><label class="sub-label">Resp Rate</label><input type="number" id="rr_input" class="form-input vital-input"></div>
-                        <div><label class="sub-label">SpO2 (%)</label><input type="number" id="spo2_input" class="form-input vital-input"></div>
-                        <div>
-                            <label class="sub-label">Oxygen Delivery</label>
-                            <div class="flex items-center space-x-2">
-                                <input type="number" id="o2_flow_input" class="form-input vital-input" placeholder="Value">
-                                <select id="o2_unit_input" class="form-select vital-input"><option value="lpm">L/min</option><option value="fio2">% FiO2</option></select>
-                            </div>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                        <label class="sub-label sm:col-span-1">Airway</label>
+                        <div class="sm:col-span-2"><input type="text" id="airway_input" class="form-input" value="Patent"></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                        <label class="sub-label sm:col-span-1">Resp Rate</label>
+                        <div class="sm:col-span-2"><input type="number" id="rr_input" class="form-input vital-input"></div>
+                    </div>
+                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                        <label class="sub-label sm:col-span-1">SpO2 (%)</label>
+                        <div class="sm:col-span-2"><input type="number" id="spo2_input" class="form-input vital-input"></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                        <label class="sub-label sm:col-span-1">Oxygen Delivery</label>
+                        <div class="sm:col-span-2 flex items-center space-x-2">
+                            <input type="number" id="o2_flow_input" class="form-input vital-input" placeholder="Value">
+                            <select id="o2_unit_input" class="form-select vital-input"><option value="lpm">L/min</option><option value="fio2">% FiO2</option></select>
                         </div>
-                        <div><label class="sub-label">Heart Rate</label><input type="number" id="hr_input" class="form-input vital-input"></div>
-                        <div><label class="sub-label">SBP (mmHg)</label><input type="number" id="sbp_input" class="form-input vital-input"></div>
-                        <div><label class="sub-label">DBP (mmHg)</label><input type="number" id="dbp_input" class="form-input"></div>
-                        <div><label class="sub-label">Consciousness</label><select id="consciousness_input" class="form-select vital-input"><option value="0">Alert</option><option value="1">Voice</option><option value="2">Pain</option><option value="3">Unresponsive</option></select></div>
-                        <div><label class="sub-label">Temp (°C)</label><input type="number" step="0.1" id="temp_input" class="form-input vital-input"></div>
                     </div>
-                    <div class="bg-teal-50 p-4 rounded-lg text-center border border-teal-200">
-                        <span class="text-sm font-medium text-gray-500">CALCULATED ADDS</span>
-                        <div id="calculatedADDSScore" class="font-bold text-5xl text-teal-600 my-2">0</div>
-                        <div id="addsBreakdown" class="text-xs text-gray-600 min-h-[3em]">Normal Parameters</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                        <label class="sub-label sm:col-span-1">Heart Rate</label>
+                        <div class="sm:col-span-2"><input type="number" id="hr_input" class="form-input vital-input"></div>
                     </div>
+                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                        <label class="sub-label sm:col-span-1">SBP (mmHg)</label>
+                        <div class="sm:col-span-2"><input type="number" id="sbp_input" class="form-input vital-input"></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                        <label class="sub-label sm:col-span-1">DBP (mmHg)</label>
+                        <div class="sm:col-span-2"><input type="number" id="dbp_input" class="form-input"></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                        <label class="sub-label sm:col-span-1">Consciousness</label>
+                        <div class="sm:col-span-2"><select id="consciousness_input" class="form-select vital-input"><option value="0">Alert</option><option value="1">Voice</option><option value="2">Pain</option><option value="3">Unresponsive</option></select></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                        <label class="sub-label sm:col-span-1">Temp (°C)</label>
+                        <div class="sm:col-span-2"><input type="number" step="0.1" id="temp_input" class="form-input vital-input"></div>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-teal-50 p-4 rounded-lg text-center border border-teal-200">
+                    <span class="text-sm font-medium text-gray-500">CALCULATED ADDS</span>
+                    <div id="calculatedADDSScore" class="font-bold text-5xl text-teal-600 my-2">0</div>
+                    <div id="addsBreakdown" class="text-xs text-gray-600 min-h-[3em]">Normal Parameters</div>
                 </div>
             </div>
              <div class="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -214,7 +239,7 @@
                         </div>
                         <div class="pt-4">
                             <label for="addsModificationText" class="sub-label">Modification Rationale:</label>
-                            <textarea id="addsModificationText" rows="2" class="form-input"></textarea>
+                            <textarea id="addsModificationText" rows="2" class="form-textarea"></textarea>
                         </div>
                     </div>
                 </div>
@@ -222,7 +247,7 @@
              <div class="grid grid-cols-1 gap-4">
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <h3 class="font-semibold text-gray-700 mb-2">Fluid Balance</h3>
-                    <div class="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
+                    <div class="flex flex-col space-y-4">
                         <div><label class="sub-label">24hr Fluid Balance (mL)</label><input type="number" id="fbc_24hr_input" class="form-input fluid-input" placeholder="+/- mL" step="500"></div>
                         <div><label class="sub-label">Total ICU Balance (mL)</label><input type="number" id="fbc_total_input" class="form-input fluid-input" placeholder="+/- mL" step="500"></div>
                     </div>
@@ -237,14 +262,14 @@
             </div>
              <div class="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <h3 class="font-semibold text-gray-700 mb-2">Key Bloods</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div><label class="sub-label" id="lactate_label">Lactate</label><div class="flex space-x-2"><input type="number" step="0.1" id="lactate_input" class="form-input blood-input" placeholder="Current"><input type="number" step="0.1" id="lactate_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div><label class="sub-label" id="hb_label">Hb</label><div class="flex space-x-2"><input type="number" id="hb_input" class="form-input blood-input" placeholder="Current"><input type="number" id="hb_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div><label class="sub-label" id="k_label">K+</label><div class="flex space-x-2"><input type="number" step="0.1" id="k_input" class="form-input blood-input" placeholder="Current"><input type="number" step="0.1" id="k_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div><label class="sub-label" id="mg_label">Mg++</label><div class="flex space-x-2"><input type="number" step="0.1" id="mg_input" class="form-input blood-input" placeholder="Current"><input type="number" step="0.1" id="mg_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div><label class="sub-label" id="creatinine_label">Creatinine</label><div class="flex space-x-2"><input type="number" id="creatinine_input" class="form-input blood-input" placeholder="Current"><input type="number" id="creatinine_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div><label class="sub-label" id="crp_label">CRP</label><div class="flex space-x-2"><input type="number" id="crp_input" class="form-input blood-input" placeholder="Current"><input type="number" id="crp_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
-                    <div><label class="sub-label" id="albumin_label">Albumin</label><div class="flex space-x-2"><input type="number" id="albumin_input" class="form-input blood-input" placeholder="Current"><input type="number" id="albumin_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                    <div><label class="sub-label" id="lactate_label">Lactate</label><div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2"><input type="number" step="0.1" id="lactate_input" class="form-input blood-input" placeholder="Current"><input type="number" step="0.1" id="lactate_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label" id="hb_label">Hb</label><div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2"><input type="number" id="hb_input" class="form-input blood-input" placeholder="Current"><input type="number" id="hb_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label" id="k_label">K+</label><div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2"><input type="number" step="0.1" id="k_input" class="form-input blood-input" placeholder="Current"><input type="number" step="0.1" id="k_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label" id="mg_label">Mg++</label><div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2"><input type="number" step="0.1" id="mg_input" class="form-input blood-input" placeholder="Current"><input type="number" step="0.1" id="mg_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label" id="creatinine_label">Creatinine</label><div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2"><input type="number" id="creatinine_input" class="form-input blood-input" placeholder="Current"><input type="number" id="creatinine_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label" id="crp_label">CRP</label><div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2"><input type="number" id="crp_input" class="form-input blood-input" placeholder="Current"><input type="number" id="crp_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
+                    <div><label class="sub-label" id="albumin_label">Albumin</label><div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2"><input type="number" id="albumin_input" class="form-input blood-input" placeholder="Current"><input type="number" id="albumin_input_prev" class="form-input blood-input" placeholder="Prev."></div></div>
                 </div>
                  <div class="mt-4 pt-4 border-t border-gray-300">
                     <label class="flex items-center">
@@ -280,7 +305,7 @@
                     </div>
                     <div id="pics_unable_details" class="hidden ml-6 mt-2">
                         <label for="pics_unable_notes" class="sub-label">Reason:</label>
-                        <textarea id="pics_unable_notes" rows="2" class="form-input"></textarea>
+                        <textarea id="pics_unable_notes" rows="2" class="form-textarea"></textarea>
                     </div>
                 </div>
             </div>
@@ -295,12 +320,12 @@
             </div>
         </div>
         
-        <div class="bg-white rounded-xl shadow-lg mb-6 p-6">
+        <div class="bg-white rounded-xl shadow-lg mb-6 p-4">
             <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Optional Narrative Details for DMR</h2>
             <div class="space-y-8 text-sm">
-                <div><label for="admissionReason" class="block font-medium text-gray-600">Reason for ICU Admission:</label><textarea id="admissionReason" rows="3" class="form-input"></textarea></div>
-                <div><label for="pmh" class="block font-medium text-gray-600">Past Medical History (PMH):</label><textarea id="pmh" rows="5" class="form-input"></textarea></div>
-                <div><label for="icuSummary" class="block font-medium text-gray-600">ICU Summary / Timeline:</label><textarea id="icuSummary" rows="10" class="form-input"></textarea></div>
+                <div><label for="admissionReason" class="block font-medium text-gray-600">Reason for ICU Admission:</label><textarea id="admissionReason" rows="3" class="form-textarea"></textarea></div>
+                <div><label for="pmh" class="block font-medium text-gray-600">Past Medical History (PMH):</label><textarea id="pmh" rows="5" class="form-textarea"></textarea></div>
+                <div><label for="icuSummary" class="block font-medium text-gray-600">ICU Summary / Timeline:</label><textarea id="icuSummary" rows="10" class="form-textarea"></textarea></div>
                 
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <h3 class="font-semibold text-gray-700 mb-4">Advanced Device, Drain & Wound Assessment</h3>
@@ -355,7 +380,7 @@
                     </div>
                 </div>
                 
-                <div><label for="emrAdditionalNotes" class="block font-medium text-gray-600">Additional Plan Notes:</label><textarea id="emrAdditionalNotes" rows="4" class="form-input"></textarea></div>
+                <div><label for="emrAdditionalNotes" class="block font-medium text-gray-600">Additional Plan Notes:</label><textarea id="emrAdditionalNotes" rows="4" class="form-textarea"></textarea></div>
             </div>
         </div>
 
@@ -367,7 +392,7 @@
         </div>
     </div>
     
-    <div class="text-center mt-8 text-gray-500 text-sm">Version 3.6 - 29 August 2025</div>
+    <div class="text-center mt-8 text-gray-500 text-sm">Version 3.8 - Final</div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -414,14 +439,6 @@
             
             // --- Data Maps & State ---
             let currentAddsBreakdown = 'Normal Parameters';
-            const categoryMap = {
-                'cat-1-critical': 'Critical Risks Identified - Immediate Senior Review',
-                'cat-1-medical': 'Category 1: High Risk - Escalate to ALERT Medical Team for Review',
-                'cat-1': 'Category 1: 72hr Nursing Follow-up On Ward',
-                'cat-2': 'Category 2: 24hr Nursing Follow-up On Ward',
-                'cat-3': 'Category 3: Single Review / Sign-off On Ward'
-            };
-            
             const carePlanMap = {
                 'crit_met_post': 'CRITICAL: Patient is in MET criteria on the ward. Initiate immediate MET call as per local protocol and escalate to senior nursing and medical staff.',
                 'crit_met_pre': 'CRITICAL: Patient\'s current observations would trigger a MET call on the ward. This is a significant barrier to transfer. Liaise with ICU and home teams to create a clear mitigation plan before stepdown.',
@@ -462,16 +479,16 @@
                 if (el && el.selectedIndex > -1) { return el.options[el.selectedIndex].text; }
                 return '';
             };
-            const getTrendText = (current, previous, higherIsWorse = true) => {
-                const curr = parseFloat(current);
-                const prev = parseFloat(previous);
-                if (isNaN(curr) || isNaN(prev)) return '';
-                if (Math.abs(curr - prev) < (curr * 0.05) && Math.abs(curr - prev) < 1) return '(static)';
-                if (higherIsWorse) {
-                    return curr > prev ? '(worsening)' : '(improving)';
-                } else {
-                    return curr < prev ? '(worsening)' : '(improving)';
-                }
+            const getDaysSinceStepdown = () => {
+                const dateStr = safeGet('icuStepdownDate');
+                if (!dateStr) return -1; // Indicates date not set
+                const stepdownDate = new Date(dateStr);
+                const today = new Date();
+                stepdownDate.setHours(0, 0, 0, 0);
+                today.setHours(0, 0, 0, 0);
+                const diffTime = today - stepdownDate;
+                if (diffTime < 0) return -1;
+                return Math.round(diffTime / (1000 * 60 * 60 * 24));
             };
             const generateImpression = () => {
                 const narratives = [];
@@ -490,25 +507,6 @@
                 impression += 'Requires close monitoring and adherence to the plan below to mitigate risk of deterioration.';
                 return impression;
             };
-            const calculateTimeOnWard = () => {
-                if (reviewTypeSelect.value === 'pre') return '';
-                const dateStr = safeGet('icuStepdownDate');
-                const timeStr = safeGet('icuStepdownTime');
-                if (!dateStr || !timeStr) return '';
-
-                const stepdownDateTime = new Date(`${dateStr}T${timeStr}`);
-                if (isNaN(stepdownDateTime)) return '';
-
-                const now = new Date();
-                const diffMillis = now - stepdownDateTime;
-                const diffHours = Math.round(diffMillis / (1000 * 60 * 60));
-                
-                if (diffHours < 0) return ' (Review time is before stepdown)';
-                if (diffHours < 48) return ` (${diffHours} hours on ward)`;
-                
-                const diffDays = Math.floor(diffHours / 24);
-                return ` (Day ${diffDays} on ward)`;
-            };
 
             // --- Core Functions ---
             function generateSummary() {
@@ -516,7 +514,6 @@
                     const output = [];
                     const los = safeGet('losDays');
                     const now = new Date();
-                    const timeOfReview = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
                     
                     const getDischargeCategory = () => {
                         const score = parseInt(totalScoreEl.textContent, 10);
@@ -532,7 +529,15 @@
                     output.push(isPreReview ? 'ALERT CNS pre-stepdown review' : 'ALERT CNS post ICU review');
                     if (los) output.push(`ICU LOS: ${los}`);
                     output.push(getDischargeCategory());
-                    output.push(`Time of review: ${timeOfReview}${calculateTimeOnWard()}`);
+                    
+                    if(!isPreReview) {
+                        const dateStr = safeGet('icuStepdownDate');
+                        if (dateStr) {
+                           const days = getDaysSinceStepdown();
+                           output.push(`Day ${days} post-ICU review on ward`);
+                        }
+                    }
+                    output.push(`Time of review: ${now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false })}`);
                     output.push('');
                     
                     const admissionReason = safeGet('admissionReason').trim();
@@ -918,26 +923,52 @@
             }
             
             function calculateScore(){let total=0;scoreInputs.forEach(input=>{if(input.checked){total+=parseInt(input.dataset.score,10)}});totalScoreEl.textContent=total;updateRiskCategory(total)}
+            
             function updateRiskCategory(score) {
                 riskCategoryEl.classList.remove('category-2', 'category-1', 'category-1-high', 'unsafe');
-                let categoryTextKey = 'cat-3';
-                let categoryClass = 'category-2'; // Green for Cat 3
+                const reviewType = reviewTypeSelect.value;
+                const daysSince = getDaysSinceStepdown();
+                let actionText = '';
+                let categoryClass = 'category-2'; // Default color for Cat 2 & 3
 
-                if (score > 40) {
-                    categoryTextKey = 'cat-1-critical';
-                    categoryClass = 'unsafe';
-                } else if (score >= 30) {
-                    categoryTextKey = 'cat-1-medical';
+                if (score >= 30) {
                     categoryClass = 'category-1-high';
+                    actionText = 'High risk - escalate to ALERT Medical Team for Review + continued follow up required for up to 72 hours on the ward. ';
+                     if (score > 40) {
+                        actionText = '** Critical risks identified - immediate senior medical review required. **';
+                        categoryClass = 'unsafe';
+                    }
                 } else if (score >= 10) {
-                    categoryTextKey = 'cat-1';
                     categoryClass = 'category-1';
+                    if (reviewType === 'pre') {
+                        actionText = 'Intensive follow up required for up to 72 hours on the ward.';
+                    } else { 
+                        if (daysSince >= 3) {
+                            actionText = "72hr review complete. Use clinical judgment to either discharge from ALERT or add to 'Patient of Concern' list for ongoing support.";
+                        } else {
+                            actionText = 'Continue daily ward reviews for up to 72 hours.';
+                        }
+                    }
                 } else if (score >= 4) {
-                    categoryTextKey = 'cat-2';
-                    // No change in class, still category-2 green
+                    categoryClass = 'category-2';
+                    if (reviewType === 'pre') {
+                        actionText = 'Follow-up required for 24 hours on the ward.';
+                    } else {
+                        if (daysSince === 0 || daysSince < 0) { // Initial review on ward
+                            actionText = 'Requires follow-up, review again next shift.';
+                        } else { // Follow-up review on a subsequent day
+                            actionText = "Use clinical judgment: If patient improved, discharge from ALERT. If static or any concerns, perform another review next shift.";
+                        }
+                    }
+                } else { // score <= 3
+                    if (reviewType === 'pre') {
+                        actionText = 'Single follow-up review required post-ward transfer.';
+                    } else {
+                        actionText = 'If no clinical concerns, discharge from ALERT service.';
+                    }
                 }
-                // Score 0-3 uses the default 'cat-3' and 'category-2' class.
-                riskCategoryEl.textContent = categoryMap[categoryTextKey];
+
+                riskCategoryEl.textContent = actionText;
                 riskCategoryEl.classList.add(categoryClass);
             }
 
@@ -1163,7 +1194,10 @@
             reviewTypeSelect.addEventListener('change', (e) => {
                 const isPreReview = e.target.value === 'pre';
                 postStepdownFields.classList.toggle('hidden', isPreReview);
+                calculateScore();
             });
+            document.getElementById('icuStepdownDate').addEventListener('change', calculateScore);
+
 
             // Device Listeners
             addCentralLineButton.addEventListener('click', createCentralLineInput);
