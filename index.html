@@ -22,10 +22,10 @@
             background-color: #134E4A;
         }
         .form-input, .form-select {
-            @apply mt-1 block w-full rounded-md border-2 border-gray-500 bg-gray-100 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 text-sm transition-colors duration-150;
+            @apply mt-1 block w-full rounded-md border-2 border-gray-300 bg-white shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 text-sm transition-colors duration-150;
         }
         .form-textarea {
-             @apply mt-1 block w-full rounded-md border-2 border-gray-500 bg-gray-100 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 text-sm transition-colors duration-150;
+             @apply mt-1 block w-full rounded-md border-2 border-gray-400 bg-gray-100 shadow-sm focus:border-teal-500 focus:ring-teal-500 p-2 text-sm transition-colors duration-150;
         }
         .sub-label {
             @apply block text-sm font-medium text-gray-700;
@@ -131,44 +131,6 @@
                             </select>
                         </div>
                        </div>
-                       <div class="md:col-span-2 pt-4 border-t mt-2 space-y-4">
-                            <div>
-                                <label for="goc" class="sub-label">Goals of Care:</label>
-                                <select id="goc" class="form-select">
-                                    <option value="">Not Documented</option>
-                                    <option value="A">A</option>
-                                    <option value="B">B</option>
-                                    <option value="C">C</option>
-                                </select>
-                                <div id="gocSpecificsContainer" class="hidden mt-2">
-                                    <label for="gocSpecifics" class="sub-label">Specifics:</label>
-                                    <input type="text" id="gocSpecifics" class="form-input">
-                                </div>
-                            </div>
-                             <div id="allergies-section">
-                                <label class="sub-label">Allergies:</label>
-                                <div class="mt-2 space-y-2">
-                                     <div class="flex items-center">
-                                        <input type="checkbox" id="nkdaCheckbox" class="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
-                                        <label for="nkdaCheckbox" class="ml-2 block text-sm text-gray-900">No Known Drug Allergies (NKDA)</label>
-                                    </div>
-                                    <div id="allergies_container" class="space-y-2"></div>
-                                    <button type="button" id="addAllergyButton" class="mt-2 text-sm bg-blue-100 text-blue-800 hover:bg-blue-200 px-3 py-1 rounded-md">+ Add Allergy</button>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="sub-label">Infection Control Precautions:</label>
-                                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-                                    <label class="flex items-center"><input type="checkbox" name="precautions" class="precaution-cb" value="Contact"> <span class="ml-2">Contact</span></label>
-                                    <label class="flex items-center"><input type="checkbox" name="precautions" class="precaution-cb" value="Droplet"> <span class="ml-2">Droplet</span></label>
-                                    <label class="flex items-center"><input type="checkbox" name="precautions" class="precaution-cb" value="Airborne"> <span class="ml-2">Airborne</span></label>
-                                </div>
-                                <div id="infectionControlDetails" class="hidden mt-2">
-                                     <label for="infectionControlReason" class="sub-label">Reason:</label>
-                                     <input type="text" id="infectionControlReason" class="form-input">
-                                </div>
-                            </div>
-                       </div>
                  </div>
             </div>
         </div>
@@ -192,7 +154,7 @@
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
                         <label class="sub-label sm:col-span-1">Oxygen Delivery</label>
-                        <div class="sm:col-span-2 flex flex-col sm:flex-row items-stretch sm:items-center sm:space-x-2 space-y-2 sm:space-y-0">
+                        <div class="sm:col-span-2 flex items-center space-x-2">
                             <input type="number" id="o2_flow_input" class="form-input vital-input" placeholder="Value">
                             <select id="o2_unit_input" class="form-select vital-input"><option value="lpm">L/min</option><option value="fio2">% FiO2</option></select>
                         </div>
@@ -285,15 +247,9 @@
              <div class="grid grid-cols-1 gap-4">
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <h3 class="font-semibold text-gray-700 mb-2">Fluid Balance</h3>
-                    <div class="space-y-4">
-                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
-                            <label class="sub-label sm:col-span-1">24hr Fluid Balance (mL)</label>
-                            <div class="sm:col-span-2"><input type="number" id="fbc_24hr_input" class="form-input fluid-input" placeholder="+/- mL" step="500"></div>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
-                             <label class="sub-label sm:col-span-1">Cumulative Balance (mL)</label>
-                            <div class="sm:col-span-2"><input type="number" id="fbc_total_input" class="form-input fluid-input" placeholder="+/- mL" step="500"></div>
-                        </div>
+                    <div class="flex flex-col space-y-4">
+                        <div><label class="sub-label">24hr Fluid Balance (mL)</label><input type="number" id="fbc_24hr_input" class="form-input fluid-input" placeholder="+/- mL" step="500"></div>
+                        <div><label class="sub-label">Total ICU Balance (mL)</label><input type="number" id="fbc_total_input" class="form-input fluid-input" placeholder="+/- mL" step="500"></div>
                     </div>
                 </div>
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -321,11 +277,6 @@
                         <span class="ml-2 text-sm font-medium text-gray-700">CTS/Cardiac Patient (apply stricter K+/Mg++ targets)</span>
                     </label>
                 </div>
-            </div>
-             <div class="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 class="font-semibold text-gray-700 mb-2">Key Investigations (Optional)</h3>
-                <div id="investigations_container" class="space-y-4"></div>
-                <button type="button" id="addInvestigationButton" class="mt-2 text-sm bg-purple-100 text-purple-800 hover:bg-purple-200 px-3 py-1 rounded-md">+ Add Investigation</button>
             </div>
         </div>
 
@@ -364,17 +315,17 @@
             <div class="final-score-bg text-white rounded-xl shadow-lg p-6">
                  <div class="flex flex-col sm:flex-row justify-between items-center text-center">
                     <div class="mb-4 sm:mb-0"><span class="text-lg font-medium text-gray-400">TOTAL SCORE</span><div id="totalScore" class="text-5xl font-bold">0</div></div>
-                    <div class="w-full sm:w-auto"><span class="text-lg font-medium text-gray-400">ACTION</span><div id="riskCategory" class="text-xl font-bold p-3 rounded-md mt-1 transition-all duration-300">Category 2: Standard follow-up</div></div>
+                    <div class="w-full sm:w-auto"><span class="text-lg font-medium text-gray-400">FINAL CATEGORY & ACTION</span><div id="riskCategory" class="text-xl font-bold p-3 rounded-md mt-1 transition-all duration-300">Category 2: Standard follow-up</div></div>
                 </div>
             </div>
         </div>
         
         <div class="bg-white rounded-xl shadow-lg mb-6 p-4">
-            <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4 px-2 pt-2">Optional Narrative Details for DMR</h2>
-            <div class="space-y-8 text-sm pt-4">
-                <div><label for="admissionReason" class="block font-medium text-gray-600 px-2">Reason for ICU Admission:</label><textarea id="admissionReason" rows="3" class="form-textarea"></textarea></div>
-                <div><label for="pmh" class="block font-medium text-gray-600 px-2">Past Medical History (PMH):</label><textarea id="pmh" rows="5" class="form-textarea"></textarea></div>
-                <div><label for="icuSummary" class="block font-medium text-gray-600 px-2">ICU Summary / Timeline:</label><textarea id="icuSummary" rows="10" class="form-textarea"></textarea></div>
+            <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-4">Optional Narrative Details for DMR</h2>
+            <div class="space-y-8 text-sm">
+                <div><label for="admissionReason" class="block font-medium text-gray-600">Reason for ICU Admission:</label><textarea id="admissionReason" rows="3" class="form-textarea"></textarea></div>
+                <div><label for="pmh" class="block font-medium text-gray-600">Past Medical History (PMH):</label><textarea id="pmh" rows="5" class="form-textarea"></textarea></div>
+                <div><label for="icuSummary" class="block font-medium text-gray-600">ICU Summary / Timeline:</label><textarea id="icuSummary" rows="10" class="form-textarea"></textarea></div>
                 
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <h3 class="font-semibold text-gray-700 mb-4">Advanced Device, Drain & Wound Assessment</h3>
@@ -429,7 +380,7 @@
                     </div>
                 </div>
                 
-                <div><label for="emrAdditionalNotes" class="block font-medium text-gray-600 px-2">Additional Plan Notes:</label><textarea id="emrAdditionalNotes" rows="4" class="form-textarea"></textarea></div>
+                <div><label for="emrAdditionalNotes" class="block font-medium text-gray-600">Additional Plan Notes:</label><textarea id="emrAdditionalNotes" rows="4" class="form-textarea"></textarea></div>
             </div>
         </div>
 
@@ -441,7 +392,7 @@
         </div>
     </div>
     
-    <div class="text-center mt-8 text-gray-500 text-sm">Version 3.9 - Final UI & Logic</div>
+    <div class="text-center mt-8 text-gray-500 text-sm">Version 3.8 - Final</div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -469,17 +420,6 @@
             const reviewTypeSelect = document.getElementById('reviewType');
             const postStepdownFields = document.getElementById('postStepdownFields');
             const receivingWardModule = document.getElementById('receivingWardModule');
-            const precautionCheckboxes = document.querySelectorAll('.precaution-cb');
-            const infectionControlDetails = document.getElementById('infectionControlDetails');
-            const allergiesSection = document.getElementById('allergies-section');
-            const nkdaCheckbox = document.getElementById('nkdaCheckbox');
-            const addAllergyButton = document.getElementById('addAllergyButton');
-            const allergiesContainer = document.getElementById('allergies_container');
-            const gocSelect = document.getElementById('goc');
-            const gocSpecificsContainer = document.getElementById('gocSpecificsContainer');
-            const addInvestigationButton = document.getElementById('addInvestigationButton');
-            const investigationsContainer = document.getElementById('investigations_container');
-
 
             // Device Element References
             const addCentralLineButton = document.getElementById('addCentralLineButton');
@@ -577,10 +517,11 @@
                     
                     const getDischargeCategory = () => {
                         const score = parseInt(totalScoreEl.textContent, 10);
-                        if (score > 40) return 'Urgent Medical Escalation Required';
-                        if (score >= 10) return 'Intensive ALERT post-ICU outreach follow up';
-                        if (score >= 4) return 'Standard ALERT post-ICU outreach follow up';
-                        return 'ALERT post-ICU follow up';
+                        if (score > 40) return 'Critical Risks Identified - Immediate Senior Review';
+                        if (score >= 30) return 'Cat 1 - Escalation to Medical Team';
+                        if (score >= 10) return 'Cat 1';
+                        if (score >= 4) return 'Cat 2';
+                        return 'Cat 3';
                     };
 
                     // ==== HEADER ====
@@ -597,37 +538,7 @@
                         }
                     }
                     output.push(`Time of review: ${now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false })}`);
-                    
-                    // Add new patient details to summary
-                    const goc = safeGet('goc');
-                    const gocSpecifics = safeGet('gocSpecifics').trim();
-                    let allergiesText = '';
-                    if (safeIsChecked('nkdaCheckbox')) {
-                        allergiesText = 'NKDA';
-                    } else {
-                        const allergyItems = [];
-                        allergiesContainer.querySelectorAll('.allergy-row').forEach(row => {
-                            const allergen = row.querySelector('[data-type="allergen"]').value.trim();
-                            const reaction = row.querySelector('[data-type="reaction"]').value.trim();
-                            const unknown = row.querySelector('[data-type="unknown"]').checked;
-                            if(allergen){
-                                allergyItems.push(`${allergen} (${unknown ? 'Reaction Unknown' : (reaction || 'N/A')})`);
-                            }
-                        });
-                        allergiesText = allergyItems.join(', ') || '';
-                    }
-
-                    const precautions = Array.from(document.querySelectorAll('input[name="precautions"]:checked')).map(cb => cb.value).join(', ');
-                    const infectionReason = safeGet('infectionControlReason').trim();
-
-                    if(goc || allergiesText || precautions) {
-                         output.push(''); // Spacer
-                         if(goc) output.push(`GOALS OF CARE: ${goc}` + (gocSpecifics ? ` (${gocSpecifics})` : ''));
-                         if(allergiesText) output.push(`ALLERGIES: ${allergiesText}`);
-                         if(precautions) output.push(`PRECAUTIONS: ${precautions}` + (infectionReason ? ` (${infectionReason})` : ''));
-                    }
-                    
-                    output.push('\n');
+                    output.push('');
                     
                     const admissionReason = safeGet('admissionReason').trim();
                     const pmh = safeGet('pmh').trim();
@@ -692,21 +603,6 @@
                         output.push(...bloods);
                     }
                     
-                     const investigations = [];
-                    investigationsContainer.querySelectorAll('.investigation-row').forEach(row => {
-                        const type = row.querySelector('[data-type="type"]').value;
-                        const date = row.querySelector('[data-type="date"]').value;
-                        const findings = row.querySelector('[data-type="findings"]').value.trim();
-                        if (findings) {
-                            investigations.push(`  - ${type} (${date || 'Date N/A'}): ${findings}`);
-                        }
-                    });
-
-                    if (investigations.length > 0) {
-                        output.push('Key Investigations:');
-                        output.push(...investigations);
-                    }
-
                     const fbc24 = safeGet('fbc_24hr_input'), fbcTotal = safeGet('fbc_total_input');
                     if (fbc24 || fbcTotal) {
                         let fluidText = 'Fluid Balance: ';
@@ -953,7 +849,6 @@
                 pacingSettingsDiv.classList.add('hidden');
                 drainsContainer.innerHTML = '';
                 woundsContainer.innerHTML = '';
-                investigationsContainer.innerHTML = '';
                 
                 picsUnableDetails.classList.add('hidden'); document.getElementById('pics_unable_notes').value = '';
                 document.querySelectorAll('.mod-details').forEach(el => el.classList.add('hidden'));
@@ -964,15 +859,6 @@
                 document.querySelectorAll('.critical-input-label').forEach(el => el.classList.remove('critical-input-label'));
                 document.querySelectorAll('.risk-item-selected-critical').forEach(el => el.classList.remove('risk-item-selected-critical'));
                 
-                // Reset new sections
-                allergiesContainer.innerHTML = '';
-                addAllergyButton.style.display = 'inline-block';
-                nkdaCheckbox.checked = false;
-                gocSpecificsContainer.classList.add('hidden');
-                document.getElementById('gocSpecifics').value = '';
-                infectionControlDetails.classList.add('hidden');
-                document.getElementById('infectionControlReason').value = '';
-
                 reviewTypeSelect.dispatchEvent(new Event('change'));
                 calculateADDS();
             }
@@ -1045,12 +931,13 @@
                 let actionText = '';
                 let categoryClass = 'category-2'; // Default color for Cat 2 & 3
 
-                if (score > 40) {
-                    actionText = '** Critical risks identified - immediate senior medical review required. **';
-                    categoryClass = 'unsafe';
-                } else if (score >= 30) {
-                    actionText = 'High risk - escalate to ALERT Medical Team for Review + continued follow up required for up to 72 hours on the ward.';
+                if (score >= 30) {
                     categoryClass = 'category-1-high';
+                    actionText = 'High risk - escalate to ALERT Medical Team for Review + continued follow up required for up to 72 hours on the ward. ';
+                     if (score > 40) {
+                        actionText = '** Critical risks identified - immediate senior medical review required. **';
+                        categoryClass = 'unsafe';
+                    }
                 } else if (score >= 10) {
                     categoryClass = 'category-1';
                     if (reviewType === 'pre') {
@@ -1089,41 +976,6 @@
             function handleFluidBalance(){const fbc24=parseFloat(safeGet('fbc_24hr_input')),fbcTotal=parseFloat(safeGet('fbc_total_input')),isSig=(!isNaN(fbc24)&&Math.abs(fbc24)>2000)||(!isNaN(fbcTotal)&&Math.abs(fbcTotal)>2000),isMild=(!isNaN(fbc24)&&Math.abs(fbc24)>1000)||(!isNaN(fbcTotal)&&Math.abs(fbcTotal)>1000);if(isSig)document.getElementById('fluid_sig_radio').checked=true;else if(isMild)document.getElementById('fluid_mild_radio').checked=true;else document.getElementById('fluid_0_radio').checked=true;calculateScore()}
             
             // --- Advanced Device Input Functions ---
-            const createAllergyInput = () => {
-                const row = document.createElement('div');
-                row.className = 'allergy-row flex items-center space-x-2';
-                row.innerHTML = `
-                    <input type="text" data-type="allergen" placeholder="Allergen" class="form-input flex-grow">
-                    <input type="text" data-type="reaction" placeholder="Reaction" class="form-input flex-grow">
-                    <label class="flex items-center text-sm"><input type="checkbox" data-type="unknown" class="mr-1"> Reaction Unknown</label>
-                    <button type="button" class="remove-btn">✖</button>`;
-                allergiesContainer.appendChild(row);
-                
-                const reactionInput = row.querySelector('[data-type="reaction"]');
-                const unknownCheckbox = row.querySelector('[data-type="unknown"]');
-                unknownCheckbox.addEventListener('change', () => {
-                    reactionInput.disabled = unknownCheckbox.checked;
-                    if(unknownCheckbox.checked) reactionInput.value = '';
-                });
-            };
-            const createInvestigationInput = () => {
-                const row = document.createElement('div');
-                row.className = 'investigation-row p-3 bg-gray-200 rounded-lg border space-y-2';
-                row.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2 flex-grow">
-                            <select data-type="type" class="form-select text-sm w-40"><option>Chest X-ray (CXR)</option><option>Abdominal X-ray (AXR)</option><option>CT Scan</option><option>ECG</option><option>Echocardiogram</option><option>Ultrasound</option></select>
-                            <input type="date" data-type="date" class="form-input text-sm">
-                        </div>
-                        <button type="button" class="remove-btn">✖</button>
-                    </div>
-                    <div>
-                        <label class="sub-label">Documented Report Findings:</label>
-                        <textarea data-type="findings" rows="2" class="form-textarea"></textarea>
-                    </div>`;
-                investigationsContainer.appendChild(row);
-            };
-
             const createCentralLineInput = () => {
                 const row = document.createElement('div');
                 row.className = 'device-row p-3 bg-gray-100 rounded-lg border space-y-2 transition-all';
@@ -1345,28 +1197,6 @@
                 calculateScore();
             });
             document.getElementById('icuStepdownDate').addEventListener('change', calculateScore);
-            precautionCheckboxes.forEach(cb => {
-                cb.addEventListener('change', () => {
-                    const anyChecked = Array.from(precautionCheckboxes).some(box => box.checked);
-                    infectionControlDetails.classList.toggle('hidden', !anyChecked);
-                });
-            });
-            addAllergyButton.addEventListener('click', createAllergyInput);
-            allergiesContainer.addEventListener('click', e => {
-                if (e.target.classList.contains('remove-btn')) {
-                    e.target.closest('.allergy-row').remove();
-                }
-            });
-            nkdaCheckbox.addEventListener('change', () => {
-                const isChecked = nkdaCheckbox.checked;
-                allergiesContainer.innerHTML = '';
-                allergiesContainer.style.display = isChecked ? 'none' : 'block';
-                addAllergyButton.style.display = isChecked ? 'none' : 'inline-block';
-            });
-             gocSelect.addEventListener('change', () => {
-                gocSpecificsContainer.classList.toggle('hidden', gocSelect.value === '');
-            });
-            addInvestigationButton.addEventListener('click', createInvestigationInput);
 
 
             // Device Listeners
@@ -1376,8 +1206,8 @@
             addDrainButton.addEventListener('click', createDrainInput);
             addWoundButton.addEventListener('click', createWoundInput);
             
-            [centralLinesContainer, pivcsContainer, drainsContainer, woundsContainer, ngTubesContainer, investigationsContainer].forEach(c => {
-                c.addEventListener('click', e => { if (e.target.classList.contains('remove-btn')) e.target.closest('.investigation-row, .device-row, .allergy-row').remove(); });
+            [centralLinesContainer, pivcsContainer, drainsContainer, woundsContainer, ngTubesContainer].forEach(c => {
+                c.addEventListener('click', e => { if (e.target.classList.contains('remove-btn')) e.target.closest('.device-row').remove(); });
             });
             pacingWiresPresentCheckbox.addEventListener('change', () => {
                 pacingWiresDetailsDiv.classList.toggle('hidden', !pacingWiresPresentCheckbox.checked);
