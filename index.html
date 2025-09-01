@@ -93,44 +93,82 @@
             <div class="p-6 bg-gray-50/50">
                 <h2 class="text-xl font-bold text-gray-800 border-b pb-3 mb-6">Patient Details</h2>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                      <div class="md:col-span-2">
-                        <label for="reviewType" class="block font-medium text-gray-700">Type of Review:</label>
-                        <select id="reviewType" class="form-select">
-                            <option value="post">Post-ICU stepdown review on ward</option>
-                            <option value="pre">Pre-ICU stepdown review</option>
-                        </select>
-                      </div>
-                      <div>
-                          <label for="patientInitials" class="block font-medium text-gray-700">Patient Initials:</label>
-                          <input type="text" id="patientInitials" class="form-input">
-                      </div>
-                      <div>
-                          <label for="urnLast4" class="block font-medium text-gray-700">Last 4 Digits of URN:</label>
-                          <input type="text" id="urnLast4" class="form-input">
-                      </div>
-                      <div>
-                          <label for="wardAndRoom" class="block font-medium text-gray-700">Ward & Room No.:</label>
-                          <input type="text" id="wardAndRoom" class="form-input">
-                      </div>
-                      <div>
-                          <label for="losDays" class="block font-medium text-gray-700">ICU LOS (days):</label>
-                          <input type="number" id="losDays" min="0" class="form-input">
-                      </div>
-                       <div id="postStepdownFields" class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 pt-2 border-t mt-2">
-                         <div>
-                            <label for="icuStepdownDate" class="block font-medium text-gray-700">ICU Stepdown Date:</label>
-                            <input type="date" id="icuStepdownDate" class="form-input time-input">
-                        </div>
-                        <div>
-                            <label for="icuStepdownTime" class="block font-medium text-gray-700">ICU Stepdown Time-band:</label>
-                            <select id="icuStepdownTime" class="form-select time-input">
-                                <option value="09:00" data-ooh="false">Morning (0600-1159)</option>
-                                <option value="15:00" data-ooh="false">Afternoon (1200-1759)</option>
-                                <option value="21:00" data-ooh="true">Evening (1800-2359)</option>
-                                <option value="03:00" data-ooh="true">Night (0000-0559)</option>
-                            </select>
-                        </div>
+                       <div class="md:col-span-2">
+                           <label for="reviewType" class="block font-medium text-gray-700">Type of Review:</label>
+                           <select id="reviewType" class="form-select">
+                               <option value="post">Post-ICU stepdown review on ward</option>
+                               <option value="pre">Pre-ICU stepdown review</option>
+                           </select>
                        </div>
+                       <div>
+                           <label for="patientInitials" class="block font-medium text-gray-700">Patient Initials:</label>
+                           <input type="text" id="patientInitials" class="form-input">
+                       </div>
+                       <div>
+                           <label for="urnLast4" class="block font-medium text-gray-700">Last 4 Digits of URN:</label>
+                           <input type="text" id="urnLast4" class="form-input">
+                       </div>
+                       <div>
+                           <label for="wardAndRoom" class="block font-medium text-gray-700">Ward & Room No.:</label>
+                           <input type="text" id="wardAndRoom" class="form-input">
+                       </div>
+                       <div>
+                           <label for="losDays" class="block font-medium text-gray-700">ICU LOS (days):</label>
+                           <input type="number" id="losDays" min="0" class="form-input">
+                       </div>
+                        <div id="postStepdownFields" class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 pt-2 border-t mt-2">
+                         <div>
+                             <label for="icuStepdownDate" class="block font-medium text-gray-700">ICU Stepdown Date:</label>
+                             <input type="date" id="icuStepdownDate" class="form-input time-input">
+                         </div>
+                         <div>
+                             <label for="icuStepdownTime" class="block font-medium text-gray-700">ICU Stepdown Time-band:</label>
+                             <select id="icuStepdownTime" class="form-select time-input">
+                                 <option value="09:00" data-ooh="false">Morning (0600-1159)</option>
+                                 <option value="15:00" data-ooh="false">Afternoon (1200-1759)</option>
+                                 <option value="21:00" data-ooh="true">Evening (1800-2359)</option>
+                                 <option value="03:00" data-ooh="true">Night (0000-0559)</option>
+                             </select>
+                         </div>
+                        </div>
+                        <div class="md:col-span-2 pt-4 border-t mt-2 space-y-4">
+                            <div>
+                                <label for="goc" class="sub-label">Goals of Care:</label>
+                                <select id="goc" class="form-select">
+                                    <option value="">Not Documented</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                </select>
+                                <div id="gocSpecificsContainer" class="hidden mt-2">
+                                    <label for="gocSpecifics" class="sub-label">Specifics:</label>
+                                    <input type="text" id="gocSpecifics" class="form-input">
+                                </div>
+                            </div>
+                            <div id="allergies-section">
+                                <label class="sub-label">Allergies:</label>
+                                <div class="mt-2 space-y-2">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" id="nkdaCheckbox" class="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
+                                        <label for="nkdaCheckbox" class="ml-2 block text-sm text-gray-900">No Known Drug Allergies (NKDA)</label>
+                                    </div>
+                                    <div id="allergies_container" class="space-y-2"></div>
+                                    <button type="button" id="addAllergyButton" class="mt-2 text-sm bg-blue-100 text-blue-800 hover:bg-blue-200 px-3 py-1 rounded-md">+ Add Allergy</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="sub-label">Infection Control Precautions:</label>
+                                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                                    <label class="flex items-center"><input type="checkbox" name="precautions" class="precaution-cb" value="Contact"> <span class="ml-2">Contact</span></label>
+                                    <label class="flex items-center"><input type="checkbox" name="precautions" class="precaution-cb" value="Droplet"> <span class="ml-2">Droplet</span></label>
+                                    <label class="flex items-center"><input type="checkbox" name="precautions" class="precaution-cb" value="Airborne"> <span class="ml-2">Airborne</span></label>
+                                </div>
+                                <div id="infectionControlDetails" class="hidden mt-2">
+                                    <label for="infectionControlReason" class="sub-label">Reason:</label>
+                                    <input type="text" id="infectionControlReason" class="form-input">
+                                </div>
+                            </div>
+                        </div>
                  </div>
             </div>
         </div>
@@ -425,6 +463,16 @@
             const afterHoursContainer = document.getElementById('after_hours_container');
             const afterHoursCheckbox = document.getElementById('systemic_after_hours_checkbox');
 
+            // New Element References for GOC, Allergies, Infection Control
+            const gocSelect = document.getElementById('goc');
+            const gocSpecificsContainer = document.getElementById('gocSpecificsContainer');
+            const nkdaCheckbox = document.getElementById('nkdaCheckbox');
+            const allergiesContainer = document.getElementById('allergies_container');
+            const addAllergyButton = document.getElementById('addAllergyButton');
+            const allergiesSection = document.getElementById('allergies-section');
+            const precautionCheckboxes = document.querySelectorAll('.precaution-cb');
+            const infectionControlDetails = document.getElementById('infectionControlDetails');
+
             // Device Element References
             const addCentralLineButton = document.getElementById('addCentralLineButton');
             const centralLinesContainer = document.getElementById('central_lines_container');
@@ -480,6 +528,18 @@
             // --- Helper Functions ---
             const safeGet = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
             const safeIsChecked = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
+            
+            const getTrendText = (current, previous, higherIsWorse) => {
+                const curr = parseFloat(current);
+                const prev = parseFloat(previous);
+                if (isNaN(curr)) return '';
+                if (isNaN(prev)) return ' (new)';
+
+                if (curr > prev) return higherIsWorse ? ' (rising)' : ' (falling)';
+                if (curr < prev) return higherIsWorse ? ' (falling)' : ' (rising)';
+                return ' (stable)';
+            };
+
             const getSelectText = (id) => {
                 const el = document.getElementById(id);
                 if (el && el.selectedIndex > -1) { return el.options[el.selectedIndex].text; }
@@ -571,6 +631,39 @@
                     if (admissionReason) output.push(`Reason for admission: ${admissionReason}`);
                     if (pmh) output.push(`PMH: ${pmh}`);
                     output.push(`Impression: ${generateImpression()}`);
+                    
+                    // Add GOC, Allergies, Infection Control to summary
+                    const goc = safeGet('goc');
+                    if (goc) {
+                        let gocLine = `Goals of Care: ${goc}`;
+                        if (['B', 'C'].includes(goc)) {
+                            const specifics = safeGet('gocSpecifics').trim();
+                            if (specifics) gocLine += ` (${specifics})`;
+                        }
+                        output.push(gocLine);
+                    }
+
+                    const allergies = [];
+                    if (safeIsChecked('nkdaCheckbox')) {
+                        allergies.push('NKDA');
+                    } else {
+                        allergiesContainer.querySelectorAll('.allergy-row').forEach(row => {
+                            const drug = row.querySelector('[data-type="allergy_drug"]').value.trim();
+                            const reaction = row.querySelector('[data-type="allergy_reaction"]').value.trim();
+                            if (drug) allergies.push(`${drug} (${reaction || 'reaction not specified'})`);
+                        });
+                        if(allergies.length === 0) allergies.push('Not Documented');
+                    }
+                    output.push(`Allergies: ${allergies.join(', ')}`);
+
+                    const precautions = [...precautionCheckboxes].filter(cb => cb.checked).map(cb => cb.value);
+                    if (precautions.length > 0) {
+                        let precautionLine = `Infection Control: ${precautions.join(', ')} Precautions`;
+                        const reason = safeGet('infectionControlReason').trim();
+                        if (reason) precautionLine += ` for ${reason}`;
+                        output.push(precautionLine);
+                    }
+                    
                     output.push('\n');
 
                     // ==== ADDS/MODS ====
@@ -615,7 +708,7 @@
                             if (val < normalRange[0]) interpretation = ' (low)';
                             if (val > normalRange[1]) interpretation = ' (high)';
                         }
-                        bloods.push(`  - ${label}: ${curr}${unit} ${getTrendText(curr, prev, higherIsWorse)}${interpretation}`);
+                        bloods.push(`  - ${label}: ${curr}${unit}${getTrendText(curr, prev, higherIsWorse)}${interpretation}`);
                     };
                     formatBlood('Lactate', 'lactate_input', 'lactate_input_prev', ' mmol/L', true, [0.5, 2.0]);
                     formatBlood('Hb', 'hb_input', 'hb_input_prev', ' g/L', false, [115, 165]);
@@ -721,14 +814,14 @@
                             
                             if (carePlanMap[id] && !addedPlanIds.has(id)) {
                                  for (const prefix in planCategoryMap) {
-                                    if (id.startsWith(prefix)) {
-                                        const category = planCategoryMap[prefix];
-                                        if (!planItems[category]) planItems[category] = [];
-                                        planItems[category].push(`- ${carePlanMap[id]}`);
-                                        addedPlanIds.add(id);
-                                        break;
-                                    }
-                                }
+                                     if (id.startsWith(prefix)) {
+                                         const category = planCategoryMap[prefix];
+                                         if (!planItems[category]) planItems[category] = [];
+                                         planItems[category].push(`- ${carePlanMap[id]}`);
+                                         addedPlanIds.add(id);
+                                         break;
+                                     }
+                                 }
                             }
                         }
                     });
@@ -759,7 +852,7 @@
                               addedPlanIds.add('cvc_site_issue');
                          }
                     });
-                     pivcsContainer.querySelectorAll('.device-row').forEach(row => {
+                      pivcsContainer.querySelectorAll('.device-row').forEach(row => {
                          const days = parseInt(row.querySelector('[data-type="days"]').textContent.replace(' Day(s)', ''), 10);
                          if (days >= 3 && !addedPlanIds.has('pivc_overdue_72h')) {
                              if (!planItems['Line & Device Management']) planItems['Line & Device Management'] = [];
@@ -772,8 +865,8 @@
                             planItems['Line & Device Management'].push(`- ${carePlanMap.pivc_pivas_action}`);
                             addedPlanIds.add('pivc_pivas_action');
                          }
-                     });
-                     
+                      });
+                        
                     const sortedCategories = Object.keys(planItems).sort((a, b) => a.includes('CRITICAL') ? -1 : 1);
                     if (sortedCategories.length > 0) {
                         sortedCategories.forEach(category => {
@@ -888,6 +981,18 @@
                 document.getElementById('airway_input').value='Patent';
                 nursingConcernText.style.display='none';
                 
+                // Reset new fields
+                gocSelect.selectedIndex = 0;
+                gocSpecificsContainer.classList.add('hidden');
+                document.getElementById('gocSpecifics').value = '';
+                nkdaCheckbox.checked = false;
+                allergiesContainer.innerHTML = '';
+                allergiesContainer.style.display = 'block';
+                addAllergyButton.style.display = 'block';
+                precautionCheckboxes.forEach(cb => cb.checked = false);
+                infectionControlDetails.classList.add('hidden');
+                document.getElementById('infectionControlReason').value = '';
+
                 centralLinesContainer.innerHTML = '';
                 pivcsContainer.innerHTML = '';
                 ngTubesContainer.innerHTML = '';
@@ -981,8 +1086,8 @@
                     categoryClass = 'category-1-high';
                     actionText = 'Category 1: High Risk - Escalate to ALERT Medical Team for Review';
                      if (score > 40) {
-                        actionText = 'Critical Risks Identified - Immediate Senior Review';
-                        categoryClass = 'unsafe';
+                         actionText = 'Critical Risks Identified - Immediate Senior Review';
+                         categoryClass = 'unsafe';
                     }
                 } else if (score >= 10) {
                     categoryClass = 'category-1';
@@ -1022,6 +1127,17 @@
             function handleFluidBalance(){const fbc24=parseFloat(safeGet('fbc_24hr_input')),fbcTotal=parseFloat(safeGet('fbc_total_input')),isSig=(!isNaN(fbc24)&&Math.abs(fbc24)>2000)||(!isNaN(fbcTotal)&&Math.abs(fbcTotal)>2000),isMild=(!isNaN(fbc24)&&Math.abs(fbc24)>1000)||(!isNaN(fbcTotal)&&Math.abs(fbcTotal)>1000);if(isSig)document.getElementById('fluid_sig_radio').checked=true;else if(isMild)document.getElementById('fluid_mild_radio').checked=true;else document.getElementById('fluid_0_radio').checked=true;calculateScore()}
             
             // --- Advanced Device Input Functions ---
+            const createAllergyInput = () => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center space-x-2 allergy-row';
+                row.innerHTML = `
+                    <input type="text" data-type="allergy_drug" placeholder="Drug/Substance" class="form-input text-sm flex-grow">
+                    <input type="text" data-type="allergy_reaction" placeholder="Reaction" class="form-input text-sm flex-grow">
+                    <button type="button" class="remove-btn">✖</button>
+                `;
+                allergiesContainer.appendChild(row);
+            };
+
             const createCentralLineInput = () => {
                 const row = document.createElement('div');
                 row.className = 'device-row p-3 bg-gray-100 rounded-lg border space-y-2 transition-all';
@@ -1090,13 +1206,13 @@
                 row.className = 'device-row p-3 bg-gray-100 rounded-lg border space-y-2 transition-all';
                 row.innerHTML = `
                      <div class="flex items-center justify-between">
-                         <input type="text" data-type="location" placeholder="e.g., 20G Pink L) Forearm" class="form-input text-sm flex-grow">
-                         <button type="button" class="remove-btn">✖</button>
-                    </div>
+                          <input type="text" data-type="location" placeholder="e.g., 20G Pink L) Forearm" class="form-input text-sm flex-grow">
+                          <button type="button" class="remove-btn">✖</button>
+                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
-                         <div><label class="sub-label">Insertion Date</label><input type="date" data-type="date" class="form-input"></div>
-                         <div><label class="sub-label">PIVAS Score</label><select data-type="pivas" class="form-select"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
-                         <div class="flex items-end pb-2 h-full"><span data-type="days" class="font-bold">0 Day(s)</span><span data-type="flag" class="ml-2"></span></div>
+                          <div><label class="sub-label">Insertion Date</label><input type="date" data-type="date" class="form-input"></div>
+                          <div><label class="sub-label">PIVAS Score</label><select data-type="pivas" class="form-select"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+                          <div class="flex items-end pb-2 h-full"><span data-type="days" class="font-bold">0 Day(s)</span><span data-type="flag" class="ml-2"></span></div>
                     </div>
                     <div data-type="action-text" class="text-xs text-red-600 font-semibold hidden"></div>`;
                 pivcsContainer.appendChild(row);
@@ -1145,7 +1261,7 @@
                      flags.push('<span class="risk-flag">>72hr Dwell</span>');
                      row.classList.add('border-orange-400');
                      if (!actionText) {
-                        actionText = 'Consider replacement per policy.';
+                         actionText = 'Consider replacement per policy.';
                      }
                 }
                 
@@ -1244,6 +1360,36 @@
                 calculateScore();
             });
 
+            // New Listeners for GOC, Allergies, Infection Control
+            gocSelect.addEventListener('change', () => {
+                const showSpecifics = ['B', 'C'].includes(gocSelect.value);
+                gocSpecificsContainer.classList.toggle('hidden', !showSpecifics);
+                if (!showSpecifics) {
+                    document.getElementById('gocSpecifics').value = '';
+                }
+            });
+
+            addAllergyButton.addEventListener('click', createAllergyInput);
+            allergiesSection.addEventListener('click', e => {
+                if (e.target.classList.contains('remove-btn')) {
+                    e.target.closest('.allergy-row').remove();
+                }
+            });
+            nkdaCheckbox.addEventListener('change', () => {
+                const isChecked = nkdaCheckbox.checked;
+                if(isChecked) allergiesContainer.innerHTML = '';
+                allergiesContainer.style.display = isChecked ? 'none' : 'block';
+                addAllergyButton.style.display = isChecked ? 'none' : 'block';
+            });
+
+            precautionCheckboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const anyChecked = [...precautionCheckboxes].some(c => c.checked);
+                    infectionControlDetails.classList.toggle('hidden', !anyChecked);
+                    if(!anyChecked) document.getElementById('infectionControlReason').value = '';
+                });
+            });
+
             // Device Listeners
             addCentralLineButton.addEventListener('click', createCentralLineInput);
             addPivcButton.addEventListener('click', createPivcInput);
@@ -1267,3 +1413,4 @@
     </script>
 </body>
 </html>
+
