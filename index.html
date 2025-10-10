@@ -665,9 +665,9 @@ function getState() {
   state['clinicianRole'] = checked ? checked.value : 'ALERT CNS';
 
   // Dynamic lists
-  state.pivcs = Array.from(document.querySelectorAll('#pivc-container .pivc-entry textarea')).map(t=>t.value.trim()).filter(Boolean);
-  state.wounds = Array.from(document.querySelectorAll('#wound-container .wound-entry textarea')).map(t=>t.value.trim()).filter(Boolean);
-  state.drains = Array.from(document.querySelectorAll('#drain-container .drain-entry textarea')).map(t=>t.value.trim()).filter(Boolean);
+  state.pivcs = Array.from(document.querySelectorAll('#pivc-container .pivc-entry textarea')).map(t=>t.value.trim());
+  state.wounds = Array.from(document.querySelectorAll('#wound-container .wound-entry textarea')).map(t=>t.value.trim());
+  state.drains = Array.from(document.querySelectorAll('#drain-container .drain-entry textarea')).map(t=>t.value.trim());
 
   // footer / misc
   return state;
@@ -1147,8 +1147,7 @@ function computeAll() {
 
   if (atoe.length > 0) lines.push('', 'A-E ASSESSMENT', ...atoe);
 
-  // Systems & bloods
-  const systems = [];
+  const bloodLines = [];
   const bloodParts = ['lac_review','hb','wcc','crp','cr_review','k','mg','plts','alb','neut','lymph'];
   const trendWord = val => ({ '↑': ' (uptrending)', '↓':' (downtrending)', '→':' (stable)'}[val] || '');
   const bloods = bloodParts.map(k => {
@@ -1156,38 +1155,47 @@ function computeAll() {
     const trend = s[`bl_${k}_trend`] || '-';
     return `${k.replace('_review','').toUpperCase()} ${v}${trendWord(trend)}`;
   }).filter(Boolean).join(', ');
-  if (bloods) systems.push(`Bloods: ${bloods}`);
-  if (s.elec_replace_note) systems.push(`Electrolyte Plan: ${s.elec_replace_note}`);
-  if (s.new_bloods_ordered) systems.push('Plan: New bloods ordered for next round.');
-
-  // Devices & wounds - only include if present
+  if (bloods) bloodLines.push(`Bloods: ${bloods}`);
+  if (s.elec_replace_note) bloodLines.push(`Electrolyte Plan: ${s.elec_replace_note}`);
+  if (s.new_bloods_ordered) bloodLines.push('Plan: New bloods ordered for next round.');
+  if (bloodLines.length > 0) lines.push('', ...bloodLines);
+  
   const deviceParts = [];
-  (s.pivcs || []).forEach((loc,i)=> { if (loc && loc.trim()) deviceParts.push(`PIVC #${i+1} (${loc.trim()})`); });
+  (s.pivcs || []).forEach((loc,i)=> {
+      let pivcString = `PIVC #${i + 1}`;
+      if (loc) pivcString += ` (${loc})`;
+      deviceParts.push(pivcString);
+  });
   if (s.dev_other_cvad_type) deviceParts.push(`Other CVAD (${s.dev_other_cvad_type})`);
   if (s.dev_cvc) {
+    let cvcString = 'CVC';
     let cvcParts = [];
     if (s.dev_cvc_loc) cvcParts.push(s.dev_cvc_loc);
     if (s.dev_cvc_site) cvcParts.push(`site: ${s.dev_cvc_site}`);
-    if(cvcParts.length > 0) deviceParts.push(`CVC (${cvcParts.join(', ')})`);
-    else deviceParts.push('CVC (details not specified)');
+    if (cvcParts.length > 0) {
+        cvcString += ` (${cvcParts.join(', ')})`;
+    }
+    deviceParts.push(cvcString);
   }
   if (s.dev_tube_type) deviceParts.push(`Enteral Tube (${s.dev_tube_type})`);
-  (s.drains || []).forEach((d,i)=> { if (d && d.trim()) deviceParts.push(`Drain #${i+1} (${d.trim()})`); });
-  (s.wounds || []).forEach((w,i)=> { if (w && w.trim()) deviceParts.push(`Wound #${i+1} (${w.trim()})`); });
+  (s.drains || []).forEach((d,i)=> { 
+    let drainString = `Drain #${i+1}`;
+    if (d) drainString += ` (${d})`;
+    deviceParts.push(drainString);
+  });
+  (s.wounds || []).forEach((w,i)=> {
+    let woundString = `Wound #${i+1}`;
+    if(w) woundString += ` (${w})`;
+    deviceParts.push(woundString);
+  });
   if (s.dev_other_note) deviceParts.push(s.dev_other_note);
   if (s.dev_idc) deviceParts.push('IDC');
   if (s.dev_pacing) deviceParts.push('Pacing Wires');
   if (deviceParts.length > 0) {
-    systems.push(''); // Add a space
-    if (deviceParts.length > 3) {
-      systems.push('Lines/Drains/Wounds:');
-      deviceParts.forEach(p=> systems.push('- ' + p));
-    } else {
-      systems.push('Lines/Drains/Wounds: ' + deviceParts.join(', '));
-    }
+    lines.push('');
+    lines.push('DEVICES:');
+    deviceParts.forEach(p=> lines.push('- ' + p));
   }
-
-  if (systems.length > 0) lines.push('', 'SYSTEMS & DEVICES', ...systems);
   
   const contextLines = [];
   if (s.goc_note) contextLines.push(`GOC: ${s.goc_note}`);
@@ -1205,7 +1213,6 @@ function computeAll() {
   }
 
   $('summary').value = lines.join('\n');
-  // update last saved label in header (read from storage)
   updateLastSaved();
 }
 
@@ -1214,9 +1221,7 @@ function computeAll() {
    =========================== */
 document.addEventListener('DOMContentLoaded', ()=> {
   initialize();
-  // compute periodically once ready
   computeAll();
-  // ensure last saved visible
   updateLastSaved();
 });
 </script>
