@@ -129,22 +129,22 @@
       margin-bottom: 10px;
       color: var(--accent);
     }
-    #panel_devices .devices-input-group > * {
+    #panel_devices .devices-input-group > * , #panel_context .devices-input-group > * {
       margin-bottom: 10px;
     }
-    #panel_devices .devices-input-group > *:last-child {
+    #panel_devices .devices-input-group > *:last-child, #panel_context .devices-input-group > *:last-child {
       margin-bottom: 0;
     }
-    #panel_devices .devices-input-group label {
+    #panel_devices .devices-input-group label, #panel_context .devices-input-group label {
       margin-bottom: 4px; /* less for labels above inputs */
     }
     #panel_devices .devices-input-group .toggle-label {
         margin-bottom: 10px;
     }
-    #panel_devices input[type="text"], #panel_devices textarea {
+    #panel_devices input[type="text"], #panel_devices textarea, #panel_context textarea {
       border-color: #b0c9c9; /* Slightly darker border */
     }
-    body.dark #panel_devices input[type="text"], body.dark #panel_devices textarea {
+    body.dark #panel_devices input[type="text"], body.dark #panel_devices textarea, body.dark #panel_context textarea {
       border-color: #2a3d3f; /* Darker border for dark mode */
     }
     #cvc_details textarea {
@@ -225,7 +225,7 @@
         <div class="col-6 npOnly" style="display:none"><label for="npFlow">NP Flow (L/min)</label><input id="npFlow" type="number" step="0.5" min="0" /></div>
         <div class="col-3 hfnpOnly" style="display:none"><label for="hfnpFio2">HFNP FiO2 (%)</label><input id="hfnpFio2" type="number" step="1" min="21" max="100" /></div>
         <div class="col-3 hfnpOnly" style="display:none"><label for="hfnpFlow">HFNP Flow (L/min)</label><input id="hfnpFlow" type="number" step="1" min="0" /></div>
-        <div class="col-6 nivOnly" style="display:none"><label for="nivDetails">NIV Details</label><input id="nivDetails" type="text" placeholder="e.g., PEEP, PS"/></div>
+        <div class="col-6 nivOnly" style="display:none"><label for="nivDetails">NIV Details</label><input id="nivDetails" type="text" placeholder="PEEP, PS"/></div>
       </div>
       <div style="margin-top:10px">
         <label>Dyspnea/Respiratory Distress</label>
@@ -263,8 +263,8 @@
       <div id="infectionMarkers" style="display:none; margin-top:12px; padding:12px; border-radius:10px; background:var(--bg)">
         <label style="margin-bottom:8px; display:block; font-weight:600;">Optional Infection Markers</label>
         <div class="grid">
-          <div class="col-4"><label for="wcc">WCC (x10^9/L)</label><input id="wcc" type="number" step="0.1" placeholder="e.g., 12.5" /></div>
-          <div class="col-4"><label for="crp">CRP (mg/L)</label><input id="crp" type="number" step="1" placeholder="e.g., 100" /></div>
+          <div class="col-4"><label for="wcc">WCC (x10^9/L)</label><input id="wcc" type="number" step="0.1" /></div>
+          <div class="col-4"><label for="crp">CRP (mg/L)</label><input id="crp" type="number" step="1" /></div>
           <div class="col-4">
             <label for="neut">Neut / Lymph (NLR)</label>
             <input id="neut" type="number" step="0.1" placeholder="Neut (x10^9/L)" style="margin-bottom:6px;" />
@@ -344,9 +344,9 @@
         <div class="col-4"><label>&nbsp;</label><input id="e_uop" type="text" placeholder="UOP"/></div>
 
         <div class="col-12"><hr></div>
-        <div class="col-12"><label for="ae_mobility">Mobility/MSK</label><input id="ae_mobility" type="text" placeholder="e.g., Bedbound, SOEOB, physio input"/></div>
-        <div class="col-12"><label for="ae_diet">Diet</label><input id="ae_diet" type="text" placeholder="e.g., NBM, clear fluids, dietitian input"/></div>
-        <div class="col-12"><label for="ae_bowels">Bowels</label><input id="ae_bowels" type="text" placeholder="e.g., Last BO, PRN aperients"/></div>
+        <div class="col-12"><label for="ae_mobility">Mobility/MSK</label><input id="ae_mobility" type="text" placeholder="Independent, bedbound, 1 assist, 2 assist"/></div>
+        <div class="col-12"><label for="ae_diet">Diet</label><input id="ae_diet" type="text" placeholder="NBM, clear fluids, dietitian input"/></div>
+        <div class="col-12"><label for="ae_bowels">Bowels</label><input id="ae_bowels" type="text" placeholder="Last BO, PRN aperients"/></div>
       </div>
     </div>
   </div>
@@ -369,7 +369,7 @@
       </div>
 
       <div style="margin-top:12px" class="grid">
-        <div class="col-12"><label>Electrolyte Plan</label><input id="elec_replace_note" type="text" placeholder="e.g. Replacement ordered"/></div>
+        <div class="col-12"><label>Electrolyte Plan</label><input id="elec_replace_note" type="text" placeholder="Replacement ordered"/></div>
         <div class="col-12" style="margin-top:8px"><div class="toggle-label" id="toggle_new_bloods_ordered" data-value="false" role="button" aria-pressed="false">New blood request ordered for next phleb round <span class="state">No</span></div></div>
       </div>
     </div>
@@ -383,7 +383,7 @@
             <div class="toggle-label" id="toggle_dev_cvc" data-value="false" role="button" aria-pressed="false">CVC <span class="state">No</span></div>
             <div id="cvc_details" style="display:none; margin-left: 20px; margin-top: 8px;" aria-hidden="true">
                 <label for="dev_cvc_loc">CVC Location</label>
-                <input id="dev_cvc_loc" type="text" placeholder="e.g. R IJ" style="margin-bottom:8px;" />
+                <input id="dev_cvc_loc" type="text" placeholder="E.g. R IJ" style="margin-bottom:8px;" />
                 <label for="dev_cvc_site">Site Appearance</label>
                 <textarea id="dev_cvc_site" placeholder="Appearance, dressing"></textarea>
             </div>
@@ -421,17 +421,32 @@
 
         <div class="devices-subtitle">▶ Other</div>
         <div class="devices-input-group">
-            <textarea id="dev_other_note" placeholder="e.g. additional notes"></textarea>
+            <textarea id="dev_other_note" placeholder="Other device"></textarea>
         </div>
+    </div>
+  </div>
 
+  <div class="accordion-wrapper" data-accordion-id="context">
+    <button class="accordion" aria-expanded="false" aria-controls="panel_context">Plan & Context <span class="icon" aria-hidden="true">[+]</span></button>
+    <div class="panel" id="panel_context">
         <div class="devices-subtitle">▶ Goals of Care (GOC)</div>
         <div class="devices-input-group">
-            <textarea id="goc_note" placeholder="Note GOC status, e.g., Resus status, treatment limitations..."></textarea>
+            <textarea id="goc_note" placeholder="Note GOC status"></textarea>
         </div>
 
         <div class="devices-subtitle">▶ Allergies</div>
         <div class="devices-input-group">
-            <textarea id="allergies_note" placeholder="Note any known allergies..."></textarea>
+            <textarea id="allergies_note" placeholder="Note any known allergies"></textarea>
+        </div>
+        
+        <div class="devices-subtitle">▶ PICS Assessment</div>
+        <div class="devices-input-group">
+            <textarea id="pics_note" placeholder="Note any PICS assessment findings"></textarea>
+        </div>
+
+        <div class="devices-subtitle">▶ Other</div>
+        <div class="devices-input-group">
+            <textarea id="context_other_note" placeholder="Hometeam plan, or other notes"></textarea>
         </div>
     </div>
   </div>
@@ -490,7 +505,7 @@ const staticInputs = [
   'bl_wcc','bl_wcc_trend','bl_crp','bl_crp_trend','bl_neut','bl_neut_trend','bl_lymph','bl_lymph_trend',
   'bl_hb','bl_hb_trend','bl_plts','bl_plts_trend','bl_k','bl_k_trend',
   'bl_cr_review','bl_cr_review_trend','bl_mg','bl_mg_trend','bl_alb','bl_alb_trend','bl_lac_review','bl_lac_review_trend',
-  'elec_replace_note','dev_other_cvad_type','dev_cvc_loc','dev_cvc_site','dev_tube_type','dev_other_note', 'goc_note', 'allergies_note',
+  'elec_replace_note','dev_other_cvad_type','dev_cvc_loc','dev_cvc_site','dev_tube_type','dev_other_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note',
   'adds','lactate','hb','wcc','crp','neut','lymph'
 ];
 const toggleInputs = [
@@ -525,7 +540,6 @@ function saveState(instantly=false) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   localStorage.setItem('alertNursingToolLastSaved', new Date().toISOString());
   updateLastSaved();
-  if (!instantly) showFloatingSaveFaint();
 }
 function loadState() {
   try {
@@ -545,7 +559,7 @@ function popUndo() {
     if (!raw) return null;
     const obj = JSON.parse(raw);
     const age = Date.now() - (obj.created || 0);
-    if (age > 30000) { localStorage.removeItem(UNDO_KEY); return null; }
+    if (age > 10000) { localStorage.removeItem(UNDO_KEY); return null; }
     localStorage.removeItem(UNDO_KEY);
     return obj.snapshot;
   } catch(e){ return null; }
@@ -817,9 +831,6 @@ function initialize() {
       maps[id] = open;
       localStorage.setItem(ACCORDION_KEY, JSON.stringify(maps));
     });
-    // restore
-    const maps = JSON.parse(localStorage.getItem(ACCORDION_KEY) || '{}');
-    if (maps[id]) { panel.style.display = 'block'; btn.setAttribute('aria-expanded','true'); btn.querySelector('.icon').textContent='[-]'; }
   });
 
   // Dynamic PIVC/Wound/Drain buttons
@@ -837,7 +848,7 @@ function initialize() {
 
   // Clear data with Undo
   const clearFn = ()=> {
-    if (!confirm('Are you sure you want to clear all data for this patient? This action cannot be undone unless undone from the toast for 30s.')) return;
+    if (!confirm('Are you sure you want to clear all data for this patient?')) return;
     const snapshot = getState();
     pushUndo(snapshot);
     // clear DOM inputs
@@ -845,10 +856,20 @@ function initialize() {
     toggleInputs.forEach(id=>{ const el = $(`toggle_${id}`); if (el) { el.dataset.value='false'; el.classList.remove('active'); const sp = el.querySelector('.state'); if(sp) sp.textContent='No'; } });
     selectInputs.forEach(g=>{ const el=$(g); if(el) el.querySelectorAll('.select-btn').forEach(b=>b.classList.remove('active')); });
     document.querySelectorAll('#pivc-container .pivc-entry, #wound-container .wound-entry, #drain-container .drain-entry').forEach(n=>n.remove());
+    // reset accordions to closed
+    document.querySelectorAll('.accordion-wrapper').forEach(wrapper => {
+      const btn = wrapper.querySelector('.accordion');
+      const panel = wrapper.querySelector('.panel');
+      panel.style.display = 'none';
+      btn.setAttribute('aria-expanded', 'false');
+      btn.querySelector('.icon').textContent = '[+]';
+    });
+    localStorage.removeItem(ACCORDION_KEY);
+    
     $('summary').value = '';
     computeAll();
     saveState(true);
-    showToast('Cleared — Undo?', 30000, 'Undo', ()=> {
+    showToast('Cleared — Undo?', 10000, 'Undo', ()=> {
       const snap = popUndo();
       if (snap) { restoreState(snap); computeAll(); saveState(true); showToast('Restored',1400); } else { showToast('Undo expired',1400); }
     });
@@ -873,7 +894,21 @@ function initialize() {
 
   // Load saved state
   const saved = loadState();
-  if (saved) restoreState(saved);
+  if (saved) {
+    restoreState(saved);
+  }
+  // Restore accordion state after loading main state
+  const maps = JSON.parse(localStorage.getItem(ACCORDION_KEY) || '{}');
+  document.querySelectorAll('.accordion-wrapper').forEach(wrapper => {
+      const id = wrapper.dataset.accordionId;
+      if (maps[id]) {
+          const btn = wrapper.querySelector('.accordion');
+          const panel = wrapper.querySelector('.panel');
+          panel.style.display = 'block';
+          btn.setAttribute('aria-expanded','true');
+          btn.querySelector('.icon').textContent='[-]';
+      }
+  });
 
   // populate footer placeholders
   computeAll();
@@ -888,14 +923,14 @@ function initialize() {
 function getRoundedTime() {
     const now = new Date();
     const minutes = now.getMinutes();
-    const roundedMinutes = Math.round(minutes / 30) * 30;
+    const roundedMinutes = Math.round(minutes / 15) * 15;
     if (roundedMinutes === 60) {
         now.setHours(now.getHours() + 1);
         now.setMinutes(0);
     } else {
         now.setMinutes(roundedMinutes);
     }
-    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function toggleOxyFields() {
@@ -927,12 +962,12 @@ function calculateTimeOnWard(dateStr, timeOfDay) {
   const stepdownHour = timeMap[timeOfDay] || 12;
   const [year, month, day] = dateStr.split('-').map(Number);
   const stepdownDate = new Date(year, month - 1, day, stepdownHour, 0, 0);
-  if (isNaN(stepdownDate.getTime())) return 'Invalid date';
+  if (isNaN(stepdownDate.getTime())) return null;
   const diffMs = new Date().getTime() - stepdownDate.getTime();
   if (diffMs < 0) return '(future date)';
   const diffHours = diffMs / 3600000;
   if (diffHours < 48) return `${Math.round(diffHours)} hours`;
-  return `Day ${Math.floor(diffHours / 24) + 1}`;
+  return `${Math.floor(diffHours / 24)} days on ward`;
 }
 
 function updateDisplay(s, red, amber) {
@@ -1056,27 +1091,33 @@ function computeAll() {
   // Build display
   updateDisplay(s, red, amber);
 
-  // Build summary (plain text, no emojis)
+  // Build summary (plain text)
   const role = s.clinicianRole || 'ALERT CNS';
-  let reviewTitle = `${getRoundedTime()} ${role} Review`;
+  let reviewTitle = `${role} Review`;
   if (s.reviewType === 'post') {
-      reviewTitle = `${getRoundedTime()} ${role} post ICU review`;
-  } else { // 'pre'
-      reviewTitle = `${getRoundedTime()} ${role} pre ICU stepdown review`;
+      reviewTitle = `${role} post ICU review`;
+  } else {
+      reviewTitle = `${role} pre ICU stepdown review`;
   }
   
-  const headerLines = [
-    reviewTitle,
-    '',
-    `Patient: ${s.ptName||'--'} | URN: ...${s.ptMrn||'--'} | Location: ${s.ptLoc||'--'}`
-  ];
+  const headerLines = [reviewTitle, `Time of review: ${getRoundedTime()}`];
 
-  if (s.reviewType === 'post') {
-    const timeOnWard = calculateTimeOnWard(s.stepdownDate, s.stepdownTime);
-    headerLines.push('', `Time since stepdown: ${timeOnWard || '(date not set)'}. ICU LOS: ${s.icuLos || '--'} days.`);
-  } else {
-    headerLines.push('', `ICU LOS: ${s.icuLos || '--'} days.`);
+  const patientDetailsParts = [];
+  if (s.ptName) patientDetailsParts.push(`Patient: ${s.ptName}`);
+  if (s.ptMrn) patientDetailsParts.push(`URN: ...${s.ptMrn}`);
+  if (s.ptLoc) patientDetailsParts.push(`Location: ${s.ptLoc}`);
+  if (patientDetailsParts.length > 0) {
+      headerLines.push('', patientDetailsParts.join(' | '));
   }
+
+  const stepdownParts = [];
+  if (s.reviewType === 'post') {
+      const timeOnWard = calculateTimeOnWard(s.stepdownDate, s.stepdownTime);
+      if(timeOnWard) stepdownParts.push(`Time since stepdown: ${timeOnWard}.`);
+  }
+  if (s.icuLos) stepdownParts.push(`ICU LOS: ${s.icuLos} days.`);
+  if(stepdownParts.length > 0) headerLines.push('', ...stepdownParts);
+  
   if(s.ptAdmissionReason) headerLines.push(`ICU admission for: ${s.ptAdmissionReason}`);
   
   const lines = [...headerLines, ''];
@@ -1127,8 +1168,8 @@ function computeAll() {
     let cvcParts = [];
     if (s.dev_cvc_loc) cvcParts.push(s.dev_cvc_loc);
     if (s.dev_cvc_site) cvcParts.push(`site: ${s.dev_cvc_site}`);
-    let cvcDetails = cvcParts.join(', ') || 'details pending';
-    deviceParts.push(`CVC (${cvcDetails})`);
+    if(cvcParts.length > 0) deviceParts.push(`CVC (${cvcParts.join(', ')})`);
+    else deviceParts.push('CVC (details not specified)');
   }
   if (s.dev_tube_type) deviceParts.push(`Enteral Tube (${s.dev_tube_type})`);
   (s.drains || []).forEach((d,i)=> { if (d && d.trim()) deviceParts.push(`Drain #${i+1} (${d.trim()})`); });
@@ -1151,6 +1192,8 @@ function computeAll() {
   const contextLines = [];
   if (s.goc_note) contextLines.push(`GOC: ${s.goc_note}`);
   if (s.allergies_note) contextLines.push(`Allergies: ${s.allergies_note}`);
+  if (s.pics_note) contextLines.push(`Post ICU Syndrome: ${s.pics_note}`);
+  if (s.context_other_note) contextLines.push(`Other: ${s.context_other_note}`);
   if (contextLines.length > 0) {
       lines.push('', 'PLAN & CONTEXT', ...contextLines);
   }
@@ -1173,10 +1216,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
   initialize();
   // compute periodically once ready
   computeAll();
-  // restore accordion states map (already handled in initialize)
   // ensure last saved visible
   updateLastSaved();
 });
 </script>
 </body>
 </html>
+
