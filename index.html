@@ -1207,12 +1207,12 @@ function computeAll() {
     let markerFound=false;
     let baseNote = s.infectionConcern_note;
     if (temp >= 38.0) { markerFound=true; addRisk(amber, `Infection: Temp ${temp}C`, baseNote, 'toggle_infectionConcern', 'amber'); }
-    if (wcc !== null && (wcc < normalRanges.wcc.low || wcc > normalRanges.wcc.high)) { markerFound=true; addRisk(amber,`Infection: Abnormal WCC (${wcc})`, baseNote, 'toggle_infectionConcern', 'amber'); }
+    if (wcc !== null && (wcc < normalRanges.wcc.low || wcc > normalRanges.wcc.high)) { markerFound=true; addRisk(red,`Infection: Abnormal WCC (${wcc})`, baseNote, 'toggle_infectionConcern', 'red'); }
     if (crp > 100) { markerFound=true; addRisk(red,`Infection: High CRP (${crp})`, baseNote, 'toggle_infectionConcern', 'red'); }
     else if (crp > 50) { markerFound=true; addRisk(amber,`Infection: Elevated CRP (${crp})`, baseNote, 'toggle_infectionConcern', 'amber'); }
     if (nlr > 10) { markerFound=true; addRisk(red,`Infection: High NLR (${nlr})`, baseNote, 'toggle_infectionConcern', 'red'); }
     else if (nlr >= 5) { markerFound=true; addRisk(amber,`Infection: Elevated NLR (${nlr})`, baseNote, 'toggle_infectionConcern', 'amber'); }
-    if (!markerFound) addRisk(amber, 'Infection concern (clinical)', baseNote, 'toggle_infectionConcern', 'amber');
+    if (!markerFound) addRisk(red, 'Infection concern (clinical)', baseNote, 'toggle_infectionConcern', 'red');
   }
 
   const overrideNote = $('overrideNote')?.value ? ` (${$('overrideNote').value})` : '';
