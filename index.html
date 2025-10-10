@@ -76,6 +76,11 @@
     .toggle-label.active { background-color: var(--accent); color: white; border-color: var(--accent); }
     .toggle-label .state { font-weight:700; font-size:0.9rem; color:var(--muted); }
     .toggle-label.active .state { color: #fff; }
+    .comorbidity-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 10px;
+    }
     .bloods-grid {display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px;}
     .blood-item {display:flex; align-items:center; gap: 6px;}
     .blood-item label { margin-bottom: 0; width:56px; font-size:0.9rem; color:var(--muted); }
@@ -86,8 +91,8 @@
       border-top: 1px solid var(--line); padding: 8px 16px;
       display: flex; flex-wrap:wrap; align-items: center; justify-content: space-between; gap: 8px 12px; box-sizing: border-box; z-index:25;
     }
-    .footer-item { color: var(--muted); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .footer-item strong { color: var(--ink); font-weight: 600; margin-right:6px; }
+    .footer-item { color: var(--muted); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .footer-item.reason { flex: 1 1 auto; min-width: 120px; }
     .footer-score { padding: 6px 12px; border-radius: 8px; font-weight: 700; text-align: center; flex-shrink: 0;}
     .tag{display:inline-flex; align-items:center; padding: 4px 10px; border-radius:999px; font-size:.85rem; margin:2px; border:1px solid; font-weight:600;}
     .tag.red{background:rgba(239,68,68,.08); color:var(--red); border-color:rgba(239,68,68,.2)}
@@ -112,13 +117,13 @@
     .floating-toolbar {
       display: flex;
       position: fixed;
-      right: 12px;
-      bottom: 72px;
+      right: 8px;
+      bottom: 68px;
       z-index: 35;
       gap: 8px;
       flex-direction: column;
     }
-    .floating-toolbar .btn { min-width:56px; border-radius:12px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+    .floating-toolbar .btn { min-width:52px; min-height: 52px; padding: 8px; border-radius:12px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
     .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:110px; background:var(--toast-bg); color:var(--toast-color); padding:10px 14px; border-radius:8px; z-index:60; display:none; font-weight:600; }
     .toast.show { display:block; animation: fadeIn .18s ease; }
     @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(6px); } to { opacity:1; transform:translateX(-50%) translateY(0);} }
@@ -156,6 +161,9 @@
       .grid { column-gap:10px; row-gap:12px; }
       input, textarea { font-size:1.05rem; padding:12px; }
       .btn, .select-btn, .toggle-label { padding:10px 12px; font-size:1rem; min-height:48px; }
+    }
+     @media (max-width: 400px) {
+      .footer-item { white-space: normal; }
     }
   </style>
 </head>
@@ -225,7 +233,7 @@
         <div class="col-6 npOnly" style="display:none"><label for="npFlow">NP Flow (L/min)</label><input id="npFlow" type="number" step="0.5" min="0" /></div>
         <div class="col-3 hfnpOnly" style="display:none"><label for="hfnpFio2">HFNP FiO2 (%)</label><input id="hfnpFio2" type="number" step="1" min="21" max="100" /></div>
         <div class="col-3 hfnpOnly" style="display:none"><label for="hfnpFlow">HFNP Flow (L/min)</label><input id="hfnpFlow" type="number" step="1" min="0" /></div>
-        <div class="col-6 nivOnly" style="display:none"><label for="nivDetails">NIV Details</label><input id="nivDetails" type="text" placeholder="PEEP, PS"/></div>
+        <div class="col-6 nivOnly" style="display:none"><label for="nivDetails">NIV Details</label><input id="nivDetails" type="text" placeholder="Settings (PEEP/PS)"/></div>
       </div>
       <div style="margin-top:10px">
         <label>Dyspnea/Respiratory Distress</label>
@@ -278,7 +286,7 @@
     <hr>
     <div class="input-group">
       <label>Concerning Comorbidities</label>
-      <div class="comorbidity-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="comorbidity-grid">
         <div class="toggle-label" id="toggle_comorb_copd" data-value="false" role="button" aria-pressed="false">COPD/Asthma <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_hf" data-value="false" role="button" aria-pressed="false">Active HF <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_esrd" data-value="false" role="button" aria-pressed="false">ESRD/Dialysis <span class="state">No</span></div>
@@ -344,9 +352,9 @@
         <div class="col-4"><label>&nbsp;</label><input id="e_uop" type="text" placeholder="UOP"/></div>
 
         <div class="col-12"><hr></div>
-        <div class="col-12"><label for="ae_mobility">Mobility/MSK</label><input id="ae_mobility" type="text" placeholder="Independent, bedbound, 1 assist, 2 assist"/></div>
-        <div class="col-12"><label for="ae_diet">Diet</label><input id="ae_diet" type="text" placeholder="NBM, clear fluids, dietitian input"/></div>
-        <div class="col-12"><label for="ae_bowels">Bowels</label><input id="ae_bowels" type="text" placeholder="Last BO, PRN aperients"/></div>
+        <div class="col-12"><label for="ae_mobility">Mobility/MSK</label><input id="ae_mobility" type="text" placeholder="Current mobility level"/></div>
+        <div class="col-12"><label for="ae_diet">Diet</label><input id="ae_diet" type="text" placeholder="Current diet/fluids"/></div>
+        <div class="col-12"><label for="ae_bowels">Bowels</label><input id="ae_bowels" type="text" placeholder="Last bowel motion"/></div>
       </div>
     </div>
   </div>
@@ -369,7 +377,7 @@
       </div>
 
       <div style="margin-top:12px" class="grid">
-        <div class="col-12"><label>Electrolyte Plan</label><input id="elec_replace_note" type="text" placeholder="Replacement ordered"/></div>
+        <div class="col-12"><label>Electrolyte Plan</label><input id="elec_replace_note" type="text" placeholder="Replacement plan"/></div>
         <div class="col-12" style="margin-top:8px"><div class="toggle-label" id="toggle_new_bloods_ordered" data-value="false" role="button" aria-pressed="false">New blood request ordered for next phleb round <span class="state">No</span></div></div>
       </div>
     </div>
@@ -383,9 +391,9 @@
             <div class="toggle-label" id="toggle_dev_cvc" data-value="false" role="button" aria-pressed="false">CVC <span class="state">No</span></div>
             <div id="cvc_details" style="display:none; margin-left: 20px; margin-top: 8px;" aria-hidden="true">
                 <label for="dev_cvc_loc">CVC Location</label>
-                <input id="dev_cvc_loc" type="text" placeholder="E.g. R IJ" style="margin-bottom:8px;" />
+                <input id="dev_cvc_loc" type="text" placeholder="Site (e.g., R IJ)" style="margin-bottom:8px;" />
                 <label for="dev_cvc_site">Site Appearance</label>
-                <textarea id="dev_cvc_site" placeholder="Appearance, dressing"></textarea>
+                <textarea id="dev_cvc_site" placeholder="Dressing & Site Condition"></textarea>
             </div>
             <label for="dev_other_cvad_type">Other CVAD (PICC, VasCath)</label>
             <input type="text" id="dev_other_cvad_type" placeholder="Type/Location"/>
@@ -421,7 +429,7 @@
 
         <div class="devices-subtitle">▶ Other</div>
         <div class="devices-input-group">
-            <textarea id="dev_other_note" placeholder="Other device"></textarea>
+            <textarea id="dev_other_note" placeholder="Other device details"></textarea>
         </div>
     </div>
   </div>
@@ -431,22 +439,22 @@
     <div class="panel" id="panel_context">
         <div class="devices-subtitle">▶ Goals of Care (GOC)</div>
         <div class="devices-input-group">
-            <textarea id="goc_note" placeholder="Note GOC status"></textarea>
+            <textarea id="goc_note" placeholder="GOC / Resuscitation Status"></textarea>
         </div>
 
         <div class="devices-subtitle">▶ Allergies</div>
         <div class="devices-input-group">
-            <textarea id="allergies_note" placeholder="Note any known allergies"></textarea>
+            <textarea id="allergies_note" placeholder="List any known allergies"></textarea>
         </div>
         
         <div class="devices-subtitle">▶ PICS Assessment</div>
         <div class="devices-input-group">
-            <textarea id="pics_note" placeholder="Note any PICS assessment findings"></textarea>
+            <textarea id="pics_note" placeholder="Note PICS assessment"></textarea>
         </div>
 
         <div class="devices-subtitle">▶ Other</div>
         <div class="devices-input-group">
-            <textarea id="context_other_note" placeholder="Hometeam plan, or other notes"></textarea>
+            <textarea id="context_other_note" placeholder="Hometeam plan, other notes"></textarea>
         </div>
     </div>
   </div>
@@ -472,7 +480,7 @@
 <footer role="contentinfo">
   <div class="footer-item"><strong>Patient:</strong> <span id="footerName">--</span></div>
   <div class="footer-item"><strong>Room:</strong> <span id="footerLocation">--</span></div>
-  <div class="footer-item" style="flex:1 1 auto; min-width:150px;"><strong>Reason:</strong> <span id="footerAdmission">--</span></div>
+  <div class="footer-item reason"><strong>Reason:</strong> <span id="footerAdmission">--</span></div>
   <div id="footerScore" class="footer-score tag green">CAT 3</div>
 </footer>
 
@@ -966,9 +974,14 @@ function calculateTimeOnWard(dateStr, timeOfDay) {
   const diffMs = new Date().getTime() - stepdownDate.getTime();
   if (diffMs < 0) return '(future date)';
   const diffHours = diffMs / 3600000;
-  if (diffHours < 48) return `${Math.round(diffHours)} hours`;
-  return `${Math.floor(diffHours / 24)} days on ward`;
+  if (diffHours < 24) {
+      return `${Math.round(diffHours)} hours`;
+  } else {
+      const days = Math.round((diffHours / 24) * 2) / 2;
+      return `${days} day${days > 1 ? 's' : ''}`;
+  }
 }
+
 
 function updateDisplay(s, red, amber) {
   const redCount = red.length, amberCount = amber.length;
