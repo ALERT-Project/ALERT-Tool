@@ -14,7 +14,7 @@
     /* Dark mode tokens */
     body.dark { --bg:#0b1112; --card:#0f1720; --ink:#e6eef0; --muted:#9aa9ad; --line:#132022; --input-bg:#071018; --toast-bg: rgba(255,255,255,0.06); --toast-color:#e6eef0; }
     html,body{height:100%}
-    body{font-family:'Inter', system-ui, sans-serif; background:var(--bg); color:var(--ink); margin:0 0 110px 0; line-height:1.4; -webkit-font-smoothing:antialiased;}
+    body{font-family:'Inter', system-ui, sans-serif; background:var(--bg); color:var(--ink); margin:0 0 140px 0; line-height:1.4; -webkit-font-smoothing:antialiased;}
     header{padding:14px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; flex-wrap:wrap; background: var(--card); position:sticky; top:0; z-index:30;}
     header h1 {
       font-size: 1.5rem;
@@ -427,7 +427,7 @@
   </div>
 
   <div class="accordion-wrapper" data-accordion-id="context">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_context">Plan & Context <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_context">Other Factors <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_context">
         <div class="devices-subtitle">▶ Goals of Care (GOC)</div>
         <div class="devices-input-group">
@@ -1195,7 +1195,7 @@ function computeAll() {
   if (s.pics_note) contextLines.push(`Post ICU Syndrome: ${s.pics_note}`);
   if (s.context_other_note) contextLines.push(`Other: ${s.context_other_note}`);
   if (contextLines.length > 0) {
-      lines.push('', 'PLAN & CONTEXT', ...contextLines);
+      lines.push('', ...contextLines);
   }
 
   const allFlags = [...red, ...amber];
