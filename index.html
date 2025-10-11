@@ -378,13 +378,14 @@
 
     <hr>
     <div class="input-group">
-      <label>Concerning Comorbidities</label>
+      <label>Concerning Comorbidities & Other Factors</label>
       <div class="comorbidity-grid">
         <div class="toggle-label" id="toggle_comorb_copd" data-value="false" role="button" aria-pressed="false">COPD/Asthma <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_hf" data-value="false" role="button" aria-pressed="false">Active HF <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_esrd" data-value="false" role="button" aria-pressed="false">ESRD/Dialysis <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_diabetes" data-value="false" role="button" aria-pressed="false">Uncontrolled Diabetes <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_cirrhosis" data-value="false" role="button" aria-pressed="false">Cirrhosis <span class="state">No</span></div>
+        <div class="toggle-label" id="toggle_immobility48h" data-value="false" role="button" aria-pressed="false">Immobility >48h <span class="state">No</span></div>
       </div>
     </div>
 
@@ -408,6 +409,9 @@
     <hr>
     <div class="section-title">Identified Risk Factors</div>
     <div id="flagList" style="margin-top:12px; min-height:28px; color:var(--muted);"></div>
+    <hr>
+    <div class="section-title">Follow-up Plan</div>
+    <div id="followUpInstructions" style="margin-top:12px; font-weight: 500;"></div>
   </div>
 
   <div class="optional-note">The following sections are optional DMR note helpers</div>
@@ -581,7 +585,7 @@ const staticInputs = [
 const toggleInputs = [
   'after_hours_discharge','pressors24h','np3Last12h','rapidWean','renalConcern','uopLow',
   'infectionConcern','use_mods','new_bloods_ordered',
-  'comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis'
+  'comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis', 'immobility48h'
 ];
 const selectInputs = ['oxMod','dyspneaConcern','neuroConcern','stepdownTime'];
 const deviceTypes = ['CVC', 'Other CVAD', 'PIVC', 'Enteral Tube', 'IDC', 'Pacing Wire', 'Drain', 'Wound', 'Other Device'];
@@ -664,7 +668,6 @@ function createDeviceEntry(type, value = '') {
     const rem = div.querySelector('.remove-entry');
     rem.addEventListener('click', () => { 
         div.remove(); 
-        // renumberDeviceEntries(type); // No longer needed
         computeAll(); 
         saveState(); 
     });
@@ -672,7 +675,6 @@ function createDeviceEntry(type, value = '') {
         if (e.key === 'Enter' || e.key === ' ') { 
             e.preventDefault(); 
             div.remove(); 
-            // renumberDeviceEntries(type); // No longer needed
             computeAll(); 
             saveState(); 
         }
@@ -680,15 +682,6 @@ function createDeviceEntry(type, value = '') {
     div.scrollIntoView({ behavior: 'smooth', block: 'center' });
     ta.focus();
 }
-
-// No longer needed as numbering is removed
-// function renumberDeviceEntries(type) {
-//     const entries = document.querySelectorAll(`.device-entry[data-type="${type}"]`);
-//     entries.forEach((entry, i) => {
-//         entry.querySelector('label').textContent = `${type} #${i + 1}`;
-//     });
-// }
-
 
 /* ===========================
    Save / Load DOM <-> State
@@ -1091,7 +1084,12 @@ function updateDisplay(s, red, amber, flaggedElements, location) {
     
     const catTextEl = $('catText');
     catTextEl.className = 'status ' + cat.id;
-    catTextEl.textContent = cat.text;
+    if (cat.id === 'red') {
+      const priorityText = redCount >= 3 ? ' - High Priority' : '';
+      catTextEl.textContent = `${cat.text} (${redCount} flag${redCount > 1 ? 's' : ''})${priorityText}`;
+    } else {
+      catTextEl.textContent = cat.text;
+    }
     
     const catBox = $('categoryBox');
     catBox.style.borderColor = `var(--${cat.id})`;
@@ -1104,6 +1102,18 @@ function updateDisplay(s, red, amber, flaggedElements, location) {
     } else {
         flagListEl.innerHTML = `<div style="color:var(--muted)">No risk factors identified</div>`;
     }
+
+    const followUpEl = $('followUpInstructions');
+    let followUpHTML = '';
+    if (cat.id === 'red') {
+        const priority = redCount >= 3 ? ' (High Priority)' : '';
+        followUpHTML = `<div class="status red">Twice-daily checks required${priority}.</div>`;
+    } else if (cat.id === 'amber') {
+        followUpHTML = `<div class="status amber">Once-daily checks for 48h total since stepdown.</div>`;
+    } else {
+        followUpHTML = `<div class="status green">Once on ward, removable from list if stable.</div>`;
+    }
+    followUpEl.innerHTML = followUpHTML;
 
     // Footer and score
     $('footerName').textContent = s.ptName || '--';
@@ -1136,6 +1146,37 @@ function computeAll() {
     }
   }
 
+  // --- New Logic for LOS and Immobility ---
+  const icuLos = num(s.icuLos);
+  const immobility = s.immobility48h;
+  const pressors = s.pressors24h;
+  const lactateVal = num(s.lactate);
+  const hasSignificantFlags = pressors || (lactateVal !== null && lactateVal > 2.0);
+  let hasCombinedRedFlag = false;
+
+  if ((immobility && icuLos >= 4) || (icuLos >= 4 && hasSignificantFlags)) {
+      let reason = (immobility && icuLos >= 4) 
+          ? "Immobility >48h + LOS ≥4 days" 
+          : `LOS ≥4 days + Significant flag (${pressors ? 'vasopressors' : 'lactate >2'})`;
+      red.push(reason);
+      if (immobility) flaggedElements.red.push('toggle_immobility48h');
+      flaggedElements.red.push('icuLos');
+      if (pressors) flaggedElements.red.push('toggle_pressors24h');
+      if (lactateVal > 2.0) flaggedElements.red.push('lactate');
+      hasCombinedRedFlag = true;
+  }
+
+  if (immobility && !hasCombinedRedFlag) {
+      amber.push('Immobility >48h');
+      flaggedElements.amber.push('toggle_immobility48h');
+  }
+
+  if (icuLos > 7) {
+      amber.push('ICU LOS > 7 days');
+      flaggedElements.amber.push('icuLos');
+  }
+  // --- End of New Logic ---
+
   // Oxygen flags
   const oxModGroup = $('oxMod');
   if (s.oxMod === 'NP') {
@@ -1162,11 +1203,12 @@ function computeAll() {
   if (s.np3Last12h) addRisk(red, 'Historical high O2 use', s.np3Last12h_note, 'toggle_np3Last12h', 'red');
   if (s.rapidWean) addRisk(red, 'Rapid oxygen wean in last 12h', s.rapidWean_note, 'toggle_rapidWean', 'red');
   if (s.after_hours_discharge) addRisk(red, 'Discharged after-hours', s.after_hours_discharge_note, 'toggle_after_hours_discharge', 'red');
-  if (s.pressors24h) addRisk(red, 'Vasopressors in last 24h', s.pressors24h_note, 'toggle_pressors24h', 'red');
+  if (s.pressors24h && !hasCombinedRedFlag) addRisk(red, 'Vasopressors in last 24h', s.pressors24h_note, 'toggle_pressors24h', 'red');
   if (num(s.adds) >= 3) { red.push(`ADDS ${s.adds}`); flaggedElements.red.push('adds');}
-  const l = num(s.lactate);
-  if (l > 2.5) {red.push(`Lactate ${l}`); flaggedElements.red.push('lactate');}
-  else if (l >= 2.0) {amber.push(`Lactate ${l}`); flaggedElements.amber.push('lactate');}
+
+  if (lactateVal > 2.5) {red.push(`Lactate ${lactateVal}`); flaggedElements.red.push('lactate');}
+  else if (lactateVal >= 2.0 && !hasCombinedRedFlag) {amber.push(`Lactate ${lactateVal}`); flaggedElements.amber.push('lactate');}
+  
   if (s.uopLow) addRisk(red, 'UOP concerning / downtrending', s.uopLow_note, 'toggle_uopLow', 'red');
   
   if (s.renalConcern) {
@@ -1177,8 +1219,6 @@ function computeAll() {
     if(renalDetails.length > 0) renalText += ` (${renalDetails.join(', ')})`;
     addRisk(red, renalText, s.renalConcern_note, 'toggle_renalConcern', 'red');
   }
-
-  if (num(s.icuLos) > 3) { amber.push(`ICU LOS ${s.icuLos} days`); flaggedElements.amber.push('icuLos'); }
   
   if (s.neuroConcern === 'severe') addRisk(red, 'Severe confusion/delirium (GCS <13)', s.neuroConcern_note, 'neuroConcern', 'red');
   else if (s.neuroConcern === 'mild') addRisk(amber, 'Mild confusion/delirium (GCS 13-14)', s.neuroConcern_note, 'neuroConcern', 'amber');
@@ -1345,6 +1385,21 @@ function computeAll() {
     lines.push('', 'IDENTIFIED RISK FACTORS:');
     allFlags.forEach(f => lines.push('- ' + f));
   }
+
+  const redCount = red.length;
+  const amberCount = amber.length;
+  if (redCount > 0 || amberCount > 0) {
+      lines.push('', 'PLAN & FOLLOW-UP:');
+      if (redCount > 0) {
+          const priority = redCount >= 3 ? ` (High Priority due to ${redCount} flags)` : '';
+          lines.push(`- Follow-up: Twice-daily checks required${priority}.`);
+      } else if (amberCount > 0) {
+          lines.push('- Follow-up: Once-daily for 48h total since stepdown.');
+      } else {
+          lines.push('- Follow-up: Standard ward care, removable from list if stable.');
+      }
+  }
+
 
   $('summary').value = lines.join('\n');
   updateLastSaved();
