@@ -120,7 +120,7 @@
     .device-entry, .pivc-entry, .wound-entry, .drain-entry {
       background: var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;
     }
-    .device-entry textarea, .pivc-entry textarea, .wound-entry textarea, .drain-entry textarea { width:100%; min-height:70px; font-size:1rem; background:var(--input-bg); }
+    .device-entry textarea, .pivc-entry textarea, .wound-entry textarea, .drain-entry textarea { width:100%; min-height:50px; font-size:1rem; background:var(--input-bg); }
     .remove-entry { background: transparent; border:1px solid rgba(239,68,68,0.12); color:var(--red); border-radius:8px; padding:8px; cursor:pointer; text-align:center; font-weight:700; }
     .remove-entry:hover { background: rgba(239,68,68,0.04); }
     .floating-toolbar { display: none; }
@@ -204,10 +204,56 @@
         </div>
       </div>
       <div class="col-6"><label for="ptName">Patient Initials</label><input id="ptName" type="text" autocomplete="off" /></div>
-      <div class="col-6"><label for="ptMrn">Last 3 digits of URN</label><input id="ptMrn" type="text" autocomplete="off" /></div>
+      <div class="col-6"><label for="ptMrn">Last 3 digits of URN</label><input id="ptMrn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" /></div>
       <div class="col-3"><label for="ptAge">Age</label><input id="ptAge" type="number" min="0" /></div>
       <div class="col-3"><label for="icuLos">ICU LOS (days)</label><input id="icuLos" type="number" min="0" /></div>
-      <div class="col-6"><label for="ptLoc">Location/Bed</label><input id="ptLoc" type="text" /></div>
+      <div class="col-4">
+          <label for="ptWard">Ward</label>
+          <select id="ptWard">
+              <option value="" selected disabled>Select Ward...</option>
+              <option value="3A">3A</option>
+              <option value="3B">3B</option>
+              <option value="3C">3C</option>
+              <option value="3D">3D</option>
+              <option value="4A">4A</option>
+              <option value="4B">4B</option>
+              <option value="4C">4C</option>
+              <option value="4D">4D</option>
+              <option value="5A">5A</option>
+              <option value="5B">5B</option>
+              <option value="5C">5C</option>
+              <option value="5D">5D</option>
+              <option value="6A">6A</option>
+              <option value="6B">6B</option>
+              <option value="6C">6C</option>
+              <option value="6D">6D</option>
+              <option value="7A">7A</option>
+              <option value="7B">7B</option>
+              <option value="7C">7C</option>
+              <option value="7D">7D</option>
+              <option value="SRS2A">SRS2A</option>
+              <option value="SRS1A">SRS1A</option>
+              <option value="SRSA">SRSA</option>
+              <option value="SRSB">SRSB</option>
+              <option value="Medihotel 8">Medihotel 8</option>
+              <option value="Medihotel 7">Medihotel 7</option>
+              <option value="Medihotel 6">Medihotel 6</option>
+              <option value="Medihotel 5">Medihotel 5</option>
+              <option value="Short Stay">Short Stay</option>
+              <option value="Transit Lounge">Transit Lounge</option>
+              <option value="Mental Health Adult">Mental Health Adult</option>
+              <option value="Mental Health Youth">Mental Health Youth</option>
+              <option value="Other">Other</option>
+          </select>
+      </div>
+      <div class="col-2">
+          <label for="ptBed">Bed</label>
+          <input id="ptBed" type="number" min="1" />
+      </div>
+      <div class="col-6" id="ptWardOtherWrapper" style="display:none;">
+          <label for="ptWardOther">Specify Other Ward</label>
+          <input id="ptWardOther" type="text" />
+      </div>
       <div class="col-12"><label for="ptAdmissionReason">Reason for ICU Admission</label><input id="ptAdmissionReason" type="text" /></div>
       <div class="col-4"><label>Stepdown Date</label><input type="date" id="stepdownDate"></div>
       <div class="col-8">
@@ -434,7 +480,7 @@
     <button class="accordion" aria-expanded="false" aria-controls="panel_devices">Lines, Drains & Wounds <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_devices" style="display:flex; flex-direction:column; gap: 12px;">
        <div id="devices-container"></div>
-       <div class="button-group" style="justify-content: center;">
+       <div class="button-group" style="justify-content: flex-start; flex-wrap: wrap;">
            <button class="btn small" data-device-type="CVC">+ Add CVC</button>
            <button class="btn small" data-device-type="Other CVAD">+ Add Other CVAD</button>
            <button class="btn small" data-device-type="PIVC">+ Add PIVC</button>
@@ -519,7 +565,7 @@ const normalRanges = {
 
 /* fields to automatically save/restore */
 const staticInputs = [
-  'ptName','ptMrn','ptAge','ptLoc','ptAdmissionReason','icuLos','stepdownDate',
+  'ptName','ptMrn','ptAge','ptWard','ptBed','ptWardOther','ptAdmissionReason','icuLos','stepdownDate',
   'npFlow','hfnpFio2','hfnpFlow','nivDetails','override','overrideNote',
   'mods_score','mods_details','airway_a','b_rr','b_spo2','b_device','b_wob',
   'c_hr','c_nibp','c_cr','c_perf','d_alert','d_gcs','d_pain','e_temp','e_bsl','e_uop','atoe_adds',
@@ -607,7 +653,7 @@ function createDeviceEntry(type, value = '') {
     div.className = 'device-entry';
     div.dataset.type = type;
     div.innerHTML = `
-        <label>${type} #${index}</label>
+        <label>${type}</label>
         <textarea placeholder="Enter details for ${type}...">${value}</textarea>
         <div class="remove-entry" role="button" tabindex="0">Remove</div>
     `;
@@ -618,7 +664,7 @@ function createDeviceEntry(type, value = '') {
     const rem = div.querySelector('.remove-entry');
     rem.addEventListener('click', () => { 
         div.remove(); 
-        renumberDeviceEntries(type);
+        // renumberDeviceEntries(type); // No longer needed
         computeAll(); 
         saveState(); 
     });
@@ -626,7 +672,7 @@ function createDeviceEntry(type, value = '') {
         if (e.key === 'Enter' || e.key === ' ') { 
             e.preventDefault(); 
             div.remove(); 
-            renumberDeviceEntries(type);
+            // renumberDeviceEntries(type); // No longer needed
             computeAll(); 
             saveState(); 
         }
@@ -635,12 +681,13 @@ function createDeviceEntry(type, value = '') {
     ta.focus();
 }
 
-function renumberDeviceEntries(type) {
-    const entries = document.querySelectorAll(`.device-entry[data-type="${type}"]`);
-    entries.forEach((entry, i) => {
-        entry.querySelector('label').textContent = `${type} #${i + 1}`;
-    });
-}
+// No longer needed as numbering is removed
+// function renumberDeviceEntries(type) {
+//     const entries = document.querySelectorAll(`.device-entry[data-type="${type}"]`);
+//     entries.forEach((entry, i) => {
+//         entry.querySelector('label').textContent = `${type} #${i + 1}`;
+//     });
+// }
 
 
 /* ===========================
@@ -682,6 +729,15 @@ function getState() {
 
   return state;
 }
+
+function updateWardOtherVisibility() {
+    const wardSelect = $('ptWard');
+    const otherWrapper = $('ptWardOtherWrapper');
+    if (wardSelect && otherWrapper) {
+        otherWrapper.style.display = (wardSelect.value === 'Other') ? 'block' : 'none';
+    }
+}
+
 function restoreState(state) {
   if (!state) return;
   for (const id of staticInputs) {
@@ -732,7 +788,8 @@ function restoreState(state) {
     const btnToActivate = group.querySelector(`.trend-btn[data-value="${value}"]`);
     if(btnToActivate) btnToActivate.classList.add('active');
   });
-
+  
+  updateWardOtherVisibility();
 }
 
 /* ===========================
@@ -796,6 +853,11 @@ function initialize() {
   });
   document.querySelectorAll('input[name="reviewType"]').forEach(r => r.addEventListener('change', debouncedComputeAndSave));
   document.querySelectorAll('input[name="clinicianRole"]').forEach(r => r.addEventListener('change', debouncedComputeAndSave));
+
+  $('ptWard').addEventListener('change', () => {
+    updateWardOtherVisibility();
+    debouncedComputeAndSave();
+  });
 
   ['neut','lymph'].forEach(id => {
     const el = $(id); if (!el) return;
@@ -999,12 +1061,12 @@ function calculateTimeOnWard(dateStr, timeOfDay) {
       return `${Math.round(diffHours)} hours`;
   } else {
       const days = Math.round((diffHours / 24) * 2) / 2;
-      return `${days} day${days !== 1 ? 's' : ''}`;
+      return `${days} day${days === 1 ? '' : 's'}`;
   }
 }
 
 
-function updateDisplay(s, red, amber, flaggedElements) {
+function updateDisplay(s, red, amber, flaggedElements, location) {
     const redCount = red.length, amberCount = amber.length;
     const cat = (redCount > 0) ? {id: 'red', text: 'CAT 1', catNum: 1} : (amberCount > 0) ? {id: 'amber', text: 'CAT 2', catNum: 2} : {id: 'green', text: 'CAT 3', catNum: 3};
 
@@ -1045,7 +1107,7 @@ function updateDisplay(s, red, amber, flaggedElements) {
 
     // Footer and score
     $('footerName').textContent = s.ptName || '--';
-    $('footerLocation').textContent = s.ptLoc || '--';
+    $('footerLocation').textContent = location || '--';
     $('footerAdmission').textContent = s.ptAdmissionReason || '--';
     const scoreEl = $('footerScore');
     scoreEl.className = `footer-score tag ${cat.id}`;
@@ -1059,6 +1121,9 @@ function computeAll() {
   const s = getState(); // current state from DOM
   const red = [], amber = [];
   const flaggedElements = { red: [], amber: [] };
+
+  const ward = s.ptWard === 'Other' ? s.ptWardOther : s.ptWard;
+  const location = [ward, s.ptBed].filter(Boolean).join(' ').trim();
   
   const addRisk = (list, text, note, elementId, flagType) => {
     if (note && note.trim()) {
@@ -1163,7 +1228,7 @@ function computeAll() {
   updateSingleBloodFlag('lymph', num(s.lymph), '');
 
   // Build display
-  updateDisplay(s, red, amber, flaggedElements);
+  updateDisplay(s, red, amber, flaggedElements, location);
 
   // Build summary (plain text)
   const role = s.clinicianRole || 'ALERT CNS';
@@ -1179,7 +1244,7 @@ function computeAll() {
   const patientDetailsParts = [];
   if (s.ptName) patientDetailsParts.push(`Patient: ${s.ptName}`);
   if (s.ptMrn) patientDetailsParts.push(`URN: ...${s.ptMrn}`);
-  if (s.ptLoc) patientDetailsParts.push(`Location: ${s.ptLoc}`);
+  if (location) patientDetailsParts.push(`Location: ${location}`);
   if (patientDetailsParts.length > 0) {
       headerLines.push('', patientDetailsParts.join(' | '));
   }
@@ -1230,17 +1295,22 @@ function computeAll() {
     const trend = s[trendKey] || '-';
     return `${k.replace('_review','').toUpperCase()} ${v}${trendWord(trend)}`;
   }).filter(Boolean).join(', ');
-  if (bloods) bloodLines.push(`Bloods: ${bloods}`);
+
+  let fullBloodLine = bloods;
+  if (s.new_bloods_ordered) {
+      fullBloodLine += `${bloods ? ' ' : ''}(new bloods ordered for next round.)`;
+  }
+  if (fullBloodLine) bloodLines.push(`Bloods: ${fullBloodLine}`);
   if (s.elec_replace_note) bloodLines.push(`Electrolyte Plan: ${s.elec_replace_note}`);
-  if (s.new_bloods_ordered) bloodLines.push('Plan: New bloods ordered for next round.');
+
   if (bloodLines.length > 0) lines.push('', ...bloodLines);
   
   const deviceParts = [];
   if(s.devices){
     deviceTypes.forEach(type => {
         if (s.devices[type] && s.devices[type].length > 0) {
-            s.devices[type].forEach((details, i) => {
-                let deviceString = `${type} #${i + 1}`;
+            s.devices[type].forEach((details) => {
+                let deviceString = type;
                 if (details) deviceString += ` (${details})`;
                 deviceParts.push(deviceString);
             });
@@ -1255,7 +1325,14 @@ function computeAll() {
   }
   
   const contextLines = [];
-  if (s.goc_note) contextLines.push(`GOC: ${s.goc_note}`);
+  if (s.goc_note) {
+    const gocText = s.goc_note.trim();
+    if (gocText.toLowerCase().startsWith('goc')) {
+      contextLines.push(gocText);
+    } else {
+      contextLines.push(`GOC: ${gocText}`);
+    }
+  }
   if (s.allergies_note) contextLines.push(`Allergies: ${s.allergies_note}`);
   if (s.pics_note) contextLines.push(`Post ICU Syndrome: ${s.pics_note}`);
   if (s.context_other_note) contextLines.push(`Other: ${s.context_other_note}`);
@@ -1284,4 +1361,3 @@ document.addEventListener('DOMContentLoaded', ()=> {
 </script>
 </body>
 </html>
-
