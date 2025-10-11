@@ -15,7 +15,7 @@
     body.dark { --bg:#0b1112; --card:#0f1720; --ink:#e6eef0; --muted:#9aa9ad; --line:#132022; --input-bg:#071018; --toast-bg: rgba(255,255,255,0.06); --toast-color:#e6eef0; }
     html,body{height:100%}
     body{font-family:'Inter', system-ui, sans-serif; background:var(--bg); color:var(--ink); margin:0 0 180px 0; line-height:1.4; -webkit-font-smoothing:antialiased;}
-    header{padding:14px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; flex-wrap:wrap; background: var(--card); position:sticky; top:0; z-index:30;}
+    header{padding:14px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; flex-wrap:wrap; background: var(--card); z-index:30;}
     header h1 {
       font-size: 1.5rem;
       font-weight: 800;
@@ -85,12 +85,15 @@
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 10px;
     }
-    .bloods-grid {display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px;}
-    .blood-item {display:flex; align-items:center; gap: 6px; position:relative;}
-    .blood-item label { margin-bottom: 0; width:56px; font-size:0.9rem; color:var(--muted); }
-    .blood-item input, .blood-item select { font-size:0.95rem; padding: 8px; }
+    .bloods-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px 12px;}
+    .blood-item { display: grid; grid-template-columns: 50px 1fr 60px; align-items: center; gap: 6px; position: relative;}
+    .blood-item label { margin-bottom: 0; font-size:0.9rem; color:var(--muted); }
+    .blood-item input { font-size:0.95rem; padding: 8px; }
+    .trend-buttons { display: flex; justify-self: end;}
+    .trend-btn { font-size: 0.9rem; border: 1px solid var(--line); background: transparent; border-radius: 6px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); padding:0;}
+    .trend-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
     .blood-abnormal { border-color: var(--red) !important; background-color: rgba(239,68,68,.06) !important; }
-    .range-annotation { font-size: 0.75rem; color: var(--muted); position: absolute; bottom: -14px; left: 62px; display: none; }
+    .range-annotation { font-size: 0.75rem; color: var(--muted); position: absolute; bottom: -14px; left: 56px; display: none; }
     footer {
       position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card);
       border-top: 1px solid var(--line); padding: 8px 16px;
@@ -114,10 +117,10 @@
     }
     .accordion .icon { color: var(--muted); font-size:0.9rem; margin-left:8px; }
     .panel { padding: 14px; background-color: transparent; display: none; overflow: hidden; }
-    .pivc-entry, .wound-entry, .drain-entry {
+    .device-entry, .pivc-entry, .wound-entry, .drain-entry {
       background: var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;
     }
-    .pivc-entry textarea, .wound-entry textarea, .drain-entry textarea { width:100%; min-height:70px; font-size:1rem; background:var(--input-bg); }
+    .device-entry textarea, .pivc-entry textarea, .wound-entry textarea, .drain-entry textarea { width:100%; min-height:70px; font-size:1rem; background:var(--input-bg); }
     .remove-entry { background: transparent; border:1px solid rgba(239,68,68,0.12); color:var(--red); border-radius:8px; padding:8px; cursor:pointer; text-align:center; font-weight:700; }
     .remove-entry:hover { background: rgba(239,68,68,0.04); }
     .floating-toolbar { display: none; }
@@ -408,17 +411,17 @@
     <button class="accordion" aria-expanded="false" aria-controls="panel_bloods">Bloods <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_bloods">
       <div class="bloods-grid">
-        <div class="blood-item"><label for="bl_lac_review">Lac</label><input id="bl_lac_review" type="number" step="0.1"/><select id="bl_lac_review_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_lac_review_range" class="range-annotation"></span></div>
-        <div class="blood-item"><label for="bl_hb">Hb</label><input id="bl_hb" type="number"/><select id="bl_hb_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_hb_range" class="range-annotation"></span></div>
-        <div class="blood-item"><label for="bl_wcc">WCC</label><input id="bl_wcc" type="number" step="0.1"/><select id="bl_wcc_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_wcc_range" class="range-annotation"></span></div>
-        <div class="blood-item"><label for="bl_crp">CRP</label><input id="bl_crp" type="number"/><select id="bl_crp_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_crp_range" class="range-annotation"></span></div>
-        <div class="blood-item"><label for="bl_cr_review">Cr</label><input id="bl_cr_review" type="number"/><select id="bl_cr_review_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_cr_review_range" class="range-annotation"></span></div>
-        <div class="blood-item"><label for="bl_k">K</label><input id="bl_k" type="number" step="0.1"/><select id="bl_k_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_k_range" class="range-annotation"></span></div>
-        <div class="blood-item"><label for="bl_mg">Mg</label><input id="bl_mg" type="number" step="0.1"/><select id="bl_mg_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_mg_range" class="range-annotation"></span></div>
-        <div class="blood-item"><label for="bl_plts">Plts</label><input id="bl_plts" type="number"/><select id="bl_plts_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_plts_range" class="range-annotation"></span></div>
-        <div class="blood-item"><label for="bl_alb">Alb</label><input id="bl_alb" type="number"/><select id="bl_alb_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_alb_range" class="range-annotation"></span></div>
-        <div class="blood-item"><label for="bl_neut">Neut</label><input id="bl_neut" type="number" step="0.1"/><select id="bl_neut_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_neut_range" class="range-annotation"></span></div>
-        <div class="blood-item"><label for="bl_lymph">Lymph</label><input id="bl_lymph" type="number" step="0.1"/><select id="bl_lymph_trend"><option>-</option><option>↑</option><option>↓</option><option>→</option></select><span id="bl_lymph_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_lac_review">Lac</label><input id="bl_lac_review" type="number" step="0.1"/><div class="trend-buttons" id="bl_lac_review_trend"></div><span id="bl_lac_review_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_hb">Hb</label><input id="bl_hb" type="number"/><div class="trend-buttons" id="bl_hb_trend"></div><span id="bl_hb_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_wcc">WCC</label><input id="bl_wcc" type="number" step="0.1"/><div class="trend-buttons" id="bl_wcc_trend"></div><span id="bl_wcc_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_crp">CRP</label><input id="bl_crp" type="number"/><div class="trend-buttons" id="bl_crp_trend"></div><span id="bl_crp_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_cr_review">Cr</label><input id="bl_cr_review" type="number"/><div class="trend-buttons" id="bl_cr_review_trend"></div><span id="bl_cr_review_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_k">K</label><input id="bl_k" type="number" step="0.1"/><div class="trend-buttons" id="bl_k_trend"></div><span id="bl_k_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_mg">Mg</label><input id="bl_mg" type="number" step="0.1"/><div class="trend-buttons" id="bl_mg_trend"></div><span id="bl_mg_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_plts">Plts</label><input id="bl_plts" type="number"/><div class="trend-buttons" id="bl_plts_trend"></div><span id="bl_plts_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_alb">Alb</label><input id="bl_alb" type="number"/><div class="trend-buttons" id="bl_alb_trend"></div><span id="bl_alb_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_neut">Neut</label><input id="bl_neut" type="number" step="0.1"/><div class="trend-buttons" id="bl_neut_trend"></div><span id="bl_neut_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_lymph">Lymph</label><input id="bl_lymph" type="number" step="0.1"/><div class="trend-buttons" id="bl_lymph_trend"></div><span id="bl_lymph_range" class="range-annotation"></span></div>
       </div>
 
       <div style="margin-top:12px" class="grid">
@@ -430,52 +433,19 @@
 
   <div class="accordion-wrapper" data-accordion-id="devices">
     <button class="accordion" aria-expanded="false" aria-controls="panel_devices">Lines, Drains & Wounds <span class="icon" aria-hidden="true">[+]</span></button>
-    <div class="panel" id="panel_devices">
-        <div class="devices-subtitle">▶ Central Lines</div>
-        <div class="devices-input-group">
-            <div class="toggle-label" id="toggle_dev_cvc" data-value="false" role="button" aria-pressed="false">CVC <span class="state">No</span></div>
-            <div id="cvc_details" style="display:none; margin-left: 20px; margin-top: 8px;" aria-hidden="true">
-                <label for="dev_cvc_loc">CVC Location</label>
-                <input id="dev_cvc_loc" type="text" placeholder="Site (e.g., R IJ)" style="margin-bottom:8px;" />
-                <label for="dev_cvc_site">Site Appearance</label>
-                <textarea id="dev_cvc_site" placeholder="Dressing & Site Condition"></textarea>
-            </div>
-            <label for="dev_other_cvad_type">Other CVAD (PICC, VasCath)</label>
-            <input type="text" id="dev_other_cvad_type" placeholder="Type/Location"/>
-        </div>
-
-        <div class="devices-subtitle">▶ Peripheral Access</div>
-        <div class="devices-input-group">
-            <div id="pivc-container" aria-live="polite"></div>
-            <button class="btn" id="add-pivc" style="margin-top:4px;">+ Add PIVC</button>
-        </div>
-
-        <div class="devices-subtitle">▶ Tubes &amp; Catheters</div>
-        <div class="devices-input-group">
-            <label for="dev_tube_type">Enteral Tube</label>
-            <input type="text" id="dev_tube_type" placeholder="Specify NG/NJ/PEG"/>
-            <div class="toggle-label" id="toggle_dev_idc" data-value="false" role="button" aria-pressed="false">IDC <span class="state">No</span></div>
-            <div class="toggle-label" id="toggle_dev_pacing" data-value="false" role="button" aria-pressed="false">Pacing Wires <span class="state">No</span></div>
-        </div>
-
-        <div class="devices-subtitle">▶ Drains</div>
-        <div class="devices-input-group">
-            <div id="drain-container" aria-live="polite"></div>
-            <button class="btn" id="add-drain" style="margin-top:4px;">+ Add Drain</button>
-        </div>
-
-        <hr style="margin: 18px 0;" />
-
-        <div class="devices-subtitle">▶ Wounds</div>
-        <div class="devices-input-group">
-            <div id="wound-container" aria-live="polite"></div>
-            <button class="btn" id="add-wound" style="margin-top:4px;">+ Add Wound</button>
-        </div>
-
-        <div class="devices-subtitle">▶ Other</div>
-        <div class="devices-input-group">
-            <textarea id="dev_other_note" placeholder="Other device details"></textarea>
-        </div>
+    <div class="panel" id="panel_devices" style="display:flex; flex-direction:column; gap: 12px;">
+       <div id="devices-container"></div>
+       <div class="button-group" style="justify-content: center;">
+           <button class="btn small" data-device-type="CVC">+ Add CVC</button>
+           <button class="btn small" data-device-type="Other CVAD">+ Add Other CVAD</button>
+           <button class="btn small" data-device-type="PIVC">+ Add PIVC</button>
+           <button class="btn small" data-device-type="Enteral Tube">+ Add Enteral Tube</button>
+           <button class="btn small" data-device-type="IDC">+ Add IDC</button>
+           <button class="btn small" data-device-type="Pacing Wire">+ Add Pacing Wire</button>
+           <button class="btn small" data-device-type="Drain">+ Add Drain</button>
+           <button class="btn small" data-device-type="Wound">+ Add Wound</button>
+           <button class="btn small" data-device-type="Other Device">+ Add Other Device</button>
+       </div>
     </div>
   </div>
 
@@ -558,17 +528,19 @@ const staticInputs = [
   'bl_wcc','bl_wcc_trend','bl_crp','bl_crp_trend','bl_neut','bl_neut_trend','bl_lymph','bl_lymph_trend',
   'bl_hb','bl_hb_trend','bl_plts','bl_plts_trend','bl_k','bl_k_trend',
   'bl_cr_review','bl_cr_review_trend','bl_mg','bl_mg_trend','bl_alb','bl_alb_trend','bl_lac_review','bl_lac_review_trend',
-  'elec_replace_note','dev_other_cvad_type','dev_cvc_loc','dev_cvc_site','dev_tube_type','dev_other_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note',
+  'elec_replace_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note',
   'adds','lactate','hb','wcc','crp','neut','lymph',
   'dyspneaConcern_note', 'renalConcern_note', 'uopLow_note', 'neuroConcern_note', 'infectionConcern_note',
   'after_hours_discharge_note', 'pressors24h_note', 'np3Last12h_note', 'rapidWean_note'
 ];
 const toggleInputs = [
   'after_hours_discharge','pressors24h','np3Last12h','rapidWean','renalConcern','uopLow',
-  'infectionConcern','use_mods','new_bloods_ordered','dev_cvc','dev_idc','dev_pacing',
+  'infectionConcern','use_mods','new_bloods_ordered',
   'comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis'
 ];
 const selectInputs = ['oxMod','dyspneaConcern','neuroConcern','stepdownTime'];
+const deviceTypes = ['CVC', 'Other CVAD', 'PIVC', 'Enteral Tube', 'IDC', 'Pacing Wire', 'Drain', 'Wound', 'Other Device'];
+
 
 /* ---------------------------
    Persistence helpers
@@ -629,69 +601,48 @@ function updateLastSaved() {
 /* ===========================
    DOM Helpers for Dynamic lists
    =========================== */
-function createPIVCEntry(value='') {
-  const container = $('pivc-container');
-  const index = container.querySelectorAll('.pivc-entry').length + 1;
-  const div = document.createElement('div'); div.className = 'pivc-entry';
-  div.innerHTML = `<label>PIVC #${index}</label>
-    <textarea placeholder="Location/PIVAS (e.g., R ACF, PIVAS 2)">${value}</textarea>
-    <div style="display:flex; gap:8px;">
-      <div class="remove-entry" role="button" tabindex="0">Remove</div>
-    </div>`;
-  container.appendChild(div);
-  const ta = div.querySelector('textarea');
-  ta.addEventListener('input', debounce(()=>{ computeAll(); saveState(); },300));
-  const rem = div.querySelector('.remove-entry');
-  rem.addEventListener('click', ()=> { div.remove(); computeAll(); saveState(); renumberEntries('pivc'); });
-  rem.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); div.remove(); computeAll(); saveState(); renumberEntries('pivc'); }});
-  div.scrollIntoView({ behavior:'smooth', block:'center' });
-  return div;
+function createDeviceEntry(type, value = '') {
+    const container = $('devices-container');
+    const index = container.querySelectorAll(`.device-entry[data-type="${type}"]`).length + 1;
+    const div = document.createElement('div');
+    div.className = 'device-entry';
+    div.dataset.type = type;
+    div.innerHTML = `
+        <label>${type} #${index}</label>
+        <textarea placeholder="Enter details for ${type}...">${value}</textarea>
+        <div class="remove-entry" role="button" tabindex="0">Remove</div>
+    `;
+    container.appendChild(div);
+
+    const ta = div.querySelector('textarea');
+    ta.addEventListener('input', debounce(() => { computeAll(); saveState(); }, 300));
+    const rem = div.querySelector('.remove-entry');
+    rem.addEventListener('click', () => { 
+        div.remove(); 
+        renumberDeviceEntries(type);
+        computeAll(); 
+        saveState(); 
+    });
+    rem.addEventListener('keydown', (e) => { 
+        if (e.key === 'Enter' || e.key === ' ') { 
+            e.preventDefault(); 
+            div.remove(); 
+            renumberDeviceEntries(type);
+            computeAll(); 
+            saveState(); 
+        }
+    });
+    div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    ta.focus();
 }
-function createWoundEntry(value='') {
-  const container = $('wound-container');
-  const index = container.querySelectorAll('.wound-entry').length + 1;
-  const div = document.createElement('div'); div.className = 'wound-entry';
-  div.innerHTML = `<label>Wound #${index}</label>
-    <textarea placeholder="Note location, appearance, dressing etc.">${value}</textarea>
-    <div style="display:flex; gap:8px;">
-      <div class="remove-entry" role="button" tabindex="0">Remove</div>
-    </div>`;
-  container.appendChild(div);
-  const ta = div.querySelector('textarea');
-  ta.addEventListener('input', debounce(()=>{ computeAll(); saveState(); },300));
-  const rem = div.querySelector('.remove-entry');
-  rem.addEventListener('click', ()=> { div.remove(); computeAll(); saveState(); renumberEntries('wound'); });
-  rem.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); div.remove(); computeAll(); saveState(); renumberEntries('wound'); }});
-  div.scrollIntoView({ behavior:'smooth', block:'center' });
-  return div;
+
+function renumberDeviceEntries(type) {
+    const entries = document.querySelectorAll(`.device-entry[data-type="${type}"]`);
+    entries.forEach((entry, i) => {
+        entry.querySelector('label').textContent = `${type} #${i + 1}`;
+    });
 }
-function createDrainEntry(value='') {
-  const container = $('drain-container');
-  const index = container.querySelectorAll('.drain-entry').length + 1;
-  const div = document.createElement('div'); div.className = 'drain-entry';
-  div.innerHTML = `<label>Drain #${index}</label>
-    <textarea placeholder="Note drain type, location, output etc.">${value}</textarea>
-    <div style="display:flex; gap:8px;">
-      <div class="remove-entry" role="button" tabindex="0">Remove</div>
-    </div>`;
-  container.appendChild(div);
-  const ta = div.querySelector('textarea');
-  ta.addEventListener('input', debounce(()=>{ computeAll(); saveState(); },300));
-  const rem = div.querySelector('.remove-entry');
-  rem.addEventListener('click', ()=> { div.remove(); computeAll(); saveState(); renumberEntries('drain'); });
-  rem.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); div.remove(); computeAll(); saveState(); renumberEntries('drain'); }});
-  div.scrollIntoView({ behavior:'smooth', block:'center' });
-  return div;
-}
-function renumberEntries(kind='pivc') {
-  let container, prefix;
-  if (kind === 'pivc') { container = $('pivc-container'); prefix = 'PIVC #'; }
-  else if (kind === 'wound') { container = $('wound-container'); prefix = 'Wound #'; }
-  else if (kind === 'drain') { container = $('drain-container'); prefix = 'Drain #'; }
-  if (!container) return;
-  const labels = container.querySelectorAll('label');
-  labels.forEach((lab, i)=> lab.textContent = `${prefix}${i+1}`);
-}
+
 
 /* ===========================
    Save / Load DOM <-> State
@@ -718,13 +669,18 @@ function getState() {
 
   checked = document.querySelector('input[name="clinicianRole"]:checked');
   state['clinicianRole'] = checked ? checked.value : 'ALERT CNS';
+  
+  state.devices = {};
+  deviceTypes.forEach(type => {
+      state.devices[type] = Array.from(document.querySelectorAll(`.device-entry[data-type="${type}"] textarea`)).map(ta => ta.value);
+  });
+  
+  // Blood trends
+  document.querySelectorAll('.trend-buttons').forEach(group => {
+    const activeBtn = group.querySelector('.trend-btn.active');
+    state[group.id] = activeBtn ? activeBtn.dataset.value : '-';
+  });
 
-  // Dynamic lists
-  state.pivcs = Array.from(document.querySelectorAll('#pivc-container .pivc-entry textarea')).map(t=>t.value.trim());
-  state.wounds = Array.from(document.querySelectorAll('#wound-container .wound-entry textarea')).map(t=>t.value.trim());
-  state.drains = Array.from(document.querySelectorAll('#drain-container .drain-entry textarea')).map(t=>t.value.trim());
-
-  // footer / misc
   return state;
 }
 function restoreState(state) {
@@ -760,14 +716,24 @@ function restoreState(state) {
     if (radioEl) radioEl.checked = true;
   }
 
+  // Devices
+  $('devices-container').innerHTML = '';
+  if (state.devices) {
+      deviceTypes.forEach(type => {
+          if (state.devices[type]) {
+              state.devices[type].forEach(value => createDeviceEntry(type, value));
+          }
+      });
+  }
+  
+  // Blood trends
+  document.querySelectorAll('.trend-buttons').forEach(group => {
+    const value = state[group.id] || '-';
+    group.querySelectorAll('.trend-btn').forEach(btn => btn.classList.remove('active'));
+    const btnToActivate = group.querySelector(`.trend-btn[data-value="${value}"]`);
+    if(btnToActivate) btnToActivate.classList.add('active');
+  });
 
-  // Clear existing dynamic entries and re-add from state
-  $('pivc-container').innerHTML = '';
-  $('wound-container').innerHTML = '';
-  $('drain-container').innerHTML = '';
-  (state.pivcs || []).forEach(v => createPIVCEntry(v));
-  (state.wounds || []).forEach(v => createWoundEntry(v));
-  (state.drains || []).forEach(v => createDrainEntry(v));
 }
 
 /* ===========================
@@ -775,36 +741,41 @@ function restoreState(state) {
    =========================== */
 function initialize() {
   updateLastSaved();
-  // debounced autosave + compute
   const debouncedComputeAndSave = debounce(()=>{ computeAll(); saveState(true); }, 600);
+  
+  // Create trend buttons
+  const trends = ['-', '↑', '↓', '→'];
+  document.querySelectorAll('.trend-buttons').forEach(group => {
+      trends.forEach(trend => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'trend-btn';
+          btn.dataset.value = trend;
+          btn.textContent = trend;
+          if(trend === '-') btn.classList.add('active');
+          btn.addEventListener('click', () => {
+              group.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+              debouncedComputeAndSave();
+          });
+          group.appendChild(btn);
+      });
+  });
 
-  // Hook up toggles
   document.querySelectorAll('.toggle-label').forEach(el => {
     el.addEventListener('click', ()=> {
       el.dataset.value = el.dataset.value === 'true' ? 'false' : 'true';
       el.classList.toggle('active', el.dataset.value === 'true');
       const stateSpan = el.querySelector('.state'); if (stateSpan) stateSpan.textContent = el.dataset.value === 'true' ? 'Yes' : 'No';
-      
       const noteWrapperId = el.id.replace('toggle_', '') + '_note_wrapper';
       const noteWrapper = $(noteWrapperId);
       if(noteWrapper) noteWrapper.style.display = el.dataset.value === 'true' ? 'block' : 'none';
-
-      if (el.id === 'toggle_infectionConcern') {
-        $('infectionMarkers').style.display = el.dataset.value === 'true' ? 'block' : 'none';
-      }
-      if (el.id === 'toggle_use_mods') {
-        $('mods_inputs').style.display = el.dataset.value === 'true' ? 'block' : 'none';
-      }
-      if (el.id === 'toggle_dev_cvc') {
-        const show = el.dataset.value === 'true';
-        $('cvc_details').style.display = show ? 'block' : 'none';
-        $('cvc_details').setAttribute('aria-hidden', !show);
-      }
+      if (el.id === 'toggle_infectionConcern') $('infectionMarkers').style.display = el.dataset.value === 'true' ? 'block' : 'none';
+      if (el.id === 'toggle_use_mods') $('mods_inputs').style.display = el.dataset.value === 'true' ? 'block' : 'none';
       debouncedComputeAndSave();
     });
   });
 
-  // Button-groups (select)
   document.querySelectorAll('.button-group').forEach(group => {
     group.querySelectorAll('.select-btn').forEach(btn => {
       btn.addEventListener('click', ()=> {
@@ -819,7 +790,6 @@ function initialize() {
     });
   });
 
-  // standard inputs
   staticInputs.forEach(id => {
     const el = $(id); if (!el) return;
     const evt = (el.tagName==='SELECT' || el.type==='date') ? 'change' : 'input';
@@ -828,44 +798,25 @@ function initialize() {
   document.querySelectorAll('input[name="reviewType"]').forEach(r => r.addEventListener('change', debouncedComputeAndSave));
   document.querySelectorAll('input[name="clinicianRole"]').forEach(r => r.addEventListener('change', debouncedComputeAndSave));
 
-  // NLR calculation
   ['neut','lymph'].forEach(id => {
     const el = $(id); if (!el) return;
     el.addEventListener('input', ()=>{ updateNLR(); debouncedComputeAndSave(); });
   });
 
-  // Two-way binding (adds etc)
   const sync = (a,b) => { if (!$(a) || !$(b)) return; $(a).addEventListener('input', ()=>{ $(b).value = $(a).value; debouncedComputeAndSave(); }); $(b).addEventListener('input', ()=>{ $(a).value = $(b).value; debouncedComputeAndSave(); }); };
-  sync('adds','atoe_adds');
-  sync('lactate','bl_lac_review');
-  sync('hb','bl_hb');
-  sync('wcc','bl_wcc');
-  sync('crp','bl_crp');
-  sync('neut','bl_neut');
-  sync('lymph','bl_lymph');
-  sync('bl_cr_review', 'e_cr'); // Sync blood Cr with A-E Cr if needed
+  sync('adds','atoe_adds'); sync('lactate','bl_lac_review'); sync('hb','bl_hb'); sync('wcc','bl_wcc'); sync('crp','bl_crp'); sync('neut','bl_neut'); sync('lymph','bl_lymph');
 
-  // Quick links for GCS and Temp
   $('d_gcs').addEventListener('input', (e)=> {
     const v = num(e.target.value);
     if (v !== null && v < 13) {
       const group = $('neuroConcern');
       group.querySelectorAll('.select-btn').forEach(b=>b.classList.remove('active'));
-      group.querySelector('.select-btn[data-value="severe"]').classList.add('active');
+      const severeBtn = group.querySelector('.select-btn[data-value="severe"]');
+      if (severeBtn) { severeBtn.classList.add('active'); severeBtn.click(); }
       debouncedComputeAndSave();
     }
   });
-  $('e_temp').addEventListener('input', (e)=> {
-    if (num(e.target.value) >= 38.0) {
-      const el = $('toggle_infectionConcern');
-      el.dataset.value = 'true'; el.classList.add('active'); const sp = el.querySelector('.state'); if(sp) sp.textContent='Yes';
-      $('infectionMarkers').style.display = 'block';
-      $('infectionConcern_note_wrapper').style.display = 'block';
-      debouncedComputeAndSave();
-    }
-  });
-
-  // Overrides
+  
   const ovA = $('override_amber'), ovR = $('override_red'), ovC = $('override_clear');
   const setOverride = (level) => {
     $('override').value = level;
@@ -878,7 +829,6 @@ function initialize() {
   ovR.addEventListener('click', ()=> setOverride('red'));
   ovC.addEventListener('click', ()=> setOverride('none'));
 
-  // Accordions with persistence
   document.querySelectorAll('.accordion-wrapper').forEach(wrapper => {
     const btn = wrapper.querySelector('.accordion');
     const panel = wrapper.querySelector('.panel');
@@ -889,19 +839,18 @@ function initialize() {
       panel.style.display = open ? 'block' : 'none';
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
       btn.querySelector('.icon').textContent = open ? '[-]' : '[+]';
-      // save accordion state
       const maps = JSON.parse(localStorage.getItem(ACCORDION_KEY) || '{}');
       maps[id] = open;
       localStorage.setItem(ACCORDION_KEY, JSON.stringify(maps));
     });
   });
 
-  // Dynamic PIVC/Wound/Drain buttons
-  $('add-pivc').addEventListener('click', ()=> { createPIVCEntry(); saveState(); });
-  $('add-wound').addEventListener('click', ()=> { createWoundEntry(); saveState(); });
-  $('add-drain').addEventListener('click', ()=> { createDrainEntry(); saveState(); });
+  document.querySelectorAll('#panel_devices .btn[data-device-type]').forEach(button => {
+        button.addEventListener('click', () => {
+            createDeviceEntry(button.dataset.deviceType);
+        });
+    });
 
-  // Copy summary
   $('copyBtn').addEventListener('click', ()=> {
     navigator.clipboard.writeText($('summary').value).then(()=> showToast('Summary copied',1400)).catch(()=> showToast('Copy failed',2000));
   });
@@ -909,26 +858,15 @@ function initialize() {
   $('footerSave').addEventListener('click', ()=> { saveState(true); showToast('Saved',900); });
   $('footerCopy').addEventListener('click', ()=> $('copyBtn').click() );
 
-  // Clear data with Undo
   const clearDataAction = () => {
     if (!confirm('Are you sure you want to clear all data for this patient?')) return;
     const snapshot = getState();
     pushUndo(snapshot);
-    // clear DOM inputs
-    staticInputs.forEach(id => { const el = $(id); if (el) el.value = ''; });
-    toggleInputs.forEach(id => {
-      const el = $(`toggle_${id}`);
-      if (el) {
-        el.dataset.value = 'false';
-        el.classList.remove('active');
-        const sp = el.querySelector('.state');
-        if (sp) sp.textContent = 'No';
-      }
-    });
-    selectInputs.forEach(g => { const el = $(g); if (el) el.querySelectorAll('.select-btn').forEach(b => b.classList.remove('active')); });
+    staticInputs.forEach(id=>{ const el=$(id); if(el) el.value=''; });
+    toggleInputs.forEach(id=>{ const el = $(`toggle_${id}`); if (el) { el.dataset.value='false'; el.classList.remove('active'); const sp = el.querySelector('.state'); if(sp) sp.textContent='No'; } });
+    selectInputs.forEach(g=>{ const el=$(g); if(el) el.querySelectorAll('.select-btn').forEach(b=>b.classList.remove('active')); });
     document.querySelectorAll('.concern-note').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('#pivc-container .pivc-entry, #wound-container .wound-entry, #drain-container .drain-entry').forEach(n => n.remove());
-    // reset accordions to closed
+    $('devices-container').innerHTML = '';
     document.querySelectorAll('.accordion-wrapper').forEach(wrapper => {
       const btn = wrapper.querySelector('.accordion');
       const panel = wrapper.querySelector('.panel');
@@ -940,24 +878,15 @@ function initialize() {
     $('summary').value = '';
     computeAll();
     saveState(true);
-    showToast('Cleared — Undo?', 10000, 'Undo', () => {
+    showToast('Cleared — Undo?', 10000, 'Undo', ()=> {
       const snap = popUndo();
-      if (snap) {
-        restoreState(snap);
-        computeAll();
-        saveState(true);
-        showToast('Restored', 1400);
-      } else {
-        showToast('Undo expired', 1400);
-      }
+      if (snap) { restoreState(snap); computeAll(); saveState(true); showToast('Restored',1400); } else { showToast('Undo expired',1400); }
     });
   };
 
   $('clearDataBtnTop').addEventListener('click', clearDataAction);
   $('clearDataBtnBottom').addEventListener('click', clearDataAction);
 
-
-  // Dark mode toggle
   const darkBtn = $('darkToggle');
   const applyDark = (on) => {
     document.body.classList.toggle('dark', !!on);
@@ -969,15 +898,10 @@ function initialize() {
   const darkPref = localStorage.getItem('alertToolDark');
   if (darkPref === '1') applyDark(true);
 
-  // auto open oxygen fields according to selection
   toggleOxyFields();
-
-  // Load saved state
   const saved = loadState();
-  if (saved) {
-    restoreState(saved);
-  }
-  // Restore accordion state after loading main state
+  if (saved) restoreState(saved);
+
   const maps = JSON.parse(localStorage.getItem(ACCORDION_KEY) || '{}');
   document.querySelectorAll('.accordion-wrapper').forEach(wrapper => {
       const id = wrapper.dataset.accordionId;
@@ -990,10 +914,7 @@ function initialize() {
       }
   });
 
-  // populate footer placeholders
   computeAll();
-
-  // On page unload save
   window.addEventListener('beforeunload', ()=> saveState(true));
 }
 
@@ -1315,36 +1236,18 @@ function computeAll() {
   if (bloodLines.length > 0) lines.push('', ...bloodLines);
   
   const deviceParts = [];
-  (s.pivcs || []).forEach((loc,i)=> {
-      let pivcString = `PIVC #${i + 1}`;
-      if (loc) pivcString += ` (${loc})`;
-      deviceParts.push(pivcString);
-  });
-  if (s.dev_other_cvad_type) deviceParts.push(`Other CVAD (${s.dev_other_cvad_type})`);
-  if (s.dev_cvc) {
-    let cvcString = 'CVC';
-    let cvcParts = [];
-    if (s.dev_cvc_loc) cvcParts.push(s.dev_cvc_loc);
-    if (s.dev_cvc_site) cvcParts.push(`site: ${s.dev_cvc_site}`);
-    if (cvcParts.length > 0) {
-        cvcString += ` (${cvcParts.join(', ')})`;
-    }
-    deviceParts.push(cvcString);
+  if(s.devices){
+    deviceTypes.forEach(type => {
+        if (s.devices[type] && s.devices[type].length > 0) {
+            s.devices[type].forEach((details, i) => {
+                let deviceString = `${type} #${i + 1}`;
+                if (details) deviceString += ` (${details})`;
+                deviceParts.push(deviceString);
+            });
+        }
+    });
   }
-  if (s.dev_tube_type) deviceParts.push(`Enteral Tube (${s.dev_tube_type})`);
-  (s.drains || []).forEach((d,i)=> { 
-    let drainString = `Drain #${i+1}`;
-    if (d) drainString += ` (${d})`;
-    deviceParts.push(drainString);
-  });
-  (s.wounds || []).forEach((w,i)=> {
-    let woundString = `Wound #${i+1}`;
-    if(w) woundString += ` (${w})`;
-    deviceParts.push(woundString);
-  });
-  if (s.dev_other_note) deviceParts.push(s.dev_other_note);
-  if (s.dev_idc) deviceParts.push('IDC');
-  if (s.dev_pacing) deviceParts.push('Pacing Wires');
+  
   if (deviceParts.length > 0) {
     lines.push('');
     lines.push('DEVICES:');
