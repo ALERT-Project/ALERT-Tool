@@ -135,17 +135,16 @@
       margin-bottom: 10px;
       color: var(--accent);
     }
-    #panel_devices .devices-input-group > * , #panel_context .devices-input-group > * {
+    .device-add-buttons { display: flex; flex-direction: column; gap: 8px; }
+    .device-add-buttons .btn { justify-content: flex-start; padding-left: 16px; }
+    #panel_context .devices-input-group > * {
       margin-bottom: 10px;
     }
-    #panel_devices .devices-input-group > *:last-child, #panel_context .devices-input-group > *:last-child {
+    #panel_context .devices-input-group > *:last-child {
       margin-bottom: 0;
     }
-    #panel_devices .devices-input-group label, #panel_context .devices-input-group label {
+    #panel_context .devices-input-group label {
       margin-bottom: 4px; /* less for labels above inputs */
-    }
-    #panel_devices .devices-input-group .toggle-label {
-        margin-bottom: 10px;
     }
     #panel_devices input[type="text"], #panel_devices textarea, #panel_context textarea {
       border-color: #b0c9c9; /* Slightly darker border */
@@ -525,9 +524,9 @@ const staticInputs = [
   'mods_score','mods_details','airway_a','b_rr','b_spo2','b_device','b_wob',
   'c_hr','c_nibp','c_cr','c_perf','d_alert','d_gcs','d_pain','e_temp','e_bsl','e_uop','atoe_adds',
   'ae_mobility','ae_diet','ae_bowels',
-  'bl_wcc','bl_wcc_trend','bl_crp','bl_crp_trend','bl_neut','bl_neut_trend','bl_lymph','bl_lymph_trend',
-  'bl_hb','bl_hb_trend','bl_plts','bl_plts_trend','bl_k','bl_k_trend',
-  'bl_cr_review','bl_cr_review_trend','bl_mg','bl_mg_trend','bl_alb','bl_alb_trend','bl_lac_review','bl_lac_review_trend',
+  'bl_wcc','bl_crp','bl_neut','bl_lymph',
+  'bl_hb','bl_plts','bl_k',
+  'bl_cr_review','bl_mg','bl_alb','bl_lac_review',
   'elec_replace_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note',
   'adds','lactate','hb','wcc','crp','neut','lymph',
   'dyspneaConcern_note', 'renalConcern_note', 'uopLow_note', 'neuroConcern_note', 'infectionConcern_note',
@@ -1227,7 +1226,8 @@ function computeAll() {
   const trendWord = val => ({ '↑': ' (uptrending)', '↓':' (downtrending)', '→':' (stable)'}[val] || '');
   const bloods = bloodParts.map(k => {
     const v = s[`bl_${k}`]; if (!v) return null;
-    const trend = s[`bl_${k}_trend`] || '-';
+    const trendKey = `bl_${k}_trend`;
+    const trend = s[trendKey] || '-';
     return `${k.replace('_review','').toUpperCase()} ${v}${trendWord(trend)}`;
   }).filter(Boolean).join(', ');
   if (bloods) bloodLines.push(`Bloods: ${bloods}`);
