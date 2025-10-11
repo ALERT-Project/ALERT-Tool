@@ -335,7 +335,11 @@
             <textarea id="uopLow_note" placeholder="Optional: enter urine output details"></textarea>
       </div>
     </div>
-
+    
+    <div class="input-group">
+      <div class="toggle-label" id="toggle_immobility48h" data-value="false" role="button" aria-pressed="false">Immobility >48h <span class="state">No</span></div>
+    </div>
+    
     <hr>
     <div class="input-group">
       <label>Neurological Concern</label>
@@ -378,14 +382,13 @@
 
     <hr>
     <div class="input-group">
-      <label>Concerning Comorbidities & Other Factors</label>
+      <label>Concerning Comorbidities</label>
       <div class="comorbidity-grid">
         <div class="toggle-label" id="toggle_comorb_copd" data-value="false" role="button" aria-pressed="false">COPD/Asthma <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_hf" data-value="false" role="button" aria-pressed="false">Active HF <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_esrd" data-value="false" role="button" aria-pressed="false">ESRD/Dialysis <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_diabetes" data-value="false" role="button" aria-pressed="false">Uncontrolled Diabetes <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_cirrhosis" data-value="false" role="button" aria-pressed="false">Cirrhosis <span class="state">No</span></div>
-        <div class="toggle-label" id="toggle_immobility48h" data-value="false" role="button" aria-pressed="false">Immobility >48h <span class="state">No</span></div>
       </div>
     </div>
 
@@ -902,6 +905,8 @@ function initialize() {
   document.querySelectorAll('#panel_devices .btn[data-device-type]').forEach(button => {
         button.addEventListener('click', () => {
             createDeviceEntry(button.dataset.deviceType);
+            computeAll();
+            saveState();
         });
     });
 
