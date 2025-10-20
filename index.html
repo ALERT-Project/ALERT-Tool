@@ -86,7 +86,7 @@
         gap: 10px;
     }
     .bloods-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px 12px;}
-    .blood-item { display: grid; grid-template-columns: 50px 1fr 60px; align-items: center; gap: 6px; position: relative;}
+    .blood-item { display: grid; grid-template-columns: 50px 1fr 80px; align-items: center; gap: 6px; position: relative;}
     .blood-item label { margin-bottom: 0; font-size:0.9rem; color:var(--muted); }
     .blood-item input { font-size:0.95rem; padding: 8px; }
     .trend-buttons { display: flex; justify-self: end;}
@@ -107,7 +107,7 @@
     .tag.red{background:rgba(239,68,68,.08); color:var(--red); border-color:rgba(239,68,68,.2)}
     .tag.amber{background:rgba(245,158,11,.08); color:var(--amber); border-color:rgba(245,158,11,.18)}
     .tag.green{background:rgba(16,185,129,.07); color:var(--green); border-color:rgba(16,185,129,.12)}
-    hr { border: none; height: 1px; background-color: var(--line); margin: 14px 0; }
+    hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18px 0; }
     .optional-note { text-align:center; color: var(--muted); font-size: 0.9rem; margin: 18px 0; }
     .accordion-wrapper { border: 1px solid var(--line); border-radius: 12px; overflow:hidden; margin-bottom: 12px;}
     .accordion {
@@ -120,7 +120,7 @@
     .device-entry, .pivc-entry, .wound-entry, .drain-entry {
       background: var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;
     }
-    .device-entry textarea, .pivc-entry textarea, .wound-entry textarea, .drain-entry textarea { width:100%; min-height:50px; font-size:1rem; background:var(--input-bg); }
+    .device-entry textarea, .pivc-entry textarea, .wound-entry textarea, .drain-entry textarea { width:100%; min-height:44px; font-size:1rem; background:var(--input-bg); }
     .remove-entry { background: transparent; border:1px solid rgba(239,68,68,0.12); color:var(--red); border-radius:8px; padding:8px; cursor:pointer; text-align:center; font-weight:700; }
     .remove-entry:hover { background: rgba(239,68,68,0.04); }
     .floating-toolbar { display: none; }
@@ -288,7 +288,9 @@
         <div class="col-6 npOnly" style="display:none"><label for="npFlow">NP Flow (L/min)</label><input id="npFlow" type="number" step="0.5" min="0" /></div>
         <div class="col-3 hfnpOnly" style="display:none"><label for="hfnpFio2">HFNP FiO2 (%)</label><input id="hfnpFio2" type="number" step="1" min="21" max="100" /></div>
         <div class="col-3 hfnpOnly" style="display:none"><label for="hfnpFlow">HFNP Flow (L/min)</label><input id="hfnpFlow" type="number" step="1" min="0" /></div>
-        <div class="col-6 nivOnly" style="display:none"><label for="nivDetails">NIV Details</label><input id="nivDetails" type="text" placeholder="Settings (PEEP/PS)"/></div>
+        <div class="col-2 nivOnly" style="display:none;"><label for="nivFio2">FiO2 (%)</label><input id="nivFio2" type="number" min="21" max="100"/></div>
+        <div class="col-2 nivOnly" style="display:none;"><label for="nivPeep">PEEP</label><input id="nivPeep" type="number" min="0"/></div>
+        <div class="col-2 nivOnly" style="display:none;"><label for="nivPs">PS</label><input id="nivPs" type="number" min="0"/></div>
       </div>
       <div style="margin-top:10px">
         <label>Dyspnea/Respiratory Distress</label>
@@ -334,10 +336,11 @@
        <div id="uopLow_note_wrapper" class="concern-note" style="display:none;">
             <textarea id="uopLow_note" placeholder="Optional: enter urine output details"></textarea>
       </div>
-    </div>
-    
-    <div class="input-group">
+      
       <div class="toggle-label" id="toggle_immobility48h" data-value="false" role="button" aria-pressed="false">Immobility >48h <span class="state">No</span></div>
+      <div id="immobility48h_note_wrapper" class="concern-note" style="display:none;">
+          <textarea id="immobility48h_note" placeholder="Optional: enter details of immobility"></textarea>
+      </div>
     </div>
     
     <hr>
@@ -477,8 +480,8 @@
       </div>
 
       <div style="margin-top:12px" class="grid">
-        <div class="col-12"><label>Electrolyte Plan</label><input id="elec_replace_note" type="text" placeholder="Replacement plan"/></div>
-        <div class="col-12" style="margin-top:8px"><div class="toggle-label" id="toggle_new_bloods_ordered" data-value="false" role="button" aria-pressed="false">New blood request ordered for next phleb round <span class="state">No</span></div></div>
+        <div class="col-12"><label>Electrolyte Plan</label><input id="elec_replace_note" type="text" placeholder="Document if replacement administered, planned or requested."/></div>
+        <div class="col-12" style="margin-top:8px"><div class="toggle-label" id="toggle_new_bloods_ordered" data-value="false" role="button" aria-pressed="false">New blood request ordered for next phleb round? <span class="state">No</span></div></div>
       </div>
     </div>
   </div>
@@ -528,7 +531,7 @@
 
   <div class="card">
     <div class="section-title">Auto-Generated Summary</div>
-    <textarea id="summary" placeholder="Summary will auto-generate here..." readonly style="min-height:240px; font-family:ui-monospace,monospace;"></textarea>
+    <textarea id="summary" placeholder="Summary will auto-generate here..." style="min-height:240px; font-family:ui-monospace,monospace;"></textarea>
     <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn primary" id="copyBtn">Copy Summary</button>
       <button class="btn danger" id="clearDataBtnBottom">Clear Data / Next Patient</button>
@@ -573,7 +576,7 @@ const normalRanges = {
 /* fields to automatically save/restore */
 const staticInputs = [
   'ptName','ptMrn','ptAge','ptWard','ptBed','ptWardOther','ptAdmissionReason','icuLos','stepdownDate',
-  'npFlow','hfnpFio2','hfnpFlow','nivDetails','override','overrideNote',
+  'npFlow','hfnpFio2','hfnpFlow','nivFio2', 'nivPeep', 'nivPs','override','overrideNote',
   'mods_score','mods_details','airway_a','b_rr','b_spo2','b_device','b_wob',
   'c_hr','c_nibp','c_cr','c_perf','d_alert','d_gcs','d_pain','e_temp','e_bsl','e_uop','atoe_adds',
   'ae_mobility','ae_diet','ae_bowels',
@@ -583,7 +586,7 @@ const staticInputs = [
   'elec_replace_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note',
   'adds','lactate','hb','wcc','crp','neut','lymph',
   'dyspneaConcern_note', 'renalConcern_note', 'uopLow_note', 'neuroConcern_note', 'infectionConcern_note',
-  'after_hours_discharge_note', 'pressors24h_note', 'np3Last12h_note', 'rapidWean_note'
+  'after_hours_discharge_note', 'pressors24h_note', 'np3Last12h_note', 'rapidWean_note', 'immobility48h_note'
 ];
 const toggleInputs = [
   'after_hours_discharge','pressors24h','np3Last12h','rapidWean','renalConcern','uopLow',
@@ -661,8 +664,10 @@ function createDeviceEntry(type, value = '') {
     div.dataset.type = type;
     div.innerHTML = `
         <label>${type}</label>
-        <textarea placeholder="Enter details for ${type}...">${value}</textarea>
-        <div class="remove-entry" role="button" tabindex="0">Remove</div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <textarea style="flex: 1;" placeholder="Enter details for ${type}...">${value}</textarea>
+            <div class="remove-entry" role="button" tabindex="0">Remove</div>
+        </div>
     `;
     container.appendChild(div);
 
@@ -720,7 +725,7 @@ function getState() {
   // Blood trends
   document.querySelectorAll('.trend-buttons').forEach(group => {
     const activeBtn = group.querySelector('.trend-btn.active');
-    state[group.id] = activeBtn ? activeBtn.dataset.value : '-';
+    state[group.id] = activeBtn ? activeBtn.dataset.value : '';
   });
 
   return state;
@@ -779,7 +784,7 @@ function restoreState(state) {
   
   // Blood trends
   document.querySelectorAll('.trend-buttons').forEach(group => {
-    const value = state[group.id] || '-';
+    const value = state[group.id] || '';
     group.querySelectorAll('.trend-btn').forEach(btn => btn.classList.remove('active'));
     const btnToActivate = group.querySelector(`.trend-btn[data-value="${value}"]`);
     if(btnToActivate) btnToActivate.classList.add('active');
@@ -796,7 +801,7 @@ function initialize() {
   const debouncedComputeAndSave = debounce(()=>{ computeAll(); saveState(true); }, 600);
   
   // Create trend buttons
-  const trends = ['-', '↑', '↓', '→'];
+  const trends = ['↑', '↓', '→'];
   document.querySelectorAll('.trend-buttons').forEach(group => {
       trends.forEach(trend => {
           const btn = document.createElement('button');
@@ -804,10 +809,12 @@ function initialize() {
           btn.className = 'trend-btn';
           btn.dataset.value = trend;
           btn.textContent = trend;
-          if(trend === '-') btn.classList.add('active');
           btn.addEventListener('click', () => {
+              const wasActive = btn.classList.contains('active');
               group.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
-              btn.classList.add('active');
+              if (!wasActive) {
+                btn.classList.add('active');
+              }
               debouncedComputeAndSave();
           });
           group.appendChild(btn);
@@ -924,6 +931,9 @@ function initialize() {
     staticInputs.forEach(id=>{ const el=$(id); if(el) el.value=''; });
     toggleInputs.forEach(id=>{ const el = $(`toggle_${id}`); if (el) { el.dataset.value='false'; el.classList.remove('active'); const sp = el.querySelector('.state'); if(sp) sp.textContent='No'; } });
     selectInputs.forEach(g=>{ const el=$(g); if(el) el.querySelectorAll('.select-btn').forEach(b=>b.classList.remove('active')); });
+    
+    document.querySelectorAll('.trend-buttons .trend-btn').forEach(btn => btn.classList.remove('active'));
+
     document.querySelectorAll('.concern-note').forEach(el => el.style.display = 'none');
     $('devices-container').innerHTML = '';
     document.querySelectorAll('.accordion-wrapper').forEach(wrapper => {
@@ -1090,8 +1100,11 @@ function updateDisplay(s, red, amber, flaggedElements, location) {
     const catTextEl = $('catText');
     catTextEl.className = 'status ' + cat.id;
     if (cat.id === 'red') {
-      const priorityText = redCount >= 3 ? ' - High Priority' : '';
-      catTextEl.textContent = `${cat.text} (${redCount} flag${redCount > 1 ? 's' : ''})${priorityText}`;
+      if (redCount >= 3) {
+          catTextEl.textContent = `CAT 1 - HIGH PRIORITY - ${redCount} flags`;
+      } else {
+          catTextEl.textContent = 'CAT 1';
+      }
     } else {
       catTextEl.textContent = cat.text;
     }
@@ -1111,12 +1124,15 @@ function updateDisplay(s, red, amber, flaggedElements, location) {
     const followUpEl = $('followUpInstructions');
     let followUpHTML = '';
     if (cat.id === 'red') {
-        const priority = redCount >= 3 ? ' (High Priority)' : '';
-        followUpHTML = `<div class="status red">Twice-daily checks required${priority}.</div>`;
+        if (redCount >= 3) {
+            followUpHTML = `<div class="status red">Priority review - twice-daily checks for up to 72h post-ICU stepdown.</div>`;
+        } else {
+            followUpHTML = `<div class="status red">At least daily checks for up to 72h post-ICU stepdown.</div>`;
+        }
     } else if (cat.id === 'amber') {
-        followUpHTML = `<div class="status amber">Once-daily checks for 48h total since stepdown.</div>`;
+        followUpHTML = `<div class="status amber">Once-daily checks for up to 48h post-ICU stepdown.</div>`;
     } else {
-        followUpHTML = `<div class="status green">Once on ward, removable from list if stable.</div>`;
+        followUpHTML = `<div class="status green">Single follow-up on ward, if stable, can be discharged from ALERT.</div>`;
     }
     followUpEl.innerHTML = followUpHTML;
 
@@ -1134,6 +1150,55 @@ function updateDisplay(s, red, amber, flaggedElements, location) {
 
 function computeAll() {
   const s = getState(); // current state from DOM
+  
+  // === Auto-populate A-E assessment fields ===
+  let oxyDeviceText = '';
+  switch (s.oxMod) {
+      case 'RA':
+          oxyDeviceText = 'RA';
+          break;
+      case 'NP':
+          const npFlow = s.npFlow;
+          oxyDeviceText = npFlow ? `${npFlow}L NP` : 'NP';
+          break;
+      case 'HFNP':
+          const hfnpFlow = s.hfnpFlow;
+          const hfnpFio2 = s.hfnpFio2;
+          let hfnpParts = [];
+          if (hfnpFlow) hfnpParts.push(`${hfnpFlow}L`);
+          if (hfnpFio2) hfnpParts.push(`${hfnpFio2}%`);
+          oxyDeviceText = `HFNP ${hfnpParts.join(' / ')}`;
+          break;
+      case 'NIV':
+          const nivFio2 = s.nivFio2;
+          const nivPeep = s.nivPeep;
+          const nivPs = s.nivPs;
+          let nivParts = [];
+          if (nivFio2) nivParts.push(`${nivFio2}% FiO2`);
+          if (nivPeep) nivParts.push(`${nivPeep} PEEP`);
+          if (nivPs) nivParts.push(`${nivPs} PS`);
+          oxyDeviceText = `NIV ${nivParts.join(', ')}`;
+          break;
+  }
+  // Update both the DOM and the state object `s` so the summary is correct
+  $('b_device').value = oxyDeviceText.trim();
+  s.b_device = oxyDeviceText.trim();
+
+  // Sync notes to A-E fields if the source note has content
+  if (s.dyspneaConcern_note && s.dyspneaConcern_note.trim() !== '') {
+      $('b_wob').value = s.dyspneaConcern_note;
+      s.b_wob = s.dyspneaConcern_note;
+  }
+  if (s.uopLow_note && s.uopLow_note.trim() !== '') {
+      $('e_uop').value = s.uopLow_note;
+      s.e_uop = s.uopLow_note;
+  }
+  if (s.immobility48h_note && s.immobility48h_note.trim() !== '') {
+      $('ae_mobility').value = s.immobility48h_note;
+      s.ae_mobility = s.immobility48h_note;
+  }
+
+
   const red = [], amber = [];
   const flaggedElements = { red: [], amber: [] };
 
@@ -1151,7 +1216,6 @@ function computeAll() {
     }
   }
 
-  // --- New Logic for LOS and Immobility ---
   const icuLos = num(s.icuLos);
   const immobility = s.immobility48h;
   const pressors = s.pressors24h;
@@ -1172,17 +1236,14 @@ function computeAll() {
   }
 
   if (immobility && !hasCombinedRedFlag) {
-      amber.push('Immobility >48h');
-      flaggedElements.amber.push('toggle_immobility48h');
+      addRisk(amber, 'Immobility >48h', s.immobility48h_note, 'toggle_immobility48h', 'amber');
   }
 
   if (icuLos > 7) {
       amber.push('ICU LOS > 7 days');
       flaggedElements.amber.push('icuLos');
   }
-  // --- End of New Logic ---
 
-  // Oxygen flags
   const oxModGroup = $('oxMod');
   if (s.oxMod === 'NP') {
     const flow = num(s.npFlow);
@@ -1225,8 +1286,28 @@ function computeAll() {
     addRisk(red, renalText, s.renalConcern_note, 'toggle_renalConcern', 'red');
   }
   
-  if (s.neuroConcern === 'severe') addRisk(red, 'Severe confusion/delirium (GCS <13)', s.neuroConcern_note, 'neuroConcern', 'red');
-  else if (s.neuroConcern === 'mild') addRisk(amber, 'Mild confusion/delirium (GCS 13-14)', s.neuroConcern_note, 'neuroConcern', 'amber');
+  if (s.neuroConcern === 'severe' || s.neuroConcern === 'mild') {
+      let neuroDetailsParts = [];
+      if (s.d_alert && s.d_alert.trim()) {
+          neuroDetailsParts.push(s.d_alert.trim());
+      }
+      if (s.d_gcs && s.d_gcs.trim()) {
+          neuroDetailsParts.push(`GCS ${s.d_gcs.trim()}`);
+      }
+
+      let neuroDetailsText = '';
+      if (neuroDetailsParts.length > 0) {
+          neuroDetailsText = ` (${neuroDetailsParts.join(', ')})`;
+      }
+
+      if (s.neuroConcern === 'severe') {
+          const baseText = `Severe confusion/delirium${neuroDetailsText}`;
+          addRisk(red, baseText, s.neuroConcern_note, 'neuroConcern', 'red');
+      } else if (s.neuroConcern === 'mild') {
+          const baseText = `Mild confusion/delirium${neuroDetailsText}`;
+          addRisk(amber, baseText, s.neuroConcern_note, 'neuroConcern', 'amber');
+      }
+  }
 
   if (s.dyspneaConcern === 'severe') {
     let dyspneaDetails = [];
@@ -1265,17 +1346,14 @@ function computeAll() {
   if ($('override').value === 'red') red.push(`Override: CAT 1 concern${overrideNote}`);
   else if ($('override').value === 'amber') amber.push(`Override: CAT 2 concern${overrideNote}`);
 
-  // Update blood highlights
   updateBloodFlags(s);
   updateSingleBloodFlag('wcc', num(s.wcc), '');
   updateSingleBloodFlag('crp', num(s.crp), '');
   updateSingleBloodFlag('neut', num(s.neut), '');
   updateSingleBloodFlag('lymph', num(s.lymph), '');
 
-  // Build display
   updateDisplay(s, red, amber, flaggedElements, location);
 
-  // Build summary (plain text)
   const role = s.clinicianRole || 'ALERT CNS';
   let reviewTitle = `${role} Review`;
   if (s.reviewType === 'post') {
@@ -1337,7 +1415,7 @@ function computeAll() {
   const bloods = bloodParts.map(k => {
     const v = s[`bl_${k}`]; if (!v) return null;
     const trendKey = `bl_${k}_trend`;
-    const trend = s[trendKey] || '-';
+    const trend = s[trendKey] || '';
     return `${k.replace('_review','').toUpperCase()} ${v}${trendWord(trend)}`;
   }).filter(Boolean).join(', ');
 
@@ -1393,16 +1471,17 @@ function computeAll() {
 
   const redCount = red.length;
   const amberCount = amber.length;
-  if (redCount > 0 || amberCount > 0) {
-      lines.push('', 'PLAN & FOLLOW-UP:');
-      if (redCount > 0) {
-          const priority = redCount >= 3 ? ` (High Priority due to ${redCount} flags)` : '';
-          lines.push(`- Follow-up: Twice-daily checks required${priority}.`);
-      } else if (amberCount > 0) {
-          lines.push('- Follow-up: Once-daily for 48h total since stepdown.');
+  lines.push('', 'PLAN & FOLLOW-UP:');
+  if (redCount > 0) {
+      if (redCount >= 3) {
+         lines.push(`- Follow-up: Priority review - twice-daily checks for up to 72h post-ICU stepdown.`);
       } else {
-          lines.push('- Follow-up: Standard ward care, removable from list if stable.');
+         lines.push(`- Follow-up: At least daily checks for up to 72h post-ICU stepdown.`);
       }
+  } else if (amberCount > 0) {
+      lines.push('- Follow-up: Once-daily checks for up to 48h post-ICU stepdown.');
+  } else {
+      lines.push('- Follow-up: Single follow-up on ward, if stable, can be discharged from ALERT.');
   }
 
 
