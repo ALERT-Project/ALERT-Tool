@@ -17,7 +17,7 @@
     body{font-family:'Inter', system-ui, sans-serif; background:var(--bg); color:var(--ink); margin:0 0 180px 0; line-height:1.4; -webkit-font-smoothing:antialiased;}
     header{padding:14px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; flex-wrap:wrap; background: var(--card); z-index:30;}
     header h1 {
-      font-size: 1.5rem;
+      font-size: 2.0rem;
       font-weight: 800;
       color: var(--accent);
       letter-spacing: -0.5px;
@@ -190,14 +190,14 @@
   <div class="card" aria-labelledby="patientHeading">
     <div class="grid">
        <div class="col-6">
-        <label>Clinician Role</label>
+        <label>Clinician Role?</label>
         <div style="display:flex; gap:8px; padding-top:6px;">
           <label style="font-weight:500"><input type="radio" name="clinicianRole" value="ALERT CNS" checked> CNS</label>
           <label style="font-weight:500"><input type="radio" name="clinicianRole" value="ALERT CN"> CN</label>
         </div>
       </div>
        <div class="col-6">
-        <label>Review Type</label>
+        <label>Review Type?</label>
         <div style="display:flex; gap:8px; padding-top:6px;">
           <label style="font-weight:500"><input type="radio" name="reviewType" value="pre"> Pre-Stepdown</label>
           <label style="font-weight:500"><input type="radio" name="reviewType" value="post" checked> Post-Stepdown</label>
@@ -276,7 +276,7 @@
     </div>
     <hr>
     <div class="input-group">
-      <label>Oxygen Modality</label>
+      <label>Oxygen Modality?</label>
       <div class="button-group" id="oxMod" role="tablist" aria-label="Oxygen Modality">
         <button class="select-btn" data-value="RA">Room Air</button>
         <button class="select-btn" data-value="NP">Nasal Prongs</button>
@@ -293,7 +293,7 @@
         <div class="col-2 nivOnly" style="display:none;"><label for="nivPs">PS</label><input id="nivPs" type="number" min="0"/></div>
       </div>
       <div style="margin-top:10px">
-        <label>Dyspnea/Respiratory Distress</label>
+        <label>Dyspnea/Respiratory Distress?</label>
         <div class="button-group" id="dyspneaConcern">
           <button class="select-btn" data-value="none">None</button>
           <button class="select-btn" data-value="mild">Mild</button>
@@ -304,48 +304,9 @@
         </div>
       </div>
     </div>
-
-    <hr>
-    <div class="input-group">
-      <div class="toggle-label" id="toggle_after_hours_discharge" data-value="false" role="button" aria-pressed="false"><span>Discharged after-hours <small style="font-weight:400; color:var(--muted)">(only score for first night on ward)</small></span><span class="state">No</span></div>
-      <div id="after_hours_discharge_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="after_hours_discharge_note" placeholder="Optional: enter details"></textarea>
-      </div>
-
-      <div class="toggle-label" id="toggle_pressors24h" data-value="false" role="button" aria-pressed="false"><span>Vasopressors in last 24h</span><span class="state">No</span></div>
-       <div id="pressors24h_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="pressors24h_note" placeholder="Optional: enter details of vasopressor use"></textarea>
-      </div>
-
-      <div class="toggle-label" id="toggle_np3Last12h" data-value="false" role="button" aria-pressed="false"><span>Historical O2: NP ≥3L, HFNP >30%, NIV in last 12h, or intubated in last 24h</span><span class="state">No</span></div>
-       <div id="np3Last12h_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="np3Last12h_note" placeholder="Optional: enter details of historical O2 use"></textarea>
-      </div>
-
-      <div class="toggle-label" id="toggle_rapidWean" data-value="false" role="button" aria-pressed="false"><span>Rapid oxygen wean in last 12h</span><span class="state">No</span></div>
-       <div id="rapidWean_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="rapidWean_note" placeholder="Optional: enter details of rapid wean"></textarea>
-      </div>
-      
-      <div class="toggle-label" id="toggle_renalConcern" data-value="false" role="button" aria-pressed="false"><span>Renal Concern (AKI, rising Cr, or ESRD/dialysis)</span><span class="state">No</span></div>
-       <div id="renalConcern_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="renalConcern_note" placeholder="Optional: enter details of renal concern"></textarea>
-      </div>
-
-      <div class="toggle-label" id="toggle_uopLow" data-value="false" role="button" aria-pressed="false"><span>UOP concerning / downtrending (&lt;0.5 mL/kg/hr)</span><span class="state">No</span></div>
-       <div id="uopLow_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="uopLow_note" placeholder="Optional: enter urine output details"></textarea>
-      </div>
-      
-      <div class="toggle-label" id="toggle_immobility48h" data-value="false" role="button" aria-pressed="false">Immobility >48h <span class="state">No</span></div>
-      <div id="immobility48h_note_wrapper" class="concern-note" style="display:none;">
-          <textarea id="immobility48h_note" placeholder="Optional: enter details of immobility"></textarea>
-      </div>
-    </div>
     
-    <hr>
     <div class="input-group">
-      <label>Neurological Concern</label>
+      <label>Neurological Concern?</label>
       <div class="button-group" id="neuroConcern">
         <button class="select-btn" data-value="none">None</button>
         <button class="select-btn" data-value="mild">Mild Confusion/Delirium</button>
@@ -358,7 +319,42 @@
 
     <hr>
     <div class="input-group">
-      <div class="toggle-label" id="toggle_infectionConcern" data-value="false" role="button" aria-pressed="false"><span>Infection Concern</span><span class="state">No</span></div>
+      <div class="toggle-label" id="toggle_after_hours_discharge" data-value="false" role="button" aria-pressed="false"><span>Discharged after-hours? <small style="font-weight:400; color:var(--muted)">(only score for first night on ward)</small></span><span class="state">No</span></div>
+      <div id="after_hours_discharge_note_wrapper" class="concern-note" style="display:none;">
+            <textarea id="after_hours_discharge_note" placeholder="Optional: enter details"></textarea>
+      </div>
+
+      <div class="toggle-label" id="toggle_pressors24h" data-value="false" role="button" aria-pressed="false"><span>Vasopressors in last 24h?</span><span class="state">No</span></div>
+       <div id="pressors24h_note_wrapper" class="concern-note" style="display:none;">
+            <textarea id="pressors24h_note" placeholder="Optional: enter details of vasopressor use"></textarea>
+      </div>
+
+      <div class="toggle-label" id="toggle_np3Last12h" data-value="false" role="button" aria-pressed="false"><span>Historical O2: NP ≥3L, HFNP >30%, NIV in last 12h, or intubated in last 24h?</span><span class="state">No</span></div>
+       <div id="np3Last12h_note_wrapper" class="concern-note" style="display:none;">
+            <textarea id="np3Last12h_note" placeholder="Optional: enter details of historical O2 use"></textarea>
+      </div>
+
+      <div class="toggle-label" id="toggle_rapidWean" data-value="false" role="button" aria-pressed="false"><span>Rapid oxygen wean in last 12h?</span><span class="state">No</span></div>
+       <div id="rapidWean_note_wrapper" class="concern-note" style="display:none;">
+            <textarea id="rapidWean_note" placeholder="Optional: enter details of rapid wean"></textarea>
+      </div>
+      
+      <div class="toggle-label" id="toggle_renalConcern" data-value="false" role="button" aria-pressed="false"><span>Renal Concern (AKI, rising Cr, or ESRD/dialysis)?</span><span class="state">No</span></div>
+       <div id="renalConcern_note_wrapper" class="concern-note" style="display:none;">
+            <textarea id="renalConcern_note" placeholder="Optional: enter details of renal concern"></textarea>
+      </div>
+
+      <div class="toggle-label" id="toggle_uopLow" data-value="false" role="button" aria-pressed="false"><span>UOP concerning / downtrending (&lt;0.5 mL/kg/hr)?</span><span class="state">No</span></div>
+       <div id="uopLow_note_wrapper" class="concern-note" style="display:none;">
+            <textarea id="uopLow_note" placeholder="Optional: enter urine output details"></textarea>
+      </div>
+      
+      <div class="toggle-label" id="toggle_immobility48h" data-value="false" role="button" aria-pressed="false">Immobility >48h? <span class="state">No</span></div>
+      <div id="immobility48h_note_wrapper" class="concern-note" style="display:none;">
+          <textarea id="immobility48h_note" placeholder="Optional: enter details of immobility"></textarea>
+      </div>
+      
+      <div class="toggle-label" id="toggle_infectionConcern" data-value="false" role="button" aria-pressed="false"><span>Infection Concern?</span><span class="state">No</span></div>
        <div id="infectionConcern_note_wrapper" class="concern-note" style="display:none;">
             <textarea id="infectionConcern_note" placeholder="Optional: enter details of clinical signs of infection"></textarea>
       </div>
@@ -382,10 +378,10 @@
         </div>
       </div>
     </div>
-
+    
     <hr>
     <div class="input-group">
-      <label>Concerning Comorbidities</label>
+      <div class="section-title">Concerning Comorbidities?</div>
       <div class="comorbidity-grid">
         <div class="toggle-label" id="toggle_comorb_copd" data-value="false" role="button" aria-pressed="false">COPD/Asthma <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_hf" data-value="false" role="button" aria-pressed="false">Active HF <span class="state">No</span></div>
@@ -396,7 +392,7 @@
     </div>
 
     <hr>
-    <div class="section-title">Clinical Judgement Override</div>
+    <div class="section-title">Clinical Judgement Override?</div>
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
       <button class="override-btn red" id="override_red">Upgrade to CAT 1</button>
       <button class="override-btn amber" id="override_amber">Upgrade to CAT 2</button>
@@ -423,10 +419,10 @@
   <div class="optional-note">The following sections are optional DMR note helpers</div>
 
   <div class="accordion-wrapper" data-accordion-id="ae">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_ae">A-E Assessment <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_ae">A-E Assessment? <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_ae">
       <div class="grid">
-        <div class="col-12"><div class="toggle-label" id="toggle_use_mods" data-value="false" role="button" aria-pressed="false">MODS in place <span class="state">No</span></div></div>
+        <div class="col-12"><div class="toggle-label" id="toggle_use_mods" data-value="false" role="button" aria-pressed="false"><span>MODS in place?</span> <span class="state">No</span></div></div>
         <div class="col-12" id="mods_inputs" style="display:none;">
           <div class="grid">
             <div class="col-12"><label>MODS Score</label><input id="mods_score" type="text"/></div>
@@ -463,7 +459,7 @@
   </div>
 
   <div class="accordion-wrapper" data-accordion-id="bloods">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_bloods">Bloods <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_bloods">Bloods? <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_bloods">
       <div class="bloods-grid">
         <div class="blood-item"><label for="bl_lac_review">Lac</label><input id="bl_lac_review" type="number" step="0.1"/><div class="trend-buttons" id="bl_lac_review_trend"></div><span id="bl_lac_review_range" class="range-annotation"></span></div>
@@ -487,7 +483,7 @@
   </div>
 
   <div class="accordion-wrapper" data-accordion-id="devices">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_devices">Lines, Drains & Wounds <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_devices">Lines, Drains & Wounds? <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_devices" style="display:flex; flex-direction:column; gap: 12px;">
        <div id="devices-container"></div>
        <div class="button-group" style="justify-content: flex-start; flex-wrap: wrap;">
@@ -505,7 +501,7 @@
   </div>
 
   <div class="accordion-wrapper" data-accordion-id="context">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_context">Other Factors <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_context">Other Factors? <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_context">
         <div class="devices-subtitle">▶ Goals of Care (GOC)</div>
         <div class="devices-input-group">
@@ -1132,7 +1128,7 @@ function updateDisplay(s, red, amber, flaggedElements, location) {
     } else if (cat.id === 'amber') {
         followUpHTML = `<div class="status amber">Once-daily checks for up to 48h post-ICU stepdown.</div>`;
     } else {
-        followUpHTML = `<div class="status green">Single follow-up on ward, if stable, can be discharged from ALERT.</div>`;
+        followUpHTML = `<div class="status green">Single follow-up on ward to ensure continued stability.</div>`;
     }
     followUpEl.innerHTML = followUpHTML;
 
@@ -1326,7 +1322,7 @@ function computeAll() {
 
 
   const comorbCount = ['comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis'].filter(id=>s[id]).length;
-  if (comorbCount >= 3) { red.push(`Multiple comorbidities (${comorbCount})`); ['comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis'].forEach(id => {if(s[id]) flaggedElements.red.push('toggle_'+id) });}
+  if (comorbCount >= 3) { red.push('Multiple comorbidities'); ['comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis'].forEach(id => {if(s[id]) flaggedElements.red.push('toggle_'+id) });}
   else if (comorbCount > 0) { amber.push(`Comorbidities (${comorbCount})`); ['comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis'].forEach(id => {if(s[id]) flaggedElements.amber.push('toggle_'+id) });}
 
   if (s.infectionConcern) {
@@ -1481,7 +1477,7 @@ function computeAll() {
   } else if (amberCount > 0) {
       lines.push('- Follow-up: Once-daily checks for up to 48h post-ICU stepdown.');
   } else {
-      lines.push('- Follow-up: Single follow-up on ward, if stable, can be discharged from ALERT.');
+      lines.push('- Follow-up: Single follow-up on ward to ensure continued stability.');
   }
 
 
