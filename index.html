@@ -316,6 +316,18 @@
             <textarea id="neuroConcern_note" placeholder="Optional: enter details of neurological concern"></textarea>
       </div>
     </div>
+    
+    <div class="input-group">
+      <label>Electrolyte Concern?</label>
+      <div class="button-group" id="electrolyteConcern" role="tablist" aria-label="Electrolyte Concern">
+        <button class="select-btn" data-value="none">None</button>
+        <button class="select-btn" data-value="mild">Mild/moderate</button>
+        <button class="select-btn" data-value="severe">Severe</button>
+      </div>
+       <div id="electrolyteConcern_note_wrapper" class="concern-note" style="display:none;">
+            <textarea id="electrolyteConcern_note" placeholder="Optional: enter details of electrolyte concern (e.g., Na 128, K 2.9)"></textarea>
+      </div>
+    </div>
 
     <hr>
     <div class="input-group">
@@ -468,6 +480,7 @@
         <div class="blood-item"><label for="bl_crp">CRP</label><input id="bl_crp" type="number"/><div class="trend-buttons" id="bl_crp_trend"></div><span id="bl_crp_range" class="range-annotation"></span></div>
         <div class="blood-item"><label for="bl_cr_review">Cr</label><input id="bl_cr_review" type="number"/><div class="trend-buttons" id="bl_cr_review_trend"></div><span id="bl_cr_review_range" class="range-annotation"></span></div>
         <div class="blood-item"><label for="bl_k">K</label><input id="bl_k" type="number" step="0.1"/><div class="trend-buttons" id="bl_k_trend"></div><span id="bl_k_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_na">Na</label><input id="bl_na" type="number" step="1"/><div class="trend-buttons" id="bl_na_trend"></div><span id="bl_na_range" class="range-annotation"></span></div>
         <div class="blood-item"><label for="bl_mg">Mg</label><input id="bl_mg" type="number" step="0.1"/><div class="trend-buttons" id="bl_mg_trend"></div><span id="bl_mg_range" class="range-annotation"></span></div>
         <div class="blood-item"><label for="bl_plts">Plts</label><input id="bl_plts" type="number"/><div class="trend-buttons" id="bl_plts_trend"></div><span id="bl_plts_range" class="range-annotation"></span></div>
         <div class="blood-item"><label for="bl_alb">Alb</label><input id="bl_alb" type="number"/><div class="trend-buttons" id="bl_alb_trend"></div><span id="bl_alb_range" class="range-annotation"></span></div>
@@ -476,7 +489,7 @@
       </div>
 
       <div style="margin-top:12px" class="grid">
-        <div class="col-12"><label>Electrolyte Plan</label><input id="elec_replace_note" type="text" placeholder="Document if replacement administered, planned or requested."/></div>
+        <div class="col-12"><label>Electrolyte Plan</label><input id="elec_replace_note" type="text" placeholder="Replacement plan..."/></div>
         <div class="col-12" style="margin-top:8px"><div class="toggle-label" id="toggle_new_bloods_ordered" data-value="false" role="button" aria-pressed="false">New blood request ordered for next phleb round? <span class="state">No</span></div></div>
       </div>
     </div>
@@ -564,7 +577,8 @@ const normalRanges = {
   wcc: { low: 4, high: 11 }, crp: { low: 0, high: 50 },
   neut: { low: 1.5, high: 7.5 }, lymph: { low: 1.0, high: 4.0 },
   hb: { low: 115, high: 165 }, plts: { low: 150, high: 400 },
-  k: { low: 3.5, high: 5.2 }, cr_review: { low: 50, high: 98 },
+  k: { low: 3.5, high: 5.2 }, na: { low: 135, high: 145 },
+  cr_review: { low: 50, high: 98 },
   mg: { low: 0.7, high: 1.1 }, alb: { low: 35, high: 50 },
   lac_review: { low: 0.5, high: 2.0 }
 };
@@ -577,11 +591,12 @@ const staticInputs = [
   'c_hr','c_nibp','c_cr','c_perf','d_alert','d_gcs','d_pain','e_temp','e_bsl','e_uop','atoe_adds',
   'ae_mobility','ae_diet','ae_bowels',
   'bl_wcc','bl_crp','bl_neut','bl_lymph',
-  'bl_hb','bl_plts','bl_k',
+  'bl_hb','bl_plts','bl_k','bl_na',
   'bl_cr_review','bl_mg','bl_alb','bl_lac_review',
   'elec_replace_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note',
   'adds','lactate','hb','wcc','crp','neut','lymph',
   'dyspneaConcern_note', 'renalConcern_note', 'uopLow_note', 'neuroConcern_note', 'infectionConcern_note',
+  'electrolyteConcern_note',
   'after_hours_discharge_note', 'pressors24h_note', 'np3Last12h_note', 'rapidWean_note', 'immobility48h_note'
 ];
 const toggleInputs = [
@@ -589,7 +604,7 @@ const toggleInputs = [
   'infectionConcern','use_mods','new_bloods_ordered',
   'comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis', 'immobility48h'
 ];
-const selectInputs = ['oxMod','dyspneaConcern','neuroConcern','stepdownTime'];
+const selectInputs = ['oxMod','dyspneaConcern','neuroConcern','electrolyteConcern','stepdownTime'];
 const deviceTypes = ['CVC', 'Other CVAD', 'PIVC', 'Enteral Tube', 'IDC', 'Pacing Wire', 'Drain', 'Wound', 'Other Device'];
 
 
@@ -1304,6 +1319,12 @@ function computeAll() {
           addRisk(amber, baseText, s.neuroConcern_note, 'neuroConcern', 'amber');
       }
   }
+  
+  if (s.electrolyteConcern === 'severe') {
+      addRisk(red, 'Severe electrolyte concern', s.electrolyteConcern_note, 'electrolyteConcern', 'red');
+  } else if (s.electrolyteConcern === 'mild') {
+      addRisk(amber, 'Mild/moderate electrolyte concern', s.electrolyteConcern_note, 'electrolyteConcern', 'amber');
+  }
 
   if (s.dyspneaConcern === 'severe') {
     let dyspneaDetails = [];
@@ -1406,7 +1427,7 @@ function computeAll() {
   if (atoe.length > 0) lines.push('', 'A-E ASSESSMENT', ...atoe);
 
   const bloodLines = [];
-  const bloodParts = ['lac_review','hb','wcc','crp','cr_review','k','mg','plts','alb','neut','lymph'];
+  const bloodParts = ['lac_review','hb','wcc','crp','cr_review','k','na','mg','plts','alb','neut','lymph'];
   const trendWord = val => ({ '↑': ' (uptrending)', '↓':' (downtrending)', '→':' (stable)'}[val] || '');
   const bloods = bloodParts.map(k => {
     const v = s[`bl_${k}`]; if (!v) return null;
