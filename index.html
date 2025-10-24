@@ -14,7 +14,7 @@
     /* Dark mode tokens */
     body.dark { --bg:#0b1112; --card:#0f1720; --ink:#e6eef0; --muted:#9aa9ad; --line:#132022; --input-bg:#071018; --toast-bg: rgba(255,255,255,0.06); --toast-color:#e6eef0; }
     html,body{height:100%}
-    body{font-family:'Inter', system-ui, sans-serif; background:var(--bg); color:var(--ink); margin:0 0 180px 0; line-height:1.4; -webkit-font-smoothing:antialiased;}
+    body{font-family:'Inter', system-ui, sans-serif; background:var(--bg); color:var(--ink); margin:0 0 220px 0; line-height:1.4; -webkit-font-smoothing:antialiased;}
     header{padding:14px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; flex-wrap:wrap; background: var(--card); z-index:30;}
     header h1 {
       font-size: 2.0rem;
@@ -67,8 +67,8 @@
         margin-top: 4px;
         font-weight: 800;
     }
-    .kpi .box h3{margin:0; font-size:1.25rem}
-    .kpi .box small{color:var(--muted); font-size: 0.8rem;}
+    .kpi .box h3{margin:0; font-size:1.75rem}
+    .kpi .box small{color:var(--muted); font-size: 0.9rem;}
     .status{font-weight:700}
     .status.red{color:var(--red)} .status.amber{color:var(--amber)} .status.green{color:var(--green)}
     .section-title{margin-bottom:12px; font-size:1.05rem; font-weight:700;}
@@ -190,14 +190,14 @@
   <div class="card" aria-labelledby="patientHeading">
     <div class="grid">
        <div class="col-6">
-        <label>Clinician Role?</label>
+        <label>Clinician Role</label>
         <div style="display:flex; gap:8px; padding-top:6px;">
           <label style="font-weight:500"><input type="radio" name="clinicianRole" value="ALERT CNS" checked> CNS</label>
           <label style="font-weight:500"><input type="radio" name="clinicianRole" value="ALERT CN"> CN</label>
         </div>
       </div>
        <div class="col-6">
-        <label>Review Type?</label>
+        <label>Review Type</label>
         <div style="display:flex; gap:8px; padding-top:6px;">
           <label style="font-weight:500"><input type="radio" name="reviewType" value="pre"> Pre-Stepdown</label>
           <label style="font-weight:500"><input type="radio" name="reviewType" value="post" checked> Post-Stepdown</label>
@@ -400,6 +400,11 @@
         <div class="toggle-label" id="toggle_comorb_esrd" data-value="false" role="button" aria-pressed="false">ESRD/Dialysis <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_diabetes" data-value="false" role="button" aria-pressed="false">Uncontrolled Diabetes <span class="state">No</span></div>
         <div class="toggle-label" id="toggle_comorb_cirrhosis" data-value="false" role="button" aria-pressed="false">Cirrhosis <span class="state">No</span></div>
+        <div class="toggle-label" id="toggle_comorb_other" data-value="false" role="button" aria-pressed="false">Other <span class="state">No</span></div>
+      </div>
+      <div id="comorb_other_note_wrapper" class="concern-note" style="display:none; margin-top: 10px;">
+          <label for="comorb_other_note">Specify other comorbidity</label>
+          <textarea id="comorb_other_note" placeholder="Enter details..."></textarea>
       </div>
     </div>
 
@@ -431,7 +436,7 @@
   <div class="optional-note">The following sections are optional DMR note helpers</div>
 
   <div class="accordion-wrapper" data-accordion-id="ae">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_ae">A-E Assessment? <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_ae">A-E Assessment <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_ae">
       <div class="grid">
         <div class="col-12"><div class="toggle-label" id="toggle_use_mods" data-value="false" role="button" aria-pressed="false"><span>MODS in place?</span> <span class="state">No</span></div></div>
@@ -471,7 +476,7 @@
   </div>
 
   <div class="accordion-wrapper" data-accordion-id="bloods">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_bloods">Bloods? <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_bloods">Bloods <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_bloods">
       <div class="bloods-grid">
         <div class="blood-item"><label for="bl_lac_review">Lac</label><input id="bl_lac_review" type="number" step="0.1"/><div class="trend-buttons" id="bl_lac_review_trend"></div><span id="bl_lac_review_range" class="range-annotation"></span></div>
@@ -496,7 +501,7 @@
   </div>
 
   <div class="accordion-wrapper" data-accordion-id="devices">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_devices">Lines, Drains & Wounds? <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_devices">Lines, Drains & Wounds <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_devices" style="display:flex; flex-direction:column; gap: 12px;">
        <div id="devices-container"></div>
        <div class="button-group" style="justify-content: flex-start; flex-wrap: wrap;">
@@ -514,7 +519,7 @@
   </div>
 
   <div class="accordion-wrapper" data-accordion-id="context">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_context">Other Factors? <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_context">Other Factors <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_context">
         <div class="devices-subtitle">▶ Goals of Care (GOC)</div>
         <div class="devices-input-group">
@@ -526,6 +531,11 @@
             <textarea id="allergies_note" placeholder="List any known allergies"></textarea>
         </div>
         
+        <div class="devices-subtitle">▶ Significant Past Medical History (PMH)</div>
+        <div class="devices-input-group">
+            <textarea id="pmh_note" placeholder="Auto-populates from 'Other' comorbidity. Editable."></textarea>
+        </div>
+
         <div class="devices-subtitle">▶ PICS Assessment</div>
         <div class="devices-input-group">
             <textarea id="pics_note" placeholder="Note PICS assessment"></textarea>
@@ -569,6 +579,7 @@
    =========================== */
 const $ = id => document.getElementById(id);
 const debounce = (fn, wait=350) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(()=>fn.apply(this,a), wait); }; };
+const computeAllAndSave = ()=>{ computeAll(); saveState(true); };
 const num = v => { const x = parseFloat(v); return isNaN(x) ? null : x; };
 const STORAGE_KEY = 'alertNursingToolData_v2';
 const ACCORDION_KEY = 'alertNursingToolAccordions_v2';
@@ -593,16 +604,16 @@ const staticInputs = [
   'bl_wcc','bl_crp','bl_neut','bl_lymph',
   'bl_hb','bl_plts','bl_k','bl_na',
   'bl_cr_review','bl_mg','bl_alb','bl_lac_review',
-  'elec_replace_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note',
+  'elec_replace_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note', 'pmh_note',
   'adds','lactate','hb','wcc','crp','neut','lymph',
   'dyspneaConcern_note', 'renalConcern_note', 'uopLow_note', 'neuroConcern_note', 'infectionConcern_note',
   'electrolyteConcern_note',
-  'after_hours_discharge_note', 'pressors24h_note', 'np3Last12h_note', 'rapidWean_note', 'immobility48h_note'
+  'after_hours_discharge_note', 'pressors24h_note', 'np3Last12h_note', 'rapidWean_note', 'immobility48h_note', 'comorb_other_note'
 ];
 const toggleInputs = [
   'after_hours_discharge','pressors24h','np3Last12h','rapidWean','renalConcern','uopLow',
   'infectionConcern','use_mods','new_bloods_ordered',
-  'comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis', 'immobility48h'
+  'comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis', 'immobility48h', 'comorb_other'
 ];
 const selectInputs = ['oxMod','dyspneaConcern','neuroConcern','electrolyteConcern','stepdownTime'];
 const deviceTypes = ['CVC', 'Other CVAD', 'PIVC', 'Enteral Tube', 'IDC', 'Pacing Wire', 'Drain', 'Wound', 'Other Device'];
@@ -855,7 +866,9 @@ function initialize() {
         const noteWrapperId = group.id + '_note_wrapper';
         const noteWrapper = $(noteWrapperId);
         if(noteWrapper) noteWrapper.style.display = (btn.dataset.value !== 'none' && btn.dataset.value !== '') ? 'block' : 'none';
-        debouncedComputeAndSave();
+        
+        const fn = (group.id === 'stepdownTime') ? computeAllAndSave : debouncedComputeAndSave;
+        fn();
       });
     });
   });
@@ -863,8 +876,28 @@ function initialize() {
   staticInputs.forEach(id => {
     const el = $(id); if (!el) return;
     const evt = (el.tagName==='SELECT' || el.type==='date') ? 'change' : 'input';
-    el.addEventListener(evt, debouncedComputeAndSave);
+    const fn = (id === 'stepdownDate') ? computeAllAndSave : debouncedComputeAndSave;
+    el.addEventListener(evt, fn);
   });
+
+  // --- PMH Note Auto-population ---
+  function updatePmhNoteFromComorbs() {
+      const otherNote = $('comorb_other_note').value.trim();
+      const pmhEl = $('pmh_note');
+      if (pmhEl) {
+         pmhEl.value = otherNote; // Just set it directly from the 'other' comorb box
+         debouncedComputeAndSave(); // Trigger re-compute and save
+      }
+  }
+  
+  const comorbOtherNoteEl = $('comorb_other_note');
+  if (comorbOtherNoteEl) {
+      comorbOtherNoteEl.addEventListener('input', () => {
+          updatePmhNoteFromComorbs();
+      });
+  }
+  // --- End PMH Note ---
+  
   document.querySelectorAll('input[name="reviewType"]').forEach(r => r.addEventListener('change', debouncedComputeAndSave));
   document.querySelectorAll('input[name="clinicianRole"]').forEach(r => r.addEventListener('change', debouncedComputeAndSave));
 
@@ -1136,14 +1169,14 @@ function updateDisplay(s, red, amber, flaggedElements, location) {
     let followUpHTML = '';
     if (cat.id === 'red') {
         if (redCount >= 3) {
-            followUpHTML = `<div class="status red">Priority review - twice-daily checks for up to 72h post-ICU stepdown.</div>`;
+            followUpHTML = `<div class="status red">Priority ALERT review - twice-daily checks by ALERT nursing for up to 72h post-ICU stepdown.</div>`;
         } else {
-            followUpHTML = `<div class="status red">At least daily checks for up to 72h post-ICU stepdown.</div>`;
+            followUpHTML = `<div class="status red">At least daily ALERT review for up to 72h post-ICU stepdown.</div>`;
         }
     } else if (cat.id === 'amber') {
-        followUpHTML = `<div class="status amber">Once-daily checks for up to 48h post-ICU stepdown.</div>`;
+        followUpHTML = `<div class="status amber">Once-daily ALERT review for up to 48h post-ICU stepdown.</div>`;
     } else {
-        followUpHTML = `<div class="status green">Single follow-up on ward to ensure continued stability.</div>`;
+        followUpHTML = `<div class="status green">Single ALERT review on ward to ensure continued stability.</div>`;
     }
     followUpEl.innerHTML = followUpHTML;
 
@@ -1213,9 +1246,6 @@ function computeAll() {
   const red = [], amber = [];
   const flaggedElements = { red: [], amber: [] };
 
-  const ward = s.ptWard === 'Other' ? s.ptWardOther : s.ptWard;
-  const location = [ward, s.ptBed].filter(Boolean).join(' ').trim();
-  
   const addRisk = (list, text, note, elementId, flagType) => {
     if (note && note.trim()) {
         list.push(`${text} (${note.trim()})`);
@@ -1227,6 +1257,9 @@ function computeAll() {
     }
   }
 
+  const ward = s.ptWard === 'Other' ? s.ptWardOther : s.ptWard;
+  const location = [ward, s.ptBed].filter(Boolean).join(' ').trim();
+  
   const icuLos = num(s.icuLos);
   const immobility = s.immobility48h;
   const pressors = s.pressors24h;
@@ -1236,8 +1269,8 @@ function computeAll() {
 
   if ((immobility && icuLos >= 4) || (icuLos >= 4 && hasSignificantFlags)) {
       let reason = (immobility && icuLos >= 4) 
-          ? "Immobility >48h + LOS ≥4 days" 
-          : `LOS ≥4 days + Significant flag (${pressors ? 'vasopressors' : 'lactate >2'})`;
+          ? `Immobility >48h + ICU LOS ${icuLos} days` 
+          : `ICU LOS ${icuLos} days + Significant flag (${pressors ? 'vasopressors' : 'lactate >2'})`;
       red.push(reason);
       if (immobility) flaggedElements.red.push('toggle_immobility48h');
       flaggedElements.red.push('icuLos');
@@ -1250,16 +1283,16 @@ function computeAll() {
       addRisk(amber, 'Immobility >48h', s.immobility48h_note, 'toggle_immobility48h', 'amber');
   }
 
-  if (icuLos > 7) {
-      amber.push('ICU LOS > 7 days');
+  if (icuLos > 7 && !hasCombinedRedFlag) {
+      amber.push(`ICU LOS ${icuLos} days`);
       flaggedElements.amber.push('icuLos');
   }
 
   const oxModGroup = $('oxMod');
   if (s.oxMod === 'NP') {
     const flow = num(s.npFlow);
-    if (flow !== null && flow >= 3) { red.push('NP flow ≥ 3 L/min'); flaggedElements.red.push(oxModGroup.id); flaggedElements.red.push('npFlow'); }
-    else if (flow !== null && flow >= 2) { amber.push('NP flow 2-2.5 L/min'); flaggedElements.amber.push(oxModGroup.id); flaggedElements.amber.push('npFlow');}
+    if (flow !== null && flow >= 3) { red.push(`NP flow ${flow} L/min`); flaggedElements.red.push(oxModGroup.id); flaggedElements.red.push('npFlow'); }
+    else if (flow !== null && flow >= 2) { amber.push(`NP flow ${flow} L/min`); flaggedElements.amber.push(oxModGroup.id); flaggedElements.amber.push('npFlow');}
   } else if (s.oxMod === 'HFNP') {
     const fio2 = num(s.hfnpFio2), flow = num(s.hfnpFlow);
     const hfnpParts = [];
@@ -1342,21 +1375,43 @@ function computeAll() {
   else if (hb !== null && hb < 100) { amber.push(`Anemia concern (Hb ${hb})`); flaggedElements.amber.push('hb'); }
 
 
-  const comorbCount = ['comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis'].filter(id=>s[id]).length;
-  if (comorbCount >= 3) { red.push('Multiple comorbidities'); ['comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis'].forEach(id => {if(s[id]) flaggedElements.red.push('toggle_'+id) });}
-  else if (comorbCount > 0) { amber.push(`Comorbidities (${comorbCount})`); ['comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis'].forEach(id => {if(s[id]) flaggedElements.amber.push('toggle_'+id) });}
+  const comorbIds = ['comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis', 'comorb_other'];
+  const comorbCount = comorbIds.filter(id => s[id]).length;
+  if (comorbCount >= 3) { 
+      red.push('Multiple comorbidities'); 
+      comorbIds.forEach(id => {if(s[id]) flaggedElements.red.push('toggle_'+id) });
+  }
+  else if (comorbCount > 0) { 
+      amber.push(`Comorbidities (${comorbCount})`); 
+      comorbIds.forEach(id => {if(s[id]) flaggedElements.amber.push('toggle_'+id) });
+  }
 
   if (s.infectionConcern) {
     const wcc = num(s.wcc), crp = num(s.crp), nlr = updateNLR(), temp = num(s.e_temp);
-    let markerFound=false;
-    let baseNote = s.infectionConcern_note;
-    if (temp >= 38.0) { markerFound=true; addRisk(amber, `Infection: Temp ${temp}C`, baseNote, 'toggle_infectionConcern', 'amber'); }
-    if (wcc !== null && (wcc < normalRanges.wcc.low || wcc > normalRanges.wcc.high)) { markerFound=true; addRisk(red,`Infection: Abnormal WCC (${wcc})`, baseNote, 'toggle_infectionConcern', 'red'); }
-    if (crp > 100) { markerFound=true; addRisk(red,`Infection: High CRP (${crp})`, baseNote, 'toggle_infectionConcern', 'red'); }
-    else if (crp > 50) { markerFound=true; addRisk(amber,`Infection: Elevated CRP (${crp})`, baseNote, 'toggle_infectionConcern', 'amber'); }
-    if (nlr > 10) { markerFound=true; addRisk(red,`Infection: High NLR (${nlr})`, baseNote, 'toggle_infectionConcern', 'red'); }
-    else if (nlr >= 5) { markerFound=true; addRisk(amber,`Infection: Elevated NLR (${nlr})`, baseNote, 'toggle_infectionConcern', 'amber'); }
-    if (!markerFound) addRisk(red, 'Infection concern (clinical)', baseNote, 'toggle_infectionConcern', 'red');
+    let markerParts = [];
+    let hasRedMarker = false;
+    let hasAmberMarker = false;
+
+    if (wcc !== null && (wcc < normalRanges.wcc.low || wcc > normalRanges.wcc.high)) { markerParts.push(`WCC ${wcc}`); hasRedMarker = true; }
+    if (crp > 100) { markerParts.push(`CRP ${crp}`); hasRedMarker = true; }
+    else if (crp > 50) { markerParts.push(`CRP ${crp}`); hasAmberMarker = true; }
+    if (nlr > 10) { markerParts.push(`NLR ${nlr}`); hasRedMarker = true; }
+    else if (nlr >= 5) { markerParts.push(`NLR ${nlr}`); hasAmberMarker = true; }
+    if (temp >= 38.0) { markerParts.push(`Temp ${temp}C`); hasAmberMarker = true; }
+
+    let baseText = 'Infection Concern';
+    if (markerParts.length > 0) {
+      baseText += `: High markers (${markerParts.join(', ')})`;
+    }
+
+    let category = 'red'; // Default to red if box is ticked with no markers
+    if (hasRedMarker) {
+      category = 'red';
+    } else if (hasAmberMarker) {
+      category = 'amber';
+    }
+    
+    addRisk(category === 'red' ? red : amber, baseText, s.infectionConcern_note, 'toggle_infectionConcern', category);
   }
 
   const overrideNote = $('overrideNote')?.value ? ` (${$('overrideNote').value})` : '';
@@ -1400,6 +1455,10 @@ function computeAll() {
   if(s.ptAdmissionReason) headerLines.push(`Reason for ICU Admission: ${s.ptAdmissionReason}`);
   
   const lines = [...headerLines, ''];
+
+  if (s.pmh_note && s.pmh_note.trim() !== '') {
+      lines.push('', 'PMH:', s.pmh_note.trim());
+  }
 
   const atoe = [];
   const score_line = (s.use_mods) ? [s.mods_score ? `MODS Score: ${s.mods_score}`:null, s.mods_details ? `Details: ${s.mods_details}`:null].filter(Boolean).join(' | ') : s.adds ? `ADDS: ${s.adds}` : '';
@@ -1491,14 +1550,14 @@ function computeAll() {
   lines.push('', 'PLAN & FOLLOW-UP:');
   if (redCount > 0) {
       if (redCount >= 3) {
-         lines.push(`- Follow-up: Priority review - twice-daily checks for up to 72h post-ICU stepdown.`);
+         lines.push(`- Follow-up: Priority ALERT review - twice-daily checks by ALERT nursing for up to 72h post-ICU stepdown.`);
       } else {
-         lines.push(`- Follow-up: At least daily checks for up to 72h post-ICU stepdown.`);
+         lines.push(`- Follow-up: At least daily ALERT review for up to 72h post-ICU stepdown.`);
       }
   } else if (amberCount > 0) {
-      lines.push('- Follow-up: Once-daily checks for up to 48h post-ICU stepdown.');
+      lines.push('- Follow-up: Once-daily ALERT review for up to 48h post-ICU stepdown.');
   } else {
-      lines.push('- Follow-up: Single follow-up on ward to ensure continued stability.');
+      lines.push('- Follow-up: Single ALERT review on ward to ensure continued stability.');
   }
 
 
