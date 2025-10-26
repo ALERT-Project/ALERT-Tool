@@ -233,7 +233,7 @@
               <option value="7D">7D</option>
               <option value="SRS2A">SRS2A</option>
               <option value="SRS1A">SRS1A</option>
-              <option value="SRSA">SRSA</option>
+              <option value::"SRSA">SRSA</option>
               <option value="SRSB">SRSB</option>
               <option value="Medihotel 8">Medihotel 8</option>
               <option value="Medihotel 7">Medihotel 7</option>
@@ -282,6 +282,7 @@
         <button class="select-btn" data-value="NP">Nasal Prongs</button>
         <button class="select-btn" data-value="HFNP">HFNP</button>
         <button class="select-btn" data-value="NIV">NIV</button>
+        <button class="select-btn" data-value="Trache">Trache / lary</button>
       </div>
 
       <div class="grid">
@@ -450,20 +451,20 @@
 
         <div class="col-12"><label>A</label><input id="airway_a" type="text" placeholder="Patent?"/></div>
         <div class="col-3"><label>B</label><input id="b_rr" type="number" placeholder="RR"/></div>
-        <div class="col-3"><label>&nbsp;</label><input id="b_spo2" type="number" placeholder="SpO2 (%)"/></div>
+        <div class="col-3"><label>&nbsp;</label><input id="b_spo2" type="text" placeholder="SpO2 (%)"/></div>
         <div class="col-3"><label>&nbsp;</label><input id="b_device" type="text" placeholder="Device"/></div>
         <div class="col-3"><label>&nbsp;</label><input id="b_wob" type="text" placeholder="WOB"/></div>
 
-        <div class="col-3"><label>C</label><input id="c_hr" type="number" placeholder="HR"/></div>
+        <div class="col-3"><label>C</label><input id="c_hr" type="text" placeholder="HR"/></div>
         <div class="col-3"><label>&nbsp;</label><input id="c_nibp" type="text" placeholder="NIBP"/></div>
         <div class="col-3"><label>&nbsp;</label><input id="c_cr" type="text" placeholder="Cap Refill"/></div>
         <div class="col-3"><label>&nbsp;</label><input id="c_perf" type="text" placeholder="Perfusion"/></div>
 
         <div class="col-4"><label>D</label><input id="d_alert" type="text" placeholder="Alert?"/></div>
-        <div class="col-4"><label>&nbsp;</label><input id="d_gcs" type="number" min="3" max="15" placeholder="GCS"/></div>
+        <div class="col-4"><label>&nbsp;</label><input id="d_gcs" type="text" placeholder="GCS"/></div>
         <div class="col-4"><label>&nbsp;</label><input id="d_pain" type="text" placeholder="Pain"/></div>
 
-        <div class="col-4"><label>E</label><input id="e_temp" type="number" step="0.1" placeholder="Temp"/></div>
+        <div class="col-4"><label>E</label><input id="e_temp" type="text" placeholder="Temp"/></div>
         <div class="col-4"><label>&nbsp;</label><input id="e_bsl" type="number" step="0.1" placeholder="BSL"/></div>
         <div class="col-4"><label>&nbsp;</label><input id="e_uop" type="text" placeholder="UOP"/></div>
 
@@ -914,6 +915,9 @@ function initialize() {
   const sync = (a,b) => { if (!$(a) || !$(b)) return; $(a).addEventListener('input', ()=>{ $(b).value = $(a).value; debouncedComputeAndSave(); }); $(b).addEventListener('input', ()=>{ $(a).value = $(b).value; debouncedComputeAndSave(); }); };
   sync('adds','atoe_adds'); sync('lactate','bl_lac_review'); sync('hb','bl_hb'); sync('wcc','bl_wcc'); sync('crp','bl_crp'); sync('neut','bl_neut'); sync('lymph','bl_lymph');
 
+  /*
+  // [GEMINI] This logic was removed based on user feedback (Bug: GCS 15 triggering confusion).
+  // User requested that GCS entry should not automatically trigger the confusion buttons.
   $('d_gcs').addEventListener('input', (e)=> {
     const v = num(e.target.value);
     if (v !== null && v < 13) {
@@ -924,6 +928,7 @@ function initialize() {
       debouncedComputeAndSave();
     }
   });
+  */
   
   const ovA = $('override_amber'), ovR = $('override_red'), ovC = $('override_clear');
   const setOverride = (level) => {
@@ -1223,6 +1228,9 @@ function computeAll() {
           if (nivPs) nivParts.push(`${nivPs} PS`);
           oxyDeviceText = `NIV ${nivParts.join(', ')}`;
           break;
+      case 'Trache':
+          oxyDeviceText = 'Trache / lary';
+          break;
   }
   // Update both the DOM and the state object `s` so the summary is correct
   $('b_device').value = oxyDeviceText.trim();
@@ -1464,13 +1472,26 @@ function computeAll() {
   const score_line = (s.use_mods) ? [s.mods_score ? `MODS Score: ${s.mods_score}`:null, s.mods_details ? `Details: ${s.mods_details}`:null].filter(Boolean).join(' | ') : s.adds ? `ADDS: ${s.adds}` : '';
   if (score_line) atoe.push(score_line);
   if (s.airway_a) atoe.push(`A: ${s.airway_a}`);
-  const b_line = [s.b_rr ? `RR ${s.b_rr}`:null, s.b_spo2 ? `SpO2 ${s.b_spo2}%`:null, s.b_device||null, s.b_wob ? `WOB ${s.b_wob}`:null].filter(Boolean).join(', ');
+  
+  const b_line = [
+    s.b_rr ? `RR ${s.b_rr}`:null, 
+    s.b_spo2 ? `SpO2 ${s.b_spo2}${s.b_spo2.includes('%') ? '' : '%'}`:null, 
+    s.b_device||null, 
+    s.b_wob ? `WOB ${s.b_wob}`:null
+  ].filter(Boolean).join(', ');
   if (b_line) atoe.push(`B: ${b_line}`);
+  
   const c_line = [s.c_hr ? `HR ${s.c_hr}`:null, s.c_nibp ? `NIBP ${s.c_nibp}`:null, s.c_cr ? `Cap Refill ${s.c_cr}`:null, s.c_perf||null].filter(Boolean).join(', ');
   if (c_line) atoe.push(`C: ${c_line}`);
+  
   const d_line = [s.d_alert||null, s.d_gcs ? `GCS ${s.d_gcs}`:null, s.d_pain ? `Pain ${s.d_pain}`:null].filter(Boolean).join(', ');
   if (d_line) atoe.push(`D: ${d_line}`);
-  const e_line = [s.e_temp ? `Temp ${s.e_temp}C`:null, s.e_bsl ? `BSL ${s.e_bsl}`:null, s.e_uop ? `UOP ${s.e_uop}`:null].filter(Boolean).join(', ');
+  
+  const e_line = [
+    s.e_temp ? `Temp ${s.e_temp}${String(s.e_temp).toLowerCase().match(/febrile|afebrile/) ? '' : 'C'}`:null, 
+    s.e_bsl ? `BSL ${s.e_bsl}`:null, 
+    s.e_uop ? `UOP ${s.e_uop}`:null
+  ].filter(Boolean).join(', ');
   if (e_line) atoe.push(`E: ${e_line}`);
   
   const otherSystemItems = [];
