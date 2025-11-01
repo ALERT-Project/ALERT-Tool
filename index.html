@@ -1513,7 +1513,6 @@ function computeAll() {
   
   if (s.renalConcern) {
     let renalDetails = [];
-    if (s.comorb_esrd) renalDetails.push('ESRD');
     if (s.bl_cr_review) renalDetails.push(`Cr ${s.bl_cr_review}`);
     let renalText = 'Renal Concern';
     if(renalDetails.length > 0) renalText += ` (${renalDetails.join(', ')})`;
