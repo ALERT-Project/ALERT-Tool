@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ALERT Nursing Risk Assessment Tool</title>
+  <title>ALERT Nursing Risk Assessment Tool v3.8</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -11,25 +11,12 @@
       --red:#ef4444; --amber:#f59e0b; --green:#10b981; --line:#d1e3e3; --input-bg:#f8fbfb;
       --blue-hint:#2563eb; --toast-bg: rgba(0,0,0,0.8); --toast-color:#fff;
     }
-    /* Dark mode tokens */
     body.dark { --bg:#0b1112; --card:#0f1720; --ink:#e6eef0; --muted:#9aa9ad; --line:#132022; --input-bg:#071018; --toast-bg: rgba(255,255,255,0.06); --toast-color:#e6eef0; }
     html,body{height:100%}
     body{font-family:'Inter', system-ui, sans-serif; background:var(--bg); color:var(--ink); margin:0 0 220px 0; line-height:1.4; -webkit-font-smoothing:antialiased;}
     header{padding:14px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; flex-wrap:wrap; background: var(--card); z-index:30;}
-    header h1 {
-      font-size: 2.0rem;
-      font-weight: 800;
-      color: var(--accent);
-      letter-spacing: -0.5px;
-      margin: 0;
-      flex: 1;
-      text-align: center;
-    }
-    header h1 .logo-em {
-      color: var(--red);
-      margin: 0 4px;
-      font-weight: 800;
-    }
+    header h1 { font-size: 2.0rem; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; margin: 0; flex: 1; text-align: center; }
+    header h1 .logo-em { color: var(--red); margin: 0 4px; font-weight: 800; }
     .header-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
     .top-meta { font-size:0.9rem; color:var(--muted); white-space:nowrap; }
     .last-saved { font-size:0.85rem; color:var(--muted); }
@@ -46,33 +33,23 @@
     textarea{min-height:80px; resize:vertical; max-height:240px;}
     .concern-note { margin-top: 8px; }
     .concern-note textarea { min-height: 40px; font-size: 0.95rem; }
-    .btn, .override-btn, .select-btn { background-color: var(--bg); color: var(--muted); border: 1px solid var(--line); padding: 8px 12px; border-radius: 10px; cursor:pointer; font-weight: 600; transition: all 0.15s; min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:8px;}
+    
+    .btn, .override-btn, .select-btn, .seg-btn { background-color: var(--bg); color: var(--muted); border: 1px solid var(--line); padding: 8px 12px; border-radius: 10px; cursor:pointer; font-weight: 600; transition: all 0.15s; min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:8px;}
     .btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
     .btn.danger{background: transparent; color: var(--red); border-color: rgba(239,68,68,0.15); }
     .btn.small { padding: 6px 10px; font-size: 0.9rem; min-height:40px; }
-    .override-btn:hover, .select-btn:hover { background-color: var(--line); }
+    .override-btn:hover, .select-btn:hover, .seg-btn:hover { background-color: var(--line); }
     .override-btn.amber.active { background-color: var(--amber); color:white; border-color:var(--amber);}
     .override-btn.red.active { background-color: var(--red); color:white; border-color:var(--red); }
-    .select-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .select-btn.active, .seg-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .select-btn.safe.active { background-color: var(--muted); border-color: var(--muted); color: #fff; opacity: 0.8; }
     .button-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-    .kpi{display:grid; grid-template-columns: 1.5fr 1fr 1fr; gap:12px;}
-    .kpi .box{background:var(--bg); border:1px solid var(--line); padding:12px; border-radius:12px; text-align:center}
-    #categoryBox {
-        padding: 16px 12px;
-        border-width: 2px;
-        transition: border-color 0.2s;
-    }
-    #categoryBox h3 {
-        font-size: 2.25rem;
-        margin-top: 4px;
-        font-weight: 800;
-    }
-    .kpi .box h3{margin:0; font-size:1.75rem}
-    .kpi .box small{color:var(--muted); font-size: 0.9rem;}
-    .status{font-weight:700}
-    .status.red{color:var(--red)} .status.amber{color:var(--amber)} .status.green{color:var(--green)}
-    .section-title{margin-bottom:12px; font-size:1.05rem; font-weight:700;}
-    .input-group { margin-bottom: 18px; }
+    
+    .segmented-group { display: flex; width: 100%; max-width: 400px; background: var(--input-bg); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .seg-btn { flex: 1; border: none; border-radius: 0; margin: 0; background: transparent; min-height: 44px; color: var(--muted); }
+    .seg-btn:first-child { border-right: 1px solid var(--line); }
+    .seg-btn[data-value="false"].active { background: var(--muted); opacity: 0.8; color: white; border-color: var(--muted); } 
+
     .toggle-label {
       display: flex; align-items: center; justify-content:space-between; gap:12px; background-color: var(--bg); padding: 12px; border-radius: 10px;
       border: 1px solid var(--line); cursor: pointer; transition: all 0.12s; margin-bottom: 8px; font-weight:600; color:var(--muted);
@@ -80,12 +57,25 @@
     .toggle-label.active { background-color: var(--accent); color: white; border-color: var(--accent); }
     .toggle-label .state { font-weight:700; font-size:0.9rem; color:var(--muted); }
     .toggle-label.active .state { color: #fff; }
-    .toggle-label.small-toggle { padding: 8px 10px; min-height: 44px; font-size: 0.9rem; }
-    .comorbidity-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 10px;
-    }
+
+    .kpi{display:grid; grid-template-columns: 1.5fr 1fr 1fr; gap:12px;}
+    .kpi .box{background:var(--bg); border:1px solid var(--line); padding:12px; border-radius:12px; text-align:center}
+    #categoryBox { padding: 16px 12px; border-width: 2px; transition: border-color 0.2s; }
+    #categoryBox h3 { font-size: 2.25rem; margin-top: 4px; font-weight: 800; }
+    .kpi .box h3{margin:0; font-size:1.75rem}
+    .kpi .box small{color:var(--muted); font-size: 0.9rem;}
+    .status{font-weight:700}
+    .status.red{color:var(--red)} .status.amber{color:var(--amber)} .status.green{color:var(--green)}
+    .section-title{margin-bottom:12px; font-size:1.05rem; font-weight:700;}
+    
+    /* Standardized Question Styles for "One Form" Flow */
+    .question-row { display: block; margin-bottom: 24px; } /* Increased margin for better separation without HR */
+    .question-label { display: block; font-weight: 600; color: var(--muted); font-size: 0.95rem; margin-bottom: 8px; }
+    .question-label small { display: block; font-weight: 400; font-size: 0.85rem; margin-top: 2px; }
+    .sub-question-wrapper { margin-left: 18px; padding-left: 12px; border-left: 2px solid var(--line); margin-bottom: 12px; display: none; }
+    .sub-question-wrapper.show { display: block; animation: fadeIn .2s; }
+    
+    .comorbidity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
     .bloods-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px 12px;}
     .blood-item { display: grid; grid-template-columns: 50px 1fr 80px; align-items: center; gap: 6px; position: relative;}
     .blood-item label { margin-bottom: 0; font-size:0.9rem; color:var(--muted); }
@@ -93,124 +83,61 @@
     .trend-buttons { display: flex; justify-self: end;}
     .trend-btn { font-size: 0.9rem; border: 1px solid var(--line); background: transparent; border-radius: 6px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); padding:0;}
     .trend-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-    .blood-abnormal { border-color: var(--red) !important; background-color: rgba(239,68,68,.06) !imporant; }
+    .blood-abnormal { border-color: var(--red) !important; background-color: rgba(239,68,68,.06) !important; }
     .range-annotation { font-size: 0.75rem; color: var(--muted); position: absolute; bottom: -14px; left: 56px; display: none; }
-    footer {
-      position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card);
-      border-top: 1px solid var(--line); padding: 8px 16px;
-      display: flex; flex-wrap:wrap; align-items: center; justify-content: space-between; gap: 8px 12px; box-sizing: border-box; z-index:25;
-    }
+    
+    footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card); border-top: 1px solid var(--line); padding: 8px 16px; display: flex; flex-wrap:wrap; align-items: center; justify-content: space-between; gap: 8px 12px; box-sizing: border-box; z-index:25; }
     .footer-item { color: var(--muted); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
     .footer-item.reason { flex: 1 1 auto; min-width: 120px; }
     .footer-score { padding: 6px 12px; border-radius: 8px; font-weight: 700; text-align: center; flex-shrink: 0;}
     .footer-buttons { display:flex; gap: 8px; }
+    
     .tag{display:inline-flex; align-items:center; padding: 4px 10px; border-radius:999px; font-size:.85rem; margin:2px; border:1px solid; font-weight:600;}
     .tag.red{background:rgba(239,68,68,.08); color:var(--red); border-color:rgba(239,68,68,.2)}
     .tag.amber{background:rgba(245,158,11,.08); color:var(--amber); border-color:rgba(245,158,11,.18)}
     .tag.green{background:rgba(16,185,129,.07); color:var(--green); border-color:rgba(16,185,129,.12)}
+    
     hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18px 0; }
     .optional-note { text-align:center; color: var(--muted); font-size: 0.9rem; margin: 18px 0; }
+    
     .accordion-wrapper { border: 1px solid var(--line); border-radius: 12px; overflow:hidden; margin-bottom: 12px;}
-    .accordion {
-      background-color: transparent; color: var(--ink); cursor: pointer; padding: 14px; width: 100%; border: none;
-      border-bottom: 1px solid var(--line); text-align: left; outline: none; font-size: 1rem; font-weight:700;
-      display:flex; align-items:center; justify-content:space-between;
-    }
+    .accordion { background-color: transparent; color: var(--ink); cursor: pointer; padding: 14px; width: 100%; border: none; border-bottom: 1px solid var(--line); text-align: left; outline: none; font-size: 1rem; font-weight:700; display:flex; align-items:center; justify-content:space-between; }
     .accordion .icon { color: var(--muted); font-size:0.9rem; margin-left:8px; }
     .panel { padding: 14px; background-color: transparent; display: none; overflow: hidden; }
-    .device-entry, .pivc-entry, .wound-entry, .drain-entry {
-      background: var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;
-    }
-    .device-entry textarea, .pivc-entry textarea, .wound-entry textarea, .drain-entry textarea { width:100%; min-height:44px; font-size:1rem; background:var(--input-bg); }
+    
+    .device-entry { background: var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; margin-bottom:10px; display:flex; flex-direction:column; gap:8px; }
+    .device-entry textarea { width:100%; min-height:44px; font-size:1rem; background:var(--input-bg); }
     .remove-entry { background: transparent; border:1px solid rgba(239,68,68,0.12); color:var(--red); border-radius:8px; padding:8px; cursor:pointer; text-align:center; font-weight:700; }
-    .remove-entry:hover { background: rgba(239,68,68,0.04); }
-    .floating-toolbar { display: none; }
+    
     .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:110px; background:var(--toast-bg); color:var(--toast-color); padding:10px 14px; border-radius:8px; z-index:60; display:none; font-weight:600; text-align: center; }
     .toast.show { display:block; animation: fadeIn .18s ease; }
-    .toast button { margin-left: 12px; }
     @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(6px); } to { opacity:1; transform:translateX(-50%) translateY(0);} }
-    .devices-subtitle {
-      font-weight: 700;
-      font-size: 1rem;
-      margin-top: 18px;
-      margin-bottom: 10px;
-      color: var(--accent);
+    
+    /* Vitals & A-E specific */
+    .quick-select-group { margin-bottom: 6px; }
+    .btn.quick-select { padding: 4px 8px; font-size: 0.8rem; min-height: 28px; background: var(--bg); border-color: var(--line); color: var(--muted); font-weight: 500; }
+    .btn.quick-select:hover { background: var(--line); }
+    .input-with-trend { display: grid; grid-template-columns: 1fr 80px; gap: 6px; align-items: center; }
+    .input-with-trend .trend-buttons { justify-self: end; }
+    .quick-select-container { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;}
+
+    /* A-E Alignment Fix */
+    #panel_ae .col-3, #panel_ae .col-4, #panel_ae .col-12 {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start; 
+        height: 100%;
     }
-    .device-add-buttons { display: flex; flex-direction: column; gap: 8px; }
-    .device-add-buttons .btn { justify-content: flex-start; padding-left: 16px; }
-    #panel_context .devices-input-group > * {
-      margin-bottom: 10px;
-    }
-    #panel_context .devices-input-group > *:last-child {
-      margin-bottom: 0;
-    }
-    #panel_context .devices-input-group label {
-      margin-bottom: 4px; /* less for labels above inputs */
-    }
-    #panel_devices input[type="text"], #panel_devices textarea, #panel_context textarea {
-      border-color: #b0c9c9; /* Slightly darker border */
-    }
-    body.dark #panel_devices input[type="text"], body.dark #panel_devices textarea, body.dark #panel_context textarea {
-      border-color: #2a3d3f; /* Darker border for dark mode */
-    }
-    #cvc_details textarea {
-      min-height: 50px; /* smaller textarea for CVC site */
-    }
+
     .flag-red { box-shadow: 0 0 0 2px var(--red); }
     .flag-amber { box-shadow: 0 0 0 2px var(--amber); }
 
-    /* New styles for A-E quick selects and vitals trends */
-    .quick-select-group { margin-bottom: 6px; }
-    .btn.quick-select { 
-        padding: 4px 8px; 
-        font-size: 0.8rem; 
-        min-height: 28px; 
-        background: var(--bg); 
-        border-color: var(--line);
-        color: var(--muted);
-        font-weight: 500;
-    }
-    .btn.quick-select:hover { background: var(--line); }
-    .input-with-trend { 
-        display: grid; 
-        grid-template-columns: 1fr 80px; 
-        gap: 6px; 
-        align-items: center; 
-    }
-    .input-with-trend .trend-buttons { 
-        justify-self: end; 
-    }
-    #panel_ae .trend-buttons { margin-top: 0; } /* Reset default trend button margin */
-    #panel_ae .col-3, #panel_ae .col-4 {
-        display: flex;
-        flex-direction: column;
-    }
-    #panel_ae .input-with-trend input {
-        width: 100%; /* Ensure input fills its grid cell */
-    }
-    /* Height adjustment for quick select groups to maintain grid alignment */
-    .quick-select-group.empty {
-        height: 34px; /* Matches height of button + margin */
-    }
-    @media (max-width:900px){
-      .quick-select-group.empty { height: 0; } /* Don't need spacer on mobile */
-    }
-
-    /* Responsive */
     @media (max-width:900px){
       .col-2,.col-3,.col-4,.col-6,.col-8{grid-column:span 12}
       .grid { column-gap:10px; row-gap:12px; }
       input, textarea { font-size:1.05rem; padding:12px; }
-      .btn, .select-btn, .toggle-label { padding:10px 12px; font-size:1rem; min-height:48px; }
-      .toggle-label.small-toggle { padding: 10px 12px; min-height: 48px; font-size: 1rem; }
-    }
-     @media (max-width: 600px) {
-        .kpi { grid-template-columns: 1fr; }
-        header h1 { font-size: 1.2rem; line-height: 1.2; }
-     }
-     @media (max-width: 400px) {
-      .footer-item { white-space: normal; }
-      .input-with-trend { grid-template-columns: 1fr 80px; } /* Keep trends visible */
+      .btn, .select-btn, .seg-btn { padding:10px 12px; font-size:1rem; min-height:48px; }
+      .segmented-group { max-width: 100%; }
     }
   </style>
 </head>
@@ -245,45 +172,14 @@
       </div>
       <div class="col-6"><label for="ptName">Patient Initials</label><input id="ptName" type="text" autocomplete="off" /></div>
       <div class="col-6"><label for="ptMrn">Last 3 digits of URN</label><input id="ptMrn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" /></div>
+      
       <div class="col-3"><label for="ptAge">Age</label><input id="ptAge" type="number" min="0" /></div>
       <div class="col-3"><label for="icuLos">ICU LOS (days)</label><input id="icuLos" type="number" min="0" /></div>
-      <div class="col-4">
+      
+      <div class="col-6">
           <label for="ptWard">Ward</label>
           <select id="ptWard">
               <option value="" selected disabled>Select Ward...</option>
-              <option value="3A">3A</option>
-              <option value="3B">3B</option>
-              <option value="3C">3C</option>
-              <option value="3D">3D</option>
-              <option value="4A">4A</option>
-              <option value="4B">4B</option>
-              <option value="4C">4C</option>
-              <option value="4D">4D</option>
-              <option value="5A">5A</option>
-              <option value="5B">5B</option>
-              <option value="5C">5C</option>
-              <option value="5D">5D</option>
-              <option value="6A">6A</option>
-              <option value="6B">6B</option>
-              <option value="6C">6C</option>
-              <option value="6D">6D</option>
-              <option value="7A">7A</option>
-              <option value="7B">7B</option>
-              <option value="7C">7C</option>
-              <option value="7D">7D</option>
-              <option value="SRS2A">SRS2A</option>
-              <option value="SRS1A">SRS1A</option>
-              <option value::"SRSA">SRSA</option>
-              <option value="SRSB">SRSB</option>
-              <option value="Medihotel 8">Medihotel 8</option>
-              <option value="Medihotel 7">Medihotel 7</option>
-              <option value="Medihotel 6">Medihotel 6</option>
-              <option value="Medihotel 5">Medihotel 5</option>
-              <option value="Short Stay">Short Stay</option>
-              <option value="Transit Lounge">Transit Lounge</option>
-              <option value="Mental Health Adult">Mental Health Adult</option>
-              <option value="Mental Health Youth">Mental Health Youth</option>
-              <option value="Other">Other</option>
           </select>
       </div>
       <div class="col-2">
@@ -309,23 +205,36 @@
   </div>
 
   <div class="card">
-    <div class="grid">
-      <div class="col-4"><label for="adds">ADDS</label><input id="adds" type="number" min="0" max="10" /></div>
-      <div class="col-4"><label for="lactate">Lactate (mmol/L)</label><input id="lactate" type="number" step="0.1" min="0"/></div>
-      <div class="col-12">
-          <div class="grid" style="row-gap: 8px;">
-              <div class="col-6"><label for="hb">Hb (g/L)</label><input id="hb" type="number" step="1" min="0"/></div>
-              <div class="col-6" style="align-self: end;">
-                  <div class="toggle-label small-toggle" id="toggle_hb_dropping" data-value="false" role="button" aria-pressed="false">Hb dropping?<span class="state">No</span></div>
-              </div>
-          </div>
-      </div>
+    
+    <div class="question-row">
+        <div class="question-label">ADDS</div>
+        <input id="adds" type="number" min="0" max="10" />
     </div>
-    <hr>
-    <div class="input-group">
-      <label>Oxygen Modality?</label>
-      <div class="button-group" id="oxMod" role="tablist" aria-label="Oxygen Modality">
-        <button class="select-btn" data-value="RA">Room Air</button>
+    
+    <div class="question-row">
+        <div class="question-label">Lactate (mmol/L)</div>
+        <input id="lactate" type="number" step="0.1" min="0"/>
+    </div>
+
+    <div class="question-row">
+        <div class="grid">
+            <div class="col-6">
+                <div class="question-label">Hb (g/L)</div>
+                <input id="hb" type="number" step="1" min="0"/>
+            </div>
+            <div class="col-6" style="align-self: end;">
+                <div class="segmented-group" id="seg_hb_dropping" style="height: 44px;">
+                   <button class="seg-btn" data-value="true">Hb Dropping</button>
+                   <button class="seg-btn" data-value="false">Stable</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="question-row">
+      <div class="question-label">Oxygen Modality?</div>
+      <div class="button-group" id="oxMod" role="tablist">
+        <button class="select-btn safe" data-value="RA">Room Air</button>
         <button class="select-btn" data-value="NP">Nasal Prongs</button>
         <button class="select-btn" data-value="HFNP">HFNP</button>
         <button class="select-btn" data-value="NIV">NIV</button>
@@ -342,9 +251,7 @@
       </div>
       
       <div class="grid tracheOnly" style="display:none; margin-top: 10px; padding: 10px; background: var(--bg); border-radius: 8px;">
-          <div class="col-12">
-              <label>Tracheostomy / Laryngectomy Details</label>
-          </div>
+          <div class="col-12"><label>Tracheostomy / Laryngectomy Details</label></div>
           <div class="col-6">
               <label>Type</label>
               <div class="button-group" id="tracheType" role="tablist">
@@ -364,116 +271,191 @@
               <textarea id="trache_details_note" placeholder="e.g., size, cuffed/uncuffed, date of change..."></textarea>
           </div>
       </div>
+    </div>
 
-      <div style="margin-top:10px">
-        <label>Respiratory Concern?</label>
+    <div class="question-row">
+      <div class="question-label">Respiratory Concern?</div>
         <div class="button-group" id="dyspneaConcern">
-          <button class="select-btn" data-value="none">None</button>
-          <button class="select-btn" data-value="mild">Mild/Moderate</button>
+          <button class="select-btn safe" data-value="none">None</button>
+          <button class="select-btn" data-value="mild">Mild</button>
+          <button class="select-btn" data-value="mod">Moderate</button>
           <button class="select-btn" data-value="severe">Severe</button>
         </div>
         <div id="dyspneaConcern_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="dyspneaConcern_note" placeholder="Optional: e.g., tachypnea, increased WOB, dyspnea, accessory muscle use"></textarea>
+            <textarea id="dyspneaConcern_note" placeholder="Optional: e.g., tachypnea, increased WOB, dyspnea"></textarea>
         </div>
-      </div>
     </div>
     
-    <div class="input-group">
-      <label>Neurological Concern?</label>
+    <div class="question-row">
+      <div class="question-label">Neurological Concern?</div>
       <div class="button-group" id="neuroConcern">
-        <button class="select-btn" data-value="none">None</button>
-        <button class="select-btn" data-value="mild">Mild Confusion/Delirium</button>
-        <button class="select-btn" data-value="severe">Severe Confusion/Delirium</button>
+        <button class="select-btn safe" data-value="none">None</button>
+        <button class="select-btn" data-value="mild">Mild</button>
+        <button class="select-btn" data-value="mod">Moderate</button>
+        <button class="select-btn" data-value="severe">Severe</button>
       </div>
-       <div id="neuroConcern_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="neuroConcern_note" placeholder="Optional: enter details of neurological concern"></textarea>
+      <div class="button-group" id="neuroType" style="display:none; margin-top:8px;">
+          <button class="select-btn small" data-value="Confusion">Confusion</button>
+          <button class="select-btn small" data-value="Delirium">Delirium</button>
+          <button class="select-btn small" data-value="Other">Other</button>
+      </div>
+      <div id="neuroConcern_note_wrapper" class="concern-note" style="display:none;">
+            <textarea id="neuroConcern_note" placeholder="Optional: Specific details (e.g. GCS 13). Typing here overrides the label."></textarea>
       </div>
     </div>
     
-    <div class="input-group">
-      <label>Electrolyte Concern?</label>
-      <div class="button-group" id="electrolyteConcern" role="tablist" aria-label="Electrolyte Concern">
-        <button class="select-btn" data-value="none">None</button>
+    <div class="question-row">
+      <div class="question-label">Electrolyte Concern?</div>
+      <div class="button-group" id="electrolyteConcern" role="tablist">
+        <button class="select-btn safe" data-value="none">None</button>
         <button class="select-btn" data-value="mild">Mild/moderate</button>
         <button class="select-btn" data-value="severe">Severe</button>
       </div>
        <div id="electrolyteConcern_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="electrolyteConcern_note" placeholder="Optional: enter details of electrolyte concern (e.g., Na 128, K 2.9)"></textarea>
-      </div>
-    </div>
-
-    <hr>
-    <div class="input-group">
-      <div class="toggle-label" id="toggle_after_hours_discharge" data-value="false" role="button" aria-pressed="false"><span>Discharged after-hours? <small style="font-weight:400; color:var(--muted)">(Scores for evening/night departures, 7 days/week. Do not score for daytime weekend departures.)</small></span><span class="state">No</span></div>
-      <div id="after_hours_discharge_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="after_hours_discharge_note" placeholder="Optional: enter details"></textarea>
-      </div>
-
-      <div class="toggle-label" id="toggle_pressors24h" data-value="false" role="button" aria-pressed="false"><span>Vasopressors in last 24h?</span><span class="state">No</span></div>
-       <div id="pressors24h_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="pressors24h_note" placeholder="Optional: enter details of vasopressor use"></textarea>
-      </div>
-
-      <div class="toggle-label" id="toggle_np3Last12h" data-value="false" role="button" aria-pressed="false"><span>Historical O2: NP ≥3L, HFNP >30%, NIV in last 12h, or intubated in last 24h?</span><span class="state">No</span></div>
-       <div id="np3Last12h_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="np3Last12h_note" placeholder="Optional: enter details of historical O2 use"></textarea>
-      </div>
-
-      <div class="toggle-label" id="toggle_rapidWean" data-value="false" role="button" aria-pressed="false"><span>Rapid oxygen wean in last 12h?</span><span class="state">No</span></div>
-       <div id="rapidWean_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="rapidWean_note" placeholder="Optional: enter details of rapid wean"></textarea>
-      </div>
-      
-      <div class="toggle-label" id="toggle_renalConcern" data-value="false" role="button" aria-pressed="false"><span>Renal Concern (AKI, rising Cr, or ESRD/dialysis)?</span><span class="state">No</span></div>
-       <div id="renalConcern_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="renalConcern_note" placeholder="Optional: enter details of renal concern"></textarea>
-      </div>
-
-      <div class="toggle-label" id="toggle_uopLow" data-value="false" role="button" aria-pressed="false"><span>UOP concerning / downtrending (&lt;0.5 mL/kg/hr)?</span><span class="state">No</span></div>
-       <div id="uopLow_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="uopLow_note" placeholder="Optional: enter urine output details"></textarea>
-      </div>
-      
-      <div class="toggle-label" id="toggle_immobility48h" data-value="false" role="button" aria-pressed="false">Immobility >48h? <span class="state">No</span></div>
-      <div id="immobility48h_note_wrapper" class="concern-note" style="display:none;">
-          <textarea id="immobility48h_note" placeholder="Optional: enter details of immobility"></textarea>
-      </div>
-      
-      <div class="toggle-label" id="toggle_infectionConcern" data-value="false" role="button" aria-pressed="false"><span>Infection Concern?</span><span class="state">No</span></div>
-       <div id="infectionConcern_note_wrapper" class="concern-note" style="display:none;">
-            <textarea id="infectionConcern_note" placeholder="Optional: enter details of clinical signs of infection"></textarea>
-      </div>
-      <div id="infectionMarkers" style="display:none; margin-top:12px; padding:12px; border-radius:10px; background:var(--bg)">
-        <label style="margin-bottom:8px; display:block; font-weight:600;">Optional: Enter Infection Markers</label>
-        <div class="grid">
-          <div class="col-4" style="position: relative;"><label for="wcc">WCC (x10^9/L)</label><input id="wcc" type="number" step="0.1" /><span id="wcc_range" class="range-annotation" style="left:0;"></span></div>
-          <div class="col-4" style="position: relative;"><label for="crp">CRP (mg/L)</label><input id="crp" type="number" step="1" /><span id="crp_range" class="range-annotation" style="left:0;"></span></div>
-          <div class="col-4">
-            <label for="neut">Neut / Lymph (NLR)</label>
-            <div style="position: relative; margin-bottom: 22px;">
-                <input id="neut" type="number" step="0.1" placeholder="Neut" />
-                <span id="neut_range" class="range-annotation" style="left: 0; bottom: -16px;"></span>
-            </div>
-            <div style="position: relative; margin-bottom: 22px;">
-                <input id="lymph" type="number" step="0.1" placeholder="Lymph" />
-                 <span id="lymph_range" class="range-annotation" style="left: 0; bottom: -16px;"></span>
-            </div>
-            <div id="nlrCalc" style="margin-top:6px; font-size:0.9rem; color:var(--muted)">NLR: --</div>
-          </div>
-        </div>
+            <textarea id="electrolyteConcern_note" placeholder="Optional: enter details (e.g., Na 128, K 2.9)"></textarea>
       </div>
     </div>
     
-    <hr>
+    <div class="question-row">
+        <div class="question-label">Discharged after-hours? <small>(Home team not on ward OR reduced nursing ratio/overnight)</small></div>
+        <div class="segmented-group" id="seg_after_hours">
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
+        </div>
+    </div>
+    <div id="after_hours_note_wrapper" class="concern-note" style="display:none; margin-bottom:12px;">
+         <textarea id="after_hours_note" placeholder="Optional: enter details"></textarea>
+    </div>
+
+    <div class="question-row">
+        <div class="question-label">Vasopressors in last 24h?</div>
+        <div class="segmented-group" id="seg_pressors">
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
+        </div>
+    </div>
+    <div class="sub-question-wrapper" id="sub_pressors_reason">
+        <label>Reason for vasopressors?</label>
+        <div class="button-group" id="pressorReason">
+            <button class="select-btn small" data-value="routine">Routine / Short term (elective/planned)</button>
+            <button class="select-btn small" data-value="shock">Medical shock / Prolonged / Complicated</button>
+        </div>
+    </div>
+    <div id="pressors_note_wrapper" class="concern-note" style="display:none; margin-bottom:12px;">
+         <textarea id="pressors_note" placeholder="Optional: enter details of vasopressor use"></textarea>
+    </div>
+
+    <div class="question-row">
+        <div class="question-label">Historical O2: NP ≥3L, HFNP >30%, or NIV in last 12h?</div>
+        <div class="segmented-group" id="seg_hist_o2">
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
+        </div>
+    </div>
+    <div id="hist_o2_note_wrapper" class="concern-note" style="display:none; margin-bottom:12px;">
+         <textarea id="hist_o2_note" placeholder="Optional: enter details"></textarea>
+    </div>
+
+    <div class="question-row">
+        <div class="question-label">Intubated in last 24h?</div>
+        <div class="segmented-group" id="seg_intubated">
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
+        </div>
+    </div>
+    <div class="sub-question-wrapper" id="sub_intubated_reason">
+        <label>Intubation Context?</label>
+        <div class="button-group" id="intubatedReason">
+            <button class="select-btn small" data-value="routine">Routine/Elective (no lasting concerns)</button>
+            <button class="select-btn small" data-value="concern">Complicated / Concerns</button>
+        </div>
+        <label style="margin-top:8px;">Intubation Details</label>
+        <textarea id="intubation_details" placeholder="Tube size, grade, specific issues..."></textarea>
+    </div>
+
+    <div class="question-row">
+        <div class="question-label">Rapid oxygen wean in last 12h?</div>
+        <div class="segmented-group" id="seg_rapid_wean">
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
+        </div>
+    </div>
+    <div id="rapid_wean_note_wrapper" class="concern-note" style="display:none; margin-bottom:12px;">
+         <textarea id="rapid_wean_note" placeholder="Optional: enter details"></textarea>
+    </div>
+    
+    <div class="question-row">
+        <div class="question-label">Renal Concern? <small>(AKI, rising Cr, or ESRD/dialysis)</small></div>
+        <div class="segmented-group" id="seg_renal">
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
+        </div>
+    </div>
+    <div id="renal_note_wrapper" class="concern-note" style="display:none; margin-bottom:12px;">
+         <textarea id="renal_note" placeholder="Optional: enter details"></textarea>
+    </div>
+
+    <div class="question-row">
+        <div class="question-label">UOP concerning / downtrending? <small>(&lt;0.5 mL/kg/hr)</small></div>
+        <div class="segmented-group" id="seg_uop">
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
+        </div>
+    </div>
+    <div id="uop_note_wrapper" class="concern-note" style="display:none; margin-bottom:12px;">
+         <textarea id="uop_note" placeholder="Optional: enter urine output details"></textarea>
+    </div>
+    
+    <div class="question-row">
+        <div class="question-label">Immobility >48h?</div>
+        <div class="segmented-group" id="seg_immobility">
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
+        </div>
+    </div>
+    <div id="immobility_note_wrapper" class="concern-note" style="display:none; margin-bottom:12px;">
+        <textarea id="immobility_note" placeholder="Optional: enter details"></textarea>
+    </div>
+    
+    <div class="question-row">
+        <div class="question-label">Infection Concern?</div>
+        <div class="segmented-group" id="seg_infection">
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
+        </div>
+    </div>
+    <div id="infection_note_wrapper" class="concern-note" style="display:none; margin-bottom:12px;">
+        <textarea id="infection_note" placeholder="Optional: enter details"></textarea>
+        <div id="infectionMarkers" style="margin-top:12px; padding:12px; border-radius:10px; background:var(--bg)">
+            <label style="margin-bottom:8px; display:block; font-weight:600;">Optional: Enter Infection Markers</label>
+            <div class="grid">
+              <div class="col-4" style="position: relative;"><label for="wcc">WCC (x10^9/L)</label><input id="wcc" type="number" step="0.1" /><span id="wcc_range" class="range-annotation" style="left:0;"></span></div>
+              <div class="col-4" style="position: relative;"><label for="crp">CRP (mg/L)</label><input id="crp" type="number" step="1" /><span id="crp_range" class="range-annotation" style="left:0;"></span></div>
+              <div class="col-4">
+                <label for="neut">Neut / Lymph (NLR)</label>
+                <div style="position: relative; margin-bottom: 22px;">
+                    <input id="neut" type="number" step="0.1" placeholder="Neut" />
+                    <span id="neut_range" class="range-annotation" style="left: 0; bottom: -16px;"></span>
+                </div>
+                <div style="position: relative; margin-bottom: 22px;">
+                    <input id="lymph" type="number" step="0.1" placeholder="Lymph" />
+                     <span id="lymph_range" class="range-annotation" style="left: 0; bottom: -16px;"></span>
+                </div>
+                <div id="nlrCalc" style="margin-top:6px; font-size:0.9rem; color:var(--muted)">NLR: --</div>
+              </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="input-group">
       <div class="section-title">Concerning Comorbidities?</div>
       <div class="comorbidity-grid">
-        <div class="toggle-label" id="toggle_comorb_copd" data-value="false" role="button" aria-pressed="false">COPD/Asthma <span class="state">No</span></div>
-        <div class="toggle-label" id="toggle_comorb_hf" data-value="false" role="button" aria-pressed="false">Active HF <span class="state">No</span></div>
-        <div class="toggle-label" id="toggle_comorb_esrd" data-value="false" role="button" aria-pressed="false">ESRD/Dialysis <span class="state">No</span></div>
-        <div class="toggle-label" id="toggle_comorb_diabetes" data-value="false" role="button" aria-pressed="false">Uncontrolled Diabetes <span class="state">No</span></div>
-        <div class="toggle-label" id="toggle_comorb_cirrhosis" data-value="false" role="button" aria-pressed="false">Cirrhosis <span class="state">No</span></div>
-        <div class="toggle-label" id="toggle_comorb_other" data-value="false" role="button" aria-pressed="false">Other <span class="state">No</span></div>
+        <div class="toggle-label" id="toggle_comorb_copd" data-value="false" role="button" aria-pressed="false">COPD/Asthma <span class="state"></span></div>
+        <div class="toggle-label" id="toggle_comorb_hf" data-value="false" role="button" aria-pressed="false">Active HF <span class="state"></span></div>
+        <div class="toggle-label" id="toggle_comorb_esrd" data-value="false" role="button" aria-pressed="false">ESRD/Dialysis <span class="state"></span></div>
+        <div class="toggle-label" id="toggle_comorb_diabetes" data-value="false" role="button" aria-pressed="false">Diabetes (Uncontrolled) <span class="state"></span></div>
+        <div class="toggle-label" id="toggle_comorb_cirrhosis" data-value="false" role="button" aria-pressed="false">Cirrhosis <span class="state"></span></div>
+        <div class="toggle-label" id="toggle_comorb_other" data-value="false" role="button" aria-pressed="false">Other <span class="state"></span></div>
       </div>
       <div id="comorb_other_note_wrapper" class="concern-note" style="display:none; margin-top: 10px;">
           <label for="comorb_other_note">Specify other comorbidity</label>
@@ -481,7 +463,6 @@
       </div>
     </div>
 
-    <hr>
     <div class="section-title">Clinical Judgement Override?</div>
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
       <button class="override-btn red" id="override_red">Upgrade to CAT 1</button>
@@ -504,12 +485,20 @@
     <hr>
     <div class="section-title">Follow-up Plan</div>
     <div id="followUpInstructions" style="margin-top:12px; font-weight: 500;"></div>
-    
     <div id="dischargeNudge" style="font-size: 0.9rem; color: var(--blue-hint); font-weight: 600; margin-top: 15px; display: none;"></div>
-    <div class="toggle-label" id="toggle_discharge_from_alert" data-value="false" role="button" aria-pressed="false" style="margin-top:10px; border-color: var(--blue-hint);">
-        <span>Suitable for discharge from ALERT list?</span>
-        <span class="state">No</span>
+    
+    <div style="margin-top:18px;">
+        <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer; color: var(--blue-hint); margin-bottom: 12px;">
+            <input type="checkbox" id="chk_discharge_alert" style="width:auto; transform:scale(1.2);">
+            Discharge from ALERT list?
+        </label>
+        
+        <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;">
+            <input type="checkbox" id="chk_medical_rounding" style="width:auto; transform:scale(1.2);">
+            Add to ALERT Medical Rounding List
+        </label>
     </div>
+
   </div>
 
   <div class="optional-note">The following sections are optional DMR note helpers</div>
@@ -518,75 +507,143 @@
     <button class="accordion" aria-expanded="false" aria-controls="panel_ae">A-E Assessment <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_ae">
       <div class="grid">
-        <div class="col-12"><div class="toggle-label" id="toggle_use_mods" data-value="false" role="button" aria-pressed="false"><span>MODS in place?</span> <span class="state">No</span></div></div>
+        <div class="col-12">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="chk_use_mods" style="width:auto; transform:scale(1.2);">
+                MODS in place?
+            </label>
+        </div>
         <div class="col-12" id="mods_inputs" style="display:none;">
           <div class="grid">
-            <div class="col-12"><label for="mods_score">MODS Score</label><input id="mods_score" type="text"/></div>
-            <div class="col-12"><label for="mods_details">MODS Details</label><input id="mods_details" type="text"/></div>
+            <div class="col-12"><label for="mods_score">MODS Score</label><input id="mods_score" type="text" placeholder="Enter score (overrides ADDS)..."/></div>
+            <div class="col-12"><label for="mods_details">MODS Details</label><input id="mods_details" type="text" placeholder="Enter details..."/></div>
           </div>
         </div>
         <div class="col-12" id="adds_input_container"><label for="atoe_adds">ADDS</label><input id="atoe_adds" type="number"/></div>
 
-        <div class="col-12"><label for="airway_a">A: Airway</label>
-            <div class="quick-select-group">
+        <div class="col-12">
+            <label for="airway_a">A: Airway</label>
+            <input id="airway_a" type="text" placeholder="" data-manual="false"/>
+            <div class="quick-select-container">
                 <button type="button" class="btn small quick-select" data-target="airway_a" data-value="Patent">Patent</button>
             </div>
-            <input id="airway_a" type="text" placeholder="" data-manual="false"/>
         </div>
-        <div class="col-3"><label for="b_rr">B: RR</label>
-            <div class="quick-select-group">
-                <button type="button" class="btn small quick-select" data-target="b_rr" data-value="15-20">RR 15-20</button>
-            </div>
+        <div class="col-3">
+            <label for="b_rr">B: RR</label>
             <div class="input-with-trend">
                 <input id="b_rr" type="text" placeholder=""/>
                 <div class="trend-buttons" id="b_rr_trend"></div>
             </div>
+            <div class="quick-select-container">
+                <button type="button" class="btn small quick-select" data-target="b_rr" data-value="15-20">RR 15-20</button>
+            </div>
         </div>
-        <div class="col-3"><label for="b_spo2">SpO2 (%)</label>
-            <div class="quick-select-group">
+        <div class="col-3">
+            <label for="b_spo2">SpO2 (%)</label>
+            <input id="b_spo2" type="text" placeholder=""/>
+            <div class="quick-select-container">
                 <button type="button" class="btn small quick-select" data-target="b_spo2" data-value=">94%">SpO2 >94%</button>
             </div>
-            <input id="b_spo2" type="text" placeholder=""/>
         </div>
-        <div class="col-3"><div class="quick-select-group empty"></div><label for="b_device">Device</label><input id="b_device" type="text" placeholder="" data-manual="false"/></div>
-        <div class="col-3"><div class="quick-select-group empty"></div><label for="b_wob">WOB</label><input id="b_wob" type="text" placeholder=""/></div>
+        <div class="col-3"><label for="b_device">Device</label><input id="b_device" type="text" placeholder="" data-manual="false"/></div>
+        
+        <div class="col-3"><label for="b_wob">WOB</label><input id="b_wob" type="text" placeholder="Description..."/></div>
 
         <div class="col-3">
-            <div class="quick-select-group empty"></div>
             <label for="c_hr">C: HR</label>
             <div class="input-with-trend">
-                <input id="c_hr" type="text" placeholder=""/>
+                <input id="c_hr" type="text" placeholder="Rate"/>
                 <div class="trend-buttons" id="c_hr_trend"></div>
             </div>
+            <div class="quick-select-container">
+               <button type="button" class="btn small quick-select" onclick="$('c_hr_rhythm').value='Regular';$('c_hr_rhythm').dispatchEvent(new Event('input'));">Regular</button>
+               <button type="button" class="btn small quick-select" onclick="$('c_hr_rhythm').value='Irregular';$('c_hr_rhythm').dispatchEvent(new Event('input'));">Irregular</button>
+            </div>
+            <input id="c_hr_rhythm" type="text" placeholder="Rhythm..." style="margin-top:4px;" />
         </div>
         <div class="col-3">
-            <div class="quick-select-group empty"></div>
             <label for="c_nibp">NIBP</label>
             <div class="input-with-trend">
                 <input id="c_nibp" type="text" placeholder=""/>
                 <div class="trend-buttons" id="c_nibp_trend"></div>
             </div>
         </div>
-        <div class="col-3"><div class="quick-select-group empty"></div><label for="c_cr">Cap Refill</label><input id="c_cr" type="text" placeholder=""/></div>
-        <div class="col-3"><div class="quick-select-group empty"></div><label for="c_perf">Perfusion</label><input id="c_perf" type="text" placeholder=""/></div>
+        <div class="col-3"><label for="c_cr">Cap Refill</label><input id="c_cr" type="text" placeholder=""/></div>
+        <div class="col-3"><label for="c_perf">Perfusion</label><input id="c_perf" type="text" placeholder=""/></div>
 
-        <div class="col-4"><div class="quick-select-group empty"></div><label for="d_alert">D: Alert?</label><input id="d_alert" type="text" placeholder=""/></div>
-        <div class="col-4"><div class="quick-select-group empty"></div><label for="d_gcs">GCS</label><input id="d_gcs" type="text" placeholder=""/></div>
-        <div class="col-4"><div class="quick-select-group empty"></div><label for="d_pain">Pain</label><input id="d_pain" type="text" placeholder=""/></div>
+        <div class="col-4">
+            <label for="d_alert">D: Alert?</label>
+            <input id="d_alert" type="text" placeholder=""/>
+             <div class="quick-select-container">
+                <button type="button" class="btn small quick-select" onclick="stackText('d_alert', 'Alert')">Alert</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('d_alert', 'GCS 15')">GCS 15</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('d_alert', 'AMT 4/4')">AMT 4/4</button>
+            </div>
+        </div>
+        
+        <div class="col-4"><label for="d_pain">Pain</label><input id="d_pain" type="text" placeholder=""/></div>
+        <div class="col-4"></div>
 
-        <div class="col-4"><label for="e_temp">E: Temp</label>
-             <div class="quick-select-group">
+        <div class="col-4">
+            <label for="e_temp">E: Temp</label>
+            <input id="e_temp" type="text" placeholder=""/>
+             <div class="quick-select-container">
                 <button type="button" class="btn small quick-select" data-target="e_temp" data-value="Afebrile">Afebrile</button>
             </div>
-            <input id="e_temp" type="text" placeholder=""/>
         </div>
-        <div class="col-4"><div class="quick-select-group empty"></div><label for="e_bsl">BSL</label><input id="e_bsl" type="text" placeholder=""/></div>
-        <div class="col-4"><div class="quick-select-group empty"></div><label for="e_uop">UOP</label><input id="e_uop" type="text" placeholder=""/></div>
+        <div class="col-4"><label for="e_bsl">BSL</label><input id="e_bsl" type="text" placeholder=""/></div>
+        <div class="col-4"><label for="e_uop">UOP</label><input id="e_uop" type="text" placeholder=""/></div>
 
         <div class="col-12"><hr></div>
-        <div class="col-12"><label for="ae_mobility">Mobility/MSK</label><input id="ae_mobility" type="text" placeholder="Current mobility level"/></div>
-        <div class="col-12"><label for="ae_diet">Diet</label><input id="ae_diet" type="text" placeholder="Current diet/fluids"/></div>
-        <div class="col-12"><label for="ae_bowels">Bowels</label><input id="ae_bowels" type="text" placeholder="Last bowel motion"/></div>
+        
+        <div class="col-12">
+            <label for="ae_mobility">Mobility/MSK</label>
+            <input id="ae_mobility" type="text" placeholder="Current mobility level"/>
+            <div class="quick-select-container">
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_mobility', 'Independent')">Independent</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_mobility', '1x Assist')">1x Assist</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_mobility', '2x Assist')">2x Assist</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_mobility', 'RIB')">RIB</button>
+            </div>
+        </div>
+        
+        <div class="col-12">
+            <label for="ae_diet">Diet</label>
+            <input id="ae_diet" type="text" placeholder="Current diet/fluids"/>
+            <div class="quick-select-container">
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_diet', 'Normal')">Normal</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_diet', 'Clear Fluids')">Clear Fluids</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_diet', 'Nourishing Fluids')">Nourishing Fluids</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_diet', 'NBM')">NBM</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_diet', 'TPN')">TPN</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_diet', 'PPN')">PPN</button>
+                <button type="button" class="btn small quick-select" onclick="stackText('ae_diet', 'NG Feed')">NG Feed</button>
+            </div>
+        </div>
+        
+        <div class="col-12">
+            <label for="ae_bowels">Bowels</label>
+            <input id="ae_bowels" type="text" placeholder="Note details..."/>
+            <div class="quick-select-container">
+                <button type="button" class="btn small quick-select" id="btn_bno">BNO</button>
+                <button type="button" class="btn small quick-select" id="btn_bo">BO</button>
+            </div>
+            <div id="bowel_date_wrapper" style="display:none; margin-top:8px;">
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <div style="flex:1;">
+                        <label id="bowel_date_label" style="font-size:0.85rem; color:var(--accent);">Date</label>
+                        <input type="date" id="bowel_date">
+                    </div>
+                    <div id="aperients_wrapper" style="display:none; flex:1; padding-top:20px;">
+                         <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; font-size:0.9rem;">
+                            <input type="checkbox" id="chk_aperients" style="width:auto; transform:scale(1.1);">
+                            Aperients charted?
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
       </div>
     </div>
   </div>
@@ -603,6 +660,7 @@
         <div class="blood-item"><label for="bl_k">K</label><input id="bl_k" type="number" step="0.1"/><div class="trend-buttons" id="bl_k_trend"></div><span id="bl_k_range" class="range-annotation"></span></div>
         <div class="blood-item"><label for="bl_na">Na</label><input id="bl_na" type="number" step="1"/><div class="trend-buttons" id="bl_na_trend"></div><span id_=""bl_na_range" class="range-annotation"></span></div>
         <div class="blood-item"><label for="bl_mg">Mg</label><input id="bl_mg" type="number" step="0.1"/><div class="trend-buttons" id="bl_mg_trend"></div><span id="bl_mg_range" class="range-annotation"></span></div>
+        <div class="blood-item"><label for="bl_phos">PO4</label><input id="bl_phos" type="number" step="0.1"/><div class="trend-buttons" id="bl_phos_trend"></div><span id="bl_phos_range" class="range-annotation"></span></div>
         <div class="blood-item"><label for="bl_plts">Plts</label><input id="bl_plts" type="number"/><div class="trend-buttons" id="bl_plts_trend"></div><span id="bl_plts_range" class="range-annotation"></span></div>
         <div class="blood-item"><label for="bl_alb">Alb</label><input id="bl_alb" type="number"/><div class="trend-buttons" id="bl_alb_trend"></div><span id="bl_alb_range" class="range-annotation"></span></div>
         <div class="blood-item"><label for="bl_neut">Neut</label><input id="bl_neut" type="number" step="0.1"/><div class="trend-buttons" id="bl_neut_trend"></div><span id="bl_neut_range" class="range-annotation"></span></div>
@@ -615,7 +673,13 @@
 
       <div style="margin-top:12px" class="grid">
         <div class="col-12"><label>Electrolyte Plan</label><input id="elec_replace_note" type="text" placeholder="Replacement plan..."/></div>
-        <div class="col-12" style="margin-top:8px"><div class="toggle-label" id="toggle_new_bloods_ordered" data-value="false" role="button" aria-pressed="false">New blood request ordered for next phleb round? <span class="state">No</span></div></div>
+        <div class="col-12" style="margin-top:8px">
+             <div class="segmented-group" id="seg_new_bloods_ordered">
+                <button class="seg-btn" style="flex:3; text-align:left; padding-left:12px; pointer-events:none;">New bloods ordered?</button>
+                <button class="seg-btn" data-value="true">Yes</button>
+                <button class="seg-btn" data-value="false">No</button>
+            </div>
+        </div>
       </div>
     </div>
   </div>
@@ -653,7 +717,7 @@
         
         <div class="devices-subtitle">▶ Significant Past Medical History (PMH)</div>
         <div class="devices-input-group">
-            <textarea id="pmh_note" placeholder="Auto-populates from 'Other' comorbidity. Editable."></textarea>
+            <textarea id="pmh_note" placeholder="Enter PMH here..."></textarea>
         </div>
 
         <div class="devices-subtitle">▶ PICS Assessment</div>
@@ -701,9 +765,9 @@ const $ = id => document.getElementById(id);
 const debounce = (fn, wait=350) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(()=>fn.apply(this,a), wait); }; };
 const computeAllAndSave = ()=>{ computeAll(); saveState(true); };
 const num = v => { const x = parseFloat(v); return isNaN(x) ? null : x; };
-const STORAGE_KEY = 'alertNursingToolData_v2';
-const ACCORDION_KEY = 'alertNursingToolAccordions_v2';
-const UNDO_KEY = 'alertNursingToolUndo_v2';
+const STORAGE_KEY = 'alertNursingToolData_v3.8';
+const ACCORDION_KEY = 'alertNursingToolAccordions_v3.8';
+const UNDO_KEY = 'alertNursingToolUndo_v3.8';
 const normalRanges = {
   wcc: { low: 4, high: 11 }, crp: { low: 0, high: 50 },
   neut: { low: 1.5, high: 7.5 }, lymph: { low: 1.0, high: 4.0 },
@@ -711,7 +775,8 @@ const normalRanges = {
   k: { low: 3.5, high: 5.2 }, na: { low: 135, high: 145 },
   cr_review: { low: 50, high: 98 },
   mg: { low: 0.7, high: 1.1 }, alb: { low: 35, high: 50 },
-  lac_review: { low: 0.5, high: 2.0 }
+  lac_review: { low: 0.5, high: 2.0 },
+  phos: { low: 0.8, high: 1.5 }
 };
 
 /* fields to automatically save/restore */
@@ -720,24 +785,34 @@ const staticInputs = [
   'npFlow','hfnpFio2','hfnpFlow','nivFio2', 'nivPeep', 'nivPs','override','overrideNote',
   'trache_details_note',
   'mods_score','mods_details','airway_a','b_rr','b_spo2','b_device','b_wob',
-  'c_hr','c_nibp','c_cr','c_perf','d_alert','d_gcs','d_pain','e_temp','e_bsl','e_uop','atoe_adds',
-  'ae_mobility','ae_diet','ae_bowels',
+  'c_hr','c_hr_rhythm','c_nibp','c_cr','c_perf','d_alert','d_pain','e_temp','e_bsl','e_uop','atoe_adds',
+  'ae_mobility','ae_diet','ae_bowels','bowel_date',
   'bl_wcc','bl_crp','bl_neut','bl_lymph',
   'bl_hb','bl_plts','bl_k','bl_na',
-  'bl_cr_review','bl_mg','bl_alb','bl_lac_review',
+  'bl_cr_review','bl_mg','bl_alb','bl_lac_review','bl_phos',
   'elec_replace_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note', 'pmh_note',
   'adds','lactate','hb','wcc','crp','neut','lymph', 'infusions_note',
   'dyspneaConcern_note', 'renalConcern_note', 'uopLow_note', 'neuroConcern_note', 'infectionConcern_note',
   'electrolyteConcern_note',
-  'after_hours_discharge_note', 'pressors24h_note', 'np3Last12h_note', 'rapidWean_note', 'immobility48h_note', 'comorb_other_note'
+  'after_hours_note', 'pressors_note', 'hist_o2_note', 'rapid_wean_note', 'immobility_note', 'comorb_other_note',
+  'intubation_details'
 ];
+
+// Replaced simple toggles with Segmented Controls. We need to save their 'value' (true/false/null).
+const segmentedInputs = [
+  'hb_dropping', 'after_hours', 'pressors', 'hist_o2', 'intubated', 'rapid_wean',
+  'renal', 'uop', 'immobility', 'infection', 'new_bloods_ordered'
+];
+
+// Simple Toggles (Comorbidities)
 const toggleInputs = [
-  'after_hours_discharge','pressors24h','np3Last12h','rapidWean','renalConcern','uopLow',
-  'infectionConcern','use_mods','new_bloods_ordered', 'hb_dropping',
-  'comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis', 'immobility48h', 'comorb_other',
-  'discharge_from_alert'
+  'comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis', 'comorb_other'
 ];
-const selectInputs = ['oxMod','dyspneaConcern','neuroConcern','electrolyteConcern','stepdownTime', 'tracheType', 'tracheStatus'];
+
+const selectInputs = [
+    'oxMod','dyspneaConcern','neuroConcern','neuroType','electrolyteConcern','stepdownTime', 
+    'tracheType', 'tracheStatus', 'pressorReason', 'intubatedReason'
+];
 const deviceTypes = ['CVC', 'Other CVAD', 'PIVC', 'Enteral Tube', 'IDC', 'Pacing Wire', 'Drain', 'Wound', 'Other Device'];
 
 
@@ -802,7 +877,6 @@ function updateLastSaved() {
    =========================== */
 function createDeviceEntry(type, value = '') {
     const container = $('devices-container');
-    const index = container.querySelectorAll(`.device-entry[data-type="${type}"]`).length + 1;
     const div = document.createElement('div');
     div.className = 'device-entry';
     div.dataset.type = type;
@@ -823,82 +897,51 @@ function createDeviceEntry(type, value = '') {
         computeAll(); 
         saveState(); 
     });
-    rem.addEventListener('keydown', (e) => { 
-        if (e.key === 'Enter' || e.key === ' ') { 
-            e.preventDefault(); 
-            div.remove(); 
-            computeAll(); 
-            saveState(); 
-        }
-    });
     div.scrollIntoView({ behavior: 'smooth', block: 'center' });
     ta.focus();
 }
 
-/**
- * Calculates the display text for the oxygen device (B) based on form state.
- * This is used for auto-populating the A-E 'Device' field.
- * @param {object} s - The current state object.
- * @returns {string} The formatted oxygen device text.
- */
 function getOxyDeviceText(s) {
     let oxyDeviceText = '';
     switch (s.oxMod) {
-        case 'RA':
-            oxyDeviceText = 'RA';
-            break;
-        case 'NP':
-            const npFlow = s.npFlow;
-            oxyDeviceText = npFlow ? `${npFlow}L NP` : 'NP';
-            break;
+        case 'RA': oxyDeviceText = 'RA'; break;
+        case 'NP': oxyDeviceText = s.npFlow ? `${s.npFlow}L NP` : 'NP'; break;
         case 'HFNP':
-            const hfnpFlow = s.hfnpFlow;
-            const hfnpFio2 = s.hfnpFio2;
             let hfnpParts = [];
-            if (hfnpFlow) hfnpParts.push(`${hfnpFlow}L`);
-            if (hfnpFio2) hfnpParts.push(`${hfnpFio2}%`);
+            if (s.hfnpFlow) hfnpParts.push(`${s.hfnpFlow}L`);
+            if (s.hfnpFio2) hfnpParts.push(`${s.hfnpFio2}%`);
             oxyDeviceText = `HFNP ${hfnpParts.join(' / ')}`;
             break;
         case 'NIV':
-            const nivFio2 = s.nivFio2;
-            const nivPeep = s.nivPeep;
-            const nivPs = s.nivPs;
             let nivParts = [];
-            if (nivFio2) nivParts.push(`${nivFio2}% FiO2`);
-            if (nivPeep) nivParts.push(`${nivPeep} PEEP`);
-            if (nivPs) nivParts.push(`${nivPs} PS`);
+            if (s.nivFio2) nivParts.push(`${s.nivFio2}% FiO2`);
+            if (s.nivPeep) nivParts.push(`${s.nivPeep} PEEP`);
+            if (s.nivPs) nivParts.push(`${s.nivPs} PS`);
             oxyDeviceText = `NIV ${nivParts.join(', ')}`;
-            break;
-        case 'Trache':
-            oxyDeviceText = ''; // Moved to getAirwayDeviceText
             break;
     }
     return oxyDeviceText.trim();
 }
 
-/**
- * Calculates the display text for the airway device (A) (trache/lary) based on form state.
- * This is used for auto-populating the A-E 'Airway' field.
- * @param {object} s - The current state object.
- * @returns {string} The formatted airway device text.
- */
 function getAirwayDeviceText(s) {
     let airwayDeviceText = '';
     if (s.oxMod === 'Trache') {
-        const tracheType = s.tracheType; // e.g., "Tracheostomy"
-        if (!tracheType) {
-            airwayDeviceText = 'Altered Airway'; // User request: "Altered Airway" if no type selected
-        } else {
-            airwayDeviceText = tracheType; // "Tracheostomy" or "Laryngectomy"
-        }
-
-        // Now append the details if they exist
+        const tracheType = s.tracheType;
+        airwayDeviceText = !tracheType ? 'Altered Airway' : tracheType;
         const details = s.trache_details_note ? s.trache_details_note.trim() : '';
-        if (details) {
-            airwayDeviceText += ` (${details})`;
-        }
+        if (details) airwayDeviceText += ` (${details})`;
     }
     return airwayDeviceText.trim();
+}
+
+// Helper for stacking GCS/AMT text
+function stackText(id, text) {
+    const el = $(id);
+    let val = el.value;
+    if (val.includes(text)) return; // already there
+    if (val.length > 0) val += ', ';
+    el.value = val + text;
+    el.dispatchEvent(new Event('input'));
 }
 
 
@@ -912,10 +955,25 @@ function getState() {
     if (!el) continue;
     state[id] = el.value;
   }
+  
+  // Segmented Controls state
+  for (const id of segmentedInputs) {
+    const group = $(`seg_${id}`);
+    if(!group) continue;
+    const active = group.querySelector('.seg-btn.active');
+    if(active) {
+        state[id] = active.dataset.value === "true";
+    } else {
+        state[id] = null;
+    }
+  }
+  
+  // Simple Toggles
   for (const id of toggleInputs) {
     const el = $(`toggle_${id}`);
     state[id] = el ? el.dataset.value === 'true' : false;
   }
+
   for (const groupId of selectInputs) {
     const el = $(groupId);
     if (!el) continue;
@@ -928,18 +986,26 @@ function getState() {
   checked = document.querySelector('input[name="clinicianRole"]:checked');
   state['clinicianRole'] = checked ? checked.value : 'ALERT CNS';
   
+  state['chk_medical_rounding'] = $('chk_medical_rounding').checked;
+  state['chk_discharge_alert'] = $('chk_discharge_alert').checked;
+  state['chk_use_mods'] = $('chk_use_mods').checked;
+  state['chk_aperients'] = $('chk_aperients').checked;
+  
+  // Bowel State
+  const bowelBtn = document.querySelector('#panel_ae .quick-select.active');
+  state['bowel_mode'] = bowelBtn ? bowelBtn.id : null;
+
   state.devices = {};
   deviceTypes.forEach(type => {
       state.devices[type] = Array.from(document.querySelectorAll(`.device-entry[data-type="${type}"] textarea`)).map(ta => ta.value);
   });
   
-  // Blood trends
+  // Trends
   document.querySelectorAll('.trend-buttons').forEach(group => {
     const activeBtn = group.querySelector('.trend-btn.active');
     state[group.id] = activeBtn ? activeBtn.dataset.value : '';
   });
   
-  // Vitals trends (manual capture)
   const vitalsTrends = ['b_rr_trend', 'c_hr_trend', 'c_nibp_trend'];
   vitalsTrends.forEach(id => {
       const group = $(id);
@@ -949,16 +1015,7 @@ function getState() {
       }
   });
 
-
   return state;
-}
-
-function updateWardOtherVisibility() {
-    const wardSelect = $('ptWard');
-    const otherWrapper = $('ptWardOtherWrapper');
-    if (wardSelect && otherWrapper) {
-        otherWrapper.style.display = (wardSelect.value === 'Other') ? 'block' : 'none';
-    }
 }
 
 function restoreState(state) {
@@ -968,33 +1025,80 @@ function restoreState(state) {
     if (!el) continue;
     if (state[id] !== undefined) el.value = state[id];
   }
+
+  // Restore Segmented Controls
+  for (const id of segmentedInputs) {
+    const group = $(`seg_${id}`);
+    if(!group) continue;
+    group.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('active'));
+    
+    if (state[id] === true) {
+        const btn = group.querySelector('.seg-btn[data-value="true"]');
+        if(btn) btn.classList.add('active');
+        handleSegmentClick(id, "true");
+    } else if (state[id] === false) {
+        const btn = group.querySelector('.seg-btn[data-value="false"]');
+        if(btn) btn.classList.add('active');
+        handleSegmentClick(id, "false");
+    } else {
+        handleSegmentClick(id, null);
+    }
+  }
+  
+  // Restore Simple Toggles
   for (const id of toggleInputs) {
     const el = $(`toggle_${id}`);
     if (!el) continue;
     const val = state[id];
     el.dataset.value = val ? 'true' : 'false';
     el.classList.toggle('active', !!val);
-    const stateSpan = el.querySelector('.state'); if (stateSpan) stateSpan.textContent = val ? 'Yes' : 'No';
+    if (id === 'comorb_other') {
+        const noteWrapper = $('comorb_other_note_wrapper');
+        if(noteWrapper) noteWrapper.style.display = val ? 'block' : 'none';
+    }
   }
+
   for (const groupId of selectInputs) {
     const value = state[groupId];
     if (!value) continue;
     const btn = $(groupId).querySelector(`.select-btn[data-value="${value}"]`);
     if (btn) btn.classList.add('active');
   }
-  let radioState = state['reviewType'];
-  if (radioState) {
-    const radioEl = document.querySelector(`input[name="reviewType"][value="${radioState}"]`);
+  
+  if (state['reviewType']) {
+    const radioEl = document.querySelector(`input[name="reviewType"][value="${state['reviewType']}"]`);
+    if (radioEl) {
+        radioEl.checked = true;
+        updateWardOptions();
+    }
+  }
+  
+  if (state['clinicianRole']) {
+    const radioEl = document.querySelector(`input[name="clinicianRole"][value="${state['clinicianRole']}"]`);
     if (radioEl) radioEl.checked = true;
   }
   
-  radioState = state['clinicianRole'];
-  if (radioState) {
-    const radioEl = document.querySelector(`input[name="clinicianRole"][value="${radioState}"]`);
-    if (radioEl) radioEl.checked = true;
+  if(state['chk_medical_rounding'] !== undefined) $('chk_medical_rounding').checked = state['chk_medical_rounding'];
+  if(state['chk_discharge_alert'] !== undefined) $('chk_discharge_alert').checked = state['chk_discharge_alert'];
+  if(state['chk_aperients'] !== undefined) $('chk_aperients').checked = state['chk_aperients'];
+  
+  if(state['chk_use_mods'] !== undefined) {
+      $('chk_use_mods').checked = state['chk_use_mods'];
+      $('mods_inputs').style.display = state['chk_use_mods'] ? 'block' : 'none';
+  }
+  
+  // Restore Bowels
+  if (state['bowel_mode']) {
+      const btn = $(state['bowel_mode']);
+      if(btn) {
+          btn.classList.add('active');
+          toggleBowelDate(state['bowel_mode']);
+      }
   }
 
-  // Devices
+  // Restore ptWard AFTER options are updated
+  if(state.ptWard) $('ptWard').value = state.ptWard;
+
   $('devices-container').innerHTML = '';
   if (state.devices) {
       deviceTypes.forEach(type => {
@@ -1004,7 +1108,6 @@ function restoreState(state) {
       });
   }
   
-  // Blood & Vitals trends
   document.querySelectorAll('.trend-buttons').forEach(group => {
     const value = state[group.id] || '';
     group.querySelectorAll('.trend-btn').forEach(btn => btn.classList.remove('active'));
@@ -1012,31 +1115,21 @@ function restoreState(state) {
     if(btnToActivate) btnToActivate.classList.add('active');
   });
   
-  // Set manual flag for b_device
+  // Set manual flags
   const expectedOxyText = getOxyDeviceText(state);
   const bDeviceEl = $('b_device');
-  if (state.b_device === expectedOxyText || state.b_device === "") {
-      bDeviceEl.dataset.manual = "false";
-  } else {
-      bDeviceEl.dataset.manual = "true";
-  }
+  bDeviceEl.dataset.manual = (state.b_device === expectedOxyText || state.b_device === "") ? "false" : "true";
 
-  // Set manual flag for airway_a
   const aDeviceEl = $('airway_a');
   const expectedAirwayText = getAirwayDeviceText(state);
   if (state.airway_a === expectedAirwayText) {
-      aDeviceEl.dataset.manual = "false"; // Matches exactly
-  } else if (!expectedAirwayText && state.airway_a) {
-        aDeviceEl.dataset.manual = "true"; // Manually typed "Patent"
-  } else if (expectedAirwayText && state.airway_a !== expectedAirwayText) {
-        aDeviceEl.dataset.manual = "true"; // Manually typed something else
+      aDeviceEl.dataset.manual = "false";
   } else {
-        aDeviceEl.dataset.manual = "false"; // Default
+      aDeviceEl.dataset.manual = "true";
   }
 
-
   updateWardOtherVisibility();
-  toggleInfusionsBox(); // Show/hide infusions box based on restored state
+  toggleInfusionsBox();
 }
 
 /* ===========================
@@ -1058,25 +1151,44 @@ function initialize() {
           btn.addEventListener('click', () => {
               const wasActive = btn.classList.contains('active');
               group.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
-              if (!wasActive) {
-                btn.classList.add('active');
-              }
+              if (!wasActive) btn.classList.add('active');
               debouncedComputeAndSave();
           });
           group.appendChild(btn);
       });
   });
 
+  // Wiring for Segmented Groups
+  document.querySelectorAll('.segmented-group').forEach(group => {
+      group.querySelectorAll('.seg-btn').forEach(btn => {
+         if(btn.style.pointerEvents === 'none') return; // Skip label buttons
+         btn.addEventListener('click', () => {
+             const val = btn.dataset.value;
+             const id = group.id.replace('seg_', '');
+             
+             // Toggle off if already active
+             if(btn.classList.contains('active')) {
+                 btn.classList.remove('active');
+                 handleSegmentClick(id, null);
+             } else {
+                 group.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+                 btn.classList.add('active');
+                 handleSegmentClick(id, val);
+             }
+             debouncedComputeAndSave();
+         });
+      });
+  });
+  
+  // Simple Toggle Labels (Comorbs)
   document.querySelectorAll('.toggle-label').forEach(el => {
     el.addEventListener('click', ()=> {
       el.dataset.value = el.dataset.value === 'true' ? 'false' : 'true';
       el.classList.toggle('active', el.dataset.value === 'true');
-      const stateSpan = el.querySelector('.state'); if (stateSpan) stateSpan.textContent = el.dataset.value === 'true' ? 'Yes' : 'No';
-      const noteWrapperId = el.id.replace('toggle_', '') + '_note_wrapper';
-      const noteWrapper = $(noteWrapperId);
-      if(noteWrapper) noteWrapper.style.display = el.dataset.value === 'true' ? 'block' : 'none';
-      if (el.id === 'toggle_infectionConcern') $('infectionMarkers').style.display = el.dataset.value === 'true' ? 'block' : 'none';
-      if (el.id === 'toggle_use_mods') $('mods_inputs').style.display = el.dataset.value === 'true' ? 'block' : 'none';
+      if(el.id === 'toggle_comorb_other') {
+          const noteWrapper = $('comorb_other_note_wrapper');
+          if(noteWrapper) noteWrapper.style.display = el.dataset.value === 'true' ? 'block' : 'none';
+      }
       debouncedComputeAndSave();
     });
   });
@@ -1084,19 +1196,23 @@ function initialize() {
   document.querySelectorAll('.button-group').forEach(group => {
     group.querySelectorAll('.select-btn').forEach(btn => {
       btn.addEventListener('click', ()=> {
-        // Clear manual flag on b_device if user clicks an O2 mod button
         if (group.id === 'oxMod' || group.id === 'tracheType' || group.id === 'tracheStatus') {
             $('b_device').dataset.manual = "false";
-            $('airway_a').dataset.manual = "false"; // Also reset airway manual flag
+            $('airway_a').dataset.manual = "false"; 
         }
           
         group.querySelectorAll('.select-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        
         if (group.id === 'oxMod') toggleOxyFields();
+        if (group.id === 'neuroConcern') toggleNeuroFields(); // New handler
+        
         const noteWrapperId = group.id + '_note_wrapper';
         const noteWrapper = $(noteWrapperId);
-        if(noteWrapper) noteWrapper.style.display = (btn.dataset.value !== 'none' && btn.dataset.value !== '') ? 'block' : 'none';
-        
+        if(noteWrapper && group.id !== 'neuroConcern') { // neuro handled separately
+             noteWrapper.style.display = (btn.dataset.value !== 'none' && btn.dataset.value !== '') ? 'block' : 'none';
+        }
+
         const fn = (group.id === 'stepdownTime') ? computeAllAndSave : debouncedComputeAndSave;
         fn();
       });
@@ -1110,53 +1226,61 @@ function initialize() {
     el.addEventListener(evt, fn);
   });
   
-  // Add listener for b_device manual entry
-  $('b_device').addEventListener('input', () => {
-      $('b_device').dataset.manual = "true";
-  });
-  // Add listener for airway_a manual entry
-  $('airway_a').addEventListener('input', () => {
-      $('airway_a').dataset.manual = "true";
-  });
-
-
-  // --- PMH Note Auto-population ---
-  function updatePmhNoteFromComorbs() {
-      const otherNote = $('comorb_other_note').value.trim();
-      const pmhEl = $('pmh_note');
-      if (pmhEl) {
-         pmhEl.value = otherNote; // Just set it directly from the 'other' comorb box
-         debouncedComputeAndSave(); // Trigger re-compute and save
-      }
-  }
+  $('b_device').addEventListener('input', () => { $('b_device').dataset.manual = "true"; });
+  $('airway_a').addEventListener('input', () => { $('airway_a').dataset.manual = "true"; });
   
-  const comorbOtherNoteEl = $('comorb_other_note');
-  if (comorbOtherNoteEl) {
-      comorbOtherNoteEl.addEventListener('input', () => {
-          updatePmhNoteFromComorbs();
+  $('chk_medical_rounding').addEventListener('change', debouncedComputeAndSave);
+  $('chk_discharge_alert').addEventListener('change', debouncedComputeAndSave);
+  $('chk_use_mods').addEventListener('change', () => {
+      $('mods_inputs').style.display = $('chk_use_mods').checked ? 'block' : 'none';
+      debouncedComputeAndSave();
+  });
+  $('chk_aperients').addEventListener('change', debouncedComputeAndSave);
+  
+  // Bowel Buttons
+  ['btn_bno', 'btn_bo'].forEach(id => {
+      $(id).addEventListener('click', (e) => {
+          e.preventDefault();
+          const btn = $(id);
+          const other = id === 'btn_bno' ? $('btn_bo') : $('btn_bno');
+          const isActive = btn.classList.contains('active');
+          
+          if (isActive) {
+              btn.classList.remove('active');
+              toggleBowelDate(null);
+          } else {
+              btn.classList.add('active');
+              other.classList.remove('active');
+              toggleBowelDate(id);
+          }
+          debouncedComputeAndSave();
       });
-  }
-  // --- End PMH Note ---
+  });
+
+  // PMH Sync
+  $('comorb_other_note').addEventListener('input', () => {
+       $('pmh_note').value = $('comorb_other_note').value;
+       debouncedComputeAndSave();
+  });
   
+  // Review Type Switch logic
   document.querySelectorAll('input[name="reviewType"]').forEach(r => r.addEventListener('change', () => {
+      updateWardOptions();
       toggleInfusionsBox();
       debouncedComputeAndSave();
   }));
-  document.querySelectorAll('input[name="clinicianRole"]').forEach(r => r.addEventListener('change', debouncedComputeAndSave));
 
   $('ptWard').addEventListener('change', () => {
     updateWardOtherVisibility();
     debouncedComputeAndSave();
   });
 
-  ['neut','lymph'].forEach(id => {
-    const el = $(id); if (!el) return;
-    el.addEventListener('input', ()=>{ updateNLR(); debouncedComputeAndSave(); });
-  });
-
+  // Bloods sync
+  ['neut','lymph'].forEach(id => { $(id).addEventListener('input', ()=>{ updateNLR(); debouncedComputeAndSave(); }); });
   const sync = (a,b) => { if (!$(a) || !$(b)) return; $(a).addEventListener('input', ()=>{ $(b).value = $(a).value; debouncedComputeAndSave(); }); $(b).addEventListener('input', ()=>{ $(a).value = $(b).value; debouncedComputeAndSave(); }); };
   sync('adds','atoe_adds'); sync('lactate','bl_lac_review'); sync('hb','bl_hb'); sync('wcc','bl_wcc'); sync('crp','bl_crp'); sync('neut','bl_neut'); sync('lymph','bl_lymph');
   
+  // Overrides
   const ovA = $('override_amber'), ovR = $('override_red'), ovC = $('override_clear');
   const setOverride = (level) => {
     $('override').value = level;
@@ -1169,6 +1293,7 @@ function initialize() {
   ovR.addEventListener('click', ()=> setOverride('red'));
   ovC.addEventListener('click', ()=> setOverride('none'));
 
+  // Accordions
   document.querySelectorAll('.accordion-wrapper').forEach(wrapper => {
     const btn = wrapper.querySelector('.accordion');
     const panel = wrapper.querySelector('.panel');
@@ -1185,18 +1310,18 @@ function initialize() {
     });
   });
   
-  // A-E Quick Select Buttons
+  // Quick Selects
   document.querySelectorAll('.quick-select').forEach(btn => {
+      if(btn.onclick || btn.id.includes('btn_b')) return; // skip inline and special handlers
       btn.addEventListener('click', (e) => {
           e.preventDefault();
           const targetEl = $(btn.dataset.target);
           if (targetEl) {
               targetEl.value = btn.dataset.value;
-              targetEl.dispatchEvent(new Event('input')); // Triggers save/compute
+              targetEl.dispatchEvent(new Event('input'));
           }
       });
   });
-
 
   document.querySelectorAll('#panel_devices .btn[data-device-type]').forEach(button => {
         button.addEventListener('click', () => {
@@ -1209,59 +1334,75 @@ function initialize() {
   $('copyBtn').addEventListener('click', ()=> {
     navigator.clipboard.writeText($('summary').value).then(()=> showToast('Summary copied',1400)).catch(()=> showToast('Copy failed',2000));
   });
-  
   $('footerSave').addEventListener('click', ()=> { saveState(true); showToast('Saved',900); });
   $('footerCopy').addEventListener('click', ()=> $('copyBtn').click() );
 
+  // Clear Data
   const clearDataAction = () => {
     if (!confirm('Are you sure you want to clear all data for this patient?')) return;
-    const snapshot = getState();
-    pushUndo(snapshot);
+    pushUndo(getState());
+    
     staticInputs.forEach(id=>{ const el=$(id); if(el) el.value=''; });
-    toggleInputs.forEach(id=>{ const el = $(`toggle_${id}`); if (el) { el.dataset.value='false'; el.classList.remove('active'); const sp = el.querySelector('.state'); if(sp) sp.textContent='No'; } });
+    
+    // Reset segmented controls
+    document.querySelectorAll('.segmented-group').forEach(group => {
+        group.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+    });
+    // Reset simple toggles
+    document.querySelectorAll('.toggle-label').forEach(el => {
+        el.dataset.value = 'false';
+        el.classList.remove('active');
+    });
+
+    // Hide side effects
+    document.querySelectorAll('.concern-note').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.sub-question-wrapper').forEach(el => {
+        el.style.display = 'none'; el.classList.remove('show');
+    });
+    $('infectionMarkers').style.display = 'none';
+    $('mods_inputs').style.display = 'none';
+
     selectInputs.forEach(g=>{ const el=$(g); if(el) el.querySelectorAll('.select-btn').forEach(b=>b.classList.remove('active')); });
     
-    toggleOxyFields(); // <-- This will hide all sub-options
-
+    toggleOxyFields();
     document.querySelectorAll('.trend-buttons .trend-btn').forEach(btn => btn.classList.remove('active'));
-
-    document.querySelectorAll('.concern-note').forEach(el => el.style.display = 'none');
     $('devices-container').innerHTML = '';
-    document.querySelectorAll('.accordion-wrapper').forEach(wrapper => {
-      const btn = wrapper.querySelector('.accordion');
-      const panel = wrapper.querySelector('.panel');
-      panel.style.display = 'none';
-      btn.setAttribute('aria-expanded', 'false');
-      btn.querySelector('.icon').textContent = '[+]';
-    });
-    localStorage.removeItem(ACCORDION_KEY);
-    $('summary').value = '';
-    $('b_device').dataset.manual = "false"; // Reset manual flag
-    $('airway_a').dataset.manual = "false"; // Reset manual flag
     
-    // Reset discharge toggle
-    const dischargeToggle = $('toggle_discharge_from_alert');
-    // dischargeToggle.style.display = 'none'; // No longer needed, it's always visible
-    dischargeToggle.dataset.value = 'false';
-    dischargeToggle.classList.remove('active');
-    const stateSpan = dischargeToggle.querySelector('.state'); 
-    if (stateSpan) stateSpan.textContent = 'No';
+    // Reset Ward list to post default
+    document.querySelector('input[name="reviewType"][value="post"]').checked = true;
+    updateWardOptions();
     
-    $('dischargeNudge').style.display = 'none'; // Hide the nudge message
+    $('chk_medical_rounding').checked = false;
+    $('chk_discharge_alert').checked = false;
+    $('chk_use_mods').checked = false;
+    $('chk_aperients').checked = false;
+    $('b_device').dataset.manual = "false";
+    $('airway_a').dataset.manual = "false";
+    $('dischargeNudge').style.display = 'none';
     
-    toggleInfusionsBox(); // Hide infusions box
-
+    // Reset Bowels
+    $('btn_bno').classList.remove('active');
+    $('btn_bo').classList.remove('active');
+    toggleBowelDate(null);
+    
+    // Reset Override
+    $('override').value = 'none';
+    $('override_reason_box').style.display = 'none';
+    $('override_red').classList.remove('active');
+    $('override_amber').classList.remove('active');
+    
     computeAll();
     saveState(true);
     showToast('Cleared — Undo?', 10000, 'Undo', ()=> {
       const snap = popUndo();
-      if (snap) { restoreState(snap); computeAll(); saveState(true); showToast('Restored',1400); } else { showToast('Undo expired',1400); }
+      if (snap) { restoreState(snap); computeAll(); saveState(true); showToast('Restored',1400); }
     });
   };
 
   $('clearDataBtnTop').addEventListener('click', clearDataAction);
   $('clearDataBtnBottom').addEventListener('click', clearDataAction);
 
+  // Dark Mode
   const darkBtn = $('darkToggle');
   const applyDark = (on) => {
     document.body.classList.toggle('dark', !!on);
@@ -1270,18 +1411,20 @@ function initialize() {
     localStorage.setItem('alertToolDark', !!on ? '1' : '0');
   };
   darkBtn.addEventListener('click', ()=> { const on = !document.body.classList.contains('dark'); applyDark(on); });
-  const darkPref = localStorage.getItem('alertToolDark');
-  if (darkPref === '1') applyDark(true);
+  if (localStorage.getItem('alertToolDark') === '1') applyDark(true);
 
-  
+  // Init sequence
   const saved = loadState();
+  updateWardOptions(); // Pre-load options
   if (saved) {
     restoreState(saved);
   }
   
-  toggleOxyFields(); // Must be after restoreState
-  toggleInfusionsBox(); // Must be after restoreState
+  toggleOxyFields();
+  toggleInfusionsBox();
+  toggleNeuroFields();
 
+  // Open accordions
   const maps = JSON.parse(localStorage.getItem(ACCORDION_KEY) || '{}');
   document.querySelectorAll('.accordion-wrapper').forEach(wrapper => {
       const id = wrapper.dataset.accordionId;
@@ -1299,8 +1442,98 @@ function initialize() {
 }
 
 /* ===========================
-   UX helpers & compute
+   UX helpers & Logic
    =========================== */
+
+function handleSegmentClick(id, value) {
+    // value is string "true", "false", or null
+    // id is like "after_hours"
+    
+    const noteWrapper = $(id + '_note_wrapper');
+    if(noteWrapper) {
+        noteWrapper.style.display = (value === "true") ? 'block' : 'none';
+    }
+    
+    if (id === 'infection') {
+        $('infectionMarkers').style.display = (value === "true") ? 'block' : 'none';
+    }
+    if (id === 'pressors') {
+        const sub = $('sub_pressors_reason');
+        if(value === "true") {
+            sub.style.display = 'block';
+            sub.classList.add('show');
+        } else {
+            sub.style.display = 'none';
+            sub.classList.remove('show');
+        }
+    }
+    if (id === 'intubated') {
+        const sub = $('sub_intubated_reason');
+        if(value === "true") {
+            sub.style.display = 'block';
+            sub.classList.add('show');
+        } else {
+            sub.style.display = 'none';
+            sub.classList.remove('show');
+        }
+    }
+}
+
+function updateWardOptions() {
+    const type = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
+    const wardSelect = $('ptWard');
+    const currentVal = wardSelect.value;
+    
+    wardSelect.innerHTML = '<option value="" selected disabled>Select Ward...</option>';
+    
+    let options = [];
+    if (type === 'pre') {
+        options = ['ICU Pod 1', 'ICU Pod 2', 'ICU Pod 3', 'ICU Pod 4'];
+    } else {
+        options = [
+            '3A','3B','3C','3D',
+            '4A','4B','4C','4D',
+            '5A','5B','5C','5D',
+            '6A','6B','6C','6D',
+            '7A','7B','7C','7D',
+            'SRS2A','SRS1A','SRSA','SRSB',
+            'Medihotel 8','Medihotel 7','Medihotel 6','Medihotel 5',
+            'Short Stay','Transit Lounge',
+            'Mental Health Adult','Mental Health Youth'
+        ];
+    }
+    options.push('Other');
+    
+    options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        wardSelect.appendChild(o);
+    });
+    
+    if (options.includes(currentVal)) {
+        wardSelect.value = currentVal;
+    } else if (currentVal === 'Other') {
+        wardSelect.value = 'Other';
+    }
+    updateWardOtherVisibility();
+}
+
+function toggleNeuroFields() {
+    const group = $('neuroConcern');
+    const active = group.querySelector('.select-btn.active');
+    const typeGroup = $('neuroType');
+    const noteWrapper = $('neuroConcern_note_wrapper');
+    
+    if (active && active.dataset.value !== 'none') {
+        typeGroup.style.display = 'flex';
+        noteWrapper.style.display = 'block';
+    } else {
+        typeGroup.style.display = 'none';
+        noteWrapper.style.display = 'none';
+    }
+}
+
 function getRoundedTime() {
     const now = new Date();
     const minutes = now.getMinutes();
@@ -1314,6 +1547,12 @@ function getRoundedTime() {
     return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
+function formatDateAUS(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+}
+
 function toggleOxyFields() {
   const mod = $('oxMod').querySelector('.select-btn.active')?.dataset.value || 'RA';
   document.querySelectorAll('.npOnly').forEach(el => el.style.display = (mod === 'NP') ? '' : 'none');
@@ -1323,11 +1562,27 @@ function toggleOxyFields() {
 }
 
 function toggleInfusionsBox() {
-    const radio = document.querySelector('input[name="reviewType"]:checked');
-    const reviewType = radio ? radio.value : 'post';
-    $('infusions_wrapper').style.display = (reviewType === 'pre') ? 'grid' : 'none'; // use grid
+    const reviewType = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
+    $('infusions_wrapper').style.display = (reviewType === 'pre') ? 'grid' : 'none';
 }
 
+function toggleBowelDate(mode) {
+    const wrapper = $('bowel_date_wrapper');
+    const label = $('bowel_date_label');
+    const aperients = $('aperients_wrapper');
+    if (!mode) {
+        wrapper.style.display = 'none';
+        return;
+    }
+    wrapper.style.display = 'block';
+    label.textContent = (mode === 'btn_bno') ? 'Date Last Opened' : 'Date BO';
+    if(mode === 'btn_bno') {
+        aperients.style.display = 'block';
+    } else {
+        aperients.style.display = 'none';
+        $('chk_aperients').checked = false; // reset check if switching
+    }
+}
 
 function updateNLR() {
   const neut = num($('neut').value), lymph = num($('lymph').value);
@@ -1335,24 +1590,22 @@ function updateNLR() {
   if(neut !== null && lymph > 0){
     const nlr = (neut / lymph).toFixed(1);
     nlrCalc.textContent = `NLR: ${nlr}`;
-    nlrCalc.classList.remove('status', 'red', 'amber');
+    nlrCalc.className = '';
     if (nlr > 10) nlrCalc.classList.add('status', 'red');
     else if (nlr >=5) nlrCalc.classList.add('status', 'amber');
     return num(nlr);
   } else {
     nlrCalc.textContent = `NLR: --`;
-    nlrCalc.classList.remove('status', 'red', 'amber');
+    nlrCalc.className = '';
     return null;
   }
 }
 
-function updateSingleBloodFlag(key, value, inputElIdPrefix = 'bl_') {
+function updateSingleBloodFlag(key, value) {
     const range = normalRanges[key];
     if(!range) return;
-
-    const inputEl = $(`${inputElIdPrefix}${key}`);
-    const rangeEl = $(`${inputElIdPrefix}${key}_range`);
-    
+    const inputEl = $(`bl_${key}`);
+    const rangeEl = $(`bl_${key}_range`);
     if (inputEl) {
         const isAbnormal = value !== null && (value < range.low || value > range.high);
         inputEl.classList.toggle('blood-abnormal', isAbnormal);
@@ -1367,17 +1620,24 @@ function updateSingleBloodFlag(key, value, inputElIdPrefix = 'bl_') {
     }
 }
 
-
 function updateBloodFlags(s) {
   for (const key of Object.keys(normalRanges)) {
     updateSingleBloodFlag(key, num(s[`bl_${key}`]));
   }
 }
 
-/**
- * Calculates time on ward.
- * @returns {object} { text: "...", hours: diffHours }
- */
+function updateWardOtherVisibility() {
+    const wardSelect = $('ptWard');
+    const otherWrapper = $('ptWardOtherWrapper');
+    if (wardSelect && otherWrapper) {
+        otherWrapper.style.display = (wardSelect.value === 'Other') ? 'block' : 'none';
+    }
+}
+
+/* ===========================
+   Scoring Logic
+   =========================== */
+
 function calculateTimeOnWard(dateStr, timeOfDay) {
   if (!dateStr) return { text: null, hours: null };
   const timeMap = { 'Morning': 9, 'Afternoon': 15, 'Evening': 18, 'Night': 21 };
@@ -1388,18 +1648,15 @@ function calculateTimeOnWard(dateStr, timeOfDay) {
   
   const diffMs = new Date().getTime() - stepdownDate.getTime();
   const diffHours = diffMs / 3600000;
-
   if (diffHours < 0) return { text: '(future date)', hours: diffHours };
 
   let text;
   if (diffHours < 24) {
       text = `${Math.round(diffHours)} hours`;
-  } else if (diffHours < 72) { // 3 days
-      // Round to nearest half day
-      const days = (Math.round((diffHours / 24) * 2) / 2).toFixed(1);
-      text = `${days} day${days === "1.0" ? '' : 's'}`;
+  } else if (diffHours < 72) {
+      const days = (Math.round((diffHours / 24) * 2) / 2);
+      text = `${days} day${days === 1 ? '' : 's'}`;
   } else {
-      // Round to nearest whole day
       const days = Math.round(diffHours / 24);
       text = `${days} day${days === 1 ? '' : 's'}`;
   }
@@ -1407,188 +1664,59 @@ function calculateTimeOnWard(dateStr, timeOfDay) {
 }
 
 
-function updateDisplay(s, red, amber, flaggedElements, location, cat, diffHours = null) {
-    const redCount = red.length, amberCount = amber.length;
-
-    // Clear previous highlights
-    document.querySelectorAll('.flag-red, .flag-amber').forEach(el => el.classList.remove('flag-red', 'flag-amber'));
-    
-    // Apply new highlights
-    flaggedElements.red.forEach(id => {
-      const el = $(id);
-      if(el) el.classList.add('flag-red');
-    });
-    flaggedElements.amber.forEach(id => {
-      const el = $(id);
-      if(el) el.classList.add('flag-amber');
-    });
-
-
-    $('redCount').textContent = redCount;
-    $('amberCount').textContent = amberCount;
-    $('redCount').style.color = redCount > 0 ? 'var(--red)' : 'var(--ink)';
-    $('amberCount').style.color = amberCount > 0 ? 'var(--amber)' : 'var(--ink)';
-    
-    const catTextEl = $('catText');
-    catTextEl.className = 'status ' + cat.id;
-    catTextEl.textContent = cat.text; // Removed "HIGH PRIORITY"
-    
-    const catBox = $('categoryBox');
-    catBox.style.borderColor = `var(--${cat.id})`;
-
-    const flagListEl = $('flagList');
-    if (redCount > 0 || amberCount > 0) {
-        const redFlagsHTML = red.map(f => `<div style="color:var(--red); font-weight:600; margin:6px 0;">[CAT 1] ${f}</div>`);
-        const amberFlagsHTML = amber.map(f => `<div style="color:var(--amber); font-weight:600; margin:6px 0;">[CAT 2] ${f}</div>`);
-        flagListEl.innerHTML = [...redFlagsHTML, ...amberFlagsHTML].join('');
-    } else {
-        flagListEl.innerHTML = `<div style="color:var(--muted)">No risk factors identified</div>`;
-    }
-
-    const followUpEl = $('followUpInstructions');
-    let followUpHTML = '';
-    // Check if discharge is ticked
-    if (s.discharge_from_alert) {
-         followUpHTML = `<div class="status" style="color:var(--blue-hint);">Discharge from ALERT nursing post ICU review list.</div>`;
-    } else if (cat.id === 'red') {
-        if (redCount >= 3) {
-            followUpHTML = `<div class="status red">Twice-daily ALERT review for up to 72h post-ICU stepdown.</div>`;
-        } else {
-            followUpHTML = `<div class="status red">At least daily ALERT review for up to 72h post-ICU stepdown.</div>`;
-        }
-    } else if (cat.id === 'amber') {
-        followUpHTML = `<div class="status amber">Once-daily ALERT review for up to 48h post-ICU stepdown.</div>`;
-    } else {
-        followUpHTML = `<div class="status green">Single ALERT review on ward to ensure continued stability.</div>`;
-    }
-    followUpEl.innerHTML = followUpHTML;
-
-    // --- Discharge Nudge Logic ---
-    const nudgeEl = $('dischargeNudge');
-    nudgeEl.style.display = 'none'; // Reset
-    nudgeEl.textContent = '';
-
-    if (diffHours !== null && diffHours > 0 && !s.discharge_from_alert) {
-        let nudgeText = '';
-        const wardTimeText = calculateTimeOnWard(s.stepdownDate, s.stepdownTime).text; // Get the rounded text
-
-        if (cat.id === 'red' && diffHours >= 72) {
-            nudgeText = `Patient stepped down ${wardTimeText} ago (CAT 1 ≥ 72h). Consider discharge from ALERT.`;
-        } else if (cat.id === 'amber' && diffHours >= 48) {
-            nudgeText = `Patient stepped down ${wardTimeText} ago (CAT 2 ≥ 48h). Consider discharge from ALERT.`;
-        } else if (cat.id === 'green' && diffHours >= 24) {
-            // Assuming 24h for CAT 3
-            nudgeText = `Patient stepped down ${wardTimeText} ago (CAT 3 ≥ 24h). Consider discharge from ALERT.`;
-        }
-
-        if (nudgeText) {
-            nudgeEl.textContent = nudgeText;
-            nudgeEl.style.display = 'block';
-        }
-    }
-    
-    // --- Discharge Toggle Logic (REMOVED) ---
-    // This is no longer needed as the toggle is always visible.
-
-    // Footer and score
-    $('footerName').textContent = s.ptName || '--';
-    $('footerLocation').textContent = location || '--';
-    $('footerAdmission').textContent = s.ptAdmissionReason || '--';
-    const scoreEl = $('footerScore');
-    scoreEl.className = `footer-score tag ${cat.id}`;
-    const flagCount = redCount > 0 ? redCount : amberCount;
-    const flagText = flagCount > 0 ? ` (${flagCount} Flag${flagCount>1?'s':''})` : '';
-    scoreEl.textContent = `${cat.text}${flagText}`;
-}
-
-
 function computeAll() {
-  const s = getState(); // current state from DOM
+  const s = getState();
   
-  // === Auto-populate A-E assessment fields ===
-  
-  // --- Handle Airway (A) ---
-  const airwayText = getAirwayDeviceText(s); // This will be "Tracheostomy (details...)", "Altered Airway", or ""
+  // Auto-populate A-E
+  const airwayText = getAirwayDeviceText(s);
   const airwayEl = $('airway_a');
+  if (airwayEl.dataset.manual !== "true" && airwayText) {
+      airwayEl.value = airwayText; s.airway_a = airwayText;
+  }
   
-  if (airwayEl.dataset.manual !== "true") {
-      // Not manually edited.
-      if (airwayText) {
-          // It's a trache, auto-populate
-          airwayEl.value = airwayText;
-          s.airway_a = airwayText; // Update state for summary
-      }
-      // If airwayText is "", we do nothing, preserving placeholder or saved "Patent" text.
-  }
-  // If manual, s.airway_a is already correct from getState().
-
-  // --- Handle Breathing (B) ---
-  const oxyDeviceText = getOxyDeviceText(s); // Calculate text from scorable section (will be "" for trache)
+  const oxyDeviceText = getOxyDeviceText(s);
   const bDeviceEl = $('b_device');
-
   if (bDeviceEl.dataset.manual !== "true") {
-      // User has not typed manually, so we are free to auto-populate.
-      bDeviceEl.value = oxyDeviceText.trim();
-      s.b_device = oxyDeviceText.trim(); // Update state for summary
-  } else {
-      // User *has* typed manually.
-      // The correct value is already in s.b_device (captured by getState()).
-      // We do nothing, preserving the user's manual entry.
+      bDeviceEl.value = oxyDeviceText; s.b_device = oxyDeviceText;
   }
-
-  // Sync notes to A-E fields if the source note has content
-  if (s.dyspneaConcern_note && s.dyspneaConcern_note.trim() !== '') {
-      $('b_wob').value = s.dyspneaConcern_note;
-      s.b_wob = s.dyspneaConcern_note;
-  }
-  if (s.uopLow_note && s.uopLow_note.trim() !== '') {
-      $('e_uop').value = s.uopLow_note;
-      s.e_uop = s.uopLow_note;
-  }
-  if (s.immobility48h_note && s.immobility48h_note.trim() !== '') {
-      $('ae_mobility').value = s.immobility48h_note;
-      s.ae_mobility = s.ae_mobility_note;
-  }
-
-
+  
   const red = [], amber = [];
   const flaggedElements = { red: [], amber: [] };
-
   const addRisk = (list, text, note, elementId, flagType) => {
-    if (note && note.trim()) {
-        list.push(`${text} (${note.trim()})`);
-    } else {
-        list.push(text);
-    }
-    if (elementId && flagType) {
-        flaggedElements[flagType].push(elementId);
-    }
+    if (note && note.trim()) list.push(`${text} (${note.trim()})`);
+    else list.push(text);
+    if (elementId && flagType) flaggedElements[flagType].push(elementId);
   }
 
   const ward = s.ptWard === 'Other' ? s.ptWardOther : s.ptWard;
   const location = [ward, s.ptBed].filter(Boolean).join(' ').trim();
   
+  // Scoring Logic
   const icuLos = num(s.icuLos);
-  const immobility = s.immobility48h;
-  const pressors = s.pressors24h;
+  const immobility = s.immobility === true;
+  const pressorReason = $('pressorReason').querySelector('.active')?.dataset.value;
+  const pressorsRed = (s.pressors === true && pressorReason === 'shock');
+  const pressorsAmber = (s.pressors === true && pressorReason === 'routine');
+  
   const lactateVal = num(s.lactate);
-  const hasSignificantFlags = pressors || (lactateVal !== null && lactateVal > 2.0);
+  const hasSignificantFlags = pressorsRed || (lactateVal !== null && lactateVal > 2.0);
+  
   let hasCombinedRedFlag = false;
 
   if ((immobility && icuLos >= 4) || (icuLos >= 4 && hasSignificantFlags)) {
       let reason = (immobility && icuLos >= 4) 
           ? `Immobility >48h + ICU LOS ${icuLos} days` 
-          : `ICU LOS ${icuLos} days + Significant flag (${pressors ? 'vasopressors' : 'lactate >2'})`;
+          : `ICU LOS ${icuLos} days + Significant flag (${pressorsRed ? 'vasopressors required' : 'lactate >2'})`;
       red.push(reason);
-      if (immobility) flaggedElements.red.push('toggle_immobility48h');
+      if (immobility) flaggedElements.red.push('seg_immobility');
       flaggedElements.red.push('icuLos');
-      if (pressors) flaggedElements.red.push('toggle_pressors24h');
+      if (pressorsRed) flaggedElements.red.push('seg_pressors');
       if (lactateVal > 2.0) flaggedElements.red.push('lactate');
       hasCombinedRedFlag = true;
   }
 
   if (immobility && !hasCombinedRedFlag) {
-      addRisk(amber, 'Immobility >48h', s.immobility48h_note, 'toggle_immobility48h', 'amber');
+      addRisk(amber, 'Immobility >48h', s.immobility_note, 'seg_immobility', 'amber');
   }
 
   if (icuLos > 7 && !hasCombinedRedFlag) {
@@ -1596,6 +1724,7 @@ function computeAll() {
       flaggedElements.amber.push('icuLos');
   }
 
+  // Oxygen
   const oxModGroup = $('oxMod');
   if (s.oxMod === 'NP') {
     const flow = num(s.npFlow);
@@ -1603,109 +1732,74 @@ function computeAll() {
     else if (flow !== null && flow >= 2) { amber.push(`NP flow ${flow} L/min`); flaggedElements.amber.push(oxModGroup.id); flaggedElements.amber.push('npFlow');}
   } else if (s.oxMod === 'HFNP') {
     const fio2 = num(s.hfnpFio2), flow = num(s.hfnpFlow);
-    const hfnpParts = [];
-    if (fio2 > 30) { hfnpParts.push(`FiO2 ${fio2}%`); flaggedElements.red.push('hfnpFio2');}
-    if (flow > 30) { hfnpParts.push(`flow ${flow}L`); flaggedElements.red.push('hfnpFlow');}
-    if (hfnpParts.length > 0) {
-      red.push(`HFNP concern: ${hfnpParts.join(' & ')}`);
-      flaggedElements.red.push(oxModGroup.id);
-    } else if ((fio2 > 21) || (flow > 0)) {
-      amber.push('On HFNP (low settings)');
-      flaggedElements.amber.push(oxModGroup.id);
-    }
+    if (fio2 > 30 || flow > 30) { red.push(`HFNP concern`); flaggedElements.red.push(oxModGroup.id); }
+    else if ((fio2 > 21) || (flow > 0)) { amber.push('On HFNP (low settings)'); flaggedElements.amber.push(oxModGroup.id); }
   } else if (s.oxMod === 'NIV') {
-    red.push('On NIV');
-    flaggedElements.red.push(oxModGroup.id);
+    red.push('On NIV'); flaggedElements.red.push(oxModGroup.id);
   } else if (s.oxMod === 'Trache') {
-    const tracheType = s.tracheType || 'Altered Airway'; // User request: default to 'Altered Airway'
-    const tracheStatus = s.tracheStatus;
-    
-    if (tracheStatus === 'New') {
-      addRisk(red, tracheType, null, 'oxMod', 'red');
-    } else if (tracheStatus === 'Stable') {
-      addRisk(amber, tracheType, null, 'oxMod', 'amber');
-    } else {
-      // No status selected
-      addRisk(amber, tracheType, null, 'oxMod', 'amber');
-    }
+      const ts = s.tracheStatus;
+      if (ts === 'New') addRisk(red, s.tracheType||'Trache', null, 'oxMod', 'red');
+      else addRisk(amber, s.tracheType||'Trache', null, 'oxMod', 'amber');
   }
 
-  if (s.np3Last12h) addRisk(red, 'Historical high O2 use', s.np3Last12h_note, 'toggle_np3Last12h', 'red');
-  if (s.rapidWean) addRisk(red, 'Rapid oxygen wean in last 12h', s.rapidWean_note, 'toggle_rapidWean', 'red');
-  if (s.after_hours_discharge) addRisk(red, 'Discharged after-hours', s.after_hours_discharge_note, 'toggle_after_hours_discharge', 'red');
-  if (s.pressors24h && !hasCombinedRedFlag) addRisk(red, 'Vasopressors in last 24h', s.pressors24h_note, 'toggle_pressors24h', 'red');
+  // Historical O2
+  if (s.hist_o2 === true) addRisk(red, 'Historical high O2/NIV', s.hist_o2_note, 'seg_hist_o2', 'red');
+  
+  // Intubation Logic
+  if (s.intubated === true) {
+      const reason = $('intubatedReason').querySelector('.active')?.dataset.value;
+      let label = 'Intubated in last 24h';
+      if (reason === 'concern') {
+          addRisk(red, `${label} (Concerns)`, s.intubation_details, 'seg_intubated', 'red');
+      } else {
+          // Routine/Elective
+          addRisk(amber, `${label} (Routine/Elective)`, s.intubation_details, 'seg_intubated', 'amber');
+      }
+  }
+
+  if (s.rapid_wean === true) addRisk(red, 'Rapid oxygen wean in last 12h', s.rapid_wean_note, 'seg_rapid_wean', 'red');
+  if (s.after_hours === true) addRisk(red, 'Discharged after-hours', s.after_hours_note, 'seg_after_hours', 'red');
+  
+  // Pressors solo logic (if not combined above)
+  if (pressorsRed && !hasCombinedRedFlag) addRisk(red, 'Vasopressors required (Shock/Complicated)', s.pressors_note, 'seg_pressors', 'red');
+  else if (pressorsAmber) addRisk(amber, 'Vasopressors (Routine/Short term)', s.pressors_note, 'seg_pressors', 'amber');
+
   if (num(s.adds) >= 3) { red.push(`ADDS ${s.adds}`); flaggedElements.red.push('adds');}
-
-  if (lactateVal > 2.5) {red.push(`Lactate ${lactateVal}`); flaggedElements.red.push('lactate');}
-  else if (lactateVal >= 2.0 && !hasCombinedRedFlag) {amber.push(`Lactate ${lactateVal}`); flaggedElements.amber.push('lactate');}
+  if (lactateVal > 2.5) { red.push(`Lactate ${lactateVal}`); flaggedElements.red.push('lactate');}
+  else if (lactateVal >= 2.0 && !hasCombinedRedFlag) { amber.push(`Lactate ${lactateVal}`); flaggedElements.amber.push('lactate');}
   
-  if (s.uopLow) addRisk(red, 'UOP concerning / downtrending', s.uopLow_note, 'toggle_uopLow', 'red');
+  if (s.uop === true) addRisk(red, 'UOP concerning / downtrending', s.uop_note, 'seg_uop', 'red');
+  if (s.renal === true) addRisk(red, 'Renal Concern', s.renal_note, 'seg_renal', 'red');
   
-  if (s.renalConcern) {
-    let renalDetails = [];
-    if (s.bl_cr_review) renalDetails.push(`Cr ${s.bl_cr_review}`);
-    let renalText = 'Renal Concern';
-    if(renalDetails.length > 0) renalText += ` (${renalDetails.join(', ')})`;
-    addRisk(red, renalText, s.renalConcern_note, 'toggle_renalConcern', 'red');
+  // Neuro - 3 Way Split
+  if (s.neuroConcern === 'severe') {
+      addRisk(red, 'Severe Neuro Concern', s.neuroConcern_note, 'neuroConcern', 'red');
+  } else if (s.neuroConcern === 'mod') {
+      addRisk(red, 'Moderate Neuro Concern', s.neuroConcern_note, 'neuroConcern', 'red');
+  } else if (s.neuroConcern === 'mild') {
+      addRisk(amber, 'Mild Neuro Concern', s.neuroConcern_note, 'neuroConcern', 'amber');
   }
   
-  if (s.neuroConcern === 'severe' || s.neuroConcern === 'mild') {
-      let neuroDetailsParts = [];
-      if (s.d_alert && s.d_alert.trim()) {
-          neuroDetailsParts.push(s.d_alert.trim());
-      }
-      if (s.d_gcs && s.d_gcs.trim()) {
-          const d_alert_clean = s.d_alert ? s.d_alert.trim().toLowerCase() : '';
-          if (!d_alert_clean.includes('gcs')) {
-             neuroDetailsParts.push(`GCS ${s.d_gcs.trim()}`);
-          }
-      }
+  // Electrolyte
+  if (s.electrolyteConcern === 'severe') addRisk(red, 'Severe electrolyte concern', s.electrolyteConcern_note, 'electrolyteConcern', 'red');
+  else if (s.electrolyteConcern === 'mild') addRisk(amber, 'Electrolyte concern', s.electrolyteConcern_note, 'electrolyteConcern', 'amber');
 
-      let neuroDetailsText = '';
-      if (neuroDetailsParts.length > 0) {
-          neuroDetailsText = ` (${neuroDetailsParts.join(', ')})`;
-      }
+  // Resp Concern - 3 Way Split
+  if (s.dyspneaConcern === 'severe') addRisk(red, 'Severe respiratory concern', s.dyspneaConcern_note, 'dyspneaConcern', 'red');
+  else if (s.dyspneaConcern === 'mod') addRisk(red, 'Moderate respiratory concern', s.dyspneaConcern_note, 'dyspneaConcern', 'red');
+  else if (s.dyspneaConcern === 'mild') addRisk(amber, 'Mild respiratory concern', s.dyspneaConcern_note, 'dyspneaConcern', 'amber');
 
-      if (s.neuroConcern === 'severe') {
-          const baseText = `Severe confusion/delirium${neuroDetailsText}`;
-          addRisk(red, baseText, s.neuroConcern_note, 'neuroConcern', 'red');
-      } else if (s.neuroConcern === 'mild') {
-          const baseText = `Mild confusion/delirium${neuroDetailsText}`;
-          addRisk(amber, baseText, s.neuroConcern_note, 'neuroConcern', 'amber');
-      }
-  }
-  
-  if (s.electrolyteConcern === 'severe') {
-      addRisk(red, 'Severe electrolyte concern', s.electrolyteConcern_note, 'electrolyteConcern', 'red');
-  } else if (s.electrolyteConcern === 'mild') {
-      addRisk(amber, 'Mild/moderate electrolyte concern', s.electrolyteConcern_note, 'electrolyteConcern', 'amber');
-  }
-
-  if (s.dyspneaConcern === 'severe') {
-    let dyspneaDetails = [];
-    if (s.b_rr) dyspneaDetails.push(`RR ${s.b_rr}`);
-    if (s.b_wob) dyspneaDetails.push(`WOB ${s.b_wob}`);
-    let dyspneaText = 'Severe respiratory concern';
-    if (dyspneaDetails.length > 0) dyspneaText += ` (${dyspneaDetails.join(', ')})`;
-    addRisk(red, dyspneaText, s.dyspneaConcern_note, 'dyspneaConcern', 'red');
-  } else if (s.dyspneaConcern === 'mild') {
-    addRisk(amber, 'Mild/moderate respiratory concern', s.dyspneaConcern_note, 'dyspneaConcern', 'amber');
-  }
-
+  // Hb
   const hb = num(s.hb);
-  const hb_dropping = s.hb_dropping;
-  if (hb !== null && hb <= 70) { 
-      red.push(`Anemia concern (Hb ${hb})`); 
-      flaggedElements.red.push('hb'); 
-  } else if (hb !== null && hb >= 71 && hb <= 100 && hb_dropping) { 
+  if (hb !== null && hb <= 70) { red.push(`Anemia concern (Hb ${hb})`); flaggedElements.red.push('hb'); }
+  else if (hb !== null && hb <= 100 && s.hb_dropping === true) { 
       amber.push(`Anemia concern (Hb ${hb}, dropping)`); 
-      flaggedElements.amber.push('hb'); 
-      flaggedElements.amber.push('toggle_hb_dropping');
+      flaggedElements.amber.push('hb'); flaggedElements.amber.push('seg_hb_dropping');
   }
 
-
+  // Comorbs (Simple Toggles)
   const comorbIds = ['comorb_copd','comorb_hf','comorb_esrd','comorb_diabetes','comorb_cirrhosis', 'comorb_other'];
-  const comorbCount = comorbIds.filter(id => s[id]).length;
+  const comorbCount = comorbIds.filter(id => s[id] === true).length;
   if (comorbCount >= 3) { 
       red.push('Multiple comorbidities'); 
       comorbIds.forEach(id => {if(s[id]) flaggedElements.red.push('toggle_'+id) });
@@ -1715,267 +1809,275 @@ function computeAll() {
       comorbIds.forEach(id => {if(s[id]) flaggedElements.amber.push('toggle_'+id) });
   }
 
-  if (s.infectionConcern) {
-    const wcc = num(s.wcc), crp = num(s.crp), nlr = updateNLR(), temp = num(s.e_temp);
-    let markerParts = [];
-    let hasRedMarker = false;
-    let hasAmberMarker = false;
-
-    if (wcc !== null && (wcc < normalRanges.wcc.low || wcc > normalRanges.wcc.high)) { markerParts.push(`WCC ${wcc}`); hasRedMarker = true; }
-    if (crp > 100) { markerParts.push(`CRP ${crp}`); hasRedMarker = true; }
-    else if (crp > 50) { markerParts.push(`CRP ${crp}`); hasAmberMarker = true; }
-    if (nlr > 10) { markerParts.push(`NLR ${nlr}`); hasRedMarker = true; }
-    else if (nlr >= 5) { markerParts.push(`NLR ${nlr}`); hasAmberMarker = true; }
-    if (temp >= 38.0) { markerParts.push(`Temp ${temp}C`); hasAmberMarker = true; }
-
-    let baseText = 'Infection Concern';
-    if (markerParts.length > 0) {
-      baseText += `: High markers (${markerParts.join(', ')})`;
-    }
-
-    let category = 'red'; // Default to red if box is ticked with no markers
-    if (hasRedMarker) {
-      category = 'red';
-    } else if (hasAmberMarker) {
-      category = 'amber';
-    }
-    
-    addRisk(category === 'red' ? red : amber, baseText, s.infectionConcern_note, 'toggle_infectionConcern', category);
+  // Infection
+  if (s.infection === true) {
+     const wcc = num(s.wcc), crp = num(s.crp), nlr = updateNLR(), temp = num(s.e_temp);
+     let markerParts = [];
+     let hasRedMarker = false, hasAmberMarker = false;
+     if (wcc !== null && (wcc < 4 || wcc > 11)) { markerParts.push(`WCC ${wcc}`); hasRedMarker = true; }
+     if (crp > 100) { markerParts.push(`CRP ${crp}`); hasRedMarker = true; }
+     else if (crp > 50) { markerParts.push(`CRP ${crp}`); hasAmberMarker = true; }
+     if (nlr > 10) { markerParts.push(`NLR ${nlr}`); hasRedMarker = true; }
+     else if (nlr >= 5) { markerParts.push(`NLR ${nlr}`); hasAmberMarker = true; }
+     
+     let baseText = 'Infection Concern';
+     if(markerParts.length) baseText += `: High markers (${markerParts.join(', ')})`;
+     
+     let cat = hasRedMarker ? 'red' : (hasAmberMarker ? 'amber' : 'red'); 
+     addRisk(cat === 'red' ? red : amber, baseText, s.infection_note, 'seg_infection', cat);
   }
 
+  // Override
   const overrideNote = $('overrideNote')?.value ? ` (${$('overrideNote').value})` : '';
   if ($('override').value === 'red') red.push(`Override: CAT 1 concern${overrideNote}`);
   else if ($('override').value === 'amber') amber.push(`Override: CAT 2 concern${overrideNote}`);
 
   updateBloodFlags(s);
-  updateSingleBloodFlag('wcc', num(s.wcc), '');
-  updateSingleBloodFlag('crp', num(s.crp), '');
-  updateSingleBloodFlag('neut', num(s.neut), '');
-  updateSingleBloodFlag('lymph', num(s.lymph), '');
 
-  // --- Calculate Category ---
+  // Category Calc
   const redCount = red.length;
   const amberCount = amber.length;
   const cat = (redCount > 0) ? {id: 'red', text: 'CAT 1', catNum: 1} : (amberCount > 0) ? {id: 'amber', text: 'CAT 2', catNum: 2} : {id: 'green', text: 'CAT 3', catNum: 3};
   
-  // Get time on ward
-  const wardTime = calculateTimeOnWard(s.stepdownDate, s.stepdownTime);
-  const timeOnWardText = wardTime.text;
-  const timeOnWardHours = wardTime.hours;
-
-  // --- Update UI ---
-  updateDisplay(s, red, amber, flaggedElements, location, cat, timeOnWardHours);
-
-  // --- Generate Summary ---
+  // UI Updates
+  $('redCount').textContent = redCount;
+  $('amberCount').textContent = amberCount;
+  $('redCount').style.color = redCount > 0 ? 'var(--red)' : 'var(--ink)';
+  $('amberCount').style.color = amberCount > 0 ? 'var(--amber)' : 'var(--ink)';
   
-  // Helper function to clean A-E parts: trim whitespace and remove trailing periods
+  const catTextEl = $('catText');
+  catTextEl.className = 'status ' + cat.id;
+  catTextEl.textContent = cat.text;
+  $('categoryBox').style.borderColor = `var(--${cat.id})`;
+
+  const flagListEl = $('flagList');
+  if (redCount > 0 || amberCount > 0) {
+      const redFlagsHTML = red.map(f => `<div style="color:var(--red); font-weight:600; margin:6px 0;">[CAT 1] ${f}</div>`);
+      const amberFlagsHTML = amber.map(f => `<div style="color:var(--amber); font-weight:600; margin:6px 0;">[CAT 2] ${f}</div>`);
+      flagListEl.innerHTML = [...redFlagsHTML, ...amberFlagsHTML].join('');
+  } else {
+      flagListEl.innerHTML = `<div style="color:var(--muted)">No risk factors identified</div>`;
+  }
+  
+  // Highlights
+  document.querySelectorAll('.flag-red, .flag-amber').forEach(el => el.classList.remove('flag-red', 'flag-amber'));
+  flaggedElements.red.forEach(id => { const el=$(id); if(el) el.classList.add('flag-red'); });
+  flaggedElements.amber.forEach(id => { const el=$(id); if(el) el.classList.add('flag-amber'); });
+
+  // Plan Text
+  const followUpEl = $('followUpInstructions');
+  let followUpHTML = '';
+  if (s.chk_discharge_alert === true) {
+      followUpHTML = `<div class="status" style="color:var(--blue-hint);">Discharge from ALERT nursing post ICU review list.</div>`;
+  } else if (cat.id === 'red') {
+      followUpHTML = `<div class="status red">${redCount >= 3 ? 'Twice-daily' : 'At least daily'} ALERT review for up to 72h post-ICU stepdown.</div>`;
+  } else if (cat.id === 'amber') {
+      followUpHTML = `<div class="status amber">Once-daily ALERT review for up to 48h post-ICU stepdown.</div>`;
+  } else {
+      followUpHTML = `<div class="status green">Single ALERT review on ward to ensure continued stability.</div>`;
+  }
+  followUpEl.innerHTML = followUpHTML;
+  
+  // Discharge Nudge
+  const wardTime = calculateTimeOnWard(s.stepdownDate, s.stepdownTime);
+  const nudgeEl = $('dischargeNudge');
+  nudgeEl.style.display = 'none';
+  if (wardTime.hours !== null && wardTime.hours > 0 && s.chk_discharge_alert !== true) {
+      let nudgeText = '';
+      if (cat.id === 'red' && wardTime.hours >= 72) nudgeText = `Patient stepped down ${wardTime.text} ago (CAT 1 ≥ 72h). Consider discharge.`;
+      else if (cat.id === 'amber' && wardTime.hours >= 48) nudgeText = `Patient stepped down ${wardTime.text} ago (CAT 2 ≥ 48h). Consider discharge.`;
+      else if (cat.id === 'green' && wardTime.hours >= 24) nudgeText = `Patient stepped down ${wardTime.text} ago (CAT 3 ≥ 24h). Consider discharge.`;
+      
+      if(nudgeText) { nudgeEl.textContent = nudgeText; nudgeEl.style.display = 'block'; }
+  }
+
+  // Footer
+  $('footerName').textContent = s.ptName || '--';
+  $('footerLocation').textContent = location || '--';
+  $('footerAdmission').textContent = s.ptAdmissionReason || '--';
+  const scoreEl = $('footerScore');
+  scoreEl.className = `footer-score tag ${cat.id}`;
+  const flagCount = redCount > 0 ? redCount : amberCount;
+  scoreEl.textContent = `${cat.text}${flagCount>0 ? ` (${flagCount} Flag${flagCount>1?'s':''})` : ''}`;
+
+  generateSummary(s, cat, location, wardTime.text, red, amber);
+}
+
+function generateSummary(s, cat, location, timeOnWardText, red, amber) {
   const clean = (str) => str ? str.trim().replace(/\.$/, '').trim() : null;
   const trendWord = val => ({ '↑': ' (uptrending)', '↓':' (downtrending)', '→':' (stable)'}[val] || '');
-
-
+  
   const role = s.clinicianRole || 'ALERT CNS';
-  let reviewTitle = `${role} Review`;
-  if (s.reviewType === 'post') {
-      reviewTitle = `${role} post ICU review`;
-  } else {
-      reviewTitle = `${role} pre ICU stepdown review`;
-  }
+  const reviewTitle = (s.reviewType === 'post') ? `${role} post ICU review` : `${role} pre ICU stepdown review`;
   
   const headerLines = [];
+  const ptDetails = [];
+  if (s.ptName) ptDetails.push(`Patient: ${s.ptName}`);
+  if (s.ptMrn) ptDetails.push(`URN: ...${s.ptMrn}`);
+  if (location) ptDetails.push(`Location: ${location}`);
+  if (ptDetails.length) headerLines.push(ptDetails.join(' | '));
   
-  const patientDetailsParts = [];
-  if (s.ptName) patientDetailsParts.push(`Patient: ${s.ptName}`);
-  if (s.ptMrn) patientDetailsParts.push(`URN: ...${s.ptMrn}`);
-  if (location) patientDetailsParts.push(`Location: ${location}`);
-  
-  if (patientDetailsParts.length > 0) {
-      headerLines.push(patientDetailsParts.join(' | '));
-  }
-
   headerLines.push(reviewTitle, `Time of review: ${getRoundedTime()}`);
+  
+  // Use stepdown date as ICU discharge date
+  if (s.stepdownDate) headerLines.push(`ICU Discharge Date: ${formatDateAUS(s.stepdownDate)}`);
 
   const stepdownParts = [];
-  if (s.reviewType === 'post') {
-      if(timeOnWardText) stepdownParts.push(`Time since stepdown: ${timeOnWardText}.`);
-  }
+  if (s.reviewType === 'post' && timeOnWardText) stepdownParts.push(`Time since stepdown: ${timeOnWardText}.`);
   if (s.icuLos) stepdownParts.push(`ICU LOS: ${s.icuLos} days.`);
-  if(stepdownParts.length > 0) headerLines.push('', ...stepdownParts);
+  if (stepdownParts.length) headerLines.push('', ...stepdownParts);
   
   if(s.ptAdmissionReason) headerLines.push(`Reason for ICU Admission: ${s.ptAdmissionReason}`);
   
-  const lines = [...headerLines, ''];
+  const lines = [...headerLines, '', `ALERT Nursing Review Category - ${cat.text}`];
+  if (s.pmh_note && s.pmh_note.trim()) lines.push('', 'PMH:', s.pmh_note.trim());
   
-  lines.push(`ALERT Nursing Review Category - ${cat.text}`);
-
-  if (s.pmh_note && s.pmh_note.trim() !== '') {
-      lines.push('', 'PMH:', s.pmh_note.trim());
-  }
-
+  // A-E
   const atoe = [];
-  const score_line = (s.use_mods) ? [s.mods_score ? `MODS Score: ${s.mods_score}`:null, s.mods_details ? `Details: ${s.mods_details}`:null].filter(Boolean).join(' | ') : s.adds ? `ADDS: ${s.adds}` : '';
-  if (score_line) atoe.push(score_line);
+  // MODS line
+  if (s.chk_use_mods === true) {
+      const modsParts = [];
+      if(s.mods_score) modsParts.push(`MODS Score: ${s.mods_score}`);
+      if(s.mods_details) modsParts.push(`Details: ${s.mods_details}`);
+      if(modsParts.length > 0) atoe.push(modsParts.join(' | '));
+  } else if(s.adds) {
+      atoe.push(`ADDS: ${s.adds}`); // fallback if no mods
+  }
   
-  // A-line: Use s.airway_a which is now populated by manual entry or getAirwayDeviceText
   if (s.airway_a) atoe.push(`A: ${s.airway_a.trim()}`);
   
-  // B-line: Use s.b_device which is populated by manual entry or getOxyDeviceText
   const b_parts = [
     clean(s.b_rr) ? `RR ${clean(s.b_rr)}${trendWord(s.b_rr_trend)}`:null, 
     clean(s.b_spo2) ? `SpO2 ${clean(s.b_spo2)}${clean(s.b_spo2).includes('%') ? '' : '%'}`:null, 
     clean(s.b_device),
     clean(s.b_wob) ? `WOB ${clean(s.b_wob)}`:null
   ];
-  const b_line = b_parts.filter(Boolean).join(', ');
-  if (b_line) atoe.push(`B: ${b_line}`);
+  if(b_parts.filter(Boolean).length) atoe.push(`B: ${b_parts.filter(Boolean).join(', ')}`);
+  
+  let hrString = clean(s.c_hr) ? `HR ${clean(s.c_hr)}${trendWord(s.c_hr_trend)}`:null;
+  if (hrString && s.c_hr_rhythm) hrString += ` (${s.c_hr_rhythm})`;
   
   const c_parts = [
-    clean(s.c_hr) ? `HR ${clean(s.c_hr)}${trendWord(s.c_hr_trend)}`:null, 
+    hrString, 
     clean(s.c_nibp) ? `NIBP ${clean(s.c_nibp)}${trendWord(s.c_nibp_trend)}`:null, 
     clean(s.c_cr) ? `Cap Refill ${clean(s.c_cr)}`:null, 
     clean(s.c_perf)
   ];
-  const c_line = c_parts.filter(Boolean).join(', ');
-  if (c_line) atoe.push(`C: ${c_line}`);
+  if(c_parts.filter(Boolean).length) atoe.push(`C: ${c_parts.filter(Boolean).join(', ')}`);
   
-  const d_alert_clean = clean(s.d_alert);
-  const d_gcs_clean = clean(s.d_gcs);
-  let gcs_part = null;
-  if (d_gcs_clean) {
-      // Only add GCS part if alert is empty OR if alert does not already contain 'gcs'
-      if (!d_alert_clean || (d_alert_clean && !d_alert_clean.toLowerCase().includes('gcs'))) {
-          gcs_part = `GCS ${d_gcs_clean}`;
-      }
-  }
-  const d_parts = [
-    d_alert_clean, 
-    gcs_part, 
-    clean(s.d_pain) ? `Pain ${clean(s.d_pain)}`:null
-  ];
-  const d_line = d_parts.filter(Boolean).join(', ');
-  if (d_line) atoe.push(`D: ${d_line}`);
+  // Alert + Pain
+  const d_parts = [];
+  if(s.d_alert && s.d_alert.trim()) d_parts.push(s.d_alert.trim());
+  if(s.d_pain && s.d_pain.trim()) d_parts.push(`Pain ${s.d_pain.trim()}`);
+  if(d_parts.length) atoe.push(`D: ${d_parts.join(', ')}`);
   
   const e_parts = [
     clean(s.e_temp) ? `Temp ${clean(s.e_temp)}${String(clean(s.e_temp)).toLowerCase().match(/febrile|afebrile|C/) ? '' : 'C'}`:null, 
     clean(s.e_bsl) ? `BSL ${clean(s.e_bsl)}`:null, 
     clean(s.e_uop) ? `UOP ${clean(s.e_uop)}`:null
   ];
-  const e_line = e_parts.filter(Boolean).join(', ');
-  if (e_line) atoe.push(`E: ${e_line}`);
+  if(e_parts.filter(Boolean).length) atoe.push(`E: ${e_parts.filter(Boolean).join(', ')}`);
   
-  const otherSystemItems = [];
-  // These are free-text fields, so we just trim whitespace, not trailing periods.
-  if (s.ae_mobility) otherSystemItems.push(`Mobility/MSK: ${s.ae_mobility.trim()}`);
-  if (s.ae_diet) otherSystemItems.push(`Diet: ${s.ae_diet.trim()}`);
-  if (s.ae_bowels) otherSystemItems.push(`Bowels: ${s.ae_bowels.trim()}`);
-
-  if (atoe.length > 0 && otherSystemItems.length > 0) {
-      atoe.push('---');
+  const otherSys = [];
+  if (s.ae_mobility) otherSys.push(`Mobility/MSK: ${s.ae_mobility.trim()}`);
+  if (s.ae_diet) otherSys.push(`Diet: ${s.ae_diet.trim()}`);
+  
+  // Bowels Logic
+  let bowelStr = s.ae_bowels ? s.ae_bowels.trim() : '';
+  if (s.bowel_mode === 'btn_bno' && s.bowel_date) {
+      const date = formatDateAUS(s.bowel_date);
+      bowelStr = bowelStr ? `BNO (Last opened: ${date}), ${bowelStr}` : `BNO (Last opened: ${date})`;
+      if (s.chk_aperients) bowelStr += ' (Aperients charted)';
+  } else if (s.bowel_mode === 'btn_bo' && s.bowel_date) {
+      const date = formatDateAUS(s.bowel_date);
+      bowelStr = bowelStr ? `BO (Date: ${date}), ${bowelStr}` : `BO (Date: ${date})`;
+  } else if (s.bowel_mode === 'btn_bno') {
+      bowelStr = bowelStr ? `BNO, ${bowelStr}` : `BNO`;
+      if (s.chk_aperients) bowelStr += ' (Aperients charted)';
+  } else if (s.bowel_mode === 'btn_bo') {
+      bowelStr = bowelStr ? `BO, ${bowelStr}` : `BO`;
   }
-  atoe.push(...otherSystemItems);
+  
+  if (bowelStr) otherSys.push(`Bowels: ${bowelStr}`);
+  
+  if (atoe.length || otherSys.length) {
+      lines.push('', 'A-E ASSESSMENT', ...atoe);
+      if(atoe.length && otherSys.length) lines.push('---');
+      lines.push(...otherSys);
+  }
 
-  if (atoe.length > 0) lines.push('', 'A-E ASSESSMENT', ...atoe);
-
+  // Bloods
   const bloodLines = [];
-  const bloodParts = ['lac_review','hb','wcc','crp','cr_review','k','na','mg','plts','alb','neut','lymph'];
-  const bloodLabelMap = {
-    'lac_review': 'Lac', 'hb': 'Hb', 'wcc': 'WCC', 'crp': 'CRP', 'cr_review': 'Cr',
-    'k': 'K', 'na': 'Na', 'mg': 'Mg', 'plts': 'Plts', 'alb': 'Alb', 'neut': 'Neut', 'lymph': 'Lymph'
-  };
+  const bloodLabelMap = { 'lac_review': 'Lac', 'hb': 'Hb', 'wcc': 'WCC', 'crp': 'CRP', 'cr_review': 'Cr', 'k': 'K', 'na': 'Na', 'mg': 'Mg', 'plts': 'Plts', 'alb': 'Alb', 'neut': 'Neut', 'lymph': 'Lymph', 'phos': 'PO4' };
+  const bloodParts = ['lac_review','hb','wcc','crp','cr_review','k','na','mg','phos','plts','alb','neut','lymph'];
   
   const bloods = bloodParts.map(k => {
     const v = s[`bl_${k}`]; if (!v) return null;
-    const trendKey = `bl_${k}_trend`;
-    const trend = s[trendKey] || '';
-    const label = bloodLabelMap[k] || k.replace('_review',''); // Use map
-    return `${label} ${v}${trendWord(trend)}`; // Removed .toUpperCase()
+    const trend = s[`bl_${k}_trend`] || '';
+    return `${bloodLabelMap[k]} ${v}${trendWord(trend)}`;
   }).filter(Boolean).join(', ');
 
   let fullBloodLine = bloods;
-  if (s.new_bloods_ordered) {
-      fullBloodLine += `${bloods ? ' ' : ''}(new bloods ordered for next round.)`;
-  }
+  if (s.new_bloods_ordered === true) fullBloodLine += `${bloods ? ' ' : ''}(new bloods ordered for next round.)`;
+  
   if (fullBloodLine) bloodLines.push(`Bloods: ${fullBloodLine}`);
   if (s.elec_replace_note) bloodLines.push(`Electrolyte Plan: ${s.elec_replace_note.trim()}`);
-
-  if (bloodLines.length > 0) lines.push('', ...bloodLines);
+  if (bloodLines.length) lines.push('', ...bloodLines);
   
   if (s.reviewType === 'pre' && s.infusions_note && s.infusions_note.trim()) {
       lines.push(`Infusions: ${s.infusions_note.trim()}`);
   }
   
-  const deviceParts = [];
-  if(s.devices){
-    deviceTypes.forEach(type => {
-        if (s.devices[type] && s.devices[type].length > 0) {
-            s.devices[type].forEach((details) => {
-                let deviceString = '';
-                const detailsTrimmed = details ? details.trim() : '';
-
-                if (type === 'Other CVAD' || type === 'Other Device') {
-                    // Request: Only show the free text
-                    if (detailsTrimmed) {
-                        deviceString = detailsTrimmed;
-                    } else {
-                        // Edge case: user added 'Other Device' but wrote nothing.
-                        deviceString = type; 
-                    }
+  // Devices
+  if(s.devices) {
+      const devLines = [];
+      deviceTypes.forEach(type => {
+        if(s.devices[type] && s.devices[type].length) {
+            s.devices[type].forEach(d => {
+                const det = d ? d.trim() : '';
+                if(type === 'Other CVAD' || type === 'Other Device') {
+                    devLines.push(det || type);
                 } else {
-                    // Original logic for all other types
-                    deviceString = type;
-                    if (detailsTrimmed) deviceString += ` (${detailsTrimmed})`;
+                    devLines.push(det ? `${type} (${det})` : type);
                 }
-                deviceParts.push(deviceString);
             });
         }
-    });
+      });
+      if(devLines.length) lines.push('', 'DEVICES:', ...devLines.map(d=>'- '+d));
   }
   
-  if (deviceParts.length > 0) {
-    lines.push('');
-    lines.push('DEVICES:');
-    deviceParts.forEach(p=> lines.push('- ' + p));
-  }
-  
+  // Context
   const contextLines = [];
   if (s.goc_note) {
     const gocText = s.goc_note.trim();
-    if (gocText.toLowerCase().startsWith('goc')) {
-      contextLines.push(gocText);
-    } else {
-      contextLines.push(`GOC: ${gocText}`);
-    }
+    contextLines.push(gocText.toLowerCase().startsWith('goc') ? gocText : `GOC: ${gocText}`);
   }
   if (s.allergies_note) contextLines.push(`Allergies: ${s.allergies_note.trim()}`);
   if (s.pics_note) contextLines.push(`Post ICU Syndrome: ${s.pics_note.trim()}`);
   if (s.context_other_note) contextLines.push(`Other: ${s.context_other_note.trim()}`);
-  if (contextLines.length > 0) {
-      lines.push('', ...contextLines);
-  }
-
+  if (contextLines.length) lines.push('', ...contextLines);
+  
+  // Risk Factors
   const allFlags = [...red, ...amber];
-  if (allFlags.length > 0) {
-    lines.push('', 'IDENTIFIED RISK FACTORS:');
-    allFlags.forEach(f => lines.push('- ' + f));
-  }
-
-  lines.push('', 'PLAN & FOLLOW-UP:');
-  if (s.discharge_from_alert) {
+  if (allFlags.length) lines.push('', 'IDENTIFIED RISK FACTORS:', ...allFlags.map(f=>'- '+f));
+  
+  // Plan
+  lines.push('', 'PLAN:');
+  if (s.chk_discharge_alert === true) {
       lines.push('- Follow-up: Discharge from ALERT nursing post ICU review list.');
-  } else if (redCount > 0) {
-      if (redCount >= 3) {
-         lines.push(`- Follow-up: Twice-daily ALERT review for up to 72h post-ICU stepdown.`);
-      } else {
-         lines.push(`- Follow-up: At least daily ALERT review for up to 72h post-ICU stepdown.`);
-      }
-  } else if (amberCount > 0) {
+  } else if (cat.id === 'red') {
+      lines.push(`- Follow-up: ${red.length >= 3 ? 'Twice-daily' : 'At least daily'} ALERT review for up to 72h post-ICU stepdown.`);
+  } else if (cat.id === 'amber') {
       lines.push('- Follow-up: Once-daily ALERT review for up to 48h post-ICU stepdown.');
   } else {
       lines.push('- Follow-up: Single ALERT review on ward to ensure continued stability.');
   }
-
+  
+  if (s.chk_medical_rounding) {
+      lines.push('- Added to ALERT Medical Rounding List.');
+  }
 
   $('summary').value = lines.join('\n');
-  updateLastSaved();
 }
 
 /* ===========================
@@ -1983,8 +2085,6 @@ function computeAll() {
    =========================== */
 document.addEventListener('DOMContentLoaded', ()=> {
   initialize();
-  // computeAll(); // This is now called inside initialize after restore
-  updateLastSaved();
 });
 </script>
 </body>
