@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ALERT Nursing Risk Assessment Tool v3.8</title>
+  <title>ALERT Nursing Risk Assessment Tool v4.1</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -68,8 +68,8 @@
     .status.red{color:var(--red)} .status.amber{color:var(--amber)} .status.green{color:var(--green)}
     .section-title{margin-bottom:12px; font-size:1.05rem; font-weight:700;}
     
-    /* Standardized Question Styles for "One Form" Flow */
-    .question-row { display: block; margin-bottom: 24px; } /* Increased margin for better separation without HR */
+    /* Standardized Question Styles */
+    .question-row { display: block; margin-bottom: 24px; }
     .question-label { display: block; font-weight: 600; color: var(--muted); font-size: 0.95rem; margin-bottom: 8px; }
     .question-label small { display: block; font-weight: 400; font-size: 0.85rem; margin-top: 2px; }
     .sub-question-wrapper { margin-left: 18px; padding-left: 12px; border-left: 2px solid var(--line); margin-bottom: 12px; display: none; }
@@ -754,6 +754,9 @@
   <div class="footer-buttons">
       <button class="btn primary" id="footerSave">Save</button>
       <button class="btn" id="footerCopy">Copy</button>
+      <button onclick="openRedcapAccelerator()" class="btn" style="background-color:#d9534f; color:white; border:none; margin-left:8px;">
+          Copy to REDCap
+      </button>
   </div>
 </footer>
 
@@ -2086,6 +2089,116 @@ function generateSummary(s, cat, location, timeOnWardText, red, amber) {
 document.addEventListener('DOMContentLoaded', ()=> {
   initialize();
 });
+</script>
+
+<script>
+function openRedcapAccelerator() {
+    // --- 1. GATHER DATA FROM YOUR TOOL ---
+    
+    // A. Role (CNS vs CN)
+    var roleVal = document.querySelector('input[name="clinicianRole"]:checked')?.value || "ALERT CNS";
+    var teamCode = (roleVal === "ALERT CN") ? "2" : "1"; // 1=CNS, 2=CN
+
+    // B. Score
+    var score = document.getElementById('adds').value || "0";
+
+    // C. Discharge Status
+    var isDischarge = document.getElementById('chk_discharge_alert').checked;
+
+    // D. Ward Mapping
+    var wardMap = {
+        "3A": "1",  "3B": "2",  "3C": "5",  "3D": "3",
+        "4A": "6",  "4B": "7",  "4C": "8",  "4D": "9",
+        "5A": "10", "5B": "11", "5C": "12", "5D": "13",
+        "6A": "14", "6B": "15", "6C": "16", "6D": "17",
+        "7A": "18", "7B": "19", "7C": "20", "7D": "21",
+        "SRS2A": "59", "SRS1A": "58", "SRSA": "60", "SRSB": "61",
+        "ICU Pod 1": "43", "ICU Pod 2": "43", "ICU Pod 3": "43", "ICU Pod 4": "43", 
+        "CCU": "30", "HDU": "41", "ED": "36", 
+        "Short Stay": "57", "Transit Lounge": "64"
+    };
+    
+    var currentWardName = document.getElementById('ptWard').value; 
+    var locationCode = wardMap[currentWardName] || ""; 
+
+
+    // --- 2. CALCULATE DATE & SHIFT (UPDATED LOGIC) ---
+
+    var now = new Date();
+    
+    // Get Day and Month, ensuring they have a leading zero if needed (e.g., "05")
+    var day = ("0" + now.getDate()).slice(-2);
+    var month = ("0" + (now.getMonth() + 1)).slice(-2);
+    var year = now.getFullYear();
+
+    // Combine into YYYY-MM-DD (Database format)
+    var dateString = year + "-" + month + "-" + day; 
+
+    // B. Shift: Time Band Logic
+    // Day: 07:30 (7.5) to 14:30 (14.5)
+    // Eve: 14:30 (14.5) to 20:00 (20.0)
+    // Night: 20:00 (20.0) onwards
+    
+    var currentHour = now.getHours();
+    var currentMin = now.getMinutes();
+    var decimalTime = currentHour + (currentMin / 60);
+
+    var shiftCode = "3"; // Default Night
+    if (decimalTime >= 7.5 && decimalTime < 14.5) {
+        shiftCode = "1"; // Day
+    } else if (decimalTime >= 14.5 && decimalTime < 20.0) {
+        shiftCode = "2"; // Evening
+    }
+    // Else stays "3" (Night)
+
+    // --- 3. CATEGORY LOGIC (NEW) ---
+    // The tool calculates Category and updates the footer text (e.g., "CAT 1")
+    // We scrape that text to determine the REDCap code.
+    // 1 = >72hrs (CAT 1), 2 = >24hrs (CAT 2), 3 = <24hrs (CAT 3)
+    
+    var catText = document.getElementById('footerScore').innerText || "CAT 3";
+    var catCode = "3"; // Default
+    if (catText.includes("CAT 1")) { catCode = "1"; }
+    else if (catText.includes("CAT 2")) { catCode = "2"; }
+    
+
+    // --- 4. BUILD URL PARAMETERS ---
+    var params = [];
+
+    // Standard Admin
+    params.push("site=1");              // Fiona Stanley
+    params.push("contactreason=6");     // ICU Follow Up
+    params.push("shifttype=" + shiftCode);
+    params.push("shift_date=" + dateString);
+    params.push("icu_category=" + catCode); // NEW: Add Category
+    
+    // Dynamic Admin
+    params.push("alert_team=" + teamCode);
+    if(locationCode) {
+        params.push("location_fs=" + locationCode);
+    }
+    params.push("adds_score=" + score);
+
+    // "Always Done" Interventions
+    params.push("int_group_a___1=1");  // 01 - ICU follow up
+    params.push("int_group_a___8=1");  // 08 - Perform A-E
+    params.push("int_group_b___19=1"); // 19 - Cognitive assess
+    params.push("int_group_c___25=1"); // 25 - Electrolytes
+
+    // Outcome Logic (Discharge vs Continue)
+    if (isDischarge) {
+        params.push("outcome=1");          // Discharge from ALERT
+        params.push("int_group_e___42=1"); // Meets Discharge Criteria
+    } else {
+        params.push("outcome=3");          // Continue ALERT review
+        params.push("int_group_e___41=1"); // ALERT to continue follow up
+    }
+
+    // --- 5. LAUNCH ---
+    var baseUrl = "https://datalibrary-rc.health.wa.gov.au/surveys/?s=K3WAPC4KKXWNTF3F";
+    var finalUrl = baseUrl + "&" + params.join("&");
+    window.open(finalUrl, '_blank');
+}
 </script>
 </body>
 </html>
