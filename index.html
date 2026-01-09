@@ -1721,12 +1721,12 @@ function computeAll() {
   if (immobility && !hasCombinedRedFlag) {
       addRisk(amber, 'Immobility >48h', s.immobility_note, 'seg_immobility', 'amber');
   }
-
-  if (icuLos > 7 && !hasCombinedRedFlag) {
+  
+  if (icuLos > 5 && !hasCombinedRedFlag) {
       amber.push(`ICU LOS ${icuLos} days`);
       flaggedElements.amber.push('icuLos');
   }
-
+  
   // Oxygen
   const oxModGroup = $('oxMod');
   if (s.oxMod === 'NP') {
@@ -1761,13 +1761,21 @@ function computeAll() {
   }
 
   if (s.rapid_wean === true) addRisk(red, 'Rapid oxygen wean in last 12h', s.rapid_wean_note, 'seg_rapid_wean', 'red');
-  if (s.after_hours === true) addRisk(red, 'Discharged after-hours', s.after_hours_note, 'seg_after_hours', 'red');
+  if (s.after_hours === true) addRisk(amber, 'Discharged after-hours', s.after_hours_note, 'seg_after_hours', 'amber');
   
   // Pressors solo logic (if not combined above)
   if (pressorsRed && !hasCombinedRedFlag) addRisk(red, 'Vasopressors required (Shock/Complicated)', s.pressors_note, 'seg_pressors', 'red');
   else if (pressorsAmber) addRisk(amber, 'Vasopressors (Routine/Short term)', s.pressors_note, 'seg_pressors', 'amber');
 
-  if (num(s.adds) >= 3) { red.push(`ADDS ${s.adds}`); flaggedElements.red.push('adds');}
+  const addsVal = num(s.adds);
+  if (addsVal >= 4) { 
+      red.push(`ADDS ${s.adds}`); 
+      flaggedElements.red.push('adds');
+  } else if (addsVal >= 3) { 
+      amber.push(`ADDS ${s.adds}`); 
+      flaggedElements.amber.push('adds');
+  }
+  
   if (lactateVal > 2.5) { red.push(`Lactate ${lactateVal}`); flaggedElements.red.push('lactate');}
   else if (lactateVal >= 2.0 && !hasCombinedRedFlag) { amber.push(`Lactate ${lactateVal}`); flaggedElements.amber.push('lactate');}
   
