@@ -1044,7 +1044,7 @@ function computeAll() {
 
         const bpStr = s.c_nibp;
         if (bpStr) {
-            const sbp = parseFloat(bpStr); 
+            const sbp = parseFloat(bpStr.split('/')[0]); 
             if (!isNaN(sbp)) {
                 if (sbp < 90) add(red, `Hypotension (SBP ${sbp})`, 'c_nibp', 'red');
             }
