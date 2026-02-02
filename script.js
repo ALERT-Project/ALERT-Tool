@@ -427,6 +427,7 @@ function initialize() {
             const btnVal = btn.dataset.value; 
             if((btnVal === "Oliguric" || btnVal.includes("<0.5")) && $('toggle_renal_oliguria').dataset.value === "false") $('toggle_renal_oliguria').click();
             if(btnVal === "Anuric" && $('toggle_renal_anuria').dataset.value === "false") $('toggle_renal_anuria').click();
+            if(btnVal === "Dialysis" && $('toggle_renal_dialysis').dataset.value === "false") $('toggle_renal_dialysis').click();
         });
     });
 
@@ -589,7 +590,22 @@ function initialize() {
             // Toggle Logic for Visibility
             if (el.id === 'toggle_comorb_other') $('comorb_other_note_wrapper').style.display = !isOn ? 'block' : 'none';
             if (el.id === 'toggle_pressor_recent_other') $('pressor_recent_other_note_wrapper').style.display = !isOn ? 'block' : 'none';
-            if (el.id === 'toggle_renal_dialysis') $('dialysis_type_wrapper').style.display = !isOn ? 'block' : 'none';
+            if (el.id === 'toggle_renal_dialysis') {
+                $('dialysis_type_wrapper').style.display = !isOn ? 'block' : 'none';
+            }
+            // Sync dialysis toggles bidirectionally
+            if (el.id === 'toggle_renal_dialysis') {
+                const comorb = $('toggle_comorb_dialysis');
+                if(comorb && comorb.dataset.value !== el.dataset.value) {
+                    comorb.click();
+                }
+            }
+            if (el.id === 'toggle_comorb_dialysis') {
+                const renal = $('toggle_renal_dialysis');
+                if(renal && renal.dataset.value !== el.dataset.value) {
+                    renal.click();
+                }
+            }
             
             compute();
         });
@@ -1019,7 +1035,7 @@ function computeAll() {
                          recentsList.push(label);
                     }
                 });
-                let recentPart = "Recent Vasoactive Support (" + recentsList.join('/');
+                let recentPart = "Recent vasoactive support (" + recentsList.join(', ');
                 if (s.pressor_ceased_time) recentPart += ` off at ${s.pressor_ceased_time}`;
                 recentPart += ")";
                 details.push(recentPart);
@@ -1097,7 +1113,7 @@ function computeAll() {
             if (s.resp_tachypnea) { parts.push('tachypnea (>20)'); flagged.red.push('toggle_resp_tachypnea'); hasRed = true; }
             if (s.resp_rapid_wean) { parts.push('rapid O2 wean (<12h)'); flagged.red.push('toggle_resp_rapid_wean'); hasRed = true; }
             
-            if (s.hist_o2 === true) { parts.push('recent high O2/NIV Requirement (<12h)'); flagged.red.push('seg_hist_o2'); hasRed = true; }
+            if (s.hist_o2 === true) { parts.push('recent high O2/NIV requirement (<12h)'); flagged.red.push('seg_hist_o2'); hasRed = true; }
             
             if (s.intubated === true) {
                 const reason = $('intubatedReason')?.querySelector('.active')?.dataset.value;
@@ -1117,7 +1133,7 @@ function computeAll() {
         }
 
         if (s.after_hours === true) add(amber, 'Discharged after-hours', 'seg_after_hours', 'amber', s.after_hours_note);
-        if (s.hac === true) add(amber, 'Hospital Acquired Complication', 'seg_hac', 'amber', s.hac_note);
+        if (s.hac === true) add(amber, 'Hospital acquired complication', 'seg_hac', 'amber', s.hac_note);
 
         if (s.neuro_gate === true) {
             let txt = "Neuro concern";
@@ -1160,18 +1176,18 @@ function computeAll() {
             // Fluid
             if(s.renal_fluid) fluidFlags.push('fluid overload');
             if(s.renal_oedema) fluidFlags.push('oedema');
-            if(s.renal_dehydrated) fluidFlags.push('dehydrated/dry'); // New Chip
+            if(s.renal_dehydrated) fluidFlags.push('dehydrated'); // New Chip
 
             // Renal
             if(s.renal_oliguria) renalFlags.push('oliguria (<0.5ml/kg)');
             if(s.renal_anuria) renalFlags.push('anuria');
-            if(s.renal_dysfunction) renalFlags.push('dysfunction/AKI');
+            if(s.renal_dysfunction) renalFlags.push('AKI');
             if(cr > 150) renalFlags.push(`High Cr ${cr}`);
 
             // Dialysis Logic
             if(s.renal_dialysis) {
                 const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
-                if(dType === 'acute') renalFlags.push('Acute Dialysis');
+                if(dType === 'new') renalFlags.push('Acute Dialysis');
                 else renalFlags.push('Chronic Dialysis');
             }
 
@@ -1180,7 +1196,7 @@ function computeAll() {
 
             // Determine Label
             let label = "Renal concern"; // Default
-            if (hasFluid && hasRenal) label = "Renal / Fluid concern";
+            if (hasFluid && hasRenal) label = "Renal/fluid concern";
             else if (hasFluid && !hasRenal) label = "Fluid concern";
             
             // Append Details
@@ -1196,7 +1212,7 @@ function computeAll() {
             
             // Dialysis overrides only if Acute
             const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
-            if(s.renal_dialysis && dType === 'acute') overrideChips.push(true);
+            if(s.renal_dialysis && dType === 'new') overrideChips.push(true);
 
             const isForceAmber = overrideChips.some(x => x === true);
             const isMitigated = (s.renal_chronic === true);
@@ -1244,7 +1260,7 @@ function computeAll() {
             
             if (nlrVal > 10) markers.push(`NLR ${nlrVal.toFixed(1)}`);
             
-            let msg = isRed ? "Infection Risk (Severe)" : "Infection Risk";
+            let msg = isRed ? "Infection risk (Severe)" : "Infection risk";
             if (markers.length) msg += ` - ${markers.join(', ')}`;
 
             const shouldSuppress = (s.infection_downtrend === true);
@@ -1332,7 +1348,7 @@ function computeAll() {
             ];
 
             if (html.length === 0) listEl.innerHTML = '<div style="color:var(--muted)">No risk factors identified</div>';
-            else listEl.innerHTML = html.join('');
+            else listEl.innerHTML = html.join('\n');
         }
 
         document.querySelectorAll('.flag-red, .flag-amber').forEach(e => e.classList.remove('flag-red', 'flag-amber'));
@@ -1442,7 +1458,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     let demo = [];
     if(s.ptAge) demo.push(`Age: ${s.ptAge}`);
     if(s.ptWeight) demo.push(`Weight: ${s.ptWeight}kg`);
-    if(demo.length) lines.push(demo.join(' | '));
+    if(demo.length) lines.push(demo.join(', '));
     
     lines.push(`Time of review: ${s.reviewTime || nowTimeStr()}`);
 
