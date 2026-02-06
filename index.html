@@ -11,12 +11,41 @@
 
 <nav class="sidebar">
     <div class="sidebar-logo">!</div>
-    <a href="#section-patient" class="nav-item" title="Patient Details">Pt</a>
-    <a href="#section-risk" class="nav-item" title="Risk Assessment">Risks</a>
-    <a href="#section-ae" class="nav-item" title="A-E Assessment">A-E</a>
-    <a href="#section-bloods" class="nav-item" title="Bloods">Bld</a>
-    <a href="#section-summary" class="nav-item" title="Summary">Sum</a>
+    <div class="sidebar-label">Navigation</div>
+    <a href="#section-patient" class="nav-item" title="Patient Details">👤 Patient</a>
+    <a href="#section-risk" class="nav-item" title="Risk Assessment">⚠️ Risks <span id="sidebar-risk-badges"></span></a>
+    <a href="#section-ae" class="nav-item" title="A-E Assessment">📋 A-E</a>
+    <a href="#section-bloods" class="nav-item" title="Bloods">🩸 Bloods</a>
+    <a href="#section-psychosocial" class="nav-item" title="Psychosocial & Recovery">🧠 Psych</a>
+    <a href="#section-devices" class="nav-item" title="Lines, Drains & Wounds">🔧 Devices</a>
+    <a href="#section-context" class="nav-item" title="Other Factors">📝 Other</a>
+    <a href="#section-summary" class="nav-item" title="Auto-Generated Summary">📄 Summary</a>
 </nav>
+
+<!-- Floating Mobile Nav Button -->
+<button id="floatingNavBtn" class="floating-nav-btn" aria-label="Open Navigation">
+  <span style="font-size:1.2rem;">☰</span>
+</button>
+
+<!-- Mobile Nav Overlay -->
+<div id="mobileNavOverlay" class="mobile-nav-overlay">
+  <div class="mobile-nav-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h3 style="margin:0; color:var(--accent); font-size:1.3rem;">Navigation</h3>
+      <button id="closeMobileNav" class="btn small" style="background:var(--line); padding:8px 12px;">✕ Close</button>
+    </div>
+    <div class="mobile-nav-links">
+      <a href="#section-patient" class="mobile-nav-link">👤 Patient Details</a>
+      <a href="#section-risk" class="mobile-nav-link">⚠️ Risk Assessment <span id="mobile-risk-badges"></span></a>
+      <a href="#section-ae" class="mobile-nav-link">📋 A-E Assessment</a>
+      <a href="#section-bloods" class="mobile-nav-link">🩸 Bloods</a>
+      <a href="#section-psychosocial" class="mobile-nav-link">🧠 Psychosocial & Recovery</a>
+      <a href="#section-devices" class="mobile-nav-link">🔧 Lines, Drains & Wounds</a>
+      <a href="#section-context" class="mobile-nav-link">📝 Other Factors</a>
+      <a href="#section-summary" class="mobile-nav-link">📄 Summary</a>
+    </div>
+  </div>
+</div>
 
 <header role="banner">
   <div style="flex:1;">
@@ -25,17 +54,23 @@
   </div>
   <div class="header-controls">
     <button class="btn small" id="darkToggle">Dark Mode</button>
-    <button class="btn danger small" id="clearDataBtnTop">Clear Data / Next Patient</button>
+    <button class="btn small" id="clearDataBtnTop" style="background:var(--accent); color:white;">Next Patient →</button>
   </div>
 </header>
 
 <main class="container" role="main">
   
+  <div id="quickReviewBanner" style="display:none; position:sticky; top:0; z-index:90; background:var(--amber); color:white; padding:12px 20px; margin:-20px -20px 20px -20px; font-weight:600; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+    <span style="font-size:1.1rem;">⚡ QUICK REVIEW MODE</span>
+    <span style="margin-left:16px; font-size:0.9rem; opacity:0.9;">Re-assessing flagged risks • Update A-E & bloods</span>
+    <button id="btnExitQuickReview" style="margin-left:16px; background:rgba(255,255,255,0.2); border:1px solid white; color:white; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Exit Quick Mode</button>
+  </div>
+  
   <div id="importModal" class="modal-overlay">
       <div class="modal-content">
           <h3 style="margin:0; color:var(--accent);">Import from Previous DMR</h3>
           <p style="margin:0; color:var(--muted); font-size:0.9rem;">Paste the text from the previous ALERT DMR note below.</p>
-          <textarea id="importText" class="modal-textarea" placeholder="Paste DMR note here..."></textarea>
+          <textarea id="importText" class="modal-textarea"></textarea>
           <div class="modal-actions">
               <button class="btn small" id="closeImport">Cancel</button>
               <button class="btn small" id="runImport" style="background:var(--accent); color:white;">Import Data</button>
@@ -43,7 +78,23 @@
       </div>
   </div>
 
+  <div id="clearDataModal" class="modal-overlay">
+      <div class="modal-content">
+          <h3 style="margin:0; color:var(--red);">⚠️ Start Next Patient Review?</h3>
+          <p style="margin:18px 0; color:var(--ink); font-size:0.95rem; line-height:1.5;">This will clear all current data and start a new patient review.<br><strong>This cannot be undone.</strong></p>
+          <div style="background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:12px; margin-bottom:16px;">
+              <div style="font-size:0.85rem; color:var(--muted); margin-bottom:4px;">💡 Tip: Copy summary to DMR first</div>
+              <button id="btnQuickCopySummary" class="btn small" style="width:100%; margin-top:4px; background:var(--input-bg);">📋 Copy Summary to Clipboard</button>
+          </div>
+          <div class="modal-actions">
+              <button class="btn small" id="closeClearModal">Cancel</button>
+              <button class="btn danger small" id="confirmClearData">Clear Data & Continue</button>
+          </div>
+      </div>
+  </div>
+
   <div id="section-patient" class="card">
+    <h2 style="margin:0 0 16px 0; font-size:1.4rem; font-weight:700;">👤 Patient Details</h2>
     <div class="grid">
        <div class="col-6">
         <label>Clinician Role</label>
@@ -64,36 +115,38 @@
           <label style="font-weight:500"><input type="radio" name="reviewType" value="post" checked> Post-Stepdown</label>
         </div>
         <button id="btnOpenImport" class="btn small" style="margin-top:8px; width:100%; border:1px dashed var(--accent); color:var(--accent); background:transparent;">⬇ Import data from last DMR note</button>
+        
+        <div id="quickReviewPrompt" style="display:none; margin-top:12px; padding:12px; background:var(--bg); border:2px solid var(--amber); border-radius:8px;">
+          <div style="font-size:0.9rem; font-weight:600; color:var(--amber); margin-bottom:8px;">↻ Day 2 Follow-Up Detected</div>
+          <div style="font-size:0.85rem; color:var(--muted); margin-bottom:10px;">Previous review: <span id="prevCategoryText" style="font-weight:600;"></span><br>Time on ward: <span id="timeOnWardText" style="font-weight:600;"></span></div>
+          <button id="btnQuickReview" class="btn small" style="width:100%; background:var(--amber); color:white; font-weight:600;">⚡ Quick Review - Re-assess Flagged Risks Only</button>
+          <button id="btnFullReview" class="btn small" style="width:100%; margin-top:6px; background:var(--input-bg);">📋 Full Detailed Review</button>
+        </div>
       </div>
       
       <div class="col-6"><label for="ptName">Patient Initials</label><input id="ptName" type="text" autocomplete="off" /></div>
       <div class="col-6"><label for="ptMrn">Last 3 digits of URN</label><input id="ptMrn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" /></div>
       
       <div class="col-3"><label for="ptAge">Age</label><input id="ptAge" type="number" min="0" /></div>
-      <div class="col-3"><label for="ptWeight">Weight (kg)</label><input id="ptWeight" type="number" min="0" placeholder="kg" /></div>
+      <div class="col-3"><label for="ptWeight">Weight (kg)</label><input id="ptWeight" type="number" min="0" /></div>
       
       <div class="col-6"><label for="icuLos">ICU LOS (days)</label><input id="icuLos" type="number" min="0" /></div>
       
       <div class="col-6">
+          <label for="ptWard">Ward</label>
+          <select id="ptWard">
+              <option value="" selected disabled>Select Ward...</option>
+          </select>
+      </div>
+      <div class="col-3">
+          <label for="ptBed">Bed</label>
+          <input id="ptBed" type="number" min="1" />
+      </div>
+      <div class="col-3">
         <div id="reviewTimeWrapper">
             <label for="reviewTime" style="color:var(--accent);">Time of Review</label>
-            <input id="reviewTime" type="text" placeholder="HH:MM" />
+            <input id="reviewTime" type="text" />
         </div>
-      </div>
-      
-      <div class="col-12">
-          <div class="grid" style="row-gap:0; margin-bottom:0;">
-              <div class="col-8">
-                  <label for="ptWard">Ward</label>
-                  <select id="ptWard">
-                      <option value="" selected disabled>Select Ward...</option>
-                  </select>
-              </div>
-              <div class="col-4">
-                  <label for="ptBed">Bed</label>
-                  <input id="ptBed" type="number" min="1" />
-              </div>
-          </div>
       </div>
       
       <div class="col-6" id="ptWardOtherWrapper" style="display:none;">
@@ -108,7 +161,7 @@
 
       <div class="col-12" id="icu_summary_wrapper" style="display:none;">
           <label for="icuSummary">ICU Course Summary</label>
-          <textarea id="icuSummary" placeholder="Enter details..." style="min-height:80px;"></textarea>
+          <textarea id="icuSummary" style="min-height:80px;"></textarea>
       </div>
       
       <div id="stepdown_date_wrapper" style="display:contents;">
@@ -134,55 +187,65 @@
   </div>
 
   <div id="section-risk" class="card">
-    
-    <div class="question-row input-box" style="padding-bottom:12px;">
-        <div class="question-label">ADDS Score <span id="prev_adds" class="prev-datum"></span></div>
-        <div style="display:flex; gap:12px; align-items:center;">
-            <input id="adds" type="number" min="0" max="20" style="flex:1; font-weight:700; font-size:1.2rem;" />
-            <button id="btnToggleCalc" class="btn small" style="background:var(--accent); color:white; height:44px;">Show Calculator</button>
-        </div>
-        <div id="addsCalculatorContainer" style="display:none; margin-top:12px; padding:12px; border:2px solid var(--accent); border-radius:8px; background:var(--bg);"></div>
-        <div id="mScoreAlert" style="display:none; margin-top:8px; color:white; background:var(--red); padding:8px; border-radius:6px; font-weight:700; text-align:center;">MET CALL CRITERIA MET (M Score)</div>
-        
-        <div class="quick-select-container">
-            <button type="button" class="btn small quick-select" data-target="adds" data-value="0">0</button>
-            <button type="button" class="btn small quick-select" data-target="adds" data-value="1">1</button>
-            <button type="button" class="btn small quick-select" data-target="adds" data-value="2">2</button>
-            <button type="button" class="btn small quick-select" data-target="adds" data-value="3">3</button>
-            <button type="button" class="btn small quick-select" data-target="adds" data-value="4">4</button>
-        </div>
-    </div>
-    
-    <div class="question-row input-box">
-        <div class="question-label">Lactate (mmol/L) <span id="prev_lac" class="prev-datum"></span></div>
-        <input id="lactate" type="number" step="0.1" min="0"/>
-    </div>
-
-    <div class="question-row input-box" id="hb_wrapper">
-        <div class="grid" style="padding: 0; margin:0;">
-            <div class="col-6">
-                <div class="question-label">Hb (g/L) <span id="prev_hb" class="prev-datum"></span></div>
-                <input id="hb" type="number" step="1" min="0"/>
+    <h2 style="margin:0 0 16px 0; font-size:1.4rem; font-weight:700;">⚠️ Risk Assessment</h2>
+    <div class="grid" style="margin-bottom:12px;">
+        <!-- ADDS Column -->
+        <div class="col-6">
+            <div class="input-box">
+                <div class="question-label">ADDS Score <span id="prev_adds" class="prev-datum"></span></div>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                    <input id="adds" type="number" min="0" max="20" style="flex:1; font-weight:700; font-size:1.2rem;" />
+                    <button id="btnToggleCalc" class="btn small" style="background:var(--accent); color:white; height:44px; padding:8px 12px; font-size:0.75rem;">Calc</button>
+                </div>
+                <div id="addsCalculatorContainer" style="display:none; margin-bottom:8px; padding:8px; border:2px solid var(--accent); border-radius:8px; background:var(--bg);"></div>
+                <div id="mScoreAlert" style="display:none; margin-bottom:8px; color:white; background:var(--red); padding:8px; border-radius:6px; font-weight:700; text-align:center; font-size:0.85rem;">MET CALL CRITERIA</div>
+                <div class="quick-select-container" style="gap:2px;">
+                    <button type="button" class="btn small quick-select" data-target="adds" data-value="0" style="font-size:0.75rem;">0</button>
+                    <button type="button" class="btn small quick-select" data-target="adds" data-value="1" style="font-size:0.75rem;">1</button>
+                    <button type="button" class="btn small quick-select" data-target="adds" data-value="2" style="font-size:0.75rem;">2</button>
+                    <button type="button" class="btn small quick-select" data-target="adds" data-value="3" style="font-size:0.75rem;">3</button>
+                    <button type="button" class="btn small quick-select" data-target="adds" data-value="4" style="font-size:0.75rem;">4</button>
+                </div>
             </div>
-            <div class="col-6" style="align-self: end;">
+        </div>
+
+        <!-- Lactate Column -->
+        <div class="col-3">
+            <div class="input-box">
+                <div class="question-label">Lactate (mmol/L) <span id="prev_lac" class="prev-datum"></span></div>
+                <input id="lactate" type="number" step="0.1" min="0" style="margin-bottom:8px;"/>
+                <div class="quick-select-container" style="gap:2px;">
+                    <button type="button" class="btn small quick-select" data-target="lactate_trend" data-value="Improving" style="flex:1; font-size:0.75rem;">Improving</button>
+                    <button type="button" class="btn small quick-select" data-target="lactate_trend" data-value="Stable" style="flex:1; font-size:0.75rem;">Stable</button>
+                    <button type="button" class="btn small quick-select" data-target="lactate_trend" data-value="Worsening" style="flex:1; font-size:0.75rem;">Worsening</button>
+                </div>
+                <input id="lactate_trend" type="text" style="margin-top:6px; display:none;"/>
+            </div>
+        </div>
+
+        <!-- Hb Column -->
+        <div class="col-3">
+            <div class="input-box">
+                <div class="question-label">Hb (g/L) <span id="prev_hb" class="prev-datum"></span></div>
+                <input id="hb" type="number" step="1" min="0" style="margin-bottom:8px;"/>
                 <div class="segmented-group" id="seg_hb_dropping" style="height: 44px;">
-                   <button class="seg-btn" data-value="true">Hb Dropping</button>
+                   <button class="seg-btn" data-value="true">Dropping</button>
                    <button class="seg-btn" data-value="false">Stable</button>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="question-row input-box" id="resp_wrapper">
+    <div class="question-row input-box" id="resp_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
       <div class="question-label bold-heading">Respiratory Concern? <span id="prev_risk_resp" class="prev-datum"></span></div>
       <div class="segmented-group" id="seg_resp_concern">
             <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No / RA</button>
+            <button class="seg-btn" data-value="false">No</button>
       </div>
       
       <div id="resp_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
-          <div class="grid" style="margin-bottom:10px;">
-              <div class="col-12"><label class="bold-heading" style="font-size:0.9rem;">Oxygen Support</label></div>
+          <div class="grid" style="margin-bottom:12px; padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
+              <div class="col-12"><label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Oxygen Support</label></div>
               <div class="col-12">
                   <div class="button-group" id="oxMod" role="tablist">
                     <button class="select-btn" data-value="RA">Room Air</button>
@@ -203,11 +266,16 @@
           <div class="grid tracheOnly" style="display:none; padding:10px; background:var(--bg); border-radius:8px; margin-bottom:12px;">
               <div class="col-6"><div class="button-group" id="tracheType"><button class="select-btn" data-value="Tracheostomy">Tracheostomy</button><button class="select-btn" data-value="Laryngectomy">Laryngectomy</button></div></div>
               <div class="col-6"><div class="button-group" id="tracheStatus"><button class="select-btn" data-value="Stable">Stable</button><button class="select-btn" data-value="New">New/Unstable</button></div></div>
-              <div class="col-12"><textarea id="trache_details_note" placeholder="Enter details..."></textarea></div>
+              <div class="col-12">
+                  <button type="button" class="btn small detail-toggle" data-target="trache_details_wrapper">Add details</button>
+                  <div id="trache_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                      <textarea id="trache_details_note"></textarea>
+                  </div>
+              </div>
           </div>
 
-          <div class="grid">
-              <div class="col-12"><label class="bold-heading" style="font-size:0.9rem;">Clinical Picture</label></div>
+          <div class="grid" style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
+              <div class="col-12"><label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Clinical Picture</label></div>
               <div class="col-12">
                   <div class="button-group" id="dyspneaConcern">
                     <button class="select-btn safe" data-value="none">No Dyspnea</button>
@@ -220,6 +288,8 @@
                    <div style="display:flex; flex-direction: column; gap:8px;">
                        <div class="toggle-label" id="toggle_resp_tachypnea" data-value="false" style="flex:1">Tachypnea (RR >20) <span class="state"></span></div>
                        <div class="toggle-label" id="toggle_resp_rapid_wean" data-value="false" style="flex:1">Rapid O2 Wean (<12h) <span class="state"></span></div>
+                       <div class="toggle-label" id="toggle_resp_poor_cough" data-value="false" style="flex:1">Poor Cough <span class="state"></span></div>
+                       <div class="toggle-label" id="toggle_resp_poor_swallow" data-value="false" style="flex:1">Poor Swallow <span class="state"></span></div>
                    </div>
               </div>
               
@@ -247,37 +317,50 @@
           </div>
           
           <div class="concern-note" style="display:block;">
-              <textarea id="dyspneaConcern_note" placeholder="Respiratory details..."></textarea>
+              <button type="button" class="btn small detail-toggle" data-target="dyspnea_details_wrapper">Add details</button>
+              <div id="dyspnea_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                  <textarea id="dyspneaConcern_note"></textarea>
+              </div>
           </div>
       </div>
     </div>
-    
-    <div class="question-row input-box" id="neuro_wrapper">
+
+    <div class="question-row input-box" id="neuro_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
       <div class="question-label bold-heading">Neurological Concern? <span id="prev_risk_neuro" class="prev-datum"></span></div>
       <div class="segmented-group" id="seg_neuro_gate">
             <button class="seg-btn" data-value="true">Yes</button>
             <button class="seg-btn" data-value="false">No</button>
       </div>
       <div id="neuro_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
-          <label>Severity</label>
-          <div class="button-group" id="neuroConcern">
-            <button class="select-btn" data-value="mild">Mild</button>
-            <button class="select-btn" data-value="moderate">Moderate</button>
-            <button class="select-btn" data-value="severe">Severe</button>
+          <div class="grid" style="row-gap:12px;">
+              <div class="col-6" style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
+                  <label class="question-label" style="font-size:0.9rem; margin-bottom:6px; display:block;">Concern Severity</label>
+                  <div class="button-group" id="neuroConcern">
+                    <button class="select-btn small" data-value="mild">Mild</button>
+                    <button class="select-btn small" data-value="moderate">Moderate</button>
+                    <button class="select-btn small" data-value="severe">Severe</button>
+                  </div>
+              </div>
+              <div class="col-6" style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
+                  <label class="question-label" style="font-size:0.9rem; margin-bottom:6px; display:block;">Type</label>
+                  <div class="button-group" id="neuroType">
+                      <button class="select-btn small" data-value="Confusion">Confusion</button>
+                      <button class="select-btn small" data-value="Delirium">Delirium</button>
+                      <button class="select-btn small" data-value="Other">Other</button>
+                  </div>
+              </div>
           </div>
-          <label style="margin-top:8px;">Type</label>
-          <div class="button-group" id="neuroType">
-              <button class="select-btn small" data-value="Confusion">Confusion</button>
-              <button class="select-btn small" data-value="Delirium">Delirium</button>
-              <button class="select-btn small" data-value="Other">Other/GCS Drop</button>
-          </div>
-          <div class="concern-note" style="display:block;">
-                <textarea id="neuroType_note" placeholder="Neuro details / context..."></textarea>
+          
+          <div style="margin-top:12px; padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
+              <button type="button" class="btn small detail-toggle" data-target="neuro_details_wrapper">Add details</button>
+              <div id="neuro_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                  <textarea id="neuroType_note"></textarea>
+              </div>
           </div>
       </div>
     </div>
     
-    <div class="question-row input-box" id="renal_wrapper">
+    <div class="question-row input-box" id="renal_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Renal / Fluid Concern? <span id="prev_risk_renal" class="prev-datum"></span></div>
         <div class="segmented-group" id="seg_renal">
             <button class="seg-btn" data-value="true">Yes</button>
@@ -285,19 +368,22 @@
         </div>
         <div id="renal_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
              
-             <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Known CKD and Cr around baseline?</label>
-             <div class="segmented-group" id="seg_renal_chronic">
-                  <button class="seg-btn" data-value="true">Yes</button>
-                  <button class="seg-btn" data-value="false">No</button>
+             <div style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line); margin-bottom:12px;">
+                 <label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Known CKD and Cr around baseline?</label>
+                 <div class="segmented-group" id="seg_renal_chronic">
+                      <button class="seg-btn" data-value="true">Yes</button>
+                      <button class="seg-btn" data-value="false">No</button>
+                 </div>
              </div>
 
-             <label style="margin-bottom:8px; margin-top:12px; font-weight:700;">Select all that apply:</label>
+             <label style="margin-bottom:12px; margin-top:12px; font-weight:700;">Select all that apply:</label>
              
              <div class="comorbidity-group-label" style="margin-top:6px;">Renal Issues</div>
              <div class="comorbidity-grid">
                 <div class="toggle-label" id="toggle_renal_oliguria" data-value="false">Oliguria (<0.5ml/kg) <span class="state"></span></div>
                 <div class="toggle-label" id="toggle_renal_anuria" data-value="false">Anuria <span class="state"></span></div>
                 <div class="toggle-label" id="toggle_renal_dysfunction" data-value="false">AKI <span class="state"></span></div>
+                <div class="toggle-label" id="toggle_renal_worsening_cr" data-value="false">Worsening Cr <span class="state"></span></div>
                 <div class="toggle-label" id="toggle_renal_dialysis" data-value="false">Dialysis <span class="state"></span></div>
              </div>
              
@@ -314,16 +400,20 @@
                  <div class="toggle-label" id="toggle_renal_fluid" data-value="false">Fluid Overload <span class="state"></span></div>
                  <div class="toggle-label" id="toggle_renal_oedema" data-value="false">Oedema <span class="state"></span></div>
                  <div class="toggle-label" id="toggle_renal_dehydrated" data-value="false">Dehydrated <span class="state"></span></div>
+                 
              </div>
 
              <div class="concern-note" style="display:block; margin-top:12px;">
                  <label>Renal Notes / Details:</label>
-                 <textarea id="renal_note" placeholder="Enter renal details here..."></textarea>
+                 <button type="button" class="btn small detail-toggle" data-target="renal_details_wrapper" style="margin-top:6px;">Add details</button>
+                 <div id="renal_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                     <textarea id="renal_note"></textarea>
+                 </div>
              </div>
         </div>
     </div>
 
-    <div class="question-row input-box" id="elec_wrapper">
+    <div class="question-row input-box" id="elec_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
       <div class="question-label bold-heading">Electrolyte Concern? <span id="prev_risk_elec" class="prev-datum"></span></div>
       <div class="segmented-group" id="seg_electrolyte_gate">
             <button class="seg-btn" data-value="true">Yes</button>
@@ -335,14 +425,16 @@
             <button class="select-btn" data-value="mild">Mild/moderate</button>
             <button class="select-btn" data-value="severe">Severe</button>
           </div>
-           <div class="concern-note" style="display:block;">
-                <label>Electrolyte Details:</label>
-                <textarea id="electrolyteConcern_note" placeholder="Enter electrolyte details here..."></textarea>
+           <div style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line); margin-top:12px;">
+                <button type="button" class="btn small detail-toggle" data-target="electrolyte_details_wrapper" style="margin-top:0;">Add details</button>
+                <div id="electrolyte_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                    <textarea id="electrolyteConcern_note"></textarea>
+                </div>
           </div>
       </div>
     </div>
     
-    <div class="question-row input-box" id="hac_wrapper">
+    <div class="question-row input-box" id="hac_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Hospital Acquired Complication?</div>
         <div class="segmented-group" id="seg_hac">
             <button class="seg-btn" data-value="true">Yes</button>
@@ -350,14 +442,16 @@
         </div>
         <div class="sub-label">Did not exist upon admission e.g., HAI [HAP, VAP, CLABSI, SSI], Sepsis, New Arrythmias, Acute Renal Failure, Hemorrhage</div>
         <div id="hac_content" style="display:none; margin-top:12px;">
-             <div class="concern-note" style="display:block;">
-                <label>Details of Complication:</label>
-                <textarea id="hac_note" placeholder="Enter HAC details..."></textarea>
+             <div style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
+                <button type="button" class="btn small detail-toggle" data-target="hac_details_wrapper" style="margin-top:0;">Add details</button>
+                <div id="hac_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                    <textarea id="hac_note"></textarea>
+                </div>
              </div>
         </div>
     </div>
 
-    <div class="question-row input-box" id="ah_wrapper">
+    <div class="question-row input-box" id="ah_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Discharged after-hours? <span id="prev_risk_ah" class="prev-datum"></span></div>
         <div class="segmented-group" id="seg_after_hours">
             <button class="seg-btn" data-value="true">Yes</button>
@@ -365,12 +459,15 @@
         </div>
         <div class="sub-label">(No home team on ward, or reduced nursing ratio)</div>
         <div class="sub-label" style="color:var(--accent); font-weight:600;">(only score until reviewed on ward by home team)</div>
-        <div id="after_hours_note_wrapper" class="concern-note" style="display:none; margin-bottom:12px;">
-             <textarea id="after_hours_note" placeholder="Enter details..."></textarea>
+        <div id="after_hours_note_wrapper" style="display:none; margin-top:12px; padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
+             <button type="button" class="btn small detail-toggle" data-target="after_hours_details_wrapper">Add details</button>
+             <div id="after_hours_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                 <textarea id="after_hours_note"></textarea>
+             </div>
         </div>
     </div>
 
-    <div class="question-row input-box" id="pressor_wrapper">
+    <div class="question-row input-box" id="pressor_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Vasoactive Support? <span id="prev_risk_pressors" class="prev-datum"></span></div>
         <div class="segmented-group" id="seg_pressors">
             <button class="seg-btn" data-value="true">Yes</button>
@@ -378,23 +475,23 @@
         </div>
         
         <div id="pressor_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
-            <label style="margin-bottom:8px; font-weight:700;">Select all that apply:</label>
-            
-            <div class="comorbidity-group-label" style="margin-top:6px;">Recent Vasoactives (Last 24h)</div>
-            <div class="comorbidity-grid">
-                <div class="toggle-label" id="toggle_pressor_recent_norad" data-value="false">Noradrenaline <span class="state"></span></div>
-                <div class="toggle-label" id="toggle_pressor_recent_met" data-value="false">Metaraminol <span class="state"></span></div>
-                <div class="toggle-label" id="toggle_pressor_recent_gtn" data-value="false">GTN <span class="state"></span></div>
-                <div class="toggle-label" id="toggle_pressor_recent_dob" data-value="false">Dobutamine <span class="state"></span></div>
-                <div class="toggle-label" id="toggle_pressor_recent_mid" data-value="false">Midodrine <span class="state"></span></div>
-                <div class="toggle-label" id="toggle_pressor_recent_other" data-value="false">Other <span class="state"></span></div>
-            </div>
-            <div id="pressor_recent_other_note_wrapper" style="display:none; margin-top:8px;">
-                 <input type="text" id="pressor_recent_other_note" placeholder="Specify recent vasoactive...">
+            <div style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line); margin-bottom:12px;">
+                <label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Recent Vasoactives (Last 24h)</label>
+                <div class="comorbidity-grid">
+                    <div class="toggle-label" id="toggle_pressor_recent_norad" data-value="false">Noradrenaline <span class="state"></span></div>
+                    <div class="toggle-label" id="toggle_pressor_recent_met" data-value="false">Metaraminol <span class="state"></span></div>
+                    <div class="toggle-label" id="toggle_pressor_recent_gtn" data-value="false">GTN <span class="state"></span></div>
+                    <div class="toggle-label" id="toggle_pressor_recent_dob" data-value="false">Dobutamine <span class="state"></span></div>
+                    <div class="toggle-label" id="toggle_pressor_recent_mid" data-value="false">Midodrine <span class="state"></span></div>
+                    <div class="toggle-label" id="toggle_pressor_recent_other" data-value="false">Other <span class="state"></span></div>
+                </div>
+                <div id="pressor_recent_other_note_wrapper" style="display:none; margin-top:8px;">
+                     <input type="text" id="pressor_recent_other_note">
+                </div>
             </div>
 
-            <div style="margin-top:10px;">
-                <label style="color:var(--accent);">Approx Time Ceased?</label>
+            <div style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line); margin-bottom:12px;">
+                <label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Time Ceased</label>
                 <div class="button-group">
                     <button class="btn small time-set-btn" data-time="08:00">Morning</button>
                     <button class="btn small time-set-btn" data-time="14:00">Afternoon</button>
@@ -409,32 +506,43 @@
                 </div>
             </div>
 
-            <div class="comorbidity-group-label" style="margin-top:16px;">Current Vasoactives</div>
-            <div class="comorbidity-grid">
-                <div class="toggle-label" id="toggle_pressor_current_mid" data-value="false">Midodrine <span class="state"></span></div>
-                <div class="toggle-label" id="toggle_pressor_current_other" data-value="false">Other Vasoactive <span class="state"></span></div>
+            <div style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line); margin-bottom:12px;">
+                <label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Current Vasoactives</label>
+                <div class="comorbidity-grid">
+                    <div class="toggle-label" id="toggle_pressor_current_mid" data-value="false">Midodrine <span class="state"></span></div>
+                    <div class="toggle-label" id="toggle_pressor_current_other" data-value="false">Other <span class="state"></span></div>
+                </div>
+                <div id="pressor_current_other_note_wrapper" style="display:none; margin-top:8px;">
+                     <input type="text" id="pressor_current_other_note">
+                </div>
             </div>
 
             <div class="concern-note" style="display:block; margin-top:12px;">
                  <label>Context / Dose / Wean:</label>
-                 <textarea id="pressors_note" placeholder="Enter context here..."></textarea>
+                 <button type="button" class="btn small detail-toggle" data-target="pressors_details_wrapper" style="margin-top:6px;">Add details</button>
+                 <div id="pressors_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                     <textarea id="pressors_note"></textarea>
+                 </div>
             </div>
         </div>
     </div>
     
-    <div class="question-row input-box" id="immobility_wrapper">
+    <div class="question-row input-box" id="immobility_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Immobility Concern? <span id="prev_risk_immob" class="prev-datum"></span></div>
         <div class="segmented-group" id="seg_immobility">
             <button class="seg-btn" data-value="true">Yes</button>
             <button class="seg-btn" data-value="false">No</button>
         </div>
         <div class="sub-label">(reference - cannot sit out in chair)</div>
-        <div id="immobility_note_wrapper" class="concern-note" style="display:none; margin-bottom:12px;">
-            <textarea id="immobility_note" placeholder="Enter details..."></textarea>
+        <div id="immobility_note_wrapper" style="display:none; margin-top:12px; padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
+            <button type="button" class="btn small detail-toggle" data-target="immobility_details_wrapper">Add details</button>
+            <div id="immobility_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                <textarea id="immobility_note"></textarea>
+            </div>
         </div>
     </div>
     
-    <div class="question-row input-box" id="infection_wrapper">
+    <div class="question-row input-box" id="infection_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Infection Concern? <span id="prev_risk_inf" class="prev-datum"></span></div>
         <div class="segmented-group" id="seg_infection">
             <button class="seg-btn" data-value="true">Yes</button>
@@ -442,13 +550,15 @@
         </div>
         <div id="infection_gate_content" style="display:none; margin-top:12px;">
             
-            <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Are the infection markers downtrending, ADDS low and the patient is on appropriate antibiotics?</label>
-            <div class="segmented-group" id="seg_infection_downtrend" style="margin-bottom:12px;">
-                  <button class="seg-btn" data-value="true">Yes</button>
-                  <button class="seg-btn" data-value="false">No</button>
-             </div>
+            <div style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line); margin-bottom:12px;">
+                <label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Are the infection markers downtrending, ADDS low and the patient is on appropriate antibiotics?</label>
+                <div class="segmented-group" id="seg_infection_downtrend" style="margin-bottom:8px;">
+                      <button class="seg-btn" data-value="true">Yes</button>
+                      <button class="seg-btn" data-value="false">No</button>
+                 </div>
+            </div>
 
-            <div id="infectionMarkers" style="margin-bottom:12px; padding:12px; border-radius:10px; background:var(--bg)">
+            <div id="infectionMarkers" style="margin-bottom:12px; padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--line);">
                 <label style="margin-bottom:8px; display:block; font-weight:600;">Infection Markers</label>
                 <div class="grid">
                   <div class="col-4" style="position: relative;"><div class="input-box"><label for="wcc">WCC</label><input id="wcc" type="number" step="0.1" /></div></div>
@@ -461,43 +571,52 @@
                 </div>
             </div>
             <div class="concern-note" style="display:block;">
-               <textarea id="infection_note" placeholder="Enter details..."></textarea>
+               <button type="button" class="btn small detail-toggle" data-target="infection_details_wrapper">Add details</button>
+               <div id="infection_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                   <textarea id="infection_note"></textarea>
+               </div>
             </div>
         </div>
     </div>
     
-    <div class="input-box" id="comorbs_wrapper" style="margin-bottom:20px;">
+    <div class="input-box" id="comorbs_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line); margin-bottom:20px;">
         <div class="section-title">Comorbidities?</div>
+        <div class="segmented-group" id="seg_comorbs_gate">
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
+        </div>
         
-        <div class="comorbidity-group-label">Respiratory</div>
-        <div class="comorbidity-grid">
-            <div class="toggle-label" id="toggle_comorb_copd" data-value="false">COPD <span class="state"></span></div>
-            <div class="toggle-label" id="toggle_comorb_asthma" data-value="false">Asthma <span class="state"></span></div>
-        </div>
+        <div id="comorbs_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
+            <div class="comorbidity-group-label">Respiratory</div>
+            <div class="comorbidity-grid">
+                <div class="toggle-label" id="toggle_comorb_copd" data-value="false">COPD <span class="state"></span></div>
+                <div class="toggle-label" id="toggle_comorb_asthma" data-value="false">Asthma <span class="state"></span></div>
+            </div>
 
-        <div class="comorbidity-group-label">Cardiac</div>
-        <div class="comorbidity-grid">
-            <div class="toggle-label" id="toggle_comorb_hf" data-value="false">Active Heart Failure <span class="state"></span></div>
-        </div>
+            <div class="comorbidity-group-label">Cardiac</div>
+            <div class="comorbidity-grid">
+                <div class="toggle-label" id="toggle_comorb_hf" data-value="false">Active Heart Failure <span class="state"></span></div>
+            </div>
 
-        <div class="comorbidity-group-label">Renal</div>
-        <div class="comorbidity-grid">
-            <div class="toggle-label" id="toggle_comorb_esrd" data-value="false">ESRD <span class="state"></span></div>
-            <div class="toggle-label" id="toggle_comorb_dialysis" data-value="false">Dialysis <span class="state"></span></div>
-        </div>
+            <div class="comorbidity-group-label">Renal</div>
+            <div class="comorbidity-grid">
+                <div class="toggle-label" id="toggle_comorb_esrd" data-value="false">ESRD <span class="state"></span></div>
+                <div class="toggle-label" id="toggle_comorb_dialysis" data-value="false">Dialysis <span class="state"></span></div>
+            </div>
 
-        <div class="comorbidity-group-label">Other</div>
-        <div class="comorbidity-grid">
-            <div class="toggle-label" id="toggle_comorb_diabetes" data-value="false">Diabetes (Uncontrolled) <span class="state"></span></div>
-            <div class="toggle-label" id="toggle_comorb_cirrhosis" data-value="false">Cirrhosis <span class="state"></span></div>
-            <div class="toggle-label" id="toggle_comorb_malignancy" data-value="false">Active Malignancy <span class="state"></span></div>
-            <div class="toggle-label" id="toggle_comorb_immuno" data-value="false">Immunosuppression <span class="state"></span></div>
-            <div class="toggle-label" id="toggle_comorb_other" data-value="false">Other <span class="state"></span></div>
-        </div>
+            <div class="comorbidity-group-label">Other</div>
+            <div class="comorbidity-grid">
+                <div class="toggle-label" id="toggle_comorb_diabetes" data-value="false">Diabetes (Uncontrolled) <span class="state"></span></div>
+                <div class="toggle-label" id="toggle_comorb_cirrhosis" data-value="false">Cirrhosis <span class="state"></span></div>
+                <div class="toggle-label" id="toggle_comorb_malignancy" data-value="false">Active Malignancy <span class="state"></span></div>
+                <div class="toggle-label" id="toggle_comorb_immuno" data-value="false">Immunosuppression <span class="state"></span></div>
+                <div class="toggle-label" id="toggle_comorb_other" data-value="false">Other <span class="state"></span></div>
+            </div>
 
-        <div id="comorb_other_note_wrapper" class="concern-note" style="display:none; margin-top: 10px;">
-            <label for="comorb_other_note">Specify other comorbidity</label>
-            <textarea id="comorb_other_note" placeholder="Enter details..."></textarea>
+            <div id="comorb_other_note_wrapper" class="concern-note" style="display:none; margin-top: 10px;">
+                <label for="comorb_other_note">Specify other comorbidity</label>
+                <textarea id="comorb_other_note"></textarea>
+            </div>
         </div>
     </div>
 
@@ -505,7 +624,6 @@
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
       <button class="override-btn red" id="override_red">Upgrade to CAT 1</button>
       <button class="override-btn amber" id="override_amber">Upgrade to CAT 2</button>
-      <button class="override-btn" id="override_clear">Clear Override</button>
     </div>
     <input type="hidden" id="override" value="none">
     <div id="override_reason_box" style="display:none;"><label>Reason for override</label><input id="overrideNote" type="text"/></div>
@@ -531,7 +649,7 @@
                    <button class="seg-btn" data-value="false">No</button>
                </div>
                 <div id="unsuitable_note_wrapper" class="concern-note" style="display:none; margin-top:12px;">
-                    <textarea id="unsuitable_note" placeholder="Reason for unsuitability..."></textarea>
+                    <textarea id="unsuitable_note"></textarea>
                 </div>
             </div>
         </div>
@@ -565,7 +683,7 @@
   </div>
 
   <div id="section-ae" class="accordion-wrapper" data-accordion-id="ae">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_ae">A-E Assessment <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_ae">📋 A-E Assessment <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_ae">
       <div class="grid">
         <div class="col-12">
@@ -576,76 +694,155 @@
         </div>
         <div class="col-12" id="mods_inputs" style="display:none;">
           <div class="grid">
-            <div class="col-12"><div class="input-box"><label for="mods_score">MODS Score</label><input id="mods_score" type="text" placeholder="Enter score (overrides ADDS)..."/></div></div>
-            <div class="col-12"><div class="input-box"><label for="mods_details">MODS Details</label><input id="mods_details" type="text" placeholder="Enter details..."/></div></div>
+            <div class="col-12"><div class="input-box"><label for="mods_score">MODS Score</label><input id="mods_score" type="text" /></div></div>
+            <div class="col-12"><div class="input-box"><label for="mods_details">MODS Details</label><input id="mods_details" type="text" /></div></div>
           </div>
         </div>
         <div class="col-12" id="adds_input_container"><div class="input-box"><label for="atoe_adds">ADDS</label><input id="atoe_adds" type="number"/></div></div>
 
+        <!-- A: AIRWAY -->
         <div class="col-12">
             <div class="input-box">
                 <label for="airway_a">A: Airway <span id="prev_airway" class="prev-datum"></span></label>
-                <input id="airway_a" type="text" placeholder="" data-manual="false"/>
+                <input id="airway_a" type="text" data-manual="false"/>
                 <div class="quick-select-container">
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="airway_a" data-value="Patent">Patent</button>
                 </div>
             </div>
         </div>
-        <div class="col-3">
+
+        <!-- B: BREATHING -->
+        <div class="col-12" style="margin-top:12px; border-top:2px solid var(--line); padding-top:12px;">
+            <label style="display:block; font-weight:700; font-size:0.9rem; margin-bottom:8px;">B: Breathing</label>
+        </div>
+        
+        <div class="col-6">
             <div class="input-box">
-                <label for="b_rr">B: RR <span id="prev_rr" class="prev-datum"></span></label>
+                <label for="b_rr">RR <span id="prev_rr" class="prev-datum"></span></label>
                 <div class="input-with-trend">
-                    <input id="b_rr" type="text" placeholder=""/>
+                    <input id="b_rr" type="text"/>
                     <div class="trend-buttons" id="b_rr_trend"></div>
                 </div>
                 <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="b_rr" data-value="15-20">RR 15-20</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="b_rr" data-value="10-14" style="font-size:0.75rem;">RR 10-14</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="b_rr" data-value="15-20" style="font-size:0.75rem;">RR 15-20</button>
                 </div>
             </div>
         </div>
-        <div class="col-3">
+        <div class="col-6">
             <div class="input-box">
                 <label for="b_spo2">SpO2 (%) <span id="prev_spo2" class="prev-datum"></span></label>
-                <input id="b_spo2" type="text" placeholder=""/>
+                <input id="b_spo2" type="text"/>
                 <div class="quick-select-container">
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="b_spo2" data-value=">94%">SpO2 >94%</button>
                 </div>
             </div>
         </div>
-        <div class="col-3"><div class="input-box"><label for="b_device">Oxygen Device <span id="prev_o2_dev" class="prev-datum"></span></label><input id="b_device" type="text" placeholder="" data-manual="false"/></div></div>
-        
-        <div class="col-3"><div class="input-box"><label for="b_wob">WOB</label><input id="b_wob" type="text" placeholder="Description..."/></div></div>
 
-        <div class="col-3">
+        <div class="col-6">
             <div class="input-box">
-                <label for="c_hr">C: HR <span id="prev_hr" class="prev-datum"></span></label>
-                <div class="input-with-trend">
-                    <input id="c_hr" type="text" placeholder="Rate"/>
-                    <div class="trend-buttons" id="c_hr_trend"></div>
+                <label for="b_device">Oxygen Device <span id="prev_o2_dev" class="prev-datum"></span></label>
+                <input id="b_device" type="text"/>
+                <div class="quick-select-container" style="gap:2px;">
+                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="RA" style="font-size:0.7rem;">RA</button>
+                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="1LNP" style="font-size:0.7rem;">1LNP</button>
+                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="2LNP" style="font-size:0.7rem;">2LNP</button>
+                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="3LNP" style="font-size:0.7rem;">3LNP</button>
+                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="4LNP" style="font-size:0.7rem;">4LNP</button>
+                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="HFNP" style="font-size:0.7rem;">HFNP</button>
+                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="40L/40%" style="font-size:0.7rem;">40L/40%</button>
+                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="30L/30%" style="font-size:0.7rem;">30L/30%</button>
                 </div>
-                <div class="quick-select-container">
-                   <button type="button" class="btn small quick-select risk-trigger" data-target="c_hr_rhythm" data-value="Regular">Regular</button>
-                   <button type="button" class="btn small quick-select risk-trigger" data-target="c_hr_rhythm" data-value="Irregular">Irregular</button>
-                </div>
-                <input id="c_hr_rhythm" type="text" placeholder="Rhythm..." style="margin-top:4px;" />
             </div>
         </div>
+        
+        <div class="col-6">
+            <div class="input-box">
+                <label for="b_wob">WOB</label>
+                <input id="b_wob" type="text"/>
+                <div class="quick-select-container">
+                    <button type="button" class="btn small quick-select" data-target="b_wob" data-value="Normal">Normal</button>
+                    <button type="button" class="btn small quick-select" data-target="b_wob" data-value="Increased">Increased</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- C: CIRCULATION -->
+        <div class="col-12" style="margin-top:12px; border-top:2px solid var(--line); padding-top:12px;">
+            <label style="display:block; font-weight:700; font-size:0.9rem; margin-bottom:8px;">C: Circulation</label>
+        </div>
+        
+        <div class="col-3">
+            <div class="input-box">
+                <label for="c_hr">HR <span id="prev_hr" class="prev-datum"></span></label>
+                <div class="input-with-trend">
+                    <input id="c_hr" type="text"/>
+                    <div class="trend-buttons" id="c_hr_trend"></div>
+                </div>
+                <div class="quick-select-container" style="gap:2px;">
+                    <button type="button" class="btn small quick-select" data-target="c_hr" data-value="60s" style="font-size:0.7rem;">60s</button>
+                    <button type="button" class="btn small quick-select" data-target="c_hr" data-value="70s" style="font-size:0.7rem;">70s</button>
+                    <button type="button" class="btn small quick-select" data-target="c_hr" data-value="80s" style="font-size:0.7rem;">80s</button>
+                    <button type="button" class="btn small quick-select" data-target="c_hr" data-value="90s" style="font-size:0.7rem;">90s</button>
+                    <button type="button" class="btn small quick-select" data-target="c_hr" data-value="100s" style="font-size:0.7rem;">100s</button>
+                </div>
+                <div class="quick-select-container" style="gap:2px; margin-top:4px;">
+                   <button type="button" class="btn small quick-select" data-target="c_hr_rhythm" data-value="Regular" style="flex:1; font-size:0.7rem;">Reg</button>
+                   <button type="button" class="btn small quick-select" data-target="c_hr_rhythm" data-value="Irregular" style="flex:1; font-size:0.7rem;">Irr</button>
+                </div>
+                <input id="c_hr_rhythm" type="text" style="margin-top:2px;"/>
+            </div>
+        </div>
+
         <div class="col-3">
             <div class="input-box">
                 <label for="c_nibp">NIBP <span id="prev_bp" class="prev-datum"></span></label>
                 <div class="input-with-trend">
-                    <input id="c_nibp" type="text" placeholder="SBP/DBP"/>
+                    <input id="c_nibp" type="text"/>
                     <div class="trend-buttons" id="c_nibp_trend"></div>
                 </div>
             </div>
         </div>
-        <div class="col-3"><div class="input-box"><label for="c_cr">Cap Refill</label><input id="c_cr" type="text" placeholder=""/></div></div>
-        <div class="col-3"><div class="input-box"><label for="c_perf">Perfusion</label><input id="c_perf" type="text" placeholder=""/></div></div>
 
-        <div class="col-4">
+        <div class="col-3">
             <div class="input-box">
-                <label for="d_alert">D: Alert? <span id="prev_alert" class="prev-datum"></span></label>
-                <input id="d_alert" type="text" placeholder=""/>
+                <label for="c_cr">Cap Refill</label>
+                <input id="c_cr" type="text"/>
+                <div class="quick-select-container" style="gap:2px;">
+                    <button type="button" class="btn small quick-select" data-target="c_cr" data-value="<3 sec" style="flex:1; font-size:0.7rem;">&lt;3s</button>
+                    <button type="button" class="btn small quick-select" data-target="c_cr" data-value="4 sec" style="flex:1; font-size:0.7rem;">4s</button>
+                    <button type="button" class="btn small quick-select" data-target="c_cr" data-value="5 sec" style="flex:1; font-size:0.7rem;">5s</button>
+                    <button type="button" class="btn small quick-select" data-target="c_cr" data-value="6 sec" style="flex:1; font-size:0.7rem;">6s</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-3">
+            <div class="input-box">
+                <label for="c_perf">Perfusion</label>
+                <textarea id="c_perf" style="min-height:44px; resize:vertical;"></textarea>
+                <div class="quick-select-container" style="gap:2px; flex-wrap:wrap;">
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Warm, well perfused" style="flex:1 1 30%; font-size:0.65rem;">Warm</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Hot" style="flex:1 1 30%; font-size:0.65rem;">Hot</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Cool, poorly perfused" style="flex:1 1 30%; font-size:0.65rem;">Cool</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Strong pulses" style="flex:1 1 48%; font-size:0.65rem;">Strong</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Thready pulses" style="flex:1 1 48%; font-size:0.65rem;">Thready</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Normal colour" style="flex:1 1 48%; font-size:0.65rem;">Normal</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Pale" style="flex:1 1 48%; font-size:0.65rem;">Pale</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Flushed" style="flex:1 1 100%; font-size:0.65rem;">Flushed</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- D: DISABILITY -->
+        <div class="col-12" style="margin-top:12px; border-top:2px solid var(--line); padding-top:12px;">
+            <label style="display:block; font-weight:700; font-size:0.9rem; margin-bottom:8px;">D: Disability</label>
+        </div>
+
+        <div class="col-6">
+            <div class="input-box">
+                <label for="d_alert">Alert? <span id="prev_alert" class="prev-datum"></span></label>
+                <input id="d_alert" type="text"/>
                  <div class="quick-select-container">
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="d_alert" data-value="Alert">Alert</button>
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="d_alert" data-value="GCS 15">GCS 15</button>
@@ -654,33 +851,50 @@
             </div>
         </div>
         
-        <div class="col-4">
+        <div class="col-6">
             <div class="input-box">
                 <label for="d_pain">Pain</label>
-                <input id="d_pain" type="text" placeholder=""/>
+                <input id="d_pain" type="text"/>
                 <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="d_pain" data-value="No Pain">No Pain</button>
+                    <button type="button" class="btn small quick-select" data-target="d_pain" data-value="No Pain">No Pain</button>
+                    <button type="button" class="btn small quick-select" data-target="d_pain" data-value="5/10">5/10</button>
+                    <button type="button" class="btn small quick-select" data-target="d_pain" data-value="10/10">10/10</button>
                 </div>
             </div>
         </div>
-        <div class="col-4"></div>
 
-        <div class="col-4">
+        <!-- E: EXPOSURE -->
+        <div class="col-12" style="margin-top:12px; border-top:2px solid var(--line); padding-top:12px;">
+            <label style="display:block; font-weight:700; font-size:0.9rem; margin-bottom:8px;">E: Exposure</label>
+        </div>
+
+        <div class="col-3">
             <div class="input-box">
-                <label for="e_temp">E: Temp <span id="prev_temp" class="prev-datum"></span></label>
-                <input id="e_temp" type="text" placeholder=""/>
+                <label for="e_temp">Temp <span id="prev_temp" class="prev-datum"></span></label>
+                <input id="e_temp" type="text"/>
                  <div class="quick-select-container">
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="e_temp" data-value="Afebrile">Afebrile</button>
                 </div>
             </div>
         </div>
-        <div class="col-4"><div class="input-box"><label for="e_bsl">BSL</label><input id="e_bsl" type="text" placeholder=""/></div></div>
+        <div class="col-3"><div class="input-box"><label for="e_bsl">BSL</label><input id="e_bsl" type="text"/></div></div>
+        <div class="col-3">
+            <div class="input-box">
+                <label for="e_fluid">Fluid Status</label>
+                <input id="e_fluid" type="text"/>
+                <div class="quick-select-container">
+                    <button type="button" class="btn small quick-select" data-target="e_fluid" data-value="Euvolaemic">Euvolaemic</button>
+                    <button type="button" class="btn small quick-select" data-target="e_fluid" data-value="Oedema">Oedema</button>
+                    <button type="button" class="btn small quick-select" data-target="e_fluid" data-value="Dehydrated">Dehydrated</button>
+                </div>
+            </div>
+        </div>
         
-        <div class="col-4">
+        <div class="col-3">
             <div class="input-box">
                 <label for="e_uop">UOP</label>
                 <div style="display:flex; align-items:center; gap:4px;">
-                    <input id="e_uop" type="text" placeholder="ml/hr"/>
+                    <input id="e_uop" type="text" />
                     <div id="target_uop_display" style="font-size:0.75rem; color:var(--blue-hint); font-weight:700; white-space:nowrap; display:none;">Target: >--</div>
                 </div>
                 <div class="quick-select-container">
@@ -693,7 +907,7 @@
             </div>
         </div>
 
-        <div class="col-12"><hr></div>
+        <div class="col-12" style="margin-top:12px;"><hr></div>
         
         <div class="col-12">
             <div class="input-box">
@@ -701,14 +915,17 @@
                 <input id="ae_mobility" type="text" placeholder="Current mobility level"/>
                 <div class="quick-select-container">
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_mobility" data-value="Independent">Independent</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_mobility" data-value="Standby Assist">Standby Assist</button>
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_mobility" data-value="1x Assist">1x Assist</button>
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_mobility" data-value="2x Assist">2x Assist</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_mobility" data-value="Hoist">Hoist</button>
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_mobility" data-value="RIB">RIB</button>
                 </div>
             </div>
         </div>
-        
-        <div class="col-12">
+
+        <!-- Diet & Nutrition Side-by-Side -->
+        <div class="col-6">
             <div class="input-box">
                 <label for="ae_diet">Diet</label>
                 <input id="ae_diet" type="text" placeholder="Current diet/fluids"/>
@@ -717,14 +934,30 @@
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_diet" data-value="Clear Fluids">Clear Fluids</button>
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_diet" data-value="Nourishing Fluids">Nourishing Fluids</button>
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_diet" data-value="NBM">NBM</button>
+                    <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_diet" data-value="Fluid Restriction" id="btn_fluid_restrict">Fluid Restriction</button>
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_diet" data-value="TPN">TPN</button>
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_diet" data-value="PPN">PPN</button>
                     <button type="button" class="btn small quick-select" data-stack="true" data-target="ae_diet" data-value="NG Feed">NG Feed</button>
                 </div>
             </div>
+            <div id="fluid_restriction_wrapper" style="display:none; margin-top:8px; padding:10px; background:var(--bg); border-radius:8px;">
+                <label for="fluid_restriction_amount" style="font-size:0.85rem;">Fluid Restriction Amount:</label>
+                <input id="fluid_restriction_amount" type="text" placeholder="e.g. 1L/day, 800ml/day..." style="padding:8px; border:1px solid var(--line); border-radius:4px;"/>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Is Nutrition Adequate?</label>
+            <div class="segmented-group" id="seg_nutrition_adequate" style="margin-bottom:8px;">
+                <button class="seg-btn" data-value="true">Yes</button>
+                <button class="seg-btn" data-value="false">No</button>
+            </div>
+            <div id="nutrition_context_wrapper" style="display:none; margin-top:8px; padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
+                <textarea id="nutrition_context_note" style="min-height:60px;"></textarea>
+            </div>
         </div>
         
-        <div class="col-12">
+        <div class="col-6">
             <div class="input-box">
                 <label for="ae_bowels">Bowels</label>
                 <input id="ae_bowels" type="text" placeholder="Note details..."/>
@@ -732,22 +965,24 @@
                     <button type="button" class="btn small quick-select" id="btn_bno">BNO</button>
                     <button type="button" class="btn small quick-select" id="btn_bo">BO</button>
                 </div>
-                <div id="bowel_date_wrapper" style="display:none; margin-top:8px;">
-                    <div style="display:flex; gap:8px; align-items:flex-end;">
-                        <div style="flex:0 0 auto;">
-                            <label id="bowel_date_label" style="font-size:0.8rem; color:var(--accent);">Date</label>
-                            <input type="date" id="bowel_date" style="padding:6px; font-size:0.9rem;">
-                            <div class="quick-select-container">
-                                <button type="button" class="btn small quick-select" id="btn_bowel_today">Today</button>
-                                <button type="button" class="btn small quick-select" id="btn_bowel_yesterday">Yesterday</button>
-                            </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div id="bowel_date_wrapper" style="display:none;">
+                <div style="display:flex; gap:8px; flex-direction:column;">
+                    <div style="flex:1;">
+                        <label id="bowel_date_label" style="font-size:0.8rem; color:var(--accent); display:block; margin-bottom:4px;">Date</label>
+                        <input type="date" id="bowel_date" style="padding:6px; font-size:0.9rem; width:100%;">
+                        <div class="quick-select-container" style="margin-top:4px;">
+                            <button type="button" class="btn small quick-select" id="btn_bowel_today">Today</button>
+                            <button type="button" class="btn small quick-select" id="btn_bowel_yesterday">Yesterday</button>
                         </div>
-                        <div id="aperients_wrapper" style="display:none; flex:1; padding-bottom:8px;">
-                             <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; font-size:0.9rem;">
-                                <input type="checkbox" id="chk_aperients" style="width:auto; transform:scale(1.1);">
-                                Aperients charted?
-                            </label>
-                        </div>
+                    </div>
+                    <div id="aperients_wrapper" style="display:none;">
+                         <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; font-size:0.9rem;">
+                            <input type="checkbox" id="chk_aperients" style="width:auto; transform:scale(1.1);">
+                            Aperients charted?
+                        </label>
                     </div>
                 </div>
             </div>
@@ -758,7 +993,7 @@
   </div>
 
   <div id="section-bloods" class="accordion-wrapper" data-accordion-id="bloods">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_bloods">Bloods <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_bloods">🩸 Bloods <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_bloods">
       
       <button id="btnUseSameBloods" class="btn small" style="width:100%; margin-bottom:12px; border:1px dashed var(--accent); color:var(--accent); background:transparent;">
@@ -771,6 +1006,7 @@
         <div class="input-box blood-item"><label for="bl_wcc">WCC <span id="prev_bl_wcc" class="prev-datum"></span></label><input id="bl_wcc" type="number" step="0.1"/><div class="trend-buttons" id="bl_wcc_trend"></div><span class="range-subtext">(4-11)</span></div>
         <div class="input-box blood-item"><label for="bl_crp">CRP <span id="prev_bl_crp" class="prev-datum"></span></label><input id="bl_crp" type="number"/><div class="trend-buttons" id="bl_crp_trend"></div><span class="range-subtext">(<5)</span></div>
         <div class="input-box blood-item"><label for="bl_cr_review">Cr <span id="prev_bl_cr_review" class="prev-datum"></span></label><input id="bl_cr_review" type="number"/><div class="trend-buttons" id="bl_cr_review_trend"></div><span class="range-subtext">(50-98)</span></div>
+        <div class="input-box blood-item"><label for="bl_egfr">eGFR <span id="prev_bl_egfr" class="prev-datum"></span></label><input id="bl_egfr" type="number"/><div class="trend-buttons" id="bl_egfr_trend"></div><span class="range-subtext">(60-120)</span></div>
         <div class="input-box blood-item"><label for="bl_k">K <span id="prev_bl_k" class="prev-datum"></span></label><input id="bl_k" type="number" step="0.1"/><div class="trend-buttons" id="bl_k_trend"></div><span class="range-subtext">(3.5-5.2)</span></div>
         <div class="input-box blood-item"><label for="bl_na">Na <span id="prev_bl_na" class="prev-datum"></span></label><input id="bl_na" type="number" step="1"/><div class="trend-buttons" id="bl_na_trend"></div><span class="range-subtext">(135-145)</span></div>
         <div class="input-box blood-item"><label for="bl_mg">Mg <span id="prev_bl_mg" class="prev-datum"></span></label><input id="bl_mg" type="number" step="0.1"/><div class="trend-buttons" id="bl_mg_trend"></div><span class="range-subtext">(0.7-1.1)</span></div>
@@ -787,14 +1023,14 @@
       </div>
       
       <div class="grid" style="margin-top:12px;">
-          <div class="col-12">
-             <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Are the infection markers downtrending, ADDS low and the patient is on appropriate antibiotics?</label>
+          <div class="col-6" style="margin-top:8px;">
+             <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Are the infection markers downtrending, ADDS low and appropriate antibiotics?</label>
              <div class="segmented-group" id="seg_infection_downtrend_bloods">
                   <button class="seg-btn" data-value="true">Yes</button>
                   <button class="seg-btn" data-value="false">No</button>
              </div>
           </div>
-           <div class="col-12" style="margin-top:8px;">
+           <div class="col-6" style="margin-top:8px;">
              <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Known CKD and Cr around baseline?</label>
              <div class="segmented-group" id="seg_renal_chronic_bloods">
                   <button class="seg-btn" data-value="true">Yes</button>
@@ -804,26 +1040,74 @@
       </div>
 
       <div class="grid" id="infusions_wrapper" style="display:none; margin-top: 12px; row-gap: 8px;">
-          <div class="col-12"><div class="input-box"><label for="infusions_note">Infusions</label><input id="infusions_note" type="text" placeholder="Enter details..."/></div></div>
-      </div>
-
-      <div style="margin-top:12px" class="grid">
-        <div class="col-12"><div class="input-box"><label>Electrolyte Plan</label><input id="elec_replace_note" type="text" placeholder="Replacement plan..."/></div></div>
-        <div class="col-12" style="margin-top:8px">
+          <div class="col-6"><div class="input-box"><label for="infusions_note">Infusions</label><input id="infusions_note" type="text"/></div></div>
+          <div class="col-6"><div class="input-box"><label for="elec_replace_note">Electrolyte Plan</label><input id="elec_replace_note" type="text"/></div></div>
+          <div class="col-12" style="margin-top:8px">
              <div class="segmented-group" id="seg_new_bloods_ordered">
                 <button class="seg-btn" style="flex:3; text-align:left; padding-left:12px; pointer-events:none;">New bloods ordered?</button>
                 <button class="seg-btn" data-value="true">Yes</button>
                 <button class="seg-btn" data-value="false">No</button>
             </div>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="section-psychosocial" class="card" style="margin-top:20px;">
+    <div class="section-title">🧠 Psychosocial & Recovery Assessment</div>
+    
+    <div class="grid" style="row-gap:10px; margin-top:12px;">
+      <div class="col-12">
+        <div class="segmented-group" id="seg_sleep_quality">
+            <button class="seg-btn" style="flex:2; text-align:left; padding-left:12px; pointer-events:none; font-weight:600;">Sleep Quality</button>
+            <button class="seg-btn" data-value="false">Adequate</button>
+            <button class="seg-btn" data-value="true">Inadequate</button>
+        </div>
+        <div id="sleep_quality_wrapper" style="display:none; margin-top:8px;">
+            <textarea id="sleep_quality_note" placeholder="details..." style="min-height:50px;"></textarea>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="segmented-group" id="seg_pain_control">
+            <button class="seg-btn" style="flex:2; text-align:left; padding-left:12px; pointer-events:none; font-weight:600;">Pain Control</button>
+            <button class="seg-btn" data-value="false">No Concern</button>
+            <button class="seg-btn" data-value="true">Concern</button>
+        </div>
+        <div id="pain_context_wrapper" style="display:none; margin-top:8px;">
+            <textarea id="pain_context_note" placeholder="details..." style="min-height:50px;"></textarea>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="segmented-group" id="seg_neuro_psych">
+            <button class="seg-btn" style="flex:2; text-align:left; padding-left:12px; pointer-events:none; font-weight:600;">Psychological Concerns</button>
+            <button class="seg-btn" data-value="false">No Concern</button>
+            <button class="seg-btn" data-value="true">Concern</button>
+        </div>
+        <div id="neuro_psych_wrapper" style="display:none; margin-top:8px;">
+            <textarea id="neuro_psych_note" placeholder="details..." style="min-height:50px;"></textarea>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="segmented-group" id="seg_pics">
+            <button class="seg-btn" style="flex:2; text-align:left; padding-left:12px; pointer-events:none; font-weight:600;">PICS</button>
+            <button class="seg-btn" data-value="false">Negative</button>
+            <button class="seg-btn" data-value="true">Positive</button>
+        </div>
+        <div id="pics_wrapper" style="display:none; margin-top:8px;">
+            <textarea id="pics_note" placeholder="details..." style="min-height:50px;"></textarea>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="accordion-wrapper" data-accordion-id="devices">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_devices">Lines, Drains & Wounds <span class="icon" aria-hidden="true">[+]</span></button>
+  <div class="accordion-wrapper" id="section-devices" data-accordion-id="devices" style="margin-top:20px;">
+    <button class="accordion" aria-expanded="false" aria-controls="panel_devices">🔧 Lines, Drains & Wounds <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_devices" style="display:flex; flex-direction:column; gap: 12px;">
        <div id="devices-container"></div>
+       
        <div class="button-group" style="justify-content: flex-start; flex-wrap: wrap;">
            <button class="btn small" data-device-type="CVC">+ Add CVC</button>
            <button class="btn small" data-device-type="PICC">+ Add PICC</button>
@@ -841,54 +1125,53 @@
   </div>
 
   <div id="section-context" class="accordion-wrapper" data-accordion-id="context">
-    <button class="accordion" aria-expanded="false" aria-controls="panel_context">Other Factors <span class="icon" aria-hidden="true">[+]</span></button>
+    <button class="accordion" aria-expanded="false" aria-controls="panel_context">📝 Other Factors <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_context">
         <div class="devices-subtitle">▶ Goals of Care (GOC)</div>
         <div class="devices-input-group">
-            <textarea id="goc_note" placeholder="Enter details..."></textarea>
+            <textarea id="goc_note"></textarea>
         </div>
 
         <div class="devices-subtitle">▶ Allergies</div>
         <div class="devices-input-group">
-            <textarea id="allergies_note" placeholder="Enter details..."></textarea>
+            <textarea id="allergies_note"></textarea>
         </div>
         
-        <div class="devices-subtitle">▶ Significant Past Medical History (PMH)</div>
+        <div class="devices-subtitle">▶ Past Medical History</div>
         <div id="selected_comorbs_display" style="font-size:0.85rem; color:var(--accent); font-weight:600; margin-bottom:4px; display:none;"></div>
         <div class="devices-input-group">
-            <textarea id="pmh_note" placeholder="Enter additional PMH here..."></textarea>
+            <textarea id="pmh_note"></textarea>
         </div>
 
-        <div class="devices-subtitle">▶ PICS Assessment</div>
-        <div class="devices-input-group">
-            <textarea id="pics_note" placeholder="Enter details..."></textarea>
+        <div class="devices-subtitle">▶ Prophylaxis & Anticoagulation</div>
+        <div class="grid" style="margin-bottom:12px; row-gap:8px;">
+            <div class="col-6"><div class="input-box"><label>Anticoagulation</label><input id="anticoag_note" type="text"/></div></div>
+            <div class="col-6"><div class="input-box"><label>VTE Prophylaxis</label><input id="vte_prophylaxis_note" type="text"/></div></div>
         </div>
 
         <div class="devices-subtitle">▶ Other</div>
         <div class="devices-input-group">
-            <textarea id="context_other_note" placeholder="Enter details..."></textarea>
+            <textarea id="context_other_note"></textarea>
         </div>
     </div>
   </div>
 
-  <div id="section-summary" class="card">
-    <div class="section-title">Auto-Generated Summary</div>
+  <div id="section-summary" class="card" style="margin-top:40px; margin-bottom:40px; display:block; scroll-margin-top:100px; position:sticky; top:100px; z-index:50; background:var(--card);">
+    <div class="section-title">📄 Auto-Generated Summary</div>
     
     <div id="manual_edit_warning" style="display:none; background:#fff3cd; color:#856404; padding:8px; border-radius:6px; font-size:0.9rem; margin-bottom:8px; border:1px solid #ffeeba; align-items:center; justify-content:space-between;">
         <span><strong>Note:</strong> You have edited the text manually. Auto-updates paused.</span>
         <button id="btn_force_update" class="btn small" style="background:#856404; color:white; border:none; margin-left:8px;">Update Anyway</button>
     </div>
 
-    <textarea id="summary" placeholder="Summary will auto-generate here..."></textarea>
+    <textarea id="summary" placeholder="Summary will auto-generate here..." style="min-height:300px; width:100%; display:block;"></textarea>
     <button id="btnCopySummaryMain" class="btn" style="width:100%; margin-top:8px; background:var(--input-bg);">Copy to DMR (Clipboard)</button>
     
     <div id="completeness_nudge" style="margin-top:8px; margin-bottom:8px; font-size:0.9rem; color:var(--muted); font-weight:600; text-align:left;"></div>
   </div>
-  
+
   <div style="text-align:center; color: var(--muted); font-weight: 600; margin: 24px 0; letter-spacing: 1px;">- END ASSESSMENT -</div>
 </main>
-
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <footer role="contentinfo">
   <div class="footer-item"><strong>Patient:</strong> <span id="footerName">--</span></div>

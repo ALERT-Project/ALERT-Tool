@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function processDMR(text) {
         // --- 0. RESET ---
         window.prevBloods = {}; 
+        const carryForward = true; // Always carry forward stable sections
 
         // --- 1. DEMOGRAPHICS ---
         const ptMatch = text.match(/Patient:\s*([A-Za-z\s]+?)\s*\|/i);
@@ -140,28 +141,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- 2. CONTEXT ---
-        let contextFound = false;
-        const gocMatch = text.match(/GOC:\s*[\(]?(.*?)[\)]?$/m) || text.match(/GOC:\s*(.*)/i);
-        if(gocMatch) { setVal('goc_note', gocMatch[1].replace(/^\(|\)$/g, '')); contextFound = true; }
+        if (carryForward) {
+            let contextFound = false;
+            const gocMatch = text.match(/GOC:\s*[\(]?(.*?)[\)]?$/m) || text.match(/GOC:\s*(.*)/i);
+            if(gocMatch) { setVal('goc_note', gocMatch[1].replace(/^\(|\)$/g, '')); contextFound = true; }
 
-        const allergiesMatch = text.match(/Allergies:\s*(.*)/i);
-        if(allergiesMatch) { setVal('allergies_note', allergiesMatch[1]); contextFound = true; }
+            const allergiesMatch = text.match(/Allergies:\s*(.*)/i);
+            if(allergiesMatch) { setVal('allergies_note', allergiesMatch[1]); contextFound = true; }
 
-        const picsMatch = text.match(/PICS Assessment:\s*[\(]?(.*?)[\)]?$/m) || text.match(/PICS Assessment:\s*(.*)/i);
-        if(picsMatch) { setVal('pics_note', picsMatch[1].replace(/^\(|\)$/g, '')); contextFound = true; }
+            const picsMatch = text.match(/PICS Assessment:\s*[\(]?(.*?)[\)]?$/m) || text.match(/PICS Assessment:\s*(.*)/i);
+            if(picsMatch) { setVal('pics_note', picsMatch[1].replace(/^\(|\)$/g, '')); contextFound = true; }
 
-        // Regex Improvement: PMH (captures lines starting with - until next section)
-        const pmhSection = text.match(/(?:PMH|Significant Past Medical History):([\s\S]*?)(?:A-E ASSESSMENT|PICS|GOC)/i);
-        if(pmhSection && pmhSection[1]) {
-            const rawPmh = pmhSection[1].split('\n')
-                .map(l => l.trim())
-                .filter(l => l.startsWith('-'))
-                .map(l => l.substring(1).trim())
-                .join('\n');
-            if(rawPmh) { setVal('pmh_note', rawPmh); contextFound = true; }
+            // Regex Improvement: PMH (captures lines starting with - until next section)
+            const pmhSection = text.match(/(?:PMH|Significant Past Medical History):([\s\S]*?)(?:A-E ASSESSMENT|PICS|GOC)/i);
+            if(pmhSection && pmhSection[1]) {
+                const rawPmh = pmhSection[1].split('\n')
+                    .map(l => l.trim())
+                    .filter(l => l.startsWith('-'))
+                    .map(l => l.substring(1).trim())
+                    .join('\n');
+                if(rawPmh) { setVal('pmh_note', rawPmh); contextFound = true; }
+            }
+
+            if(contextFound) openAccordion('panel_context', '[aria-controls="panel_context"]');
         }
-
-        if(contextFound) openAccordion('panel_context', '[aria-controls="panel_context"]');
 
         // --- 3. PREVIOUS DATA (A-E) ---
         const aeBlock = text.match(/A-E ASSESSMENT([\s\S]*?)(?:Bloods:|DEVICES:)/i) || [null, text];
@@ -197,14 +200,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if(alertMatch) setPrev('prev_alert', alertMatch[1]);
         }
 
-        const mobMatch = text.match(/Mobility:\s*(.*)/i);
-        if(mobMatch) setVal('ae_mobility', mobMatch[1]);
+        if (carryForward) {
+            const mobMatch = text.match(/Mobility:\s*(.*)/i);
+            if(mobMatch) setVal('ae_mobility', mobMatch[1]);
 
-        const dietMatch = text.match(/Diet:\s*(.*)/i);
-        if(dietMatch) setVal('ae_diet', dietMatch[1]);
+            const dietMatch = text.match(/Diet:\s*(.*)/i);
+            if(dietMatch) setVal('ae_diet', dietMatch[1]);
 
-        const bowelMatch = text.match(/Bowels:\s*(.*)/i);
-        if(bowelMatch) setVal('ae_bowels', bowelMatch[1]);
+            const bowelMatch = text.match(/Bowels:\s*(.*)/i);
+            if(bowelMatch) setVal('ae_bowels', bowelMatch[1]);
+        }
 
         // --- 4. BLOODS ---
         const bloodsBlock = text.match(/Bloods:\s*([\s\S]*?)(?:DEVICES:|IDENTIFIED ICU READMISSION|IDENTIFIED RISK FACTORS|$)/i);
@@ -224,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
             getB(/WCC\s*([\d\.]+)/i, 'prev_bl_wcc', 'wcc');
             getB(/CRP\s*(\d+)/i, 'prev_bl_crp', 'crp');
             getB(/Cr\s*(\d+)/i, 'prev_bl_cr_review', 'cr_review');
+            getB(/eGFR\s*(\d+)/i, 'prev_bl_egfr', 'egfr');
             getB(/Lac\s*([\d\.]+)/i, 'prev_bl_lac_review', 'lac_review');
             getB(/K\s*([\d\.]+)/i, 'prev_bl_k', 'k');
             getB(/Na\s*(\d+)/i, 'prev_bl_na', 'na');
@@ -237,6 +243,14 @@ document.addEventListener('DOMContentLoaded', () => {
             getB(/ALT\s*(\d+)/i, 'prev_bl_alt', 'alt');
             getB(/INR\s*([\d\.]+)/i, 'prev_bl_inr', 'inr');
             getB(/APTT\s*(\d+)/i, 'prev_bl_aptt', 'aptt');
+
+            // --- Auto-detect worsening Cr ---
+            const crMatch = text.match(/Cr\s*(\d+)/i);
+            if (crMatch && window.prevBloods && window.prevBloods.cr_review) {
+                const prevCr = parseFloat(window.prevBloods.cr_review);
+                // Don't auto-click, just set the chip to ready for manual selection
+                // Clinician will see prev Cr in the summary and can decide
+            }
         }
 
         // --- 5. RISKS ---
@@ -272,80 +286,129 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(lower.includes('vaso') || lower.includes('pressor')) setRiskText('prev_risk_pressors', rawTxt);
                     if(lower.includes('immobility')) setRiskText('prev_risk_immob', rawTxt);
 
-                    // --- AUTOMATION (TOGGLES & CHIPS) ---
-
-                    // Mitigation Checks
-                    if(lower.includes('infection markers downtrending')) clickSegment('seg_infection_downtrend', 'true');
-                    if(lower.includes('known ckd and cr around baseline')) clickSegment('seg_renal_chronic', 'true');
-
-                    // Standard Risks
-                    if(lower.includes('discharged after-hours')) clickSegment('seg_after_hours', 'true');
-                    if(lower.includes('hospital acquired complication')) clickSegment('seg_hac', 'true');
-
-                    // Vasoactives
-                    if(lower.includes('vasoactive')) {
-                        clickSegment('seg_pressors', 'true');
-                        if(lower.includes('noradrenaline')) clickToggle('toggle_pressor_recent_norad');
-                        if(lower.includes('metaraminol')) clickToggle('toggle_pressor_recent_met');
-                        if(lower.includes('gtn')) clickToggle('toggle_pressor_recent_gtn');
-                        if(lower.includes('dobutamine')) clickToggle('toggle_pressor_recent_dob');
-                        if(lower.includes('midodrine')) clickToggle('toggle_pressor_recent_mid');
-                        
-                        // "Other" handling
-                        if(lower.includes('other')) {
-                             clickToggle('toggle_pressor_recent_other');
-                             // Attempt to extract detail
-                             const otherMatch = rawTxt.match(/Other \((.*?)\)/i);
-                             if(otherMatch) setVal('pressor_recent_other_note', otherMatch[1]);
-                        }
-                    }
-
-                    // Renal Details
-                    if(lower.includes('renal concern')) {
-                         clickSegment('seg_renal', 'true');
-                         if(lower.includes('oliguria')) clickToggle('toggle_renal_oliguria');
-                         if(lower.includes('anuria')) clickToggle('toggle_renal_anuria');
-                         if(lower.includes('fluid overload')) clickToggle('toggle_renal_fluid');
-                         if(lower.includes('dialysis')) clickToggle('toggle_renal_dialysis');
-                    }
-                    
-                    // Respiratory Details
-                    if(lower.includes('respiratory concern')) {
-                         clickSegment('seg_resp_concern', 'true');
-                         if(lower.includes('tachypnea')) clickToggle('toggle_resp_tachypnea');
-                         if(lower.includes('rapid o2 wean')) clickToggle('toggle_resp_rapid_wean');
-                         if(lower.includes('intubated')) clickSegment('seg_intubated', 'true');
-                    }
-
-                    // Immobility
-                    if(lower.includes('immobility')) clickSegment('seg_immobility', 'true');
+                    // Note: Scraped risks are shown as FYI only, not auto-highlighted
+                    // Clinicians should review and manually select concerns
 
                 });
             } else { risksBox.style.display = 'none'; }
         } else { risksBox.style.display = 'none'; }
 
         // --- 6. DEVICES ---
-        const devSection = text.match(/DEVICES:([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|$)/i);
-        if(devSection && devSection[1]) {
-            openAccordion('panel_devices', '[aria-controls="panel_devices"]');
-            const devLines = devSection[1].split('\n').map(l => l.trim()).filter(l => l.startsWith('-'));
-            devLines.forEach(line => {
-                const txt = line.substring(1).trim();
-                if(txt.toLowerCase().includes('nil')) return;
-                
-                let type = "Other Device";
-                let det = txt;
-                
-                const known = ['CVC', 'PICC', 'Other CVAD', 'PIVC', 'Arterial Line', 'Enteral Tube', 'IDC', 'Drain', 'Wound', 'Pacing Wire'];
-                for(let k of known) {
-                    if(txt.startsWith(k)) {
-                        type = k;
-                        det = txt.substring(k.length).trim().replace(/^\(|\)$/g, '').replace(/^-/, '').trim(); 
-                        break;
+        if (carryForward) {
+            const devSection = text.match(/DEVICES:([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|$)/i);
+            if(devSection && devSection[1]) {
+                openAccordion('panel_devices', '[aria-controls="panel_devices"]');
+                const devLines = devSection[1].split('\n').map(l => l.trim()).filter(l => l.startsWith('-'));
+                devLines.forEach(line => {
+                    const txt = line.substring(1).trim();
+                    if(txt.toLowerCase().includes('nil')) return;
+                    
+                    let type = "Other Device";
+                    let det = txt;
+                    let insertionDate = '';
+
+                    const insertedMatch = txt.match(/inserted\s*[:]?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+                    if (insertedMatch) {
+                        const rawDate = insertedMatch[1];
+                        if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
+                            insertionDate = rawDate;
+                        } else {
+                            const parts = rawDate.split(/[\/\-]/);
+                            const day = parts[0].padStart(2, '0');
+                            const month = parts[1].padStart(2, '0');
+                            let year = parts[2];
+                            if (year.length === 2) year = '20' + year;
+                            insertionDate = `${year}-${month}-${day}`;
+                        }
                     }
-                }
-                if(window.addDevice) window.addDevice(type, det);
-            });
+
+                    const dwellMatch = txt.match(/dwell\s*(\d+)\s*days?/i) || txt.match(/(\d+)\s*days?\s*dwell/i);
+                    if (!insertionDate && dwellMatch) {
+                        const dwellDays = parseInt(dwellMatch[1], 10);
+                        if (!isNaN(dwellDays)) {
+                            const now = new Date();
+                            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dwellDays);
+                            const yyyy = d.getFullYear();
+                            const mm = String(d.getMonth() + 1).padStart(2, '0');
+                            const dd = String(d.getDate()).padStart(2, '0');
+                            insertionDate = `${yyyy}-${mm}-${dd}`;
+                        }
+                    }
+                    
+                    const known = ['CVC', 'PICC', 'Other CVAD', 'PIVC', 'Arterial Line', 'Enteral Tube', 'IDC', 'Drain', 'Wound', 'Pacing Wire', 'Vascath'];
+                    for(let k of known) {
+                        if(txt.startsWith(k)) {
+                            type = k;
+                            det = txt.substring(k.length).trim().replace(/^\(|\)$/g, '').replace(/^-/, '').trim(); 
+                            break;
+                        }
+                    }
+                    if (det) {
+                        det = det
+                            .replace(/\(.*?inserted\s*[:]?.*?\)/i, '')
+                            .replace(/inserted\s*[:]?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i, '')
+                            .replace(/dwell\s*\d+\s*days?/i, '')
+                            .replace(/\d+\s*days?\s*dwell/i, '')
+                            .replace(/^\(|\)$/g, '')
+                            .trim();
+                    }
+
+                    if(window.addDevice) window.addDevice(type, det, insertionDate);
+                });
+            }
+        }
+        
+        // --- QUICK REVIEW DETECTION FOR CAT 2 FOLLOW-UPS ---
+        // Extract category and time info from imported data
+        const catMatch = text.match(/ALERT Nursing Review Category - (CAT \d+)/i);
+        
+        // Match both hours and days formats
+        let hoursOnWard = null;
+        const hourMatch = text.match(/Time since stepdown:\s*([\d.]+)\s*hour/i);
+        const dayMatch = text.match(/Time since stepdown:\s*([\d.]+)\s*day/i);
+        
+        if (hourMatch) {
+            hoursOnWard = parseFloat(hourMatch[1]);
+        } else if (dayMatch) {
+            hoursOnWard = parseFloat(dayMatch[1]) * 24; // Convert days to hours
+        }
+        
+        if (catMatch && hoursOnWard !== null) {
+            const categoryText = catMatch[1]; // e.g., "CAT 2"
+            
+            let category = 'green';
+            if (categoryText.includes('CAT 1')) category = 'red';
+            else if (categoryText.includes('CAT 2')) category = 'amber';
+            
+            // Parse which specific risks were flagged in the imported note
+            const identifiedRisks = text.match(/IDENTIFIED ICU READMISSION RISK FACTORS:([\s\S]*?)(?=PLAN:|$)/i);
+            const previousRisks = [];
+            if (identifiedRisks && identifiedRisks[1]) {
+                const riskText = identifiedRisks[1].toLowerCase();
+                if (riskText.includes('respiratory') || riskText.includes('oxygen') || riskText.includes('o2')) previousRisks.push('respiratory');
+                if (riskText.includes('confusion') || riskText.includes('delirium') || riskText.includes('neuro')) previousRisks.push('neuro');
+                if (riskText.includes('renal') || riskText.includes('aki') || riskText.includes('kidney')) previousRisks.push('renal');
+                if (riskText.includes('infection') || riskText.includes('sepsis')) previousRisks.push('infection');
+                if (riskText.includes('vasoactive') || riskText.includes('pressor') || riskText.includes('inotrope')) previousRisks.push('vasoactive');
+                if (riskText.includes('immobility') || riskText.includes('mobility')) previousRisks.push('immobility');
+                if (riskText.includes('nutrition') || riskText.includes('feeding')) previousRisks.push('nutrition');
+                if (riskText.includes('electrolyte')) previousRisks.push('electrolyte');
+            }
+            
+            // Store for later use
+            if (window.previousCategoryData !== undefined) {
+                window.previousCategoryData = { category, hoursOnWard, categoryText, previousRisks };
+            }
+            
+            // Only offer Quick Review for CAT 2 patients on day 2+ with known risks
+            const shouldOfferQuickReview = 
+                (category === 'amber' && hoursOnWard >= 24 && previousRisks.length > 0);
+            
+            if (shouldOfferQuickReview && window.showQuickReviewPrompt) {
+                setTimeout(() => {
+                    window.showQuickReviewPrompt(categoryText, hoursOnWard, previousRisks);
+                }, 1000);
+            }
         }
         
         const t = document.getElementById('toast');

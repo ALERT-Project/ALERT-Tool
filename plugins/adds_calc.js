@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="col-6" style="align-self:end;"><div id="score_spo2" style="font-weight:700; color:var(--accent);"></div></div>
                     <div class="col-12">
                         <div class="quick-chip-group">
-                            <button class="btn small quick-calc" data-target="calc_spo2" data-val="95">SpO2 >94%</button>
+                            <button class="btn small quick-calc" data-target="calc_spo2" data-val=">94%">SpO2 >94%</button>
                         </div>
                     </div>
                 </div>
@@ -67,8 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="2LNP">2LNP</button>
                             <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="3LNP">3LNP</button>
                             <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="4LNP">4LNP</button>
-                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="hf" data-val="HFNP 30%/30L">HFNP 30%</button>
-                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="hf" data-val="HFNP 40%/40L">HFNP 40%</button>
+                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="hf" data-val="30%">HFNP 30%</button>
+                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="hf" data-val="40%">HFNP 40%</button>
                         </div>
                     </div>
                 </div>
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(type === 'hr') {
             if(n >= 140) return { s: 3, m: true };
             if(n >= 130) return { s: 3, m: false };
-            if(n >= 120) return { s: 2, m: false };
+            if(n >= 110) return { s: 2, m: false };
             if(n >= 100) return { s: 1, m: false };
             if(n <= 39) return { s: 3, m: true };
             if(n <= 49) return { s: 1, m: false };
@@ -350,6 +350,52 @@ document.addEventListener('DOMContentLoaded', () => {
              syncVal('b_device', o2Val); 
              const devEl = document.getElementById('b_device');
              if(devEl) devEl.dataset.manual = 'true';
+        }
+
+        // --- SYNC TO RISK ASSESSMENT (Respiratory) ---
+        // If oxygen support selected in calculator, set Risk Assessment and open gate
+        if(o2Val) {
+             const respGateYes = document.querySelector('#seg_resp_concern .seg-btn[data-value="true"]');
+             if(respGateYes && !respGateYes.classList.contains('active')) {
+                 respGateYes.click();
+             }
+             
+             const lowerVal = o2Val.toLowerCase();
+             let selectedMode = null;
+             let selectedFlow = null;
+             
+             // Determine which oxygen support mode and extract flow if applicable
+             if(lowerVal === 'ra') {
+                 selectedMode = 'RA';
+             } else if(lowerVal.includes('hfnp') || (lowerVal.includes('hf') && mode === 'hf')) {
+                 selectedMode = 'HFNP';
+             } else if(lowerVal.includes('np') || lowerVal.includes('nasal')) {
+                 selectedMode = 'NP';
+                 // Extract flow for NP
+                 const flowMatch = o2Val.match(/(\d+)/);
+                 if(flowMatch) selectedFlow = flowMatch[1];
+             } else if(lowerVal.includes('niv')) {
+                 selectedMode = 'NIV';
+             } else if(lowerVal.includes('trache')) {
+                 selectedMode = 'Trache';
+             }
+             
+             // Click the appropriate oxygen mode button
+             if(selectedMode) {
+                 const oxModBtn = document.querySelector(`#oxMod .select-btn[data-value="${selectedMode}"]`);
+                 if(oxModBtn && !oxModBtn.classList.contains('active')) {
+                     oxModBtn.click();
+                 }
+             }
+             
+             // Set NP flow if applicable
+             if(selectedFlow && selectedMode === 'NP') {
+                 const npFlowInput = document.getElementById('npFlow');
+                 if(npFlowInput) {
+                     npFlowInput.value = selectedFlow;
+                     npFlowInput.dispatchEvent(new Event('input'));
+                 }
+             }
         }
         
         if(sbp) {
