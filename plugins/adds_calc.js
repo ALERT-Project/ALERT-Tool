@@ -130,6 +130,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div style="font-weight:600;">Total Score:</div>
                 <div id="calc_total_display" style="font-size:1.4rem; font-weight:800; color:var(--ink);">0</div>
             </div>
+            
+            <button id="btnHideCalc" class="btn small" style="position:absolute; bottom:8px; right:8px; background:var(--muted); color:white; z-index:10;">Hide Calc</button>
         `;
     }
 
@@ -140,11 +142,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const c = document.getElementById('addsCalculatorContainer');
             if(c.style.display === 'none') {
                 c.style.display = 'block';
-                btnToggle.textContent = 'Hide Calculator';
+                btnToggle.textContent = 'Calc';
             } else {
                 c.style.display = 'none';
-                btnToggle.textContent = 'Show Calculator';
+                btnToggle.textContent = 'Calc';
             }
+        });
+    }
+    
+    // Hide Calc button
+    const btnHideCalc = document.getElementById('btnHideCalc');
+    if(btnHideCalc) {
+        btnHideCalc.addEventListener('click', () => {
+            const c = document.getElementById('addsCalculatorContainer');
+            const btnToggle = document.getElementById('btnToggleCalc');
+            if(c) c.style.display = 'none';
+            if(btnToggle) btnToggle.textContent = 'Calc';
         });
     }
 

@@ -74,7 +74,7 @@ const staticInputs = [
     'bl_bili', 'bl_alt', 'bl_inr', 'bl_aptt', 'bl_egfr', 'anticoag_note', 'vte_prophylaxis_note',
     'elec_replace_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note', 'pmh_note',
     'adds', 'lactate', 'lactate_trend', 'hb', 'wcc', 'crp', 'neut', 'lymph', 'infusions_note',
-    'dyspneaConcern_note', 'renal_note', 'infection_note',
+    'dyspneaConcern', 'dyspneaConcern_note', 'renal_note', 'infection_note',
     'electrolyteConcern_note', 'neuroType_note', 'nutrition_context_note', 'pain_context_note', 'neuro_psych_note', 'fluid_restriction_amount',
     'after_hours_note', 'pressors_note', 'immobility_note', 'comorb_other_note',
     'unsuitable_note', 'pressor_ceased_time', 'pressor_recent_other_note', 'pressor_current_other_note', 'hac_note'
@@ -87,7 +87,8 @@ const segmentedInputs = [
     'stepdown_suitable', 'comorbs_gate',
     'renal_chronic', 'renal_chronic_bloods', 
     'infection_downtrend', 'infection_downtrend_bloods',
-    'dialysis_type', 'sleep_quality', 'pain_control', 'neuro_psych', 'seg_pics'
+    'dialysis_type', 'sleep_quality', 'pain_control', 'neuro_psych', 'seg_pics',
+    'lactate_trend', 'resp_dyspnea', 'resp_tachypnea', 'resp_rapid_wean', 'resp_poor_cough', 'resp_poor_swallow'
 ];
 
 const toggleInputs = [
@@ -116,10 +117,20 @@ function formatDateDDMMYYYY(isoStr) {
     return `${d}/${m}/${y}`;
 }
 
-function lower(str) {
-    if(!str) return '';
-    if(/^[0-9]/.test(str) || /^[A-Z]{2}/.test(str) || /^[A-Z][0-9]/.test(str)) return str;
-    return str.charAt(0).toLowerCase() + str.slice(1);
+
+function sentenceCase(str) {
+    if (!str) return '';
+    if (/^[0-9]/.test(str) || /^[A-Z]{2}/.test(str) || /^[A-Z][0-9]/.test(str)) return str;
+    str = str.trim().toLowerCase();
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function joinGrammatically(parts) {
+    if(!parts || parts.length === 0) return '';
+    if(parts.length === 1) return sentenceCase(parts[0]);
+    const [first, ...rest] = parts;
+    const procRest = rest.map(s => sentenceCase(s));
+    return [sentenceCase(first), ...procRest].join(', ');
 }
 
 function joinGrammatically(parts) {
@@ -174,6 +185,11 @@ function getState() {
     });
 
     toggleInputs.forEach(id => {
+        // Remove the four respiratory toggles from toggleInputs logic, now handled as segmentedInputs
+        if ([
+            'resp_tachypnea', 'resp_rapid_wean', 'resp_poor_cough', 'resp_poor_swallow',
+            'lactate_trend'
+        ].includes(id)) return;
         const el = $(`toggle_${id}`);
         if (!el && id === 'chk_aperients') { const chk = $('chk_aperients'); if(chk) state[id] = chk.checked; return; }
         state[id] = el ? (el.dataset.value === 'true') : false;
@@ -197,10 +213,10 @@ function getState() {
     state.devices = {};
     deviceTypes.forEach(type => {
         state.devices[type] = Array.from(document.querySelectorAll(`.device-entry[data-type="${type}"]`)).map(entry => {
-            const textarea = entry.querySelector('textarea');
+            const detailsInput = entry.querySelector('.device-textarea');
             const dateInput = entry.querySelector('.device-date');
             return {
-                details: textarea ? textarea.value : '',
+                details: detailsInput ? detailsInput.value : '',
                 insertionDate: dateInput ? dateInput.value : ''
             };
         });
@@ -634,7 +650,20 @@ function initialize() {
                         if (!target.value.includes(val)) target.value = target.value ? `${target.value}, ${val}` : val;
                     } else { target.value = val; }
                     target.dispatchEvent(new Event('input'));
-                    
+                    // Lactate trend quick-select highlight logic
+                    if (targetId === 'lactate_trend') {
+                        // Remove active from all lactate trend buttons
+                        document.querySelectorAll('.quick-select[data-target="lactate_trend"]').forEach(b => b.classList.remove('active'));
+                        // Add active to clicked button
+                        btn.classList.add('active');
+                    }
+                    // Dyspnea severity quick-select highlight logic
+                    if (targetId === 'dyspneaConcern') {
+                        // Remove active from all dyspnea buttons
+                        document.querySelectorAll('.quick-select[data-target="dyspneaConcern"]').forEach(b => b.classList.remove('active'));
+                        // Add active to clicked button
+                        btn.classList.add('active');
+                    }
                     // Special handling for fluid restriction
                     if (btn.id === 'btn_fluid_restrict') {
                         const frWrapper = $('fluid_restriction_wrapper');
@@ -642,7 +671,6 @@ function initialize() {
                             frWrapper.style.display = target.value.includes('Fluid Restriction') ? 'block' : 'none';
                         }
                     }
-                    
                     compute();
                 }
             } else if (btn.id === 'btn_bo' || btn.id === 'btn_bno') {
@@ -699,12 +727,15 @@ function initialize() {
         });
     });
 
+    // Only attach toggle-label listeners for non-respiratory toggles
     document.querySelectorAll('.toggle-label').forEach(el => {
+        if ([
+            'toggle_resp_tachypnea', 'toggle_resp_rapid_wean', 'toggle_resp_poor_cough', 'toggle_resp_poor_swallow'
+        ].includes(el.id)) return;
         el.addEventListener('click', () => {
             const isOn = el.dataset.value === 'true';
             el.dataset.value = isOn ? 'false' : 'true';
             el.classList.toggle('active', !isOn);
-            
             // Toggle Logic for Visibility
             if (el.id === 'toggle_comorb_other') $('comorb_other_note_wrapper').style.display = !isOn ? 'block' : 'none';
             if (el.id === 'toggle_pressor_recent_other') $('pressor_recent_other_note_wrapper').style.display = !isOn ? 'block' : 'none';
@@ -725,7 +756,6 @@ function initialize() {
                     renal.click();
                 }
             }
-            
             saveState(true);
             compute();
         });
@@ -942,7 +972,9 @@ function handleSegmentClick(id, value) {
         'sleep_quality': 'sleep_quality_wrapper',
         'pain_control': 'pain_context_wrapper',
         'neuro_psych': 'neuro_psych_wrapper',
-        'pics': 'pics_wrapper'
+        'pics': 'pics_wrapper',
+        'resp_dyspnea': 'sub_dyspnea_severity',
+        'intubated': 'sub_intubated_reason'
     };
 
     if (map[id]) {
@@ -954,6 +986,14 @@ function handleSegmentClick(id, value) {
                  el.style.display = (value === "true") ? 'block' : 'none';
              }
         }
+    }
+    
+    // Clear dyspneaConcern value when resp_dyspnea is set to No
+    if (id === 'resp_dyspnea' && value !== 'true') {
+        const dyspInput = $('dyspneaConcern');
+        if (dyspInput) dyspInput.value = '';
+        // Remove active from all dyspnea severity buttons
+        document.querySelectorAll('.quick-select[data-target="dyspneaConcern"]').forEach(b => b.classList.remove('active'));
     }
 }
 
@@ -1014,34 +1054,56 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
         
         // Determine indicator based on device type and dwell time
         let indicator = '🟢';
-        let statusText = 'Safe';
+        let statusText = '';
         let statusColor = 'var(--green)';
         
         if (type === 'PIVC') {
-            if (dwellDays >= 7) { indicator = '🔴'; statusText = 'Critical'; statusColor = 'var(--red)'; borderColor = 'var(--red)'; }
-            else if (dwellDays >= 5) { indicator = '🟡'; statusText = 'High Risk'; statusColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
-            else if (dwellDays >= 3) { indicator = '🟣'; statusText = 'Review Soon'; statusColor = '#9333ea'; borderColor = '#9333ea'; }
+            if (dwellDays >= 7) { indicator = '🔴'; statusText = '(very long dwell)'; statusColor = 'var(--red)'; borderColor = 'var(--red)'; }
+            else if (dwellDays >= 5) { indicator = '🟡'; statusText = '(very long dwell)'; statusColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
+            else if (dwellDays >= 3) { indicator = '🟣'; statusText = '(long dwell)'; statusColor = '#9333ea'; borderColor = '#9333ea'; }
         } else {
-            if (dwellDays >= 14) { indicator = '🔴'; statusText = 'Critical'; statusColor = 'var(--red)'; borderColor = 'var(--red)'; }
-            else if (dwellDays >= 10) { indicator = '🟡'; statusText = 'High Risk'; statusColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
-            else if (dwellDays >= 7) { indicator = '🟣'; statusText = 'Monitor'; statusColor = '#9333ea'; borderColor = '#9333ea'; }
+            if (dwellDays >= 14) { indicator = '🔴'; statusText = '(very long dwell)'; statusColor = 'var(--red)'; borderColor = 'var(--red)'; }
+            else if (dwellDays >= 10) { indicator = '🟡'; statusText = '(very long dwell)'; statusColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
+            else if (dwellDays >= 7) { indicator = '🟣'; statusText = '(long dwell)'; statusColor = '#9333ea'; borderColor = '#9333ea'; }
         }
         
-        dwellIndicator = `<span style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:600; color:${statusColor};">${indicator} ${dwellDays}d (${statusText})</span>`;
+        dwellIndicator = statusText ? `<span style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:600; color:${statusColor};">${indicator} ${dwellDays}d ${statusText}</span>` : `<span style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; color:${statusColor};">${indicator} ${dwellDays}d</span>`;
     }
     
-    let html = `<div style="display:flex; gap:8px; align-items:center; width:100%; padding:8px; background:var(--input-bg); border:1px solid ${borderColor}; border-radius:6px;">`;
+    // Determine info text to display below device based on dwell time
+    let infoText = '';
+    let infoColor = '';
+    if (hasDateField && insertionDate) {
+        if (type === 'PIVC') {
+            if (dwellDays >= 7) { infoText = 'Very long dwell'; infoColor = 'var(--red)'; }
+            else if (dwellDays >= 5) { infoText = 'Very long dwell'; infoColor = 'var(--amber)'; }
+            else if (dwellDays >= 3) { infoText = 'Long dwell'; infoColor = '#9333ea'; }
+        } else {
+            if (dwellDays >= 14) { infoText = 'Very long dwell'; infoColor = 'var(--red)'; }
+            else if (dwellDays >= 10) { infoText = 'Very long dwell'; infoColor = 'var(--amber)'; }
+            else if (dwellDays >= 7) { infoText = 'Long dwell'; infoColor = '#9333ea'; }
+        }
+    }
+    
+    let html = `<div style="display:flex; flex-direction:column; gap:4px;">`;
+    html += `<div style="display:flex; gap:8px; align-items:center; width:100%; padding:8px; background:var(--input-bg); border:1px solid ${borderColor}; border-radius:6px;">`;
     html += `<div style="flex-shrink:0; font-weight:600; font-size:0.85rem; min-width:80px;">${type}</div>`;
     
     if (hasDateField) {
         html += `<input class="device-date" type="date" value="${insertionDate}" placeholder="Date" style="padding:4px 6px; border:1px solid var(--line); border-radius:4px; font-size:0.8rem; width:130px;"/>`;
-        if (dwellIndicator) {
-            html += `<span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:600; color:${statusColor}; white-space:nowrap;">${indicator} ${dwellDays}d</span>`;
+        if (dwellIndicator && insertionDate) {
+            html += dwellIndicator;
         }
     }
     
     html += `<input class="device-textarea" type="text" placeholder="details..." value="${val}" style="flex:1; padding:4px 8px; border:1px solid var(--line); border-radius:4px; font-size:0.85rem;"/>`;
     html += `<div class="remove-entry" style="cursor:pointer; font-weight:bold; color:var(--accent); font-size:1rem;">✕</div>`;
+    html += `</div>`;
+    
+    if (infoText && infoColor) {
+        html += `<div class="device-info-text" style="font-size:0.8rem; font-weight:600; color:${infoColor}; padding-left:8px;">${infoText}</div>`;
+    }
+    
     html += `</div>`;
     
     div.innerHTML = html;
@@ -1061,15 +1123,18 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
                 let indicator = '🟢';
                 let statusColor = 'var(--green)';
                 let newBorderColor = 'var(--line)';
+                let statusText = '';
+                let infoText = '';
+                let infoColor = '';
                 
                 if (type === 'PIVC') {
-                    if (dwellDays >= 7) { indicator = '🔴'; statusColor = 'var(--red)'; newBorderColor = 'var(--red)'; }
-                    else if (dwellDays >= 5) { indicator = '🟡'; statusColor = 'var(--amber)'; newBorderColor = 'var(--amber)'; }
-                    else if (dwellDays >= 3) { indicator = '🟣'; statusColor = '#9333ea'; newBorderColor = '#9333ea'; }
+                    if (dwellDays >= 7) { indicator = '🔴'; statusColor = 'var(--red)'; newBorderColor = 'var(--red)'; statusText = '(very long dwell)'; infoText = 'Very long dwell'; infoColor = 'var(--red)'; }
+                    else if (dwellDays >= 5) { indicator = '🟡'; statusColor = 'var(--amber)'; newBorderColor = 'var(--amber)'; statusText = '(very long dwell)'; infoText = 'Very long dwell'; infoColor = 'var(--amber)'; }
+                    else if (dwellDays >= 3) { indicator = '🟣'; statusColor = '#9333ea'; newBorderColor = '#9333ea'; statusText = '(long dwell)'; infoText = 'Long dwell'; infoColor = '#9333ea'; }
                 } else {
-                    if (dwellDays >= 14) { indicator = '🔴'; statusColor = 'var(--red)'; newBorderColor = 'var(--red)'; }
-                    else if (dwellDays >= 10) { indicator = '🟡'; statusColor = 'var(--amber)'; newBorderColor = 'var(--amber)'; }
-                    else if (dwellDays >= 7) { indicator = '🟣'; statusColor = '#9333ea'; newBorderColor = '#9333ea'; }
+                    if (dwellDays >= 14) { indicator = '🔴'; statusColor = 'var(--red)'; newBorderColor = 'var(--red)'; statusText = '(very long dwell)'; infoText = 'Very long dwell'; infoColor = 'var(--red)'; }
+                    else if (dwellDays >= 10) { indicator = '🟡'; statusColor = 'var(--amber)'; newBorderColor = 'var(--amber)'; statusText = '(very long dwell)'; infoText = 'Very long dwell'; infoColor = 'var(--amber)'; }
+                    else if (dwellDays >= 7) { indicator = '🟣'; statusColor = '#9333ea'; newBorderColor = '#9333ea'; statusText = '(long dwell)'; infoText = 'Long dwell'; infoColor = '#9333ea'; }
                 }
                 
                 // Update border
@@ -1081,8 +1146,23 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
                 // Update indicator span
                 const indicatorSpan = div.querySelector('span[style*="white-space"]');
                 if (indicatorSpan) {
-                    indicatorSpan.innerHTML = `${indicator} ${dwellDays}d`;
+                    indicatorSpan.innerHTML = statusText ? `${indicator} ${dwellDays}d ${statusText}` : `${indicator} ${dwellDays}d`;
                     indicatorSpan.style.color = statusColor;
+                }
+                
+                // Update or create info text
+                let infoTextEl = div.querySelector('.device-info-text');
+                if (infoText && infoColor) {
+                    if (!infoTextEl) {
+                        infoTextEl = document.createElement('div');
+                        infoTextEl.className = 'device-info-text';
+                        infoTextEl.style.cssText = 'font-size:0.8rem; font-weight:600; padding-left:8px;';
+                        div.querySelector('div[style*="flex-direction"]')?.appendChild(infoTextEl);
+                    }
+                    infoTextEl.textContent = infoText;
+                    infoTextEl.style.color = infoColor;
+                } else if (infoTextEl) {
+                    infoTextEl.remove();
                 }
             }
             saveState(true); 
@@ -1172,7 +1252,7 @@ function clearData() {
     
     const gatesToHide = [
         '#resp_gate_content', '#renal_gate_content', '#neuro_gate_content', '#electrolyte_gate_content', '#infection_gate_content', '#pressor_gate_content', '#hac_content',
-        '#immobility_note_wrapper', '#after_hours_note_wrapper', '#comorb_other_note_wrapper', '#unsuitable_note_wrapper', '#override_reason_box', '#sub_intubated_reason', 
+        '#immobility_note_wrapper', '#after_hours_note_wrapper', '#comorb_other_note_wrapper', '#unsuitable_note_wrapper', '#override_reason_box', '#sub_intubated_reason', '#sub_dyspnea_severity',
         '#pressor_recent_other_note_wrapper', '#dialysis_type_wrapper', '#anticoag_note_wrapper', '#vte_prophylaxis_note_wrapper'
     ];
     gatesToHide.forEach(sel => { const el = document.querySelector(sel); if(el) el.style.display = 'none'; });
@@ -1541,14 +1621,17 @@ function computeAll() {
 
         if (hasCurrent || hasRecent) { 
             let details = [];
+            let currentList = [];
             currentKeys.forEach(k => { 
                 if(s[k]) {
                     let label = k.replace('pressor_current_','').replace('mid','Midodrine');
                     if(k === 'pressor_current_other') label = `Other (${s.pressor_current_other_note || ''})`;
-                    details.push(label);
+                    currentList.push(label);
                 }
             });
-            
+            if (currentList.length > 0) {
+                details.push(`current vasoactive support (${currentList.join(', ')})`);
+            }
             if (hasRecent) {
                 let recentsList = [];
                 recentKeys.forEach(k => { 
@@ -1558,12 +1641,12 @@ function computeAll() {
                          recentsList.push(label);
                     }
                 });
-                let recentPart = "Recent vasoactive support (" + recentsList.join(', ');
-                if (s.pressor_ceased_time) recentPart += ` off at ${s.pressor_ceased_time}`;
+                let recentPart = `recent vasoactive support (${recentsList.join(', ')}`;
+                if (s.pressor_ceased_time) recentPart += ` off at approx ${s.pressor_ceased_time}`;
                 recentPart += ")";
                 details.push(recentPart);
             }
-            add(amber, details.join(', '), 'seg_pressors', 'amber', s.pressors_note);
+            add(amber, sentenceCase(details.join('. ')), 'seg_pressors', 'amber', s.pressors_note);
         }
 
         const adds = num(s.adds);
@@ -1630,13 +1713,17 @@ function computeAll() {
                 if (s.tracheStatus === 'New') { parts.push(`new/unstable tracheostomy`); flagged.red.push('tracheStatus'); hasRed = true; }
                 else { parts.push(`tracheostomy`); flagged.amber.push('oxMod'); }
             }
-            const dysp = s.dyspneaConcern;
-            if (dysp === 'severe' || dysp === 'mod') { parts.push(`${dysp} dyspnea`); flagged.red.push('dyspneaConcern'); hasRed = true; }
-            else if (dysp === 'mild') { parts.push(`mild dyspnea`); flagged.amber.push('dyspneaConcern'); }
-            if (s.resp_tachypnea) { parts.push('tachypnea (>20)'); flagged.red.push('toggle_resp_tachypnea'); hasRed = true; }
-            if (s.resp_rapid_wean) { parts.push('rapid O2 wean (<12h)'); flagged.red.push('toggle_resp_rapid_wean'); hasRed = true; }
-            if (s.resp_poor_cough) { parts.push('poor cough'); flagged.amber.push('toggle_resp_poor_cough'); }
-            if (s.resp_poor_swallow) { parts.push('poor swallow'); flagged.amber.push('toggle_resp_poor_swallow'); }
+            // Dyspnea - only display if resp_dyspnea is true
+            if (s.resp_dyspnea === true) {
+                const dysp = s.dyspneaConcern;
+                if (dysp === 'severe' || dysp === 'moderate') { parts.push(`${dysp} dyspnea`); flagged.red.push('dyspneaConcern'); hasRed = true; }
+                else if (dysp === 'mild') { parts.push(`mild dyspnea`); flagged.amber.push('dyspneaConcern'); }
+                else if (!dysp) { parts.push(`dyspnea`); flagged.amber.push('seg_resp_dyspnea'); }
+            }
+            if (s.resp_tachypnea === true) { parts.push('tachypnea (>20)'); flagged.red.push('seg_resp_tachypnea'); hasRed = true; }
+            if (s.resp_rapid_wean === true) { parts.push('rapid O2 wean (<12h)'); flagged.red.push('seg_resp_rapid_wean'); hasRed = true; }
+            if (s.resp_poor_cough === true) { parts.push('poor cough'); flagged.amber.push('seg_resp_poor_cough'); }
+            if (s.resp_poor_swallow === true) { parts.push('poor swallow'); flagged.amber.push('seg_resp_poor_swallow'); }
             
             if (s.hist_o2 === true) { parts.push('recent high O2/NIV requirement (<12h)'); flagged.red.push('seg_hist_o2'); hasRed = true; }
             
@@ -1661,16 +1748,14 @@ function computeAll() {
         if (s.hac === true) add(amber, 'Hospital acquired complication', 'seg_hac', 'amber', s.hac_note);
 
         if (s.neuro_gate === true) {
-            let txt = "Neuro concern";
-            const sev = s.neuroConcern;
-            if(sev) txt += ` (${sev})`;
+            let txt = "neuro concern";
             const gcsInput = s.d_alert;
-            if(gcsInput && gcsInput.toLowerCase().includes('gcs')) txt += ` - ${gcsInput}`;
             const type = s.neuroType;
-            if(type) txt += ` - ${type}`;
-
-            if (sev === 'severe' || sev === 'mod') add(red, txt, 'neuroConcern', 'red', s.neuroType_note);
-            else add(amber, txt, 'neuroConcern', 'amber', s.neuroType_note);
+            let details = [];
+            if (gcsInput && gcsInput.toLowerCase().includes('gcs')) details.push(gcsInput);
+            if (type) details.push(type.toLowerCase());
+            if (details.length > 0) txt += ` - ${details.join(', ')}`;
+            add(red, sentenceCase(txt), 'neuroConcern', 'red', s.neuroType_note);
         }
 
         const k = num(s.bl_k);
@@ -1712,8 +1797,8 @@ function computeAll() {
             // Dialysis Logic
             if(s.renal_dialysis) {
                 const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
-                if(dType === 'new') renalFlags.push('Acute Dialysis');
-                else renalFlags.push('Chronic Dialysis');
+                if(dType === 'new') renalFlags.push('acute dialysis');
+                else renalFlags.push('chronic dialysis');
             }
 
             const hasFluid = fluidFlags.length > 0;
@@ -1848,30 +1933,10 @@ function computeAll() {
         }
 
         // --- LINE DWELL TRACKING (from device insertion dates) ---
-        // Only flag very long dwell central lines as amber risk (not PIVC or IDC)
-        const now = new Date();
-        const trackedDevices = { 'CVC': 14, 'PICC': 14, 'Other CVAD': 14, 'Vascath': 14 };
+        // Visual indicators only - not scored as readmission risks to avoid alarm fatigue
+        // Device dwell times are highlighted with colored borders and info text
+        // but do not contribute to risk categorization
         
-        if (s.devices) {
-            Object.entries(trackedDevices).forEach(([deviceType, thresholdDays]) => {
-                if (s.devices[deviceType]) {
-                    s.devices[deviceType].forEach((item, idx) => {
-                        const insertionDate = typeof item === 'string' ? '' : item.insertionDate;
-                        if (insertionDate) {
-                            const deviceDate = new Date(insertionDate + 'T00:00:00');
-                            const dwellDays = Math.floor((now - deviceDate) / (1000 * 60 * 60 * 24));
-                            if (dwellDays >= thresholdDays) {
-                                const msg = `${deviceType} dwell ${dwellDays} days`;
-                                const context = typeof item === 'string' ? '' : item.details;
-                                const fullMsg = context ? `${msg} (${context})` : msg;
-                                add(amber, fullMsg, 'panel_devices', 'amber');
-                            }
-                        }
-                    });
-                }
-            });
-        }
-
         // --- WORSENING CREATININE (Auto-detect with leeway) ---
         // First, check if should auto-select the chip
         if (window.prevBloods && window.prevBloods.cr_review && !s.renal_worsening_cr) {
@@ -1927,17 +1992,18 @@ function computeAll() {
             } else { comorbDisplay.style.display = 'none'; }
         }
         if (countComorbs >= 3) {
-            add(red, 'Multiple comorbidities (3+)', null, 'red', s.comorb_other_note);
+            add(red, sentenceCase('multiple comorbidities (3+)'), null, 'red', s.comorb_other_note);
             activeComorbsKeys.forEach(k => flagged.red.push(`toggle_${k}`));
         } else if (countComorbs > 0) {
-            const cList = activeComorbsKeys.map(k => comorbMap[k]).join(', ');
-            add(amber, `Comorbidities (${cList})`, null, 'amber', s.comorb_other_note);
+            const cList = activeComorbsKeys.map(k => comorbMap[k].toLowerCase()).join(', ');
+            add(amber, sentenceCase(`comorbidities (${cList})`), null, 'amber', s.comorb_other_note);
             activeComorbsKeys.forEach(k => flagged.amber.push(`toggle_${k}`));
         }
 
         const lact = num(s.lactate) || num(s.bl_lac_review);
         if (lact > 4.0) add(red, `Lactate ${lact}`, 'lactate', 'red');
         else if (lact >= 2.0) add(amber, `Lactate ${lact}`, 'lactate', 'amber');
+        // Optionally, you can use s.lactate_trend for further logic if needed
 
         if (s.override === 'red') {
             const reason = s.overrideNote || 'Clinician override: CAT 1';
@@ -2254,10 +2320,22 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
 
     lines.push('DEVICES:');
     if (Object.values(s.devices || {}).some(arr => arr.length)) {
+        const trackedDevices = ['CVC', 'PICC', 'PIVC', 'Other CVAD', 'IDC', 'Vascath'];
         Object.entries(s.devices).forEach(([k, v]) => { 
             v.forEach(item => {
                 let deviceLine = `- ${k}`;
-                if (item.insertionDate) deviceLine += ` (Inserted: ${item.insertionDate})`;
+                if (item.insertionDate) {
+                    deviceLine += ` (Inserted: ${item.insertionDate})`;
+                    // Add long dwell indicator if applicable
+                    if (trackedDevices.includes(k)) {
+                        const deviceDate = new Date(item.insertionDate + 'T00:00:00');
+                        const dwellDays = Math.floor((new Date() - deviceDate) / (1000 * 60 * 60 * 24));
+                        const threshold = (k === 'PIVC') ? 3 : 7;
+                        if (dwellDays >= threshold) {
+                            deviceLine += ` (long dwell)`;
+                        }
+                    }
+                }
                 if (item.details) deviceLine += ` ${item.details}`;
                 lines.push(deviceLine);
             });
