@@ -87,14 +87,13 @@ const segmentedInputs = [
     'stepdown_suitable', 'comorbs_gate',
     'renal_chronic', 'renal_chronic_bloods', 
     'infection_downtrend', 'infection_downtrend_bloods',
-    'dialysis_type', 'sleep_quality', 'pain_control', 'neuro_psych', 'seg_pics',
+    'dialysis_type', 'sleep_quality', 'pain_control', 'neuro_psych', 'pics',
     'lactate_trend', 'resp_dyspnea', 'resp_tachypnea', 'resp_rapid_wean', 'resp_poor_cough', 'resp_poor_swallow'
 ];
 
 const toggleInputs = [
     'comorb_copd', 'comorb_asthma', 'comorb_hf', 'comorb_esrd', 'comorb_dialysis',
     'comorb_diabetes', 'comorb_cirrhosis', 'comorb_malignancy', 'comorb_immuno', 'comorb_other',
-    'resp_tachypnea', 'resp_rapid_wean', 'resp_poor_cough', 'resp_poor_swallow',
     'renal_oliguria', 'renal_anuria', 'renal_fluid', 'renal_oedema', 'renal_dysfunction', 'renal_dialysis', 'renal_dehydrated', 'renal_worsening_cr',
     'chk_aperients',
     'pressor_recent_norad', 'pressor_recent_met', 'pressor_recent_gtn', 'pressor_recent_dob', 'pressor_recent_mid', 'pressor_recent_other',
@@ -137,7 +136,7 @@ function joinGrammatically(parts) {
     if(!parts || parts.length === 0) return '';
     if(parts.length === 1) return parts[0];
     const [first, ...rest] = parts;
-    const procRest = rest.map(s => lower(s));
+    const procRest = rest.map(s => s.toLowerCase());
     return [first, ...procRest].join(', ');
 }
 
@@ -177,10 +176,12 @@ function getState() {
     segmentedInputs.forEach(id => {
         const group = $(`seg_${id}`);
         const active = group?.querySelector('.seg-btn.active');
-        state[id] = active ? (active.dataset.value === "true" || active.dataset.value) : null;
-        // Handle boolean vs string values for segmentation
-        if(active && (active.dataset.value === "true" || active.dataset.value === "false")) {
+        if (!active) {
+            state[id] = null;
+        } else if (active.dataset.value === "true" || active.dataset.value === "false") {
             state[id] = (active.dataset.value === "true");
+        } else {
+            state[id] = active.dataset.value;
         }
     });
 
@@ -722,7 +723,9 @@ function initialize() {
                     btn.classList.add('active');
                     handleSegmentClick(id, val);
                 }
-                compute();
+                saveState(true); // Save immediately to prevent loss from debouncing
+                computeAll(); // Call immediately to update risks
+                checkBloodRanges();
             });
         });
     });
@@ -757,7 +760,8 @@ function initialize() {
                 }
             }
             saveState(true);
-            compute();
+            computeAll(); // Call immediately to update risks
+            checkBloodRanges();
         });
     });
 
@@ -773,8 +777,10 @@ function initialize() {
                     toggleOxyFields();
                 }
                 
-                if (group.id === 'neuroType') $('neuro_gate_content').style.display = 'block'; 
-                compute();
+                if (group.id === 'neuroType') $('neuro_gate_content').style.display = 'block';
+                saveState(true); // Save immediately to prevent loss from debouncing
+                computeAll(); // Call immediately to update risks
+                checkBloodRanges();
             });
         });
     });
@@ -1044,60 +1050,42 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
     const hasDateField = trackedDevices.includes(type);
     
     // Calculate dwell time and status indicator
-    let dwellIndicator = '';
     let dwellDays = 0;
     let borderColor = 'var(--line)';
+    let infoText = '';
+    let infoColor = '';
+    
     if (hasDateField && insertionDate) {
         const now = new Date();
         const deviceDate = new Date(insertionDate + 'T00:00:00');
         dwellDays = Math.floor((now - deviceDate) / (1000 * 60 * 60 * 24));
         
-        // Determine indicator based on device type and dwell time
-        let indicator = '🟢';
-        let statusText = '';
-        let statusColor = 'var(--green)';
+        // Always show dwell time
+        infoText = `${dwellDays}d dwell`;
+        infoColor = 'var(--text)';
         
+        // Determine status and color based on device type and dwell time
         if (type === 'PIVC') {
-            if (dwellDays >= 7) { indicator = '🔴'; statusText = '(very long dwell)'; statusColor = 'var(--red)'; borderColor = 'var(--red)'; }
-            else if (dwellDays >= 5) { indicator = '🟡'; statusText = '(very long dwell)'; statusColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
-            else if (dwellDays >= 3) { indicator = '🟣'; statusText = '(long dwell)'; statusColor = '#9333ea'; borderColor = '#9333ea'; }
+            if (dwellDays >= 7) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
+            else if (dwellDays >= 5) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
+            else if (dwellDays >= 3) { infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; borderColor = '#9333ea'; }
         } else {
-            if (dwellDays >= 14) { indicator = '🔴'; statusText = '(very long dwell)'; statusColor = 'var(--red)'; borderColor = 'var(--red)'; }
-            else if (dwellDays >= 10) { indicator = '🟡'; statusText = '(very long dwell)'; statusColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
-            else if (dwellDays >= 7) { indicator = '🟣'; statusText = '(long dwell)'; statusColor = '#9333ea'; borderColor = '#9333ea'; }
-        }
-        
-        dwellIndicator = statusText ? `<span style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:600; color:${statusColor};">${indicator} ${dwellDays}d ${statusText}</span>` : `<span style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; color:${statusColor};">${indicator} ${dwellDays}d</span>`;
-    }
-    
-    // Determine info text to display below device based on dwell time
-    let infoText = '';
-    let infoColor = '';
-    if (hasDateField && insertionDate) {
-        if (type === 'PIVC') {
-            if (dwellDays >= 7) { infoText = 'Very long dwell'; infoColor = 'var(--red)'; }
-            else if (dwellDays >= 5) { infoText = 'Very long dwell'; infoColor = 'var(--amber)'; }
-            else if (dwellDays >= 3) { infoText = 'Long dwell'; infoColor = '#9333ea'; }
-        } else {
-            if (dwellDays >= 14) { infoText = 'Very long dwell'; infoColor = 'var(--red)'; }
-            else if (dwellDays >= 10) { infoText = 'Very long dwell'; infoColor = 'var(--amber)'; }
-            else if (dwellDays >= 7) { infoText = 'Long dwell'; infoColor = '#9333ea'; }
+            if (dwellDays >= 14) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
+            else if (dwellDays >= 10) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
+            else if (dwellDays >= 7) { infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; borderColor = '#9333ea'; }
         }
     }
     
-    let html = `<div style="display:flex; flex-direction:column; gap:4px;">`;
-    html += `<div style="display:flex; gap:8px; align-items:center; width:100%; padding:8px; background:var(--input-bg); border:1px solid ${borderColor}; border-radius:6px;">`;
+    let html = `<div style="display:flex; flex-direction:column; gap:4px; width:100%; box-sizing:border-box;">`;
+    html += `<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px; background:var(--input-bg); border:1px solid ${borderColor}; border-radius:6px; box-sizing:border-box;">`;
     html += `<div style="flex-shrink:0; font-weight:600; font-size:0.85rem; min-width:80px;">${type}</div>`;
     
     if (hasDateField) {
         html += `<input class="device-date" type="date" value="${insertionDate}" placeholder="Date" style="padding:4px 6px; border:1px solid var(--line); border-radius:4px; font-size:0.8rem; width:130px;"/>`;
-        if (dwellIndicator && insertionDate) {
-            html += dwellIndicator;
-        }
     }
     
-    html += `<input class="device-textarea" type="text" placeholder="details..." value="${val}" style="flex:1; padding:4px 8px; border:1px solid var(--line); border-radius:4px; font-size:0.85rem;"/>`;
-    html += `<div class="remove-entry" style="cursor:pointer; font-weight:bold; color:var(--accent); font-size:1rem;">✕</div>`;
+    html += `<input class="device-textarea" type="text" placeholder="details..." value="${val}" style="flex:1; min-width:120px; padding:4px 8px; border:1px solid var(--line); border-radius:4px; font-size:0.85rem; box-sizing:border-box;"/>`;
+    html += `<div class="remove-entry" style="cursor:pointer; font-weight:bold; color:var(--accent); font-size:1rem; flex-shrink:0;">✕</div>`;
     html += `</div>`;
     
     if (infoText && infoColor) {
@@ -1120,34 +1108,24 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
                 const deviceDate = new Date(newDate + 'T00:00:00');
                 const dwellDays = Math.floor((new Date() - deviceDate) / (1000 * 60 * 60 * 24));
                 
-                let indicator = '🟢';
-                let statusColor = 'var(--green)';
                 let newBorderColor = 'var(--line)';
-                let statusText = '';
-                let infoText = '';
-                let infoColor = '';
+                let infoText = `${dwellDays}d dwell`;
+                let infoColor = 'var(--text)';
                 
                 if (type === 'PIVC') {
-                    if (dwellDays >= 7) { indicator = '🔴'; statusColor = 'var(--red)'; newBorderColor = 'var(--red)'; statusText = '(very long dwell)'; infoText = 'Very long dwell'; infoColor = 'var(--red)'; }
-                    else if (dwellDays >= 5) { indicator = '🟡'; statusColor = 'var(--amber)'; newBorderColor = 'var(--amber)'; statusText = '(very long dwell)'; infoText = 'Very long dwell'; infoColor = 'var(--amber)'; }
-                    else if (dwellDays >= 3) { indicator = '🟣'; statusColor = '#9333ea'; newBorderColor = '#9333ea'; statusText = '(long dwell)'; infoText = 'Long dwell'; infoColor = '#9333ea'; }
+                    if (dwellDays >= 7) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; }
+                    else if (dwellDays >= 5) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; }
+                    else if (dwellDays >= 3) { newBorderColor = '#9333ea'; infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; }
                 } else {
-                    if (dwellDays >= 14) { indicator = '🔴'; statusColor = 'var(--red)'; newBorderColor = 'var(--red)'; statusText = '(very long dwell)'; infoText = 'Very long dwell'; infoColor = 'var(--red)'; }
-                    else if (dwellDays >= 10) { indicator = '🟡'; statusColor = 'var(--amber)'; newBorderColor = 'var(--amber)'; statusText = '(very long dwell)'; infoText = 'Very long dwell'; infoColor = 'var(--amber)'; }
-                    else if (dwellDays >= 7) { indicator = '🟣'; statusColor = '#9333ea'; newBorderColor = '#9333ea'; statusText = '(long dwell)'; infoText = 'Long dwell'; infoColor = '#9333ea'; }
+                    if (dwellDays >= 14) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; }
+                    else if (dwellDays >= 10) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; }
+                    else if (dwellDays >= 7) { newBorderColor = '#9333ea'; infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; }
                 }
                 
                 // Update border
                 const innerDiv = div.querySelector('div[style*="border"]');
                 if (innerDiv) {
                     innerDiv.style.borderColor = newBorderColor;
-                }
-                
-                // Update indicator span
-                const indicatorSpan = div.querySelector('span[style*="white-space"]');
-                if (indicatorSpan) {
-                    indicatorSpan.innerHTML = statusText ? `${indicator} ${dwellDays}d ${statusText}` : `${indicator} ${dwellDays}d`;
-                    indicatorSpan.style.color = statusColor;
                 }
                 
                 // Update or create info text
@@ -1166,7 +1144,7 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
                 }
             }
             saveState(true); 
-            compute(); 
+            computeAll(); // Call immediately to update DMR with insertion date
         });
     }
     c.appendChild(div);
@@ -1186,7 +1164,7 @@ function toggleOxyFields() {
 function toggleInfusionsBox() {
     const type = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
     const w = $('infusions_wrapper');
-    if(w) w.style.display = (type === 'pre') ? 'grid' : 'none';
+    if(w) w.style.display = 'grid'; // Always show infusions, electrolyte plan, and new bloods
 }
 
 function toggleBowelDate(mode) {
@@ -1553,6 +1531,7 @@ function closeMobileNav() {
 function computeAll() {
     try {
         const s = getState();
+        console.log('computeAll called, state keys:', Object.keys(s).length);
         const red = [], amber = [];
         const suppressedRisks = [];
         const flagged = { red: [], amber: [] };
@@ -1593,9 +1572,6 @@ function computeAll() {
         const timeData = calculateWardTime(s.stepdownDate, s.stepdownTime, isPre);
         const isRecent = isPre || (timeData.hours < 24);
 
-        const ahWrapper = $('ah_wrapper');
-        if(ahWrapper) ahWrapper.style.display = 'block';
-
         // --- Vasoactive Logic ---
         const timeOffEl = $('pressor_time_off_display');
         const recentKeys = ['pressor_recent_norad', 'pressor_recent_met', 'pressor_recent_gtn', 'pressor_recent_dob', 'pressor_recent_mid', 'pressor_recent_other'];
@@ -1630,7 +1606,7 @@ function computeAll() {
                 }
             });
             if (currentList.length > 0) {
-                details.push(`current vasoactive support (${currentList.join(', ')})`);
+                details.push(`Current vasoactive support with ${joinGrammatically(currentList)}`);
             }
             if (hasRecent) {
                 let recentsList = [];
@@ -1641,52 +1617,51 @@ function computeAll() {
                          recentsList.push(label);
                     }
                 });
-                let recentPart = `recent vasoactive support (${recentsList.join(', ')}`;
-                if (s.pressor_ceased_time) recentPart += ` off at approx ${s.pressor_ceased_time}`;
-                recentPart += ")";
+                let recentPart = `Recent vasoactive support included ${joinGrammatically(recentsList)}`;
+                if (s.pressor_ceased_time) recentPart += ` which was ceased at approximately ${s.pressor_ceased_time}`;
                 details.push(recentPart);
             }
-            add(amber, sentenceCase(details.join('. ')), 'seg_pressors', 'amber', s.pressors_note);
+            add(amber, details.join('. '), 'seg_pressors', 'amber', s.pressors_note);
         }
 
         const adds = num(s.adds);
         if (adds !== null) {
-            if (adds >= 6) add(red, `Severe physiological instability (ADDS ${adds})`, 'adds', 'red');
-            else if (adds >= 4) add(red, `Physiological instability (ADDS ${adds})`, 'adds', 'red');
-            else if (adds === 3 && isRecent) add(amber, `Observation required (ADDS 3)`, 'adds', 'amber');
+            if (adds >= 6) add(red, `Severe physiological instability ADDS ${adds}`, 'adds', 'red');
+            else if (adds >= 4) add(red, `Physiological instability ADDS ${adds}`, 'adds', 'red');
+            else if (adds === 3 && isRecent) add(amber, `Observation required ADDS 3`, 'adds', 'amber');
         }
 
         const hr = num(s.c_hr);
         if (hr) {
-            if (hr > 130) add(red, `Signif. Tachycardia (HR ${hr})`, 'c_hr', 'red');
-            else if (hr > 110) add(amber, `Tachycardia (HR ${hr})`, 'c_hr', 'amber');
-            else if (hr < 40) add(red, `Severe Bradycardia (HR ${hr})`, 'c_hr', 'red');
-            else if (hr < 50) add(amber, `Bradycardia (HR ${hr})`, 'c_hr', 'amber');
+            if (hr > 130) add(red, `Significant tachycardia HR ${hr}`, 'c_hr', 'red');
+            else if (hr > 110) add(amber, `Tachycardia HR ${hr}`, 'c_hr', 'amber');
+            else if (hr < 40) add(red, `Severe bradycardia HR ${hr}`, 'c_hr', 'red');
+            else if (hr < 50) add(amber, `Bradycardia HR ${hr}`, 'c_hr', 'amber');
         }
 
         const bpStr = s.c_nibp;
         if (bpStr) {
             const sbp = parseFloat(bpStr.split('/')[0]); 
             if (!isNaN(sbp)) {
-                if (sbp < 90) add(red, `Hypotension (SBP ${sbp})`, 'c_nibp', 'red');
+                if (sbp < 90) add(red, `Hypotension SBP ${sbp}`, 'c_nibp', 'red');
             }
         }
 
         const rr = num(s.b_rr);
         if (rr) {
-            if (rr > 25) add(red, `Tachypnea (RR ${rr})`, 'b_rr', 'red');
-            else if (rr > 20) add(amber, `Mild Tachypnea (RR ${rr})`, 'b_rr', 'amber');
-            else if (rr < 8) add(red, `Bradypnea (RR ${rr})`, 'b_rr', 'red');
+            if (rr > 25) add(red, `Tachypnea RR ${rr}`, 'b_rr', 'red');
+            else if (rr > 20) add(amber, `Mild tachypnea RR ${rr}`, 'b_rr', 'amber');
+            else if (rr < 8) add(red, `Bradypnea RR ${rr}`, 'b_rr', 'red');
         }
 
         const spo2Str = s.b_spo2 ? s.b_spo2.replace('%', '') : '';
         const spo2 = num(spo2Str);
-        if (spo2 && spo2 < 88) add(red, `Hypoxia (SpO2 ${spo2}%)`, 'b_spo2', 'red'); 
+        if (spo2 && spo2 < 88) add(red, `Hypoxia SpO2 ${spo2}%`, 'b_spo2', 'red'); 
         
         const temp = num(s.e_temp);
         if (temp) {
-            if (temp > 38.5) add(red, `Pyrexia (${temp})`, 'e_temp', 'red');
-            else if (temp < 35.5) add(red, `Hypothermia (${temp})`, 'e_temp', 'red');
+            if (temp > 38.5) add(red, `Pyrexia Temp ${temp}`, 'e_temp', 'red');
+            else if (temp < 35.5) add(red, `Hypothermia Temp ${temp}`, 'e_temp', 'red');
         }
 
         const oxDevInput = $('b_device');
@@ -1705,12 +1680,18 @@ function computeAll() {
             let parts = [], hasRed = false;
             if (s.oxMod === 'NP') {
                 const flow = num(s.npFlow);
-                if (flow >= 3) { parts.push(`high flow NP (${flow}L)`); flagged.red.push('npFlow'); hasRed = true; }
-                else if (flow >= 2) { parts.push(`NP flow (${flow}L)`); flagged.amber.push('npFlow'); }
-            } else if (s.oxMod === 'HFNP') { parts.push(`HFNP requirement`); flagged.red.push('oxMod'); hasRed = true; }
-            else if (s.oxMod === 'NIV') { parts.push(`NIV requirement`); flagged.red.push('oxMod'); hasRed = true; }
-            else if (s.oxMod === 'Trache') {
-                if (s.tracheStatus === 'New') { parts.push(`new/unstable tracheostomy`); flagged.red.push('tracheStatus'); hasRed = true; }
+                if (flow >= 3) { parts.push(`high flow NP ${flow}L`); flagged.red.push('npFlow'); hasRed = true; }
+                else if (flow >= 2) { parts.push(`NP ${flow}L`); flagged.amber.push('npFlow'); }
+            } else if (s.oxMod === 'HFNP') {
+                const fio2 = num(s.hfnpFio2);
+                if (fio2 >= 60) { parts.push(`HFNP with high FiO2 ${fio2}%`); flagged.red.push('oxMod'); hasRed = true; }
+                else { parts.push(`HFNP requirement`); flagged.red.push('oxMod'); hasRed = true; }
+            } else if (s.oxMod === 'NIV') {
+                const fio2 = num(s.nivFio2);
+                if (fio2 >= 60) { parts.push(`NIV with high FiO2 ${fio2}%`); flagged.red.push('oxMod'); hasRed = true; }
+                else { parts.push(`NIV requirement`); flagged.red.push('oxMod'); hasRed = true; }
+            } else if (s.oxMod === 'Trache') {
+                if (s.tracheStatus === 'New') { parts.push(`new or unstable tracheostomy`); flagged.red.push('tracheStatus'); hasRed = true; }
                 else { parts.push(`tracheostomy`); flagged.amber.push('oxMod'); }
             }
             // Dyspnea - only display if resp_dyspnea is true
@@ -1720,27 +1701,30 @@ function computeAll() {
                 else if (dysp === 'mild') { parts.push(`mild dyspnea`); flagged.amber.push('dyspneaConcern'); }
                 else if (!dysp) { parts.push(`dyspnea`); flagged.amber.push('seg_resp_dyspnea'); }
             }
-            if (s.resp_tachypnea === true) { parts.push('tachypnea (>20)'); flagged.red.push('seg_resp_tachypnea'); hasRed = true; }
-            if (s.resp_rapid_wean === true) { parts.push('rapid O2 wean (<12h)'); flagged.red.push('seg_resp_rapid_wean'); hasRed = true; }
-            if (s.resp_poor_cough === true) { parts.push('poor cough'); flagged.amber.push('seg_resp_poor_cough'); }
+            if (s.resp_tachypnea === true) { parts.push('tachypnea >20bpm'); flagged.red.push('seg_resp_tachypnea'); hasRed = true; }
+            if (s.resp_rapid_wean === true) { parts.push('rapid O2 wean <12hrs'); flagged.red.push('seg_resp_rapid_wean'); hasRed = true; }
+            if (s.resp_poor_cough === true) { parts.push('poor cough effort'); flagged.amber.push('seg_resp_poor_cough'); }
             if (s.resp_poor_swallow === true) { parts.push('poor swallow'); flagged.amber.push('seg_resp_poor_swallow'); }
             
-            if (s.hist_o2 === true) { parts.push('recent high O2/NIV requirement (<12h)'); flagged.red.push('seg_hist_o2'); hasRed = true; }
+            if (s.hist_o2 === true) { parts.push('recent high O2/NIV requirement <12hrs'); flagged.red.push('seg_hist_o2'); hasRed = true; }
             
             if (s.intubated === true) {
                 const reason = $('intubatedReason')?.querySelector('.active')?.dataset.value;
-                if (reason === 'concern') { parts.push('intubated <24h with concerns'); flagged.red.push('seg_intubated'); hasRed = true; }
-                else { parts.push('intubated <24h'); flagged.amber.push('seg_intubated'); }
+                if (reason === 'concern') { parts.push('intubated <24hrs with concerns'); flagged.red.push('seg_intubated'); hasRed = true; }
+                else { parts.push('intubated <24hrs (elective)'); flagged.amber.push('seg_intubated'); }
             }
             
             if(s.dyspneaConcern_note && parts.length > 0) {
-                 parts[parts.length-1] += ` (${s.dyspneaConcern_note})`;
+                 parts[parts.length-1] += `. Note: ${s.dyspneaConcern_note}`;
             }
 
             if (parts.length > 0) {
                 const joined = joinGrammatically(parts);
-                const finalTxt = `Respiratory concern - ${joined}`;
+                const finalTxt = `Respiratory concern with ${joined}`;
                 if (hasRed) red.push(finalTxt); else amber.push(finalTxt);
+            } else {
+                // Gate is open but no specific concerns identified - still flag as amber
+                add(amber, 'Respiratory concern - details required', 'seg_resp_concern', 'amber', s.dyspneaConcern_note);
             }
         }
 
@@ -1748,29 +1732,40 @@ function computeAll() {
         if (s.hac === true) add(amber, 'Hospital acquired complication', 'seg_hac', 'amber', s.hac_note);
 
         if (s.neuro_gate === true) {
-            let txt = "neuro concern";
+            let txt = "Neurological concern";
             const gcsInput = s.d_alert;
             const type = s.neuroType;
+            const severity = s.neuroConcern;
             let details = [];
             if (gcsInput && gcsInput.toLowerCase().includes('gcs')) details.push(gcsInput);
             if (type) details.push(type.toLowerCase());
-            if (details.length > 0) txt += ` - ${details.join(', ')}`;
-            add(red, sentenceCase(txt), 'neuroConcern', 'red', s.neuroType_note);
+            if (details.length > 0) txt += ` with ${joinGrammatically(details)}`;
+            
+            const isRed = (severity === 'severe');
+            add(isRed ? red : amber, sentenceCase(txt), 'neuroConcern', isRed ? 'red' : 'amber', s.neuroType_note);
         }
 
         const k = num(s.bl_k);
         if (s.electrolyte_gate === true || (k && (k < 3.0 || k > 6.0))) {
             let msg = "Electrolyte concern", isRed = false;
+            let parts = [];
             if (k) {
-                if (k > 6.0) { msg += ` (Hyperkalemia ${k})`; isRed = true; }
-                else if (k < 3.0) { msg += ` (Hypokalaemia ${k})`; isRed = true; }
+                if (k > 6.0) { parts.push(`hyperkalemia K+ ${k}`); isRed = true; }
+                else if (k < 3.0) { parts.push(`hypokalaemia K+ ${k}`); isRed = true; }
             }
             const na = num(s.bl_na);
             if(na && (na < 125 || na > 155)) {
-                 msg += ` (Severe Na ${na})`; isRed = true;
+                 parts.push(`severe Na derangement ${na}`);
+                 isRed = true;
             }
             const sev = s.electrolyteConcern;
-            if (sev === 'severe') { msg += " (Severe)"; isRed = true; }
+            if (sev === 'severe') { 
+                if (parts.length === 0) parts.push("severe derangement"); 
+                isRed = true; 
+            } else if (sev === 'mild' && parts.length === 0) {
+                parts.push("mild/moderate derangement");
+            }
+            if (parts.length > 0) msg += ` with ${joinGrammatically(parts)}`;
             add(isRed ? red : amber, msg, 'electrolyteConcern', isRed ? 'red' : 'amber', s.electrolyteConcern_note);
         }
 
@@ -1789,10 +1784,10 @@ function computeAll() {
             if(s.renal_dehydrated) fluidFlags.push('dehydrated'); // New Chip
 
             // Renal
-            if(s.renal_oliguria) renalFlags.push('oliguria (<0.5ml/kg)');
+            if(s.renal_oliguria) renalFlags.push('oliguria <0.5ml/kg/hr');
             if(s.renal_anuria) renalFlags.push('anuria');
             if(s.renal_dysfunction) renalFlags.push('AKI');
-            if(cr > 150) renalFlags.push(`High Cr ${cr}`);
+            if(cr > 150) renalFlags.push(`Cr ${cr}`);
 
             // Dialysis Logic
             if(s.renal_dialysis) {
@@ -1806,12 +1801,12 @@ function computeAll() {
 
             // Determine Label
             let label = "Renal concern"; // Default
-            if (hasFluid && hasRenal) label = "Renal/fluid concern";
+            if (hasFluid && hasRenal) label = "Renal and fluid concern";
             else if (hasFluid && !hasRenal) label = "Fluid concern";
             
             // Append Details
             const allFlags = [...renalFlags, ...fluidFlags];
-            if(allFlags.length > 0) label += ` - ${joinGrammatically(allFlags)}`;
+            if(allFlags.length > 0) label += ` with ${joinGrammatically(allFlags)}`;
 
             // Check Mitigation vs Amber Override
             // Chips that override mitigation (Force Amber)
@@ -1855,13 +1850,16 @@ function computeAll() {
         if (autoTrigger || manualConcern) {
             let markers = [], isRed = false;
             
-            if (wcc !== null && (wcc > 15 || wcc < 2)) isRed = true;
+            // Red flags: CRP >100, Temp >38.5, NLR >10 (but NOT WCC)
             if (crp > 100) isRed = true;
             if (temp > 38.5) isRed = true;
+            if (nlrVal > 10) isRed = true;
             
+            // Add WCC marker (always amber, never contributes to red)
             if (wcc !== null && (wcc < 3 || wcc > 15)) markers.push(`WCC ${wcc}`);
             else if (wcc !== null && (wcc > 11)) markers.push(`WCC ${wcc}`);
             
+            // Add other markers
             if (crp > 100) markers.push(`CRP ${crp}`);
             else if (crp > 50) markers.push(`CRP ${crp}`);
             
@@ -1870,8 +1868,8 @@ function computeAll() {
             
             if (nlrVal > 10) markers.push(`NLR ${nlrVal.toFixed(1)}`);
             
-            let msg = isRed ? "Infection risk (Severe)" : "Infection risk";
-            if (markers.length) msg += ` - ${markers.join(', ')}`;
+            let msg = isRed ? "Severe infection risk" : "Infection risk";
+            if (markers.length) msg += ` with ${joinGrammatically(markers)}`;
 
             const shouldSuppress = (s.infection_downtrend === true);
 
@@ -1884,35 +1882,33 @@ function computeAll() {
 
         if (s.immobility === true) {
             const icuLos = num(s.icuLos) || 0;
-            if (icuLos >= 4) add(red, `Immobility plus long ICU LOS`, 'seg_immobility', 'red', s.immobility_note);
+            if (icuLos >= 4) add(red, `Immobility concern with prolonged ICU stay`, 'seg_immobility', 'red', s.immobility_note);
             else add(amber, 'Immobility concern', 'seg_immobility', 'amber', s.immobility_note);
         }
 
         const hb = num(s.hb) || num(s.bl_hb);
         if (hb && hb <= 70) add(red, `Hb ${hb}`, 'hb_wrapper', 'red');
-        else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Hb ${hb} (dropping)`, 'hb_wrapper', 'amber');
-        else if (s.hb_dropping) add(amber, `Hb Dropping`, 'hb_wrapper', 'amber');
+        else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Hb ${hb} and dropping`, 'hb_wrapper', 'amber');
 
         const alb = num(s.bl_alb);
-        if(alb && alb < 20) add(amber, `Severe hypoalbuminemia (${alb})`, 'bl_alb', 'amber');
+        if(alb && alb < 20) add(amber, `Severe hypoalbuminemia Alb ${alb}`, 'bl_alb', 'amber');
         
         const plts = num(s.bl_plts);
-        if(plts && plts < 100) add(amber, `Thrombocytopenia (${plts})`, 'bl_plts', 'amber');
+        if(plts && plts < 100) add(amber, `Thrombocytopenia Plts ${plts}`, 'bl_plts', 'amber');
 
         const inr = num(s.bl_inr);
-        if (inr && inr > 3.5) add(red, `Very high INR (${inr})`, 'bl_inr', 'red');
-        else if (inr && inr > 2.5) add(amber, `High INR (${inr})`, 'bl_inr', 'amber');
+        if (inr && inr > 3.5) add(red, `High INR ${inr}`, 'bl_inr', 'red');
+        else if (inr && inr > 2.5) add(amber, `Elevated INR ${inr}`, 'bl_inr', 'amber');
 
         const egfr = num(s.bl_egfr);
-        if (egfr && egfr < 15) add(red, `Very low eGFR (${egfr}) - severe renal impairment`, 'bl_egfr', 'red');
-        else if (egfr && egfr < 30) add(amber, `Low eGFR (${egfr}) - renal concern`, 'bl_egfr', 'amber');
+        if (egfr && egfr < 30) add(amber, `Low eGFR ${egfr} indicating renal concern`, 'bl_egfr', 'amber');
 
         // --- BSL FLAGGING ---
         const bsl = num(s.e_bsl);
         if (bsl) {
-            if (bsl < 4.0) add(red, `Hypoglycemia (BSL ${bsl})`, 'e_bsl', 'red');
-            else if (bsl > 20) add(red, `Severe Hyperglycemia (BSL ${bsl})`, 'e_bsl', 'red');
-            else if (bsl >= 15) add(amber, `Hyperglycemia (BSL ${bsl})`, 'e_bsl', 'amber');
+            if (bsl < 4.0) add(red, `Hypoglycemia BSL ${bsl}`, 'e_bsl', 'red');
+            else if (bsl > 20) add(red, `Hyperglycemia BSL ${bsl}`, 'e_bsl', 'red');
+            else if (bsl >= 15) add(amber, `Hyperglycemia BSL ${bsl}`, 'e_bsl', 'amber');
         }
 
         // --- PAIN CONTROL ---
@@ -1920,7 +1916,7 @@ function computeAll() {
         const painNotControlled = painScore >= 7 || s.pain_control;
         if (painNotControlled) {
             let painMsg = `Pain not well controlled`;
-            if (painScore) painMsg += ` (${painScore}/10)`;
+            if (painScore) painMsg += ` with score of ${painScore} out of 10`;
             add(amber, painMsg, 'neuro_section', 'amber', s.pain_control ? s.pain_context_note : null);
         }
 
@@ -1961,7 +1957,7 @@ function computeAll() {
                 const percentChange = ((currCr - prevCr) / prevCr) * 100;
                 // Only flag if >30% increase or absolute increase >30
                 if (percentChange > 30 || (currCr - prevCr) > 30) {
-                    add(amber, `Worsening Cr (${prevCr}→${currCr})`, 'bl_cr_review', 'amber');
+                    add(amber, `Worsening Cr ${prevCr}→${currCr}`, 'bl_cr_review', 'amber');
                 }
             }
         }
@@ -1992,11 +1988,11 @@ function computeAll() {
             } else { comorbDisplay.style.display = 'none'; }
         }
         if (countComorbs >= 3) {
-            add(red, sentenceCase('multiple comorbidities (3+)'), null, 'red', s.comorb_other_note);
+            add(red, sentenceCase('Multiple comorbidities (three or more)'), null, 'red', s.comorb_other_note);
             activeComorbsKeys.forEach(k => flagged.red.push(`toggle_${k}`));
         } else if (countComorbs > 0) {
-            const cList = activeComorbsKeys.map(k => comorbMap[k].toLowerCase()).join(', ');
-            add(amber, sentenceCase(`comorbidities (${cList})`), null, 'amber', s.comorb_other_note);
+            const cList = activeComorbsKeys.map(k => comorbMap[k].toLowerCase());
+            add(amber, sentenceCase(`Comorbidities including ${joinGrammatically(cList)}`), null, 'amber', s.comorb_other_note);
             activeComorbsKeys.forEach(k => flagged.amber.push(`toggle_${k}`));
         }
 
@@ -2152,6 +2148,9 @@ function computeAll() {
         const fu = $('followUpInstructions'); if(fu) fu.innerHTML = planHtml;
 
         checkCompleteness(s, countComorbs);
+        console.log('Risks before generateSummary - Red:', uniqueRed.length, 'Amber:', uniqueAmber.length);
+        console.log('Red risks:', uniqueRed);
+        console.log('Amber risks:', uniqueAmber);
         generateSummary(s, cat, timeData.text, uniqueRed, uniqueAmber, suppressedRisks, activeComorbsKeys);
     } catch(err) {
         console.error("Compute Error:", err);
@@ -2176,10 +2175,10 @@ function checkCompleteness(s, comorbCount) {
 
 function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys) {
     
-    // Manual Edit Protection: allow auto-fill if summary is empty
+    // Manual Edit Protection: allow auto-fill if summary is empty OR in quick review mode
     const sum = $('summary');
     const hasSummary = !!(sum && sum.value && sum.value.trim());
-    if(isManuallyEdited && hasSummary) {
+    if(isManuallyEdited && hasSummary && !isQuickReviewMode) {
         return; 
     }
 
@@ -2210,9 +2209,8 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     lines.push('');
 
     if (wardTimeTxt && s.reviewType !== 'pre') lines.push(`Time since stepdown: ${wardTimeTxt}`);
-    if (s.icuLos) lines.push(`ICU LOS: ${s.icuLos} days.`);
+    if (s.icuLos) lines.push(`ICU LOS: ${s.icuLos} days`);
     lines.push(`Reason for ICU Admission: ${s.ptAdmissionReason || '--'}`);
-    if (s.allergies_note) lines.push(`Allergies: ${s.allergies_note}`);
 
     if (s.reviewType === 'pre' && s.icuSummary) {
         lines.push('');
@@ -2248,7 +2246,17 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         lines.push('');
     }
 
-    lines.push('A-E ASSESSMENT');
+    if (s.allergies_note) {
+        lines.push(`Allergies: ${s.allergies_note}`);
+        lines.push('');
+    }
+
+    if (s.goc_note) {
+        lines.push(`GOC: ${s.goc_note}`);
+        lines.push('');
+    }
+
+    lines.push('A-E ASSESSMENT:');
     if (s.chk_use_mods) addLine(`MODS: ${s.mods_score} ${s.mods_details ? `(${s.mods_details})` : ''}`);
     else addLine(`ADDS: ${s.adds}`);
 
@@ -2270,7 +2278,13 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
 
     let d = [];
     if (s.d_alert) d.push(s.d_alert);
-    if (s.d_pain) d.push(`Pain: ${s.d_pain}`);
+    if (s.d_pain) {
+        if (s.d_pain.toLowerCase() === 'no pain') {
+            d.push('No pain');
+        } else {
+            d.push(`Pain: ${s.d_pain}`);
+        }
+    }
     if (d.length) addLine(`D: ${d.join(', ')}`);
 
     let e = [];
@@ -2283,7 +2297,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
 
     if (s.ae_mobility) addLine(`Mobility: ${s.ae_mobility}`);
     if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
-    if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` (${s.nutrition_context_note})` : ''}`);
+    if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
 
     let bowelTxt = '';
@@ -2292,12 +2306,14 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
 
     if (s.bowel_date) {
         const bd = new Date(s.bowel_date);
-        bowelTxt += ` last opened (${bd.getDate()}/${bd.getMonth() + 1})`;
+        bowelTxt += ` last opened ${bd.getDate()}/${bd.getMonth() + 1}`;
     }
-    if (s.chk_aperients && s.bowel_mode === 'btn_bno') bowelTxt += ' (Aperients charted)';
-    if (s.ae_bowels) bowelTxt += ` ${s.ae_bowels}`;
+    if (s.chk_aperients && s.bowel_mode === 'btn_bno') bowelTxt += ', aperients charted';
+    if (s.ae_bowels) bowelTxt += ` - ${s.ae_bowels}`;
 
     if (bowelTxt) addLine(`Bowels: ${bowelTxt}`);
+    if (s.anticoag_note) addLine(`Anticoagulation: ${s.anticoag_note}`);
+    if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
 
     lines.push('');
 
@@ -2308,45 +2324,50 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         const prevVal = window.prevBloods ? window.prevBloods[key] : null;
         if (currentVal) {
             let str = `${blMap[key]} ${currentVal}`;
-            if (prevVal && prevVal !== currentVal) str += ` (${prevVal})`;
+            if (prevVal && prevVal !== currentVal) str += ` (was ${prevVal})`;
             blLines.push(str);
         }
     });
     if (blLines.length) addLine(`Bloods: ${blLines.join(', ')}`);
     if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
-    if (s.new_bloods_ordered) addLine('(new bloods ordered for next round)');
+    if (s.new_bloods_ordered) addLine('New bloods ordered for next round');
     if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
     lines.push('');
 
-    lines.push('DEVICES:');
+    lines.push('LINES, DRAINS & DEVICES:');
     if (Object.values(s.devices || {}).some(arr => arr.length)) {
         const trackedDevices = ['CVC', 'PICC', 'PIVC', 'Other CVAD', 'IDC', 'Vascath'];
         Object.entries(s.devices).forEach(([k, v]) => { 
             v.forEach(item => {
                 let deviceLine = `- ${k}`;
+                if (item.details) deviceLine += ` ${item.details}`;
                 if (item.insertionDate) {
-                    deviceLine += ` (Inserted: ${item.insertionDate})`;
-                    // Add long dwell indicator if applicable
+                    deviceLine += ` inserted ${formatDateDDMMYYYY(item.insertionDate)}`;
+                    // Add dwell time if device is tracked
                     if (trackedDevices.includes(k)) {
                         const deviceDate = new Date(item.insertionDate + 'T00:00:00');
                         const dwellDays = Math.floor((new Date() - deviceDate) / (1000 * 60 * 60 * 24));
+                        deviceLine += `, ${dwellDays}d`;
+                        
+                        // Add status if applicable
                         const threshold = (k === 'PIVC') ? 3 : 7;
-                        if (dwellDays >= threshold) {
-                            deviceLine += ` (long dwell)`;
+                        if (k === 'PIVC') {
+                            if (dwellDays >= 3) deviceLine += ', long dwell';
+                            else deviceLine += ' dwell';
+                        } else {
+                            if (dwellDays >= 7) deviceLine += ', long dwell';
+                            else deviceLine += ' dwell';
                         }
                     }
                 }
-                if (item.details) deviceLine += ` ${item.details}`;
                 lines.push(deviceLine);
             });
         });
-    } else { lines.push('- Nil'); }
+    }
     lines.push('');
 
-    if (s.goc_note) lines.push(`GOC: ${s.goc_note}`);
-    if (s.pain_context_note) lines.push(`Pain Concern: ${s.pain_context_note}`);
-    if (s.neuro_psych_note) lines.push(`Psychological Resilience: ${s.neuro_psych_note}`);
-    if (s.pics_note) lines.push(`PICS Assessment: ${s.pics_note}`);
+    if (s.neuro_psych_note) lines.push(`Psychological: ${s.neuro_psych_note}`);
+    if (s.pics_note) lines.push(`PICS: ${s.pics_note}`);
     if (s.context_other_note) lines.push(`Other: ${s.context_other_note}`);
     lines.push('');
 

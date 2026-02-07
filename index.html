@@ -659,58 +659,6 @@
     </div>
     <input type="hidden" id="override" value="none">
     <div id="override_reason_box" style="display:none;"><label>Reason for override</label><input id="overrideNote" type="text"/></div>
-    
-    <div style="margin-top:20px; border-top:1px solid var(--line); padding-top:12px;">
-        <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-weight:600; cursor:pointer;">
-            <input type="checkbox" id="chk_medical_rounding" style="width:auto; transform:scale(1.2);">
-            Add to ALERT Medical Rounding List
-        </label>
-        
-        <div id="chk_discharge_wrapper" style="display:none;">
-            <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer; color:var(--blue-hint);">
-                <input type="checkbox" id="chk_discharge_alert" style="width:auto; transform:scale(1.2);">
-                Discharge from ALERT post ICU rounding list?
-            </label>
-        </div>
-
-        <div id="chk_unsuitable_wrapper" style="display:none;">
-             <div class="question-row input-box" id="suitability_wrapper">
-               <div class="question-label" style="font-size:1.1rem; color:var(--accent);">Is patient suitable for ward stepdown?</div>
-               <div class="segmented-group" id="seg_stepdown_suitable">
-                   <button class="seg-btn" data-value="true">Yes</button>
-                   <button class="seg-btn" data-value="false">No</button>
-               </div>
-                <div id="unsuitable_note_wrapper" class="concern-note" style="display:none; margin-top:12px;">
-                    <textarea id="unsuitable_note"></textarea>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="kpi" style="margin-top:24px; margin-bottom:12px; border-top:1px solid var(--line); padding-top:16px;">
-        <div class="box" id="categoryBox">
-            <small>Category</small>
-            <h3 id="catText" class="status green">CAT 3</h3>
-        </div>
-        <div class="box">
-            <small>Red Flags</small>
-            <h3 id="redCount">0</h3>
-        </div>
-        <div class="box">
-            <small>Amber Flags</small>
-            <h3 id="amberCount">0</h3>
-        </div>
-    </div>
-
-    <div id="discharge_prompt" style="display:none; text-align:center; color:var(--blue-hint); font-weight:700; margin-bottom:16px; border:2px dashed var(--blue-hint); padding:12px; border-radius:8px;">
-        <div id="discharge_msg" style="margin-bottom:8px; font-size:1.1rem;"></div>
-        <div style="display:flex; justify-content:center; gap:16px;">
-            <button id="btn_discharge_yes" class="btn small" style="background:var(--blue-hint); color:white; border-color:var(--blue-hint);">Yes</button>
-            <button id="btn_discharge_no" class="btn small">No</button>
-        </div>
-    </div>
-
-    <div id="flagList" style="margin-bottom:20px; font-size:0.9rem; background:var(--input-bg); padding:10px; border-radius:8px; border:1px solid var(--line);"></div>
 
   </div>
 
@@ -1020,6 +968,13 @@
             </div>
         </div>
         
+        <div class="col-12" style="margin-top:12px;">
+            <div class="grid" style="row-gap:8px;">
+                <div class="col-6"><div class="input-box"><label>Anticoagulation</label><input id="anticoag_note" type="text"/></div></div>
+                <div class="col-6"><div class="input-box"><label>VTE Prophylaxis</label><input id="vte_prophylaxis_note" type="text"/></div></div>
+            </div>
+        </div>
+        
       </div>
     </div>
   </div>
@@ -1038,7 +993,7 @@
         <div class="input-box blood-item"><label for="bl_wcc">WCC <span id="prev_bl_wcc" class="prev-datum"></span></label><input id="bl_wcc" type="number" step="0.1"/><div class="trend-buttons" id="bl_wcc_trend"></div><span class="range-subtext">(4-11)</span></div>
         <div class="input-box blood-item"><label for="bl_crp">CRP <span id="prev_bl_crp" class="prev-datum"></span></label><input id="bl_crp" type="number"/><div class="trend-buttons" id="bl_crp_trend"></div><span class="range-subtext">(<5)</span></div>
         <div class="input-box blood-item"><label for="bl_cr_review">Cr <span id="prev_bl_cr_review" class="prev-datum"></span></label><input id="bl_cr_review" type="number"/><div class="trend-buttons" id="bl_cr_review_trend"></div><span class="range-subtext">(50-98)</span></div>
-        <div class="input-box blood-item"><label for="bl_egfr">eGFR <span id="prev_bl_egfr" class="prev-datum"></span></label><input id="bl_egfr" type="number"/><div class="trend-buttons" id="bl_egfr_trend"></div><span class="range-subtext">(60-120)</span></div>
+        <div class="input-box blood-item"><label for="bl_egfr">eGFR <span id="prev_bl_egfr" class="prev-datum"></span></label><input id="bl_egfr" type="text"/><div class="trend-buttons" id="bl_egfr_trend"></div><span class="range-subtext">(60-120 or >90)</span></div>
         <div class="input-box blood-item"><label for="bl_k">K <span id="prev_bl_k" class="prev-datum"></span></label><input id="bl_k" type="number" step="0.1"/><div class="trend-buttons" id="bl_k_trend"></div><span class="range-subtext">(3.5-5.2)</span></div>
         <div class="input-box blood-item"><label for="bl_na">Na <span id="prev_bl_na" class="prev-datum"></span></label><input id="bl_na" type="number" step="1"/><div class="trend-buttons" id="bl_na_trend"></div><span class="range-subtext">(135-145)</span></div>
         <div class="input-box blood-item"><label for="bl_mg">Mg <span id="prev_bl_mg" class="prev-datum"></span></label><input id="bl_mg" type="number" step="0.1"/><div class="trend-buttons" id="bl_mg_trend"></div><span class="range-subtext">(0.7-1.1)</span></div>
@@ -1056,14 +1011,14 @@
       
       <div class="grid" style="margin-top:12px;">
           <div class="col-6" style="margin-top:8px;">
-             <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Are the infection markers downtrending, ADDS low and appropriate antibiotics?</label>
+             <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Are infection markers downtrending, ADDS low, and appropriate antibiotics prescribed?</label>
              <div class="segmented-group" id="seg_infection_downtrend_bloods">
                   <button class="seg-btn" data-value="true">Yes</button>
                   <button class="seg-btn" data-value="false">No</button>
              </div>
           </div>
            <div class="col-6" style="margin-top:8px;">
-             <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Known CKD and Cr around baseline?</label>
+             <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Known CKD with Cr around baseline?</label>
              <div class="segmented-group" id="seg_renal_chronic_bloods">
                   <button class="seg-btn" data-value="true">Yes</button>
                   <button class="seg-btn" data-value="false">No</button>
@@ -1071,15 +1026,27 @@
           </div>
       </div>
 
-      <div class="grid" id="infusions_wrapper" style="display:none; margin-top: 12px; row-gap: 8px;">
-          <div class="col-6"><div class="input-box"><label for="infusions_note">Infusions</label><input id="infusions_note" type="text"/></div></div>
-          <div class="col-6"><div class="input-box"><label for="elec_replace_note">Electrolyte Plan</label><input id="elec_replace_note" type="text"/></div></div>
+      <div class="grid" id="infusions_wrapper" style="margin-top: 12px; row-gap: 8px;">
+          <div class="col-6">
+              <div class="input-box">
+                  <label for="infusions_note" class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Infusions</label>
+                  <input id="infusions_note" type="text"/>
+              </div>
+          </div>
+          <div class="col-6">
+              <div class="input-box">
+                  <label for="elec_replace_note" class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Electrolyte Plan</label>
+                  <input id="elec_replace_note" type="text"/>
+              </div>
+          </div>
           <div class="col-12" style="margin-top:8px">
-             <div class="segmented-group" id="seg_new_bloods_ordered">
-                <button class="seg-btn" style="flex:3; text-align:left; padding-left:12px; pointer-events:none;">New bloods ordered?</button>
-                <button class="seg-btn" data-value="true">Yes</button>
-                <button class="seg-btn" data-value="false">No</button>
-            </div>
+              <div class="input-box">
+                  <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">New bloods ordered?</label>
+                  <div class="segmented-group" id="seg_new_bloods_ordered">
+                      <button class="seg-btn" data-value="true">Yes</button>
+                      <button class="seg-btn" data-value="false">No</button>
+                  </div>
+              </div>
           </div>
       </div>
     </div>
@@ -1088,12 +1055,12 @@
   <div id="section-psychosocial" class="card" style="margin-top:20px;">
     <div class="section-title">🧠 Psychosocial & Recovery Assessment</div>
     
-    <div class="grid" style="row-gap:10px; margin-top:12px;">
+    <div class="grid" style="row-gap:12px; margin-top:12px;">
       <div class="col-12">
+        <label class="question-label" style="font-size:0.9rem; margin-bottom:4px; display:block;">Poor sleep?</label>
         <div class="segmented-group" id="seg_sleep_quality">
-            <button class="seg-btn" style="flex:2; text-align:left; padding-left:12px; pointer-events:none; font-weight:600;">Sleep Quality</button>
-            <button class="seg-btn" data-value="false">Adequate</button>
-            <button class="seg-btn" data-value="true">Inadequate</button>
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
         </div>
         <div id="sleep_quality_wrapper" style="display:none; margin-top:8px;">
             <textarea id="sleep_quality_note" placeholder="details..." style="min-height:50px;"></textarea>
@@ -1101,21 +1068,10 @@
       </div>
 
       <div class="col-12">
-        <div class="segmented-group" id="seg_pain_control">
-            <button class="seg-btn" style="flex:2; text-align:left; padding-left:12px; pointer-events:none; font-weight:600;">Pain Control</button>
-            <button class="seg-btn" data-value="false">No Concern</button>
-            <button class="seg-btn" data-value="true">Concern</button>
-        </div>
-        <div id="pain_context_wrapper" style="display:none; margin-top:8px;">
-            <textarea id="pain_context_note" placeholder="details..." style="min-height:50px;"></textarea>
-        </div>
-      </div>
-
-      <div class="col-12">
+        <label class="question-label" style="font-size:0.9rem; margin-bottom:4px; display:block;">Any psychological concerns?</label>
         <div class="segmented-group" id="seg_neuro_psych">
-            <button class="seg-btn" style="flex:2; text-align:left; padding-left:12px; pointer-events:none; font-weight:600;">Psychological Concerns</button>
-            <button class="seg-btn" data-value="false">No Concern</button>
-            <button class="seg-btn" data-value="true">Concern</button>
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
         </div>
         <div id="neuro_psych_wrapper" style="display:none; margin-top:8px;">
             <textarea id="neuro_psych_note" placeholder="details..." style="min-height:50px;"></textarea>
@@ -1123,10 +1079,10 @@
       </div>
 
       <div class="col-12">
+        <label class="question-label" style="font-size:0.9rem; margin-bottom:4px; display:block;">PICS positive?</label>
         <div class="segmented-group" id="seg_pics">
-            <button class="seg-btn" style="flex:2; text-align:left; padding-left:12px; pointer-events:none; font-weight:600;">PICS</button>
-            <button class="seg-btn" data-value="false">Negative</button>
-            <button class="seg-btn" data-value="true">Positive</button>
+            <button class="seg-btn" data-value="true">Yes</button>
+            <button class="seg-btn" data-value="false">No</button>
         </div>
         <div id="pics_wrapper" style="display:none; margin-top:8px;">
             <textarea id="pics_note" placeholder="details..." style="min-height:50px;"></textarea>
@@ -1138,7 +1094,7 @@
   <div class="accordion-wrapper" id="section-devices" data-accordion-id="devices" style="margin-top:20px;">
     <button class="accordion" aria-expanded="false" aria-controls="panel_devices">🔧 Lines, Drains & Wounds <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_devices" style="display:flex; flex-direction:column; gap: 12px;">
-       <div id="devices-container"></div>
+       <div id="devices-container" style="width:100%; box-sizing:border-box;"></div>
        
        <div class="button-group" style="justify-content: flex-start; flex-wrap: wrap;">
            <button class="btn small" data-device-type="CVC">+ Add CVC</button>
@@ -1175,17 +1131,65 @@
             <textarea id="pmh_note"></textarea>
         </div>
 
-        <div class="devices-subtitle">▶ Prophylaxis & Anticoagulation</div>
-        <div class="grid" style="margin-bottom:12px; row-gap:8px;">
-            <div class="col-6"><div class="input-box"><label>Anticoagulation</label><input id="anticoag_note" type="text"/></div></div>
-            <div class="col-6"><div class="input-box"><label>VTE Prophylaxis</label><input id="vte_prophylaxis_note" type="text"/></div></div>
-        </div>
-
         <div class="devices-subtitle">▶ Other</div>
         <div class="devices-input-group">
             <textarea id="context_other_note"></textarea>
         </div>
     </div>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <div style="border-top:1px solid var(--line); padding-top:12px;">
+        <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-weight:600; cursor:pointer;">
+            <input type="checkbox" id="chk_medical_rounding" style="width:auto; transform:scale(1.2);">
+            Add to ALERT Medical Rounding List
+        </label>
+        
+        <div id="chk_discharge_wrapper" style="display:none;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer; color:var(--blue-hint);">
+                <input type="checkbox" id="chk_discharge_alert" style="width:auto; transform:scale(1.2);">
+                Discharge from ALERT post ICU rounding list?
+            </label>
+        </div>
+
+        <div id="chk_unsuitable_wrapper" style="display:none;">
+             <div class="question-row input-box" id="suitability_wrapper">
+               <div class="question-label" style="font-size:1.1rem; color:var(--accent);">Is patient suitable for ward stepdown?</div>
+               <div class="segmented-group" id="seg_stepdown_suitable">
+                   <button class="seg-btn" data-value="true">Yes</button>
+                   <button class="seg-btn" data-value="false">No</button>
+               </div>
+                <div id="unsuitable_note_wrapper" class="concern-note" style="display:none; margin-top:12px;">
+                    <textarea id="unsuitable_note"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi" style="margin-top:24px; margin-bottom:12px; border-top:1px solid var(--line); padding-top:16px;">
+        <div class="box" id="categoryBox">
+            <small>Category</small>
+            <h3 id="catText" class="status green">CAT 3</h3>
+        </div>
+        <div class="box">
+            <small>Red Flags</small>
+            <h3 id="redCount">0</h3>
+        </div>
+        <div class="box">
+            <small>Amber Flags</small>
+            <h3 id="amberCount">0</h3>
+        </div>
+    </div>
+
+    <div id="discharge_prompt" style="display:none; text-align:center; color:var(--blue-hint); font-weight:700; margin-bottom:16px; border:2px dashed var(--blue-hint); padding:12px; border-radius:8px;">
+        <div id="discharge_msg" style="margin-bottom:8px; font-size:1.1rem;"></div>
+        <div style="display:flex; justify-content:center; gap:16px;">
+            <button id="btn_discharge_yes" class="btn small" style="background:var(--blue-hint); color:white; border-color:var(--blue-hint);">Yes</button>
+            <button id="btn_discharge_no" class="btn small">No</button>
+        </div>
+    </div>
+
+    <div id="flagList" style="margin-bottom:20px; font-size:0.9rem; background:var(--input-bg); padding:10px; border-radius:8px; border:1px solid var(--line);"></div>
   </div>
 
   <div id="section-summary" class="card" style="margin-top:40px; margin-bottom:40px; display:block; scroll-margin-top:100px; position:sticky; top:100px; z-index:50; background:var(--card);">
@@ -1225,6 +1229,8 @@
       </button>
   </div>
 </footer>
+
+<div id="toast" class="toast"></div>
 
 <script src="script.js"></script>
 <script src="plugins/redcap.js"></script>
