@@ -2410,11 +2410,6 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     lines.push('');
 
     if (s.ae_mobility) addLine(`Mobility: ${s.ae_mobility}`);
-    if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
-    if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
-    else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
-    if (s.sleep_quality) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ''}`);
-    if (s.pics) addLine(`Post ICU Syndrome: Positive${s.pics_note ? ` - ${s.pics_note}` : ''}`);
 
     let bowelTxt = '';
     if (s.bowel_mode === 'btn_bo') bowelTxt = 'BO';
@@ -2441,8 +2436,16 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (s.ae_bowels) bowelTxt += ` - ${s.ae_bowels}`;
 
     if (bowelTxt) addLine(`Bowels: ${bowelTxt}`);
+    
+    if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
+    if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
+    else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
+    if (s.sleep_quality) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ''}`);
+    if (s.pics) addLine(`Post ICU Syndrome: Positive${s.pics_note ? ` - ${s.pics_note}` : ''}`);
+    
     if (s.anticoag_note) addLine(`Anticoagulation: ${s.anticoag_note}`);
     if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
+    if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
 
     lines.push('');
 
@@ -2458,7 +2461,6 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         }
     });
     if (blLines.length) addLine(`Bloods: ${blLines.join(', ')}`);
-    if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
     if (s.new_bloods_ordered === 'ordered') addLine('New bloods ordered for next round');
     if (s.new_bloods_ordered === 'requested') addLine('New bloods requested (not yet ordered)');
     if (s.new_bloods_ordered === 'not_required') addLine('New bloods not required');
