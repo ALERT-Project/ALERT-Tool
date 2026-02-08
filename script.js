@@ -2076,25 +2076,11 @@ function computeAll() {
         }
         if (countComorbs >= 3) {
             add(red, sentenceCase('Multiple comorbidities (three or more)'), null, 'red', s.comorb_other_note);
-            activeComorbsKeys.forEach(k => flagged.red.push(`toggle_${k}`));
+            flagged.red.push('comorbs_wrapper');
         } else if (countComorbs > 0) {
             const cList = activeComorbsKeys.map(k => comorbMap[k].toLowerCase());
             add(amber, sentenceCase(`Comorbidities including ${joinGrammatically(cList)}`), null, 'amber', s.comorb_other_note);
-            activeComorbsKeys.forEach(k => flagged.amber.push(`toggle_${k}`));
-        }
-        
-        // Highlight comorbidities box if any selected
-        const comorbsWrapper = $('comorbs_wrapper');
-        if (comorbsWrapper) {
-            if (countComorbs >= 3) {
-                comorbsWrapper.classList.add('risk-flagged-red');
-                comorbsWrapper.classList.remove('risk-flagged-amber');
-            } else if (countComorbs > 0) {
-                comorbsWrapper.classList.add('risk-flagged-amber');
-                comorbsWrapper.classList.remove('risk-flagged-red');
-            } else {
-                comorbsWrapper.classList.remove('risk-flagged-red', 'risk-flagged-amber');
-            }
+            flagged.amber.push('comorbs_wrapper');
         }
 
         const lact = num(s.lactate) || num(s.bl_lac_review);
@@ -2187,8 +2173,28 @@ function computeAll() {
         }
 
         document.querySelectorAll('.flag-red, .flag-amber').forEach(e => e.classList.remove('flag-red', 'flag-amber'));
-        flagged.red.forEach(id => $(id)?.closest('.toggle-label, .input-box, .question-row')?.classList.add('flag-red'));
-        flagged.amber.forEach(id => $(id)?.closest('.toggle-label, .input-box, .question-row')?.classList.add('flag-amber'));
+        flagged.red.forEach(id => {
+            const el = $(id);
+            if (el) {
+                // For wrappers, flag directly; for others, find parent container
+                if (id.endsWith('_wrapper')) {
+                    el.classList.add('flag-red');
+                } else {
+                    el.closest('.toggle-label, .input-box, .question-row')?.classList.add('flag-red');
+                }
+            }
+        });
+        flagged.amber.forEach(id => {
+            const el = $(id);
+            if (el) {
+                // For wrappers, flag directly; for others, find parent container
+                if (id.endsWith('_wrapper')) {
+                    el.classList.add('flag-amber');
+                } else {
+                    el.closest('.toggle-label, .input-box, .question-row')?.classList.add('flag-amber');
+                }
+            }
+        });
 
         // --- PLAN & DISCHARGE LOGIC (UPDATED WITH TIME GATING) ---
         let planHtml = '';
