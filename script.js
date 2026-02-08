@@ -2082,6 +2082,20 @@ function computeAll() {
             add(amber, sentenceCase(`Comorbidities including ${joinGrammatically(cList)}`), null, 'amber', s.comorb_other_note);
             activeComorbsKeys.forEach(k => flagged.amber.push(`toggle_${k}`));
         }
+        
+        // Highlight comorbidities box if any selected
+        const comorbsWrapper = $('comorbs_wrapper');
+        if (comorbsWrapper) {
+            if (countComorbs >= 3) {
+                comorbsWrapper.classList.add('risk-flagged-red');
+                comorbsWrapper.classList.remove('risk-flagged-amber');
+            } else if (countComorbs > 0) {
+                comorbsWrapper.classList.add('risk-flagged-amber');
+                comorbsWrapper.classList.remove('risk-flagged-red');
+            } else {
+                comorbsWrapper.classList.remove('risk-flagged-red', 'risk-flagged-amber');
+            }
+        }
 
         const lact = num(s.lactate) || num(s.bl_lac_review);
         if (lact > 4.0) add(red, `Lactate ${lact}`, 'lactate', 'red');
