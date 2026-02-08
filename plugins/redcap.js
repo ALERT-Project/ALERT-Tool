@@ -1,5 +1,8 @@
 /* =========================================
    ALERT Tool Plugin: REDCap Accelerator
+   Copyright © 2025-2026 Casey Bond
+   Part of ALERT Nursing Risk Assessment Tool
+   MIT License - https://opensource.org/licenses/MIT
    ========================================= */
 
 document.addEventListener('DOMContentLoaded', () => {

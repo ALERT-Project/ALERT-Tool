@@ -1,6 +1,27 @@
 /* =========================================
    ALERT Nursing Risk Assessment Tool v7.7
-   Logic Layer - Full File with Manual Edit Protection
+   Copyright © 2025-2026 Casey Bond
+   
+   Developed for South Metropolitan Health Service ALERT Team
+   
+   MIT License
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+   
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+   
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
    ========================================= */
 
 /* --- 1. CONFIGURATION & STATE --- */
@@ -75,7 +96,7 @@ const staticInputs = [
     'elec_replace_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note', 'pmh_note',
     'adds', 'lactate', 'lactate_trend', 'hb', 'wcc', 'crp', 'neut', 'lymph', 'infusions_note',
     'dyspneaConcern', 'dyspneaConcern_note', 'renal_note', 'infection_note',
-    'electrolyteConcern_note', 'neuroType_note', 'nutrition_context_note', 'pain_context_note', 'neuro_psych_note', 'fluid_restriction_amount',
+    'electrolyteConcern_note', 'neuroType_note', 'nutrition_context_note', 'pain_context_note', 'neuro_psych_note', 'sleep_quality_note', 'fluid_restriction_amount',
     'after_hours_note', 'pressors_note', 'immobility_note', 'comorb_other_note',
     'unsuitable_note', 'pressor_ceased_time', 'pressor_recent_other_note', 'pressor_current_other_note', 'hac_note'
 ];
@@ -151,22 +172,22 @@ function showToast(msg, timeout = 2500) {
 
 function saveState(instantly = false) {
     const state = getState();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    localStorage.setItem('alertToolLastSaved_v7_7', new Date().toISOString());
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    sessionStorage.setItem('alertToolLastSaved_v7_7', new Date().toISOString());
     updateLastSaved();
 }
 
 function loadState() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { return null; }
+    try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY)); } catch (e) { return null; }
 }
 
 function updateLastSaved() {
-    const iso = localStorage.getItem('alertToolLastSaved_v7_7');
+    const iso = sessionStorage.getItem('alertToolLastSaved_v7_7');
     const el = $('lastSaved');
     if (el) el.textContent = iso ? 'Last saved: ' + new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Last saved: --:--';
 }
 
-function pushUndo(snapshot) { localStorage.setItem(UNDO_KEY, JSON.stringify({ snapshot, created: Date.now() })); }
+function pushUndo(snapshot) { sessionStorage.setItem(UNDO_KEY, JSON.stringify({ snapshot, created: Date.now() })); }
 
 /* --- 3. DOM STATE MAPPING --- */
 function getState() {
@@ -204,7 +225,7 @@ function getState() {
     state['reviewType'] = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
     state['clinicianRole'] = document.querySelector('input[name="clinicianRole"]:checked')?.value || 'ALERT CNS';
 
-    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_use_mods'].forEach(id => {
+    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods'].forEach(id => {
         const el = $(id);
         if(el) state[id] = el.checked;
     });
@@ -297,7 +318,7 @@ function restoreState(state) {
         if(r) r.checked = true;
     }
 
-    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_use_mods'].forEach(id => {
+    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods'].forEach(id => {
         const el = $(id);
         if (el && state[id] !== undefined) el.checked = state[id];
     });
@@ -344,7 +365,7 @@ function restoreState(state) {
 /* --- 4. INTERACTIVITY & EVENTS --- */
 function initialize() {
     updateLastSaved();
-    const compute = debounce(() => { computeAll(); checkBloodRanges(); saveState(true); }, 500);
+    const compute = debounce(() => { computeAll(); checkBloodRanges(); saveState(true); }, 350);
 
     window.addDevice = (type, val, insertionDate = '') => { createDeviceEntry(type, val, insertionDate); compute(); };
     
@@ -395,6 +416,8 @@ function initialize() {
         btnNo.addEventListener('click', (e) => {
             e.preventDefault();
             window.dismissedDischarge = true;
+            const continueChk = $('chk_continue_alert');
+            if (continueChk) continueChk.checked = true;
             compute(); 
         });
     }
@@ -791,8 +814,41 @@ function initialize() {
     $('chk_aperients')?.addEventListener('change', compute);
     $('comorb_other_note')?.addEventListener('input', compute);
 
-    $('chk_discharge_alert')?.addEventListener('change', compute);
-    $('chk_medical_rounding')?.addEventListener('change', compute);
+    $('chk_discharge_alert')?.addEventListener('change', () => {
+        const dischargeChk = $('chk_discharge_alert');
+        const continueChk = $('chk_continue_alert');
+        if (dischargeChk && dischargeChk.checked && continueChk) {
+            continueChk.checked = false;
+        }
+        compute();
+    });
+    $('chk_continue_alert')?.addEventListener('change', () => {
+        const continueChk = $('chk_continue_alert');
+        const dischargeChk = $('chk_discharge_alert');
+        const disPrompt = $('discharge_prompt');
+        
+        if (continueChk && continueChk.checked) {
+            // Uncheck discharge checkbox
+            if (dischargeChk) dischargeChk.checked = false;
+            // If discharge prompt is visible, dismiss it
+            if (disPrompt && disPrompt.style.display !== 'none') {
+                window.dismissedDischarge = true;
+            }
+        }
+        compute();
+    });
+    $('chk_medical_rounding')?.addEventListener('change', () => {
+        // Sync with pre-stepdown checkbox
+        const preCheckbox = $('chk_medical_rounding_pre');
+        if (preCheckbox) preCheckbox.checked = $('chk_medical_rounding').checked;
+        compute();
+    });
+    $('chk_medical_rounding_pre')?.addEventListener('change', () => {
+        // Sync with main checkbox
+        const mainCheckbox = $('chk_medical_rounding');
+        if (mainCheckbox) mainCheckbox.checked = $('chk_medical_rounding_pre').checked;
+        compute();
+    });
 
     document.querySelectorAll('input[name="reviewType"]').forEach(r => r.addEventListener('change', () => {
         updateWardOptions();
@@ -904,8 +960,7 @@ function initialize() {
         btn.addEventListener('click', () => { createDeviceEntry(btn.dataset.deviceType); compute(); });
     });
 
-    $('darkToggle')?.addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem('alertToolDark', document.body.classList.contains('dark') ? '1' : '0'); });
-    if (localStorage.getItem('alertToolDark') === '1') document.body.classList.add('dark');
+    // Dark mode removed
 
     ['red', 'amber'].forEach(t => {
         const btn = $(`override_${t}`);
@@ -935,7 +990,7 @@ function initialize() {
     refreshDetailToggleState();
     updateReviewTypeVisibility();
 
-    const accMap = JSON.parse(localStorage.getItem(ACCORDION_KEY) || '{}');
+    const accMap = JSON.parse(sessionStorage.getItem(ACCORDION_KEY) || '{}');
     document.querySelectorAll('.accordion-wrapper').forEach(w => {
         if (accMap[w.dataset.accordionId]) { w.querySelector('.panel').style.display = 'block'; w.querySelector('.icon').textContent = '[-]'; }
     });
@@ -1028,6 +1083,14 @@ function updateReviewTypeVisibility() {
     const uns = $('chk_unsuitable_wrapper'); if(uns) uns.style.display = (type === 'pre') ? 'block' : 'none';
     const icu = $('icu_summary_wrapper'); if(icu) icu.style.display = (type === 'pre') ? 'block' : 'none';
     const dateWrapper = $('stepdown_date_wrapper'); if (dateWrapper) dateWrapper.style.display = (type === 'post') ? 'contents' : 'none';
+    
+    // Show/hide medical rounding checkbox based on review type
+    const medRoundingWrapper = $('chk_medical_rounding_wrapper');
+    const medRoundingPre = $('chk_medical_rounding_prestepdown');
+    const continueAlertWrapper = $('chk_continue_alert_wrapper');
+    if(medRoundingWrapper) medRoundingWrapper.style.display = (type === 'post') ? 'block' : 'none';
+    if(medRoundingPre) medRoundingPre.style.display = (type === 'pre') ? 'block' : 'none';
+    if(continueAlertWrapper) continueAlertWrapper.style.display = (type === 'post') ? 'flex' : 'none';
     
     if (type === 'pre') { const c = $('chk_discharge_alert'); if(c) c.checked = false; }
 }
@@ -1206,7 +1269,7 @@ function clearData() {
         const icon = btn.querySelector('.icon');
         if(icon) icon.textContent = '[+]';
     });
-    localStorage.removeItem(ACCORDION_KEY);
+    sessionStorage.removeItem(ACCORDION_KEY);
 
     staticInputs.forEach(id => { 
         if ($(id)) {
@@ -1606,7 +1669,7 @@ function computeAll() {
                 }
             });
             if (currentList.length > 0) {
-                details.push(`Current vasoactive support with ${joinGrammatically(currentList)}`);
+                details.push(`Current vasoactive support - ${joinGrammatically(currentList)}`);
             }
             if (hasRecent) {
                 let recentsList = [];
@@ -1684,15 +1747,18 @@ function computeAll() {
                 else if (flow >= 2) { parts.push(`NP ${flow}L`); flagged.amber.push('npFlow'); }
             } else if (s.oxMod === 'HFNP') {
                 const fio2 = num(s.hfnpFio2);
-                if (fio2 >= 60) { parts.push(`HFNP with high FiO2 ${fio2}%`); flagged.red.push('oxMod'); hasRed = true; }
+                if (fio2 >= 60) { parts.push(`HFNP - high FiO2 ${fio2}%`); flagged.red.push('oxMod'); hasRed = true; }
                 else { parts.push(`HFNP requirement`); flagged.red.push('oxMod'); hasRed = true; }
             } else if (s.oxMod === 'NIV') {
                 const fio2 = num(s.nivFio2);
-                if (fio2 >= 60) { parts.push(`NIV with high FiO2 ${fio2}%`); flagged.red.push('oxMod'); hasRed = true; }
+                if (fio2 >= 60) { parts.push(`NIV - high FiO2 ${fio2}%`); flagged.red.push('oxMod'); hasRed = true; }
                 else { parts.push(`NIV requirement`); flagged.red.push('oxMod'); hasRed = true; }
             } else if (s.oxMod === 'Trache') {
                 if (s.tracheStatus === 'New') { parts.push(`new or unstable tracheostomy`); flagged.red.push('tracheStatus'); hasRed = true; }
                 else { parts.push(`tracheostomy`); flagged.amber.push('oxMod'); }
+            } else if (s.oxMod === 'RA') {
+                // Room air - patient is on room air, no oxygen support needed, so no respiratory concern to flag
+                // Just document it without adding to parts array
             }
             // Dyspnea - only display if resp_dyspnea is true
             if (s.resp_dyspnea === true) {
@@ -1710,8 +1776,8 @@ function computeAll() {
             
             if (s.intubated === true) {
                 const reason = $('intubatedReason')?.querySelector('.active')?.dataset.value;
-                if (reason === 'concern') { parts.push('intubated <24hrs with concerns'); flagged.red.push('seg_intubated'); hasRed = true; }
-                else { parts.push('intubated <24hrs (elective)'); flagged.amber.push('seg_intubated'); }
+                if (reason === 'concern') { parts.push('intubated <24hrs ago'); flagged.red.push('seg_intubated'); hasRed = true; }
+                else { parts.push('intubated <24hrs ago (elective)'); flagged.amber.push('seg_intubated'); }
             }
             
             if(s.dyspneaConcern_note && parts.length > 0) {
@@ -1720,7 +1786,7 @@ function computeAll() {
 
             if (parts.length > 0) {
                 const joined = joinGrammatically(parts);
-                const finalTxt = `Respiratory concern with ${joined}`;
+                const finalTxt = `Respiratory concern - ${joined}`;
                 if (hasRed) red.push(finalTxt); else amber.push(finalTxt);
             } else {
                 // Gate is open but no specific concerns identified - still flag as amber
@@ -1882,7 +1948,7 @@ function computeAll() {
 
         if (s.immobility === true) {
             const icuLos = num(s.icuLos) || 0;
-            if (icuLos >= 4) add(red, `Immobility concern with prolonged ICU stay`, 'seg_immobility', 'red', s.immobility_note);
+            if (icuLos >= 4) add(red, `Immobility concern - prolonged ICU stay`, 'seg_immobility', 'red', s.immobility_note);
             else add(amber, 'Immobility concern', 'seg_immobility', 'amber', s.immobility_note);
         }
 
@@ -1913,19 +1979,8 @@ function computeAll() {
 
         // --- PAIN CONTROL ---
         const painScore = num(s.d_pain);
-        const painNotControlled = painScore >= 7 || s.pain_control;
-        if (painNotControlled) {
-            let painMsg = `Pain not well controlled`;
-            if (painScore) painMsg += ` with score of ${painScore} out of 10`;
-            add(amber, painMsg, 'neuro_section', 'amber', s.pain_control ? s.pain_context_note : null);
-        }
-
-        // --- AUTO-HIGHLIGHT NEURO IF PAIN/PSYCH SELECTED ---
-        if ((s.pain_control || s.neuro_psych) && !s.neuro_gate) {
-            const neuroCheckbox = $('seg_neuro_gate')?.querySelector('[data-value="true"]');
-            if (neuroCheckbox && !neuroCheckbox.classList.contains('active')) {
-                neuroCheckbox.click();
-            }
+        if (painScore >= 7) {
+            add(amber, `Pain not well controlled with score of ${painScore} out of 10`, 'neuro_section', 'amber', null);
         }
 
         // --- LINE DWELL TRACKING (from device insertion dates) ---
@@ -1973,8 +2028,8 @@ function computeAll() {
         }
 
         // --- PICS ---
-        if (s.seg_pics) {
-            add(amber, `PICS positive`, 'seg_pics', 'amber', s.pics_note);
+        if (s.pics) {
+            add(amber, `Post ICU Syndrome positive`, 'seg_pics', 'amber', s.pics_note);
         }
 
         const activeComorbsKeys = toggleInputs.filter(k => k.startsWith('comorb_') && s[k]);
@@ -2131,17 +2186,24 @@ function computeAll() {
             } else {
                 disPrompt.style.display = 'none';
                 if(disWrap) disWrap.classList.remove('pulse-highlight');
+                
+                // Auto-check continue ALERT when discharge prompt is hidden (not enough time elapsed)
+                const continueChk = $('chk_continue_alert');
+                if (continueChk && !s.chk_discharge_alert && s.reviewType === 'post') {
+                    continueChk.checked = true;
+                }
             }
         }
 
-        if (s.stepdown_suitable === false) planHtml = `<div class="status red">NOT SUITABLE FOR STEPDOWN.</div>`;
+        if (s.stepdown_suitable === false) planHtml = `<div class="status red">Not suitable for stepdown.</div>`;
         else if (s.chk_discharge_alert) planHtml = `<div class="status" style="color:var(--blue-hint)">Discharge from ALERT nursing outreach list.</div>`;
+        else if (s.chk_continue_alert) planHtml = `<div class="status green">Continue ALERT post ICU reviews.</div>`;
         else if (cat.id === 'red') planHtml = `<div class="status red">At least daily ALERT review (up to 72h).</div>`;
         else if (cat.id === 'amber') planHtml = `<div class="status amber">At least daily ALERT review (up to 48h).</div>`;
         else {
             // Green Logic
-            if(s.reviewType === 'pre') planHtml = `<div class="status green">At least single ALERT nursing follow up on ward.</div>`;
-            else planHtml = `<div class="status green">Continue ALERT post ICU review.</div>`; 
+            if(s.reviewType === 'pre') planHtml = `<div class="status green">ALERT post ICU review on ward.</div>`;
+            else planHtml = `<div class="status green">Continue ALERT post ICU reviews.</div>`; 
         }
 
         if (s.chk_medical_rounding) planHtml += `<div style="margin-top:2px; font-weight:600; color:var(--accent);">+ Added to ALERT Medical Rounding List</div>`;
@@ -2219,7 +2281,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     lines.push('');
 
     if (s.stepdown_suitable === false) {
-        lines.push(`ALERT Nursing Review Category - NOT SUITABLE FOR STEPDOWN`);
+        lines.push(`ALERT Nursing Review Category - Not suitable for stepdown`);
         lines.push('');
         lines.push('Assessed as not presently suitable for ward stepdown.');
         lines.push(`Reason: ${s.unsuitable_note || 'Clinical concerns (see notes)'}`);
@@ -2299,6 +2361,8 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
+    if (s.sleep_quality) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ''}`);
+    if (s.pics) addLine(`Post ICU Syndrome: Positive${s.pics_note ? ` - ${s.pics_note}` : ''}`);
 
     let bowelTxt = '';
     if (s.bowel_mode === 'btn_bo') bowelTxt = 'BO';
@@ -2324,7 +2388,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         const prevVal = window.prevBloods ? window.prevBloods[key] : null;
         if (currentVal) {
             let str = `${blMap[key]} ${currentVal}`;
-            if (prevVal && prevVal !== currentVal) str += ` (was ${prevVal})`;
+            if (prevVal && prevVal !== currentVal) str += ` (${prevVal})`;
             blLines.push(str);
         }
     });
@@ -2367,7 +2431,6 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     lines.push('');
 
     if (s.neuro_psych_note) lines.push(`Psychological: ${s.neuro_psych_note}`);
-    if (s.pics_note) lines.push(`PICS: ${s.pics_note}`);
     if (s.context_other_note) lines.push(`Other: ${s.context_other_note}`);
     lines.push('');
 
@@ -2387,6 +2450,8 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         lines.push('- Please re-contact ALERT for re-review when appropriate.');
     } else if (s.chk_discharge_alert) {
         lines.push('- Discharge from ALERT nursing post-ICU list. Please re-contact ALERT if further support required.');
+    } else if (s.chk_continue_alert) {
+        lines.push('- Continue ALERT post ICU reviews.');
     } else if (cat.id === 'red') {
         lines.push('- At least daily ALERT review for up to 72h post-ICU stepdown.');
     } else if (cat.id === 'amber') {
@@ -2394,7 +2459,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     } else {
         // Green
         if(s.reviewType === 'pre') lines.push('- At least single ALERT nursing follow up on ward.');
-        else lines.push('- Continue ALERT post ICU review.');
+        else lines.push('- Continue ALERT post ICU reviews.');
     }
     
     if (s.chk_medical_rounding) {

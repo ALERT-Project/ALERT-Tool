@@ -1,9 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+<!--
+  ALERT Nursing Risk Assessment Tool v7.7
+  Copyright © 2025-2026 Casey Bond
+  Developed for South Metropolitan Health Service ALERT Team
+  Licensed under MIT License
+-->
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ALERT Nursing Risk Assessment Tool</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90' font-weight='bold' fill='%23ef4444'>!</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -11,15 +18,14 @@
 
 <nav class="sidebar">
     <div class="sidebar-logo">!</div>
-    <div class="sidebar-label">Navigation</div>
-    <a href="#section-patient" class="nav-item" title="Patient Details">👤 Patient</a>
-    <a href="#section-risk" class="nav-item" title="Risk Assessment">⚠️ Risks <span id="sidebar-risk-badges"></span></a>
-    <a href="#section-ae" class="nav-item" title="A-E Assessment">📋 A-E</a>
-    <a href="#section-bloods" class="nav-item" title="Bloods">🩸 Bloods</a>
-    <a href="#section-psychosocial" class="nav-item" title="Psychosocial & Recovery">🧠 Psych</a>
-    <a href="#section-devices" class="nav-item" title="Lines, Drains & Wounds">🔧 Devices</a>
-    <a href="#section-context" class="nav-item" title="Other Factors">📝 Other</a>
-    <a href="#section-summary" class="nav-item" title="Auto-Generated Summary">📄 Summary</a>
+    <a href="#section-patient" class="nav-item" title="Patient Details"><span class="nav-icon">👤</span><span class="nav-label">Patient</span></a>
+    <a href="#section-risk" class="nav-item" title="Risk Assessment"><span class="nav-icon">⚠️</span><span class="nav-label">Risks <span id="sidebar-risk-badges"></span></span></a>
+    <a href="#section-ae" class="nav-item" title="A-E Assessment"><span class="nav-icon">📋</span><span class="nav-label">A-E</span></a>
+    <a href="#section-bloods" class="nav-item" title="Bloods"><span class="nav-icon">🩸</span><span class="nav-label">Bloods</span></a>
+    <a href="#section-devices" class="nav-item" title="Lines, Drains & Wounds"><span class="nav-icon">🔧</span><span class="nav-label">Devices</span></a>
+    <a href="#section-context" class="nav-item" title="Other Factors"><span class="nav-icon">📝</span><span class="nav-label">Other</span></a>
+    <a href="#section-category" class="nav-item" title="Assessed Risk Category"><span class="nav-icon">🎯</span><span class="nav-label">Category</span></a>
+    <a href="#section-summary" class="nav-item" title="Auto-Generated Summary"><span class="nav-icon">📄</span><span class="nav-label">Summary</span></a>
 </nav>
 
 <!-- Floating Mobile Nav Button -->
@@ -30,19 +36,18 @@
 <!-- Mobile Nav Overlay -->
 <div id="mobileNavOverlay" class="mobile-nav-overlay">
   <div class="mobile-nav-content">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <h3 style="margin:0; color:var(--accent); font-size:1.3rem;">Navigation</h3>
+    <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:16px;">
       <button id="closeMobileNav" class="btn small" style="background:var(--line); padding:8px 12px;">✕ Close</button>
     </div>
     <div class="mobile-nav-links">
-      <a href="#section-patient" class="mobile-nav-link">👤 Patient Details</a>
-      <a href="#section-risk" class="mobile-nav-link">⚠️ Risk Assessment <span id="mobile-risk-badges"></span></a>
-      <a href="#section-ae" class="mobile-nav-link">📋 A-E Assessment</a>
-      <a href="#section-bloods" class="mobile-nav-link">🩸 Bloods</a>
-      <a href="#section-psychosocial" class="mobile-nav-link">🧠 Psychosocial & Recovery</a>
-      <a href="#section-devices" class="mobile-nav-link">🔧 Lines, Drains & Wounds</a>
-      <a href="#section-context" class="mobile-nav-link">📝 Other Factors</a>
-      <a href="#section-summary" class="mobile-nav-link">📄 Summary</a>
+      <a href="#section-patient" class="mobile-nav-link"><span class="nav-icon">👤</span><span class="nav-label">Patient Details</span></a>
+      <a href="#section-risk" class="mobile-nav-link"><span class="nav-icon">⚠️</span><span class="nav-label">Risk Assessment <span id="mobile-risk-badges"></span></span></a>
+      <a href="#section-ae" class="mobile-nav-link"><span class="nav-icon">📋</span><span class="nav-label">A-E Assessment</span></a>
+      <a href="#section-bloods" class="mobile-nav-link"><span class="nav-icon">🩸</span><span class="nav-label">Bloods</span></a>
+      <a href="#section-devices" class="mobile-nav-link"><span class="nav-icon">🔧</span><span class="nav-label">Lines, Drains & Wounds</span></a>
+      <a href="#section-context" class="mobile-nav-link"><span class="nav-icon">📝</span><span class="nav-label">Other Factors</span></a>
+      <a href="#section-category" class="mobile-nav-link"><span class="nav-icon">🎯</span><span class="nav-label">Assessed Risk Category</span></a>
+      <a href="#section-summary" class="mobile-nav-link"><span class="nav-icon">📄</span><span class="nav-label">Summary</span></a>
     </div>
   </div>
 </div>
@@ -53,10 +58,13 @@
       <div class="top-meta last-saved" id="lastSaved">Last saved: --:--</div>
   </div>
   <div class="header-controls">
-    <button class="btn small" id="darkToggle">Dark Mode</button>
     <button class="btn small" id="clearDataBtnTop" style="background:var(--accent); color:white;">Clear Data / Next Patient</button>
   </div>
 </header>
+
+<div style="background:var(--bg); border-bottom:1px solid var(--line); padding:6px 20px; font-size:0.8rem; color:var(--muted); line-height:1.4; text-align:center;">
+  <strong style="color:var(--ink);">Tool info:</strong> • <strong style="color:var(--ink);">Privacy:</strong> 🔒 Enter initials + last 3 URN digits only (no PHI) • <strong style="color:var(--ink);">Purpose:</strong> 📊 QI / clinical decision support tool • <strong style="color:var(--ink);">Data:</strong> 💾 Local session only, data not transmitted or saved, auto-deletes on close
+</div>
 
 <main class="container" role="main">
   
@@ -124,7 +132,7 @@
         </div>
       </div>
       
-      <div class="col-6"><label for="ptName">Patient Initials</label><input id="ptName" type="text" autocomplete="off" /></div>
+      <div class="col-6"><label for="ptName">Patient Initials</label><input id="ptName" type="text" autocomplete="off" maxlength="3" pattern="[A-Z]{3}" style="text-transform:uppercase" /></div>
       <div class="col-6"><label for="ptMrn">Last 3 digits of URN</label><input id="ptMrn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" /></div>
       
       <div class="col-3"><label for="ptAge">Age</label><input id="ptAge" type="number" min="0" /></div>
@@ -652,13 +660,15 @@
         </div>
     </div>
 
-    <div class="section-title" style="margin-top:20px;">Clinical Judgement Override?</div>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-      <button class="override-btn red" id="override_red">Upgrade to CAT 1</button>
-      <button class="override-btn amber" id="override_amber">Upgrade to CAT 2</button>
+    <div class="card" style="margin-top:20px; background:var(--bg); border:1px solid var(--line); padding:16px;">
+      <div class="section-title" style="margin:0 0 12px 0;">Clinical Judgement Override?</div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <button class="override-btn red" id="override_red">Upgrade to CAT 1</button>
+        <button class="override-btn amber" id="override_amber">Upgrade to CAT 2</button>
+      </div>
+      <input type="hidden" id="override" value="none">
+      <div id="override_reason_box" style="display:none;"><label>Reason for override</label><input id="overrideNote" type="text"/></div>
     </div>
-    <input type="hidden" id="override" value="none">
-    <div id="override_reason_box" style="display:none;"><label>Reason for override</label><input id="overrideNote" type="text"/></div>
 
   </div>
 
@@ -927,13 +937,15 @@
         </div>
 
         <div class="col-6">
-            <label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Is Nutrition Adequate?</label>
-            <div class="segmented-group" id="seg_nutrition_adequate" style="margin-bottom:8px;">
-                <button class="seg-btn" data-value="true">Yes</button>
-                <button class="seg-btn" data-value="false">No</button>
-            </div>
-            <div id="nutrition_context_wrapper" style="display:none; margin-top:8px; padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
-                <textarea id="nutrition_context_note" style="min-height:60px;"></textarea>
+            <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
+                <label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Is Nutrition Adequate?</label>
+                <div class="segmented-group" id="seg_nutrition_adequate" style="margin-bottom:8px;">
+                    <button class="seg-btn" data-value="true">Yes</button>
+                    <button class="seg-btn" data-value="false">No</button>
+                </div>
+                <div id="nutrition_context_wrapper" style="display:none; margin-top:8px; padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
+                    <textarea id="nutrition_context_note" style="min-height:60px;"></textarea>
+                </div>
             </div>
         </div>
         
@@ -974,6 +986,51 @@
                 <div class="col-6"><div class="input-box"><label>VTE Prophylaxis</label><input id="vte_prophylaxis_note" type="text"/></div></div>
             </div>
         </div>
+
+        <div class="col-12" style="margin-top:24px; padding:16px; background:var(--bg); border:1px solid var(--line); border-radius:8px; margin-bottom:24px;">
+          <div class="section-title" style="font-size:1.05rem; margin-bottom:12px;">Psychosocial & Recovery</div>
+          
+          <div class="grid" style="row-gap:12px;">
+            <div class="col-6">
+              <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
+                <label class="question-label" style="font-size:0.95rem; margin-bottom:4px; display:block; color:var(--accent);">Poor sleep?</label>
+                <div class="segmented-group" id="seg_sleep_quality">
+                    <button class="seg-btn" data-value="true">Yes</button>
+                    <button class="seg-btn" data-value="false">No</button>
+                </div>
+                <div id="sleep_quality_wrapper" style="display:none; margin-top:8px;">
+                    <textarea id="sleep_quality_note" placeholder="details..." style="min-height:50px;"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-6">
+              <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
+                <label class="question-label" style="font-size:0.95rem; margin-bottom:4px; display:block; color:var(--accent);">Any psychological concerns?</label>
+                <div class="segmented-group" id="seg_neuro_psych">
+                    <button class="seg-btn" data-value="true">Yes</button>
+                    <button class="seg-btn" data-value="false">No</button>
+                </div>
+                <div id="neuro_psych_wrapper" style="display:none; margin-top:8px;">
+                    <textarea id="neuro_psych_note" placeholder="details..." style="min-height:50px;"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-6">
+              <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
+                <label class="question-label" style="font-size:0.95rem; margin-bottom:4px; display:block; color:var(--accent);">PICS positive?</label>
+                <div class="segmented-group" id="seg_pics">
+                    <button class="seg-btn" data-value="true">Yes</button>
+                    <button class="seg-btn" data-value="false">No</button>
+                </div>
+                <div id="pics_wrapper" style="display:none; margin-top:8px;">
+                    <textarea id="pics_note" placeholder="details..." style="min-height:50px;"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         
       </div>
     </div>
@@ -1010,14 +1067,14 @@
       </div>
       
       <div class="grid" style="margin-top:12px;">
-          <div class="col-6" style="margin-top:8px;">
+          <div class="col-6" style="margin-top:8px; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:8px;">
              <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Are infection markers downtrending, ADDS low, and appropriate antibiotics prescribed?</label>
              <div class="segmented-group" id="seg_infection_downtrend_bloods">
                   <button class="seg-btn" data-value="true">Yes</button>
                   <button class="seg-btn" data-value="false">No</button>
              </div>
           </div>
-           <div class="col-6" style="margin-top:8px;">
+           <div class="col-6" style="margin-top:8px; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:8px;">
              <label class="question-label" style="font-size:0.9rem; margin-bottom:4px;">Known CKD with Cr around baseline?</label>
              <div class="segmented-group" id="seg_renal_chronic_bloods">
                   <button class="seg-btn" data-value="true">Yes</button>
@@ -1052,45 +1109,6 @@
     </div>
   </div>
 
-  <div id="section-psychosocial" class="card" style="margin-top:20px;">
-    <div class="section-title">🧠 Psychosocial & Recovery Assessment</div>
-    
-    <div class="grid" style="row-gap:12px; margin-top:12px;">
-      <div class="col-12">
-        <label class="question-label" style="font-size:0.9rem; margin-bottom:4px; display:block;">Poor sleep?</label>
-        <div class="segmented-group" id="seg_sleep_quality">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
-        </div>
-        <div id="sleep_quality_wrapper" style="display:none; margin-top:8px;">
-            <textarea id="sleep_quality_note" placeholder="details..." style="min-height:50px;"></textarea>
-        </div>
-      </div>
-
-      <div class="col-12">
-        <label class="question-label" style="font-size:0.9rem; margin-bottom:4px; display:block;">Any psychological concerns?</label>
-        <div class="segmented-group" id="seg_neuro_psych">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
-        </div>
-        <div id="neuro_psych_wrapper" style="display:none; margin-top:8px;">
-            <textarea id="neuro_psych_note" placeholder="details..." style="min-height:50px;"></textarea>
-        </div>
-      </div>
-
-      <div class="col-12">
-        <label class="question-label" style="font-size:0.9rem; margin-bottom:4px; display:block;">PICS positive?</label>
-        <div class="segmented-group" id="seg_pics">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
-        </div>
-        <div id="pics_wrapper" style="display:none; margin-top:8px;">
-            <textarea id="pics_note" placeholder="details..." style="min-height:50px;"></textarea>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div class="accordion-wrapper" id="section-devices" data-accordion-id="devices" style="margin-top:20px;">
     <button class="accordion" aria-expanded="false" aria-controls="panel_devices">🔧 Lines, Drains & Wounds <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_devices" style="display:flex; flex-direction:column; gap: 12px;">
@@ -1112,61 +1130,44 @@
     </div>
   </div>
 
-  <div id="section-context" class="accordion-wrapper" data-accordion-id="context">
+  <div id="section-context" class="accordion-wrapper" data-accordion-id="context" style="margin-top:20px;">
     <button class="accordion" aria-expanded="false" aria-controls="panel_context">📝 Other Factors <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_context">
-        <div class="devices-subtitle">▶ Goals of Care (GOC)</div>
-        <div class="devices-input-group">
-            <textarea id="goc_note"></textarea>
+        <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px; margin-bottom:12px;">
+            <div class="devices-subtitle">▶ Goals of Care (GOC)</div>
+            <div class="devices-input-group">
+                <textarea id="goc_note"></textarea>
+            </div>
         </div>
 
-        <div class="devices-subtitle">▶ Allergies</div>
-        <div class="devices-input-group">
-            <textarea id="allergies_note"></textarea>
+        <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px; margin-bottom:12px;">
+            <div class="devices-subtitle">▶ Allergies</div>
+            <div class="devices-input-group">
+                <textarea id="allergies_note"></textarea>
+            </div>
         </div>
         
-        <div class="devices-subtitle">▶ Past Medical History</div>
-        <div id="selected_comorbs_display" style="font-size:0.85rem; color:var(--accent); font-weight:600; margin-bottom:4px; display:none;"></div>
-        <div class="devices-input-group">
-            <textarea id="pmh_note"></textarea>
+        <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px; margin-bottom:12px;">
+            <div class="devices-subtitle">▶ Past Medical History</div>
+            <div id="selected_comorbs_display" style="font-size:0.85rem; color:var(--accent); font-weight:600; margin-bottom:4px; display:none;"></div>
+            <div class="devices-input-group">
+                <textarea id="pmh_note"></textarea>
+            </div>
         </div>
 
-        <div class="devices-subtitle">▶ Other</div>
-        <div class="devices-input-group">
-            <textarea id="context_other_note"></textarea>
+        <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
+            <div class="devices-subtitle">▶ Other</div>
+            <div class="devices-input-group">
+                <textarea id="context_other_note"></textarea>
+            </div>
         </div>
     </div>
   </div>
 
-  <div class="card" style="margin-top:20px;">
-    <div style="border-top:1px solid var(--line); padding-top:12px;">
-        <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-weight:600; cursor:pointer;">
-            <input type="checkbox" id="chk_medical_rounding" style="width:auto; transform:scale(1.2);">
-            Add to ALERT Medical Rounding List
-        </label>
-        
-        <div id="chk_discharge_wrapper" style="display:none;">
-            <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer; color:var(--blue-hint);">
-                <input type="checkbox" id="chk_discharge_alert" style="width:auto; transform:scale(1.2);">
-                Discharge from ALERT post ICU rounding list?
-            </label>
-        </div>
+  <div id="section-category" class="card" style="margin-top:20px;">
+    <h2 style="margin:0 0 16px 0; font-size:1.4rem; font-weight:700;">🎯 Assessed Risk Category</h2>
 
-        <div id="chk_unsuitable_wrapper" style="display:none;">
-             <div class="question-row input-box" id="suitability_wrapper">
-               <div class="question-label" style="font-size:1.1rem; color:var(--accent);">Is patient suitable for ward stepdown?</div>
-               <div class="segmented-group" id="seg_stepdown_suitable">
-                   <button class="seg-btn" data-value="true">Yes</button>
-                   <button class="seg-btn" data-value="false">No</button>
-               </div>
-                <div id="unsuitable_note_wrapper" class="concern-note" style="display:none; margin-top:12px;">
-                    <textarea id="unsuitable_note"></textarea>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="kpi" style="margin-top:24px; margin-bottom:12px; border-top:1px solid var(--line); padding-top:16px;">
+    <div class="kpi" style="margin-bottom:12px;">
         <div class="box" id="categoryBox">
             <small>Category</small>
             <h3 id="catText" class="status green">CAT 3</h3>
@@ -1189,10 +1190,49 @@
         </div>
     </div>
 
-    <div id="flagList" style="margin-bottom:20px; font-size:0.9rem; background:var(--input-bg); padding:10px; border-radius:8px; border:1px solid var(--line);"></div>
+    <div style="border-top:1px solid var(--line); padding-top:16px; margin-top:16px;">
+        <div style="font-weight:700; font-size:1.05rem; color:var(--ink); margin-bottom:12px;">ALERT Actions</div>
+        
+        <label id="chk_continue_alert_wrapper" style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-weight:600; cursor:pointer;">
+            <input type="checkbox" id="chk_continue_alert" style="width:auto; transform:scale(1.2);">
+            Continue ALERT post ICU review?
+        </label>
+        
+        <div id="chk_discharge_wrapper" style="display:none;">
+            <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-weight:600; cursor:pointer; color:#9333ea;">
+                <input type="checkbox" id="chk_discharge_alert" style="width:auto; transform:scale(1.2);">
+                Discharge from ALERT post ICU rounding list?
+            </label>
+        </div>
+        
+        <label id="chk_medical_rounding_wrapper" style="display:flex; align-items:center; gap:8px; margin-bottom:10px; margin-left:1px; font-weight:600; cursor:pointer;">
+            <input type="checkbox" id="chk_medical_rounding" style="width:auto; transform:scale(1.2);">
+            Add to ALERT Medical Rounding list?
+        </label>
+
+        <div id="chk_unsuitable_wrapper" style="display:none;">
+             <div class="question-row input-box" id="suitability_wrapper">
+               <div class="question-label" style="font-size:1.1rem; color:var(--accent);">Is patient suitable for ward stepdown?</div>
+               <div class="segmented-group" id="seg_stepdown_suitable">
+                   <button class="seg-btn" data-value="true">Yes</button>
+                   <button class="seg-btn" data-value="false">No</button>
+               </div>
+                <div id="unsuitable_note_wrapper" class="concern-note" style="display:none; margin-top:12px;">
+                    <textarea id="unsuitable_note"></textarea>
+                </div>
+                
+                <label id="chk_medical_rounding_prestepdown" style="display:none; align-items:center; gap:8px; margin-top:16px; font-weight:600; cursor:pointer;">
+                    <input type="checkbox" id="chk_medical_rounding_pre" style="width:auto; transform:scale(1.2);">
+                    Add to ALERT Medical Rounding list?
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div id="flagList" style="margin-bottom:20px; font-size:0.9rem; background:var(--input-bg); padding:10px; border-radius:8px; border:1px solid var(--line); margin-top:16px; border-top:1px solid var(--line); padding-top:16px;"></div>
   </div>
 
-  <div id="section-summary" class="card" style="margin-top:40px; margin-bottom:40px; display:block; scroll-margin-top:100px; position:sticky; top:100px; z-index:50; background:var(--card);">
+  <div id="section-summary" class="card" style="margin-top:40px; margin-bottom:40px; display:block; scroll-margin-top:100px;">
     <div class="section-title">📄 Auto-Generated Summary</div>
     
     <div id="manual_edit_warning" style="display:none; background:#fff3cd; color:#856404; padding:8px; border-radius:6px; font-size:0.9rem; margin-bottom:8px; border:1px solid #ffeeba; align-items:center; justify-content:space-between;">
@@ -1206,7 +1246,13 @@
     <div id="completeness_nudge" style="margin-top:8px; margin-bottom:8px; font-size:0.9rem; color:var(--muted); font-weight:600; text-align:left;"></div>
   </div>
 
-  <div style="text-align:center; color: var(--muted); font-weight: 600; margin: 24px 0; letter-spacing: 1px;">- END ASSESSMENT -</div>
+  <div style="text-align:center; color: var(--muted); font-weight: 600; margin: 24px 0 8px 0; letter-spacing: 1px;">- END ASSESSMENT -</div>
+  
+  <div style="text-align:center; padding:32px 20px 20px 20px; font-size:0.75rem; color:var(--muted); line-height:1.6; word-wrap:break-word; overflow-wrap:break-word;">
+    <div>ALERT Tool v7.7 © 2025-2026 Casey Bond</div>
+    <div>Developed for South Metropolitan Health Service ALERT Team</div>
+    <div><a href="https://opensource.org/licenses/MIT" target="_blank" style="color:var(--accent); text-decoration:none;">MIT License</a></div>
+  </div>
 </main>
 
 <footer role="contentinfo">

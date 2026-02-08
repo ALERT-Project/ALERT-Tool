@@ -1,6 +1,8 @@
 /* =========================================
-   ALERT Tool Plugin: DMR Importer (Smart)
-   v7.6 - Updated for Vasoactive & Mitigation Logic
+   ALERT Tool Plugin: DMR Importer
+   Copyright © 2025-2026 Casey Bond
+   Part of ALERT Nursing Risk Assessment Tool
+   MIT License - https://opensource.org/licenses/MIT
    ========================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -358,22 +360,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // --- QUICK REVIEW DETECTION FOR CAT 2 FOLLOW-UPS ---
-        // Extract category and time info from imported data
+        // --- QUICK REVIEW DETECTION ---
+        // Extract category from imported note
         const catMatch = text.match(/ALERT Nursing Review Category - (CAT \d+)/i);
         
-        // Match both hours and days formats
-        let hoursOnWard = null;
-        const hourMatch = text.match(/Time since stepdown:\s*([\d.]+)\s*hour/i);
-        const dayMatch = text.match(/Time since stepdown:\s*([\d.]+)\s*day/i);
-        
-        if (hourMatch) {
-            hoursOnWard = parseFloat(hourMatch[1]);
-        } else if (dayMatch) {
-            hoursOnWard = parseFloat(dayMatch[1]) * 24; // Convert days to hours
-        }
-        
-        if (catMatch && hoursOnWard !== null) {
+        if (catMatch) {
             const categoryText = catMatch[1]; // e.g., "CAT 2"
             
             let category = 'green';
@@ -395,20 +386,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (riskText.includes('electrolyte')) previousRisks.push('electrolyte');
             }
             
-            // Store for later use
-            if (window.previousCategoryData !== undefined) {
-                window.previousCategoryData = { category, hoursOnWard, categoryText, previousRisks };
-            }
-            
-            // Only offer Quick Review for CAT 2 patients on day 2+ with known risks
-            const shouldOfferQuickReview = 
-                (category === 'amber' && hoursOnWard >= 24 && previousRisks.length > 0);
-            
-            if (shouldOfferQuickReview && window.showQuickReviewPrompt) {
-                setTimeout(() => {
-                    window.showQuickReviewPrompt(categoryText, hoursOnWard, previousRisks);
-                }, 1000);
-            }
+            // Calculate CURRENT hours on ward based on stepdown date/time
+            // Use the imported stepdownDate (already set above) and get stepdownTime from form
+            setTimeout(() => {
+                const stepdownDateEl = document.getElementById('stepdownDate');
+                const stepdownTimeButtons = document.querySelectorAll('#stepdownTime .btn');
+                
+                let stepdownDate = stepdownDateEl?.value;
+                let stepdownTime = null;
+                stepdownTimeButtons.forEach(btn => {
+                    if (btn.classList.contains('active')) {
+                        stepdownTime = btn.dataset.value;
+                    }
+                });
+                
+                // Map time-of-day to hours (same as calculateWardTime function)
+                // Default to 4pm (16:00) if no time specified - most ICU discharges are afternoon
+                const timeMap = { 'Morning': 9, 'Afternoon': 15, 'Evening': 18, 'Night': 21 };
+                const hour = stepdownTime ? (timeMap[stepdownTime] || 16) : 16;
+                
+                let currentHoursOnWard = 0;
+                if (stepdownDate) {
+                    const [y, m, d] = stepdownDate.split('-');
+                    const stepdownDateTime = new Date(y, m - 1, d, hour);
+                    const now = new Date();
+                    const diffMs = now - stepdownDateTime;
+                    currentHoursOnWard = diffMs / (1000 * 60 * 60);
+                }
+                
+                // Store for later use
+                if (window.previousCategoryData !== undefined) {
+                    window.previousCategoryData = { category, hoursOnWard: currentHoursOnWard, categoryText, previousRisks };
+                }
+                
+                // Determine if quick review should be offered:
+                // - CAT 1 (red): Never offer quick review
+                // - CAT 2 (amber): Offer if currently ≥18 hours on ward
+                // - CAT 3 (green): Offer anytime currently on ward (>0 hours)
+                let shouldOfferQuickReview = false;
+                if (category === 'red') {
+                    shouldOfferQuickReview = false; // CAT 1 always needs full review
+                } else if (category === 'amber') {
+                    shouldOfferQuickReview = (currentHoursOnWard >= 18 && previousRisks.length > 0);
+                } else if (category === 'green') {
+                    shouldOfferQuickReview = (currentHoursOnWard > 0 && previousRisks.length > 0);
+                }
+                
+                if (shouldOfferQuickReview && window.showQuickReviewPrompt) {
+                    window.showQuickReviewPrompt(categoryText, currentHoursOnWard, previousRisks);
+                }
+            }, 1000);
         }
         
         const t = document.getElementById('toast');

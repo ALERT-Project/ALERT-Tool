@@ -1,6 +1,8 @@
 /* =========================================
    ALERT Tool Plugin: ADDS Calculator
-   Updated: AVPU Text Mapping
+   Copyright © 2025-2026 Casey Bond
+   Part of ALERT Nursing Risk Assessment Tool
+   MIT License - https://opensource.org/licenses/MIT
    ========================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -77,8 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="calc-box">
                 <div class="grid" style="row-gap:8px;">
                     <div class="col-12"><label>Blood Pressure</label></div>
-                    <div class="col-3"><input type="number" id="calc_sbp" placeholder="Systolic"></div>
-                    <div class="col-3"><input type="number" id="calc_dbp" placeholder="Diastolic"></div>
+                    <div class="col-3"><input type="number" id="calc_sbp" placeholder="SBP"></div>
+                    <div class="col-3"><input type="number" id="calc_dbp" placeholder="DBP"></div>
                     <div class="col-6" style="align-self:center;"><div id="score_sbp" style="font-weight:700; color:var(--accent);"></div></div>
                 </div>
             </div>
@@ -126,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             
-            <div style="margin-top:12px; padding-top:8px; border-top:2px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
+            <div style="margin-top:12px; margin-bottom:48px; padding-top:8px; border-top:2px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
                 <div style="font-weight:600;">Total Score:</div>
                 <div id="calc_total_display" style="font-size:1.4rem; font-weight:800; color:var(--ink);">0</div>
             </div>
@@ -368,11 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- SYNC TO RISK ASSESSMENT (Respiratory) ---
         // If oxygen support selected in calculator, set Risk Assessment and open gate
         if(o2Val) {
-             const respGateYes = document.querySelector('#seg_resp_concern .seg-btn[data-value="true"]');
-             if(respGateYes && !respGateYes.classList.contains('active')) {
-                 respGateYes.click();
-             }
-             
              const lowerVal = o2Val.toLowerCase();
              let selectedMode = null;
              let selectedFlow = null;
@@ -391,6 +388,14 @@ document.addEventListener('DOMContentLoaded', () => {
                  selectedMode = 'NIV';
              } else if(lowerVal.includes('trache')) {
                  selectedMode = 'Trache';
+             }
+             
+             // Only open respiratory concern gate if NOT room air
+             if(selectedMode && selectedMode !== 'RA') {
+                 const respGateYes = document.querySelector('#seg_resp_concern .seg-btn[data-value="true"]');
+                 if(respGateYes && !respGateYes.classList.contains('active')) {
+                     respGateYes.click();
+                 }
              }
              
              // Click the appropriate oxygen mode button
