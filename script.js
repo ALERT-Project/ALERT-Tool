@@ -2461,6 +2461,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
     if (s.new_bloods_ordered === 'ordered') addLine('New bloods ordered for next round');
     if (s.new_bloods_ordered === 'requested') addLine('New bloods requested (not yet ordered)');
+    if (s.new_bloods_ordered === 'not_required') addLine('New bloods not required');
     if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
     lines.push('');
 
