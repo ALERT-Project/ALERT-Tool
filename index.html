@@ -958,16 +958,18 @@
             <div id="bowel_date_wrapper" style="display:none;">
                 <div style="display:flex; gap:8px; flex-direction:column;">
                     <div style="flex:1;">
-                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; font-size:0.9rem; margin-bottom:8px;">
-                            <input type="checkbox" id="chk_unknown_blo_date" style="width:auto; transform:scale(1.1);">
-                            Unknown date of BLO
-                        </label>
                         <label id="bowel_date_label" style="font-size:0.8rem; color:var(--accent); display:block; margin-bottom:4px;">Date</label>
                         <input type="date" id="bowel_date" style="padding:6px; font-size:0.9rem; width:100%;">
                         <div class="quick-select-container" style="margin-top:4px;">
                             <button type="button" class="btn small quick-select" id="btn_bowel_today">Today</button>
                             <button type="button" class="btn small quick-select" id="btn_bowel_yesterday">Yesterday</button>
                         </div>
+                    </div>
+                    <div>
+                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; font-size:0.9rem;">
+                            <input type="checkbox" id="chk_unknown_blo_date" style="width:auto; transform:scale(1.1);">
+                            Unknown date of BLO
+                        </label>
                     </div>
                     <div id="aperients_wrapper" style="display:none;">
                          <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer; font-size:0.9rem;">

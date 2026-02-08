@@ -214,6 +214,7 @@ function getState() {
         ].includes(id)) return;
         const el = $(`toggle_${id}`);
         if (!el && id === 'chk_aperients') { const chk = $('chk_aperients'); if(chk) state[id] = chk.checked; return; }
+        if (!el && id === 'chk_unknown_blo_date') { const chk = $('chk_unknown_blo_date'); if(chk) state[id] = chk.checked; return; }
         state[id] = el ? (el.dataset.value === 'true') : false;
     });
 
@@ -272,6 +273,7 @@ function restoreState(state) {
 
     toggleInputs.forEach(id => {
         if (id === 'chk_aperients') { const chk = $('chk_aperients'); if(chk) chk.checked = state[id]; return; }
+        if (id === 'chk_unknown_blo_date') { const chk = $('chk_unknown_blo_date'); if(chk) chk.checked = state[id]; return; }
         const el = $(`toggle_${id}`);
         if (el) {
             el.dataset.value = state[id] ? 'true' : 'false';
@@ -809,6 +811,10 @@ function initialize() {
     });
 
     staticInputs.forEach(id => { const el = $(id); if (el) el.addEventListener('input', compute); });
+    
+    // Date inputs need both input and change events
+    $('bowel_date')?.addEventListener('change', compute);
+    $('stepdownDate')?.addEventListener('change', compute);
 
     $('chk_use_mods')?.addEventListener('change', () => { $('mods_inputs').style.display = $('chk_use_mods').checked ? 'block' : 'none'; compute(); });
     $('chk_aperients')?.addEventListener('change', compute);
