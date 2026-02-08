@@ -2398,7 +2398,18 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         bowelTxt += ', unknown when BLO';
     } else if (s.bowel_date) {
         const bd = new Date(s.bowel_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        bd.setHours(0, 0, 0, 0);
+        const daysDiff = Math.floor((today - bd) / (1000 * 60 * 60 * 24));
         bowelTxt += ` last opened ${bd.getDate()}/${bd.getMonth() + 1}`;
+        if (daysDiff === 0) {
+            bowelTxt += ' (today)';
+        } else if (daysDiff === 1) {
+            bowelTxt += ' (yesterday)';
+        } else if (daysDiff > 1) {
+            bowelTxt += ` (${daysDiff} days ago)`;
+        }
     }
     if (s.chk_aperients && s.bowel_mode === 'btn_bno') bowelTxt += ', aperients charted';
     if (s.ae_bowels) bowelTxt += ` - ${s.ae_bowels}`;
