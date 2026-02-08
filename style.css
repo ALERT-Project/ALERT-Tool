@@ -625,6 +625,10 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
         justify-content: center;
     }
     
+    .nav-item .nav-label {
+        display: none;
+    }
+    
     footer { padding-left: 16px; }
 
     .desktop-text { display: none; }

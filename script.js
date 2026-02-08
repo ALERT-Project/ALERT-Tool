@@ -116,7 +116,7 @@ const toggleInputs = [
     'comorb_copd', 'comorb_asthma', 'comorb_hf', 'comorb_esrd', 'comorb_dialysis',
     'comorb_diabetes', 'comorb_cirrhosis', 'comorb_malignancy', 'comorb_immuno', 'comorb_other',
     'renal_oliguria', 'renal_anuria', 'renal_fluid', 'renal_oedema', 'renal_dysfunction', 'renal_dialysis', 'renal_dehydrated', 'renal_worsening_cr',
-    'chk_aperients',
+    'chk_aperients', 'chk_unknown_blo_date',
     'pressor_recent_norad', 'pressor_recent_met', 'pressor_recent_gtn', 'pressor_recent_dob', 'pressor_recent_mid', 'pressor_recent_other',
     'pressor_current_mid', 'pressor_current_other'
 ];
@@ -812,6 +812,7 @@ function initialize() {
 
     $('chk_use_mods')?.addEventListener('change', () => { $('mods_inputs').style.display = $('chk_use_mods').checked ? 'block' : 'none'; compute(); });
     $('chk_aperients')?.addEventListener('change', compute);
+    $('chk_unknown_blo_date')?.addEventListener('change', () => { handleUnknownBLODate(); compute(); });
     $('comorb_other_note')?.addEventListener('input', compute);
 
     $('chk_discharge_alert')?.addEventListener('change', () => {
@@ -1238,6 +1239,31 @@ function toggleBowelDate(mode) {
         if(l) l.textContent = (mode === 'btn_bno') ? 'Date Last Opened' : 'Date BO';
         const ap = $('aperients_wrapper');
         if(ap) ap.style.display = (mode === 'btn_bno') ? 'block' : 'none';
+        handleUnknownBLODate();
+    }
+}
+
+function handleUnknownBLODate() {
+    const unknownChk = $('chk_unknown_blo_date');
+    const dateInput = $('bowel_date');
+    const todayBtn = $('btn_bowel_today');
+    const yesterdayBtn = $('btn_bowel_yesterday');
+    
+    if (unknownChk && dateInput) {
+        const isUnknown = unknownChk.checked;
+        dateInput.disabled = isUnknown;
+        dateInput.style.opacity = isUnknown ? '0.5' : '1';
+        if (todayBtn) {
+            todayBtn.disabled = isUnknown;
+            todayBtn.style.opacity = isUnknown ? '0.5' : '1';
+        }
+        if (yesterdayBtn) {
+            yesterdayBtn.disabled = isUnknown;
+            yesterdayBtn.style.opacity = isUnknown ? '0.5' : '1';
+        }
+        if (isUnknown) {
+            dateInput.value = '';
+        }
     }
 }
 
@@ -2368,7 +2394,9 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (s.bowel_mode === 'btn_bo') bowelTxt = 'BO';
     else if (s.bowel_mode === 'btn_bno') bowelTxt = 'BNO';
 
-    if (s.bowel_date) {
+    if (s.chk_unknown_blo_date && s.bowel_mode === 'btn_bno') {
+        bowelTxt += ', unknown when BLO';
+    } else if (s.bowel_date) {
         const bd = new Date(s.bowel_date);
         bowelTxt += ` last opened ${bd.getDate()}/${bd.getMonth() + 1}`;
     }
