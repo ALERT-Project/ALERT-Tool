@@ -17,7 +17,7 @@
 <body>
 
 <nav class="sidebar">
-    <div class="sidebar-logo">!</div>
+    <div class="sidebar-logo" id="sidebarLogo" style="cursor:pointer;" title="Double-click to import Excel data">!</div>
     <a href="#section-patient" class="nav-item" title="Patient Details"><span class="nav-icon">👤</span><span class="nav-label">Patient</span></a>
     <a href="#section-risk" class="nav-item" title="Risk Assessment"><span class="nav-icon">⚠️</span><span class="nav-label">Risks <span id="sidebar-risk-badges"></span></span></a>
     <a href="#section-ae" class="nav-item" title="A-E Assessment"><span class="nav-icon">📋</span><span class="nav-label">A-E</span></a>
@@ -1271,6 +1271,129 @@
 </footer>
 
 <div id="toast" class="toast"></div>
+
+<!-- Excel Import Modal -->
+<div id="excelImportModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; padding:24px; border-radius:12px; max-width:600px; width:90%; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+        <h3 style="margin:0 0 16px 0; color:var(--accent);">📋 Import Excel Data</h3>
+        <p style="margin:0 0 12px 0; color:var(--muted); font-size:0.9rem;">Copy the JSON cell from Excel and paste it below:</p>
+        <textarea id="excelPasteBox" placeholder='{"initials":"AW", "urn":"016", "ward":"6A", ...}' 
+                  style="width:100%; min-height:120px; padding:12px; border:1px solid var(--line); border-radius:6px; font-family:monospace; font-size:0.85rem; margin-bottom:12px; box-sizing:border-box;"></textarea>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <button onclick="closeExcelImportModal()" class="btn small" style="background:#ddd; color:#333;">Cancel</button>
+            <button onclick="importExcelData()" class="btn small" style="background:var(--accent); color:white;">Import</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Double-click on sidebar logo to open import modal
+document.getElementById('sidebarLogo')?.addEventListener('dblclick', () => {
+    const modal = document.getElementById('excelImportModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.getElementById('excelPasteBox').focus();
+    }
+});
+
+function closeExcelImportModal() {
+    const modal = document.getElementById('excelImportModal');
+    if (modal) modal.style.display = 'none';
+    document.getElementById('excelPasteBox').value = '';
+}
+
+function importExcelData() {
+    const pasteBox = document.getElementById('excelPasteBox');
+    try {
+        // Parse JSON
+        let jsonString = pasteBox.value.trim();
+        if (!jsonString) {
+            alert('Please paste JSON data first');
+            return;
+        }
+        
+        // Remove wrapping quotes if Excel adds them
+        if (jsonString.startsWith('"') && jsonString.endsWith('"')) {
+            jsonString = jsonString.slice(1, -1).replace(/""/g, '"');
+        }
+        
+        const data = JSON.parse(jsonString);
+        
+        // Set review type to post-stepdown
+        const postRadio = document.querySelector('input[name="reviewType"][value="post"]');
+        if (postRadio) {
+            postRadio.checked = true;
+            // Trigger change event to update visibility
+            postRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        
+        // Map demographics
+        if (data.initials) document.getElementById('ptName').value = data.initials;
+        if (data.urn) document.getElementById('ptMrn').value = data.urn;
+        if (data.age) document.getElementById('ptAge').value = String(data.age).trim();
+        if (data.bed) document.getElementById('ptBed').value = data.bed;
+        if (data.los) document.getElementById('icuLos').value = data.los;
+        if (data.reason) document.getElementById('ptAdmissionReason').value = data.reason;
+        
+        // Handle stepdown date (check both "stepdown" and "discharge" keys)
+        const stepdownDate = data.stepdown || data.discharge;
+        if (stepdownDate) document.getElementById('stepdownDate').value = stepdownDate;
+        
+        // Ward logic with fallback to "Other"
+        if (data.ward) {
+            const wardSelect = document.getElementById('ptWard');
+            if (wardSelect) {
+                wardSelect.value = data.ward;
+                // If ward not in dropdown, use "Other"
+                if (wardSelect.value === '') {
+                    wardSelect.value = 'Other';
+                    const otherWrapper = document.getElementById('ptWardOtherWrapper');
+                    const otherInput = document.getElementById('ptWardOther');
+                    if (otherWrapper) otherWrapper.style.display = 'block';
+                    if (otherInput) otherInput.value = data.ward;
+                }
+            }
+        }
+        
+        // Map bloods
+        if (data.lac) document.getElementById('bl_lac_review').value = data.lac;
+        if (data.hb) document.getElementById('bl_hb').value = data.hb;
+        if (data.cr) document.getElementById('bl_cr_review').value = data.cr;
+        if (data.k) document.getElementById('bl_k').value = data.k;
+        if (data.na) document.getElementById('bl_na').value = data.na;
+        if (data.mg) document.getElementById('bl_mg').value = data.mg;
+        if (data.plts) document.getElementById('bl_plts').value = data.plts;
+        if (data.wcc) document.getElementById('bl_wcc').value = data.wcc;
+        
+        // Trigger compute to update all calculations and save state
+        if (typeof compute === 'function') {
+            compute();
+        }
+        
+        // Visual feedback and close
+        pasteBox.style.backgroundColor = '#dcfce7';
+        setTimeout(() => {
+            closeExcelImportModal();
+            pasteBox.style.backgroundColor = 'white';
+        }, 800);
+        
+    } catch (err) {
+        console.error('Import Error:', err);
+        pasteBox.style.backgroundColor = '#fee2e2';
+        alert('Error reading data. Please ensure you copied valid JSON from Excel.\n\nError: ' + err.message);
+        setTimeout(() => {
+            pasteBox.style.backgroundColor = 'white';
+        }, 2000);
+    }
+}
+
+// Allow Enter key to trigger import
+document.getElementById('excelPasteBox')?.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+        importExcelData();
+    }
+});
+</script>
 
 <script src="script.js"></script>
 <script src="plugins/redcap.js"></script>
