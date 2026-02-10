@@ -1042,9 +1042,17 @@
     <button class="accordion" aria-expanded="false" aria-controls="panel_bloods">🩸 Bloods <span class="icon" aria-hidden="true">[+]</span></button>
     <div class="panel" id="panel_bloods">
       
-      <button id="btnUseSameBloods" class="btn small" style="width:100%; margin-bottom:12px; border:1px dashed var(--accent); color:var(--accent); background:transparent;">
-          ⟲ Use same results as last review (no new bloods)
-      </button>
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <button id="btnUseSameBloods" class="btn small" style="flex:1; border:1px dashed var(--accent); color:var(--accent); background:transparent;">
+              ⟲ Use same results as last review (no new bloods)
+          </button>
+          <button id="btnClearCurrentBloods" class="btn small" style="border:1px dashed var(--red); color:var(--red); background:transparent;" title="Clear all current blood results">
+              Clear Current Bloods
+          </button>
+          <button id="btnClearPreviousBloods" class="btn small" style="border:1px dashed var(--amber); color:var(--amber); background:transparent;" title="Clear all previous blood results (Prev: labels)">
+              Clear Previous Bloods
+          </button>
+      </div>
 
       <div class="bloods-grid">
         <div class="input-box blood-item"><label for="bl_lac_review">Lac <span id="prev_bl_lac_review" class="prev-datum"></span></label><input id="bl_lac_review" type="number" step="0.1"/><div class="trend-buttons" id="bl_lac_review_trend"></div><span class="range-subtext">(0.5-2.0)</span></div>

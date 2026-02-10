@@ -937,6 +937,67 @@ function initialize() {
         }
     });
 
+    // Clear Current Blood Results
+    $('btnClearCurrentBloods')?.addEventListener('click', () => {
+        const bloodFields = [
+            'bl_lac_review', 'bl_hb', 'bl_wcc', 'bl_crp', 'bl_cr_review', 'bl_egfr',
+            'bl_k', 'bl_na', 'bl_mg', 'bl_phos', 'bl_plts', 'bl_alb', 
+            'bl_neut', 'bl_lymph', 'bl_bili', 'bl_alt', 'bl_inr', 'bl_aptt'
+        ];
+        
+        let count = 0;
+        bloodFields.forEach(id => {
+            const field = $(id);
+            if (field && field.value) {
+                field.value = '';
+                field.classList.remove('scraped-data');
+                count++;
+            }
+        });
+
+        // Clear trend buttons
+        document.querySelectorAll('.trend-buttons .trend-btn.active').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        if (count > 0) {
+            compute();
+            showToast(`Cleared ${count} blood result${count > 1 ? 's' : ''}`, 1500);
+        } else {
+            showToast("No blood results to clear", 1500);
+        }
+    });
+
+    // Clear Previous Blood Results (Prev: labels)
+    $('btnClearPreviousBloods')?.addEventListener('click', () => {
+        const prevLabels = [
+            'prev_bl_lac_review', 'prev_bl_hb', 'prev_bl_wcc', 'prev_bl_crp', 
+            'prev_bl_cr_review', 'prev_bl_egfr', 'prev_bl_k', 'prev_bl_na', 
+            'prev_bl_mg', 'prev_bl_phos', 'prev_bl_plts', 'prev_bl_alb', 
+            'prev_bl_neut', 'prev_bl_lymph', 'prev_bl_bili', 'prev_bl_alt', 
+            'prev_bl_inr', 'prev_bl_aptt'
+        ];
+        
+        let count = 0;
+        prevLabels.forEach(id => {
+            const label = $(id);
+            if (label && label.textContent.trim()) {
+                label.textContent = '';
+                count++;
+            }
+        });
+
+        // Clear prevBloods object
+        window.prevBloods = {};
+
+        if (count > 0) {
+            compute();
+            showToast(`Cleared ${count} previous blood result${count > 1 ? 's' : ''}`, 1500);
+        } else {
+            showToast("No previous blood results to clear", 1500);
+        }
+    });
+
     document.querySelectorAll('.trend-buttons').forEach(group => {
         ['↑', '↓', '→'].forEach(t => {
             const btn = document.createElement('button');

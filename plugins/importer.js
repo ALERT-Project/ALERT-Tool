@@ -347,11 +347,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (det) {
                         det = det
-                            .replace(/\(.*?inserted\s*[:]?.*?\)/i, '')
-                            .replace(/inserted\s*[:]?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i, '')
-                            .replace(/dwell\s*\d+\s*days?/i, '')
-                            .replace(/\d+\s*days?\s*dwell/i, '')
+                            .replace(/\(.*?inserted\s*[:]?.*?\)/gi, '')
+                            .replace(/inserted\s*[:]?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi, '')
+                            .replace(/,?\s*dwell\s*\d+\s*days?/gi, '')
+                            .replace(/,?\s*\d+\s*days?\s*dwell/gi, '')
+                            .replace(/,?\s*\d+d\s*dwell/gi, '')
                             .replace(/^\(|\)$/g, '')
+                            .replace(/,\s*,/g, ',')
+                            .replace(/^,\s*|,\s*$/g, '')
                             .trim();
                     }
 
@@ -363,6 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- QUICK REVIEW DETECTION ---
         // Extract category from imported note
         const catMatch = text.match(/ALERT Nursing Review Category - (CAT \d+)/i);
+        
+        // Check if imported DMR is from a pre-stepdown review
+        const isPreStepdownImport = text.match(/Pre-Stepdown Review/i);
         
         if (catMatch) {
             const categoryText = catMatch[1]; // e.g., "CAT 2"
@@ -420,15 +426,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // Determine if quick review should be offered:
-                // - CAT 1 (red): Never offer quick review
-                // - CAT 2 (amber): Offer if currently ≥18 hours on ward
-                // - CAT 3 (green): Offer anytime currently on ward (>0 hours)
+                // - Pre-stepdown DMR import: Only offer for CAT 3 (patient hasn't been on ward yet)
+                // - Post-stepdown DMR import: Offer for CAT 2 or CAT 3 (indicates follow-up review)
+                // - CAT 1 (red): Never offer quick review (always needs full assessment)
                 let shouldOfferQuickReview = false;
                 if (category === 'red') {
                     shouldOfferQuickReview = false; // CAT 1 always needs full review
-                } else if (category === 'amber') {
-                    shouldOfferQuickReview = (currentHoursOnWard >= 18 && previousRisks.length > 0);
-                } else if (category === 'green') {
+                } else if (isPreStepdownImport) {
+                    // Pre-stepdown import: only CAT 3 gets quick review
+                    shouldOfferQuickReview = (category === 'green' && currentHoursOnWard > 0 && previousRisks.length > 0);
+                } else {
+                    // Post-stepdown import: CAT 2 or CAT 3 get quick review (confirms it's a follow-up)
                     shouldOfferQuickReview = (currentHoursOnWard > 0 && previousRisks.length > 0);
                 }
                 
