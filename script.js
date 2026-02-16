@@ -393,6 +393,7 @@ function initialize() {
         forceBtn.addEventListener('click', () => {
             if(confirm("This will overwrite your manual edits with the latest auto-generated data. Continue?")) {
                 isManuallyEdited = false;
+                window.devicesModifiedSinceLastSummary = false;
                 $('manual_edit_warning').style.display = 'none';
                 computeAll();
             }
@@ -1226,10 +1227,19 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
     html += `</div>`;
     
     div.innerHTML = html;
-    div.querySelector('.remove-entry').addEventListener('click', () => { div.remove(); saveState(true); compute(); });
+    div.querySelector('.remove-entry').addEventListener('click', () => { 
+        div.remove(); 
+        window.devicesModifiedSinceLastSummary = true;
+        saveState(true); 
+        compute(); 
+    });
     const textarea = div.querySelector('.device-textarea');
     if (textarea) {
-        textarea.addEventListener('input', debounce(() => { saveState(true); compute(); }, 100));
+        textarea.addEventListener('input', debounce(() => { 
+            window.devicesModifiedSinceLastSummary = true;
+            saveState(true); 
+            compute(); 
+        }, 100));
     }
     if (hasDateField) {
         div.querySelector('.device-date').addEventListener('change', () => { 
@@ -1274,6 +1284,7 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
                     infoTextEl.remove();
                 }
             }
+            window.devicesModifiedSinceLastSummary = true;
             saveState(true); 
             computeAll(); // Call immediately to update DMR with insertion date
         });
@@ -2354,8 +2365,18 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     const sum = $('summary');
     const hasSummary = !!(sum && sum.value && sum.value.trim());
     if(isManuallyEdited && hasSummary && !isQuickReviewMode) {
+        // If devices were modified, show a hint to use Force Update
+        if(window.devicesModifiedSinceLastSummary) {
+            const warn = $('manual_edit_warning');
+            if(warn && !warn.textContent.includes('device')) {
+                warn.innerHTML = '⚠️ Manual edits detected. Devices modified - use Force Update to refresh DMR.';
+            }
+        }
         return; 
     }
+
+    // Clear device modified flag when summary is successfully regenerated
+    window.devicesModifiedSinceLastSummary = false;
 
     const lines = [];
     const addLine = (txt) => { if (txt) lines.push(txt); };
@@ -2484,17 +2505,35 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         today.setHours(0, 0, 0, 0);
         bd.setHours(0, 0, 0, 0);
         const daysDiff = Math.floor((today - bd) / (1000 * 60 * 60 * 24));
-        bowelTxt += ` last opened ${bd.getDate()}/${bd.getMonth() + 1}`;
-        if (daysDiff === 0) {
-            bowelTxt += ' (today)';
-        } else if (daysDiff === 1) {
-            bowelTxt += ' (yesterday)';
-        } else if (daysDiff > 1) {
-            bowelTxt += ` (${daysDiff} days ago)`;
+        
+        if (s.bowel_mode === 'btn_bo') {
+            // For BO: "BO, today (16/2), type xx" or "BO, yesterday (15/2), type xx"
+            if (daysDiff === 0) {
+                bowelTxt += `, today (${bd.getDate()}/${bd.getMonth() + 1})`;
+            } else if (daysDiff === 1) {
+                bowelTxt += `, yesterday (${bd.getDate()}/${bd.getMonth() + 1})`;
+            } else {
+                bowelTxt += `, ${daysDiff} days ago (${bd.getDate()}/${bd.getMonth() + 1})`;
+            }
+        } else if (s.bowel_mode === 'btn_bno') {
+            // For BNO: "BNO. Last opened 3 days ago on 13/2/26"
+            if (daysDiff === 0) {
+                bowelTxt += `. Last opened today (${bd.getDate()}/${bd.getMonth() + 1})`;
+            } else if (daysDiff === 1) {
+                bowelTxt += `. Last opened yesterday on ${bd.getDate()}/${bd.getMonth() + 1}`;
+            } else {
+                bowelTxt += `. Last opened ${daysDiff} days ago on ${bd.getDate()}/${bd.getMonth() + 1}`;
+            }
         }
     }
-    if (s.chk_aperients && s.bowel_mode === 'btn_bno') bowelTxt += ', aperients charted';
-    if (s.ae_bowels) bowelTxt += ` - ${s.ae_bowels}`;
+    if (s.chk_aperients && s.bowel_mode === 'btn_bno') bowelTxt += '. On aperients';
+    if (s.ae_bowels) {
+        if (s.bowel_mode === 'btn_bo') {
+            bowelTxt += `, type ${s.ae_bowels}`;
+        } else {
+            bowelTxt += `. ${s.ae_bowels}`;
+        }
+    }
 
     if (bowelTxt) addLine(`Bowels: ${bowelTxt}`);
     
@@ -2534,24 +2573,34 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         Object.entries(s.devices).forEach(([k, v]) => { 
             v.forEach(item => {
                 let deviceLine = `- ${k}`;
-                if (item.details) deviceLine += ` ${item.details}`;
-                if (item.insertionDate) {
-                    deviceLine += ` inserted ${formatDateDDMMYYYY(item.insertionDate)}`;
-                    // Add dwell time if device is tracked
-                    if (trackedDevices.includes(k)) {
-                        const deviceDate = new Date(item.insertionDate + 'T00:00:00');
-                        const dwellDays = Math.floor((new Date() - deviceDate) / (1000 * 60 * 60 * 24));
-                        deviceLine += `, ${dwellDays}d`;
-                        
-                        // Add status if applicable
-                        const threshold = (k === 'PIVC') ? 3 : 7;
-                        if (k === 'PIVC') {
-                            if (dwellDays >= 3) deviceLine += ', long dwell';
-                            else deviceLine += ' dwell';
-                        } else {
-                            if (dwellDays >= 7) deviceLine += ', long dwell';
-                            else deviceLine += ' dwell';
-                        }
+                
+                // Add dwell time if device is tracked and has insertion date
+                if (item.insertionDate && trackedDevices.includes(k)) {
+                    const deviceDate = new Date(item.insertionDate + 'T00:00:00');
+                    const dwellDays = Math.floor((new Date() - deviceDate) / (1000 * 60 * 60 * 24));
+                    
+                    // Format: "PICC - left brachial - 5d dwell, inserted 11/2/26"
+                    if (item.details) deviceLine += ` - ${item.details}`;
+                    
+                    const threshold = (k === 'PIVC') ? 3 : 7;
+                    if (k === 'PIVC') {
+                        if (dwellDays >= 3) deviceLine += ` - ${dwellDays}d long dwell`;
+                        else deviceLine += ` - ${dwellDays}d dwell`;
+                    } else {
+                        if (dwellDays >= 7) deviceLine += ` - ${dwellDays}d long dwell`;
+                        else deviceLine += ` - ${dwellDays}d dwell`;
+                    }
+                    
+                    // Add insertion date at the end
+                    const bd = new Date(item.insertionDate);
+                    deviceLine += `, inserted ${bd.getDate()}/${bd.getMonth() + 1}/${bd.getFullYear().toString().slice(-2)}`;
+                } else {
+                    // For non-tracked devices or tracked without insertion date
+                    // Format: "Wound - left arm, dressed with xx" or "Arterial Line - left radial - inserted 11/2/26"
+                    if (item.details) deviceLine += ` - ${item.details}`;
+                    if (item.insertionDate) {
+                        const bd = new Date(item.insertionDate);
+                        deviceLine += ` - inserted ${bd.getDate()}/${bd.getMonth() + 1}/${bd.getFullYear().toString().slice(-2)}`;
                     }
                 }
                 lines.push(deviceLine);
