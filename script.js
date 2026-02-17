@@ -1199,8 +1199,8 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
         // Determine status and color based on device type and dwell time
         if (type === 'PIVC') {
             if (dwellDays >= 7) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
-            else if (dwellDays >= 5) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
-            else if (dwellDays >= 3) { infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; borderColor = '#9333ea'; }
+            else if (dwellDays >= 5) { infoText = `${dwellDays}d, long dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
+            else if (dwellDays >= 3) { infoText = `${dwellDays}d dwell`; infoColor = '#9333ea'; borderColor = '#9333ea'; }
         } else {
             if (dwellDays >= 14) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
             else if (dwellDays >= 10) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
@@ -1255,8 +1255,8 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
                 
                 if (type === 'PIVC') {
                     if (dwellDays >= 7) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; }
-                    else if (dwellDays >= 5) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; }
-                    else if (dwellDays >= 3) { newBorderColor = '#9333ea'; infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; }
+                    else if (dwellDays >= 5) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, long dwell`; infoColor = 'var(--amber)'; }
+                    else if (dwellDays >= 3) { newBorderColor = '#9333ea'; infoText = `${dwellDays}d dwell`; infoColor = '#9333ea'; }
                 } else {
                     if (dwellDays >= 14) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; }
                     else if (dwellDays >= 10) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; }
@@ -2582,9 +2582,9 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
                     // Format: "PICC - left brachial - 5d dwell, inserted 11/2/26"
                     if (item.details) deviceLine += ` - ${item.details}`;
                     
-                    const threshold = (k === 'PIVC') ? 3 : 7;
+                    const threshold = (k === 'PIVC') ? 5 : 7;
                     if (k === 'PIVC') {
-                        if (dwellDays >= 3) deviceLine += ` - ${dwellDays}d long dwell`;
+                        if (dwellDays >= 5) deviceLine += ` - ${dwellDays}d long dwell`;
                         else deviceLine += ` - ${dwellDays}d dwell`;
                     } else {
                         if (dwellDays >= 7) deviceLine += ` - ${dwellDays}d long dwell`;

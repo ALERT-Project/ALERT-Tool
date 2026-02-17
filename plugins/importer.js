@@ -351,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             .replace(/inserted\s*[:]?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi, '')
                             .replace(/,?\s*dwell\s*\d+\s*days?/gi, '')
                             .replace(/,?\s*\d+\s*days?\s*dwell/gi, '')
+                            .replace(/,?\s*\d+d\s*long\s*dwell/gi, '')
                             .replace(/,?\s*\d+d\s*dwell/gi, '')
                             .replace(/^\(|\)$/g, '')
                             .replace(/,\s*,/g, ',')
