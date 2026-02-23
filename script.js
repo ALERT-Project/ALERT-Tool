@@ -1026,7 +1026,7 @@ function initialize() {
     });
 
     document.querySelectorAll('.btn[data-device-type]').forEach(btn => {
-        btn.addEventListener('click', () => { createDeviceEntry(btn.dataset.deviceType); compute(); });
+        btn.addEventListener('click', () => { createDeviceEntry(btn.dataset.deviceType); computeAll(); });
     });
 
     // Dark mode removed
@@ -1231,15 +1231,15 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
         div.remove(); 
         window.devicesModifiedSinceLastSummary = true;
         saveState(true); 
-        compute(); 
+        computeAll(); // Immediate update for device removal
     });
     const textarea = div.querySelector('.device-textarea');
     if (textarea) {
-        textarea.addEventListener('input', debounce(() => { 
+        textarea.addEventListener('input', () => { 
             window.devicesModifiedSinceLastSummary = true;
             saveState(true); 
-            compute(); 
-        }, 100));
+            computeAll(); // Immediate update when editing device details
+        });
     }
     if (hasDateField) {
         div.querySelector('.device-date').addEventListener('change', () => { 
@@ -1286,7 +1286,7 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
             }
             window.devicesModifiedSinceLastSummary = true;
             saveState(true); 
-            computeAll(); // Call immediately to update DMR with insertion date
+            computeAll(); // Immediate update for device date change
         });
     }
     c.appendChild(div);
