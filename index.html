@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--
-  ALERT Nursing Risk Assessment Tool v7.7
+  ALERT Nursing Risk Assessment Tool v7.8 (24 Feb 2026)
   Copyright © 2025-2026 Casey Bond
-  Developed for South Metropolitan Health Service ALERT Team
+  Developed for ALERT at South Metropolitan Health Service, WA, Australia
   Licensed under MIT License
 -->
 <head>
@@ -232,8 +232,8 @@
                 <div class="question-label">Hb (g/L) <span id="prev_hb" class="prev-datum"></span></div>
                 <input id="hb" type="number" step="1" min="0" style="margin-bottom:8px;"/>
                 <div class="segmented-group" id="seg_hb_dropping" style="height: 44px;">
-                   <button class="seg-btn" data-value="true">Dropping</button>
-                   <button class="seg-btn" data-value="false">Stable</button>
+                   <button type="button" class="seg-btn" data-value="true">Dropping</button>
+                   <button type="button" class="seg-btn" data-value="false">Stable</button>
                 </div>
             </div>
         </div>
@@ -242,8 +242,8 @@
     <div class="question-row input-box" id="resp_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
       <div class="question-label bold-heading">Respiratory Concern? <span id="prev_risk_resp" class="prev-datum"></span></div>
       <div class="segmented-group" id="seg_resp_concern">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
+            <button type="button" class="seg-btn" data-value="true">Yes</button>
+            <button type="button" class="seg-btn" data-value="false">No</button>
       </div>
       
       <div id="resp_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
@@ -363,8 +363,8 @@
     <div class="question-row input-box" id="neuro_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
       <div class="question-label bold-heading">Neurological Concern? <span id="prev_risk_neuro" class="prev-datum"></span></div>
       <div class="segmented-group" id="seg_neuro_gate">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
+            <button type="button" class="seg-btn" data-value="true">Yes</button>
+            <button type="button" class="seg-btn" data-value="false">No</button>
       </div>
       <div id="neuro_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
           <div class="grid" style="row-gap:12px;">
@@ -398,8 +398,8 @@
     <div class="question-row input-box" id="renal_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Renal / Fluid Concern? <span id="prev_risk_renal" class="prev-datum"></span></div>
         <div class="segmented-group" id="seg_renal">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
+            <button type="button" class="seg-btn" data-value="true">Yes</button>
+            <button type="button" class="seg-btn" data-value="false">No</button>
         </div>
         <div id="renal_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
              
@@ -451,8 +451,8 @@
     <div class="question-row input-box" id="elec_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
       <div class="question-label bold-heading">Electrolyte Concern? <span id="prev_risk_elec" class="prev-datum"></span></div>
       <div class="segmented-group" id="seg_electrolyte_gate">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
+            <button type="button" class="seg-btn" data-value="true">Yes</button>
+            <button type="button" class="seg-btn" data-value="false">No</button>
       </div>
       <div id="electrolyte_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
           <label>Severity</label>
@@ -472,8 +472,8 @@
     <div class="question-row input-box" id="hac_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Hospital Acquired Complication?</div>
         <div class="segmented-group" id="seg_hac">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
+            <button type="button" class="seg-btn" data-value="true">Yes</button>
+            <button type="button" class="seg-btn" data-value="false">No</button>
         </div>
         <div class="sub-label">Did not exist upon admission e.g., HAI [HAP, VAP, CLABSI, SSI], Sepsis, New Arrythmias, Acute Renal Failure, Hemorrhage</div>
         <div id="hac_content" style="display:none; margin-top:12px;">
@@ -489,8 +489,8 @@
     <div class="question-row input-box" id="ah_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Discharged after-hours? <span id="prev_risk_ah" class="prev-datum"></span></div>
         <div class="segmented-group" id="seg_after_hours">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
+            <button type="button" class="seg-btn" data-value="true">Yes</button>
+            <button type="button" class="seg-btn" data-value="false">No</button>
         </div>
         <div class="sub-label">(No home team on ward, or reduced nursing ratio)</div>
         <div class="sub-label" style="color:var(--accent); font-weight:600;">(only score until reviewed on ward by home team)</div>
@@ -505,8 +505,8 @@
     <div class="question-row input-box" id="pressor_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Vasoactive Support? <span id="prev_risk_pressors" class="prev-datum"></span></div>
         <div class="segmented-group" id="seg_pressors">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
+            <button type="button" class="seg-btn" data-value="true">Yes</button>
+            <button type="button" class="seg-btn" data-value="false">No</button>
         </div>
         
         <div id="pressor_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
@@ -565,8 +565,8 @@
     <div class="question-row input-box" id="immobility_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Immobility Concern? <span id="prev_risk_immob" class="prev-datum"></span></div>
         <div class="segmented-group" id="seg_immobility">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
+            <button type="button" class="seg-btn" data-value="true">Yes</button>
+            <button type="button" class="seg-btn" data-value="false">No</button>
         </div>
         <div class="sub-label">(reference - cannot sit out in chair)</div>
         <div id="immobility_note_wrapper" style="display:none; margin-top:12px; padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
@@ -580,8 +580,8 @@
     <div class="question-row input-box" id="infection_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line);">
         <div class="question-label bold-heading">Infection Concern? <span id="prev_risk_inf" class="prev-datum"></span></div>
         <div class="segmented-group" id="seg_infection">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
+            <button type="button" class="seg-btn" data-value="true">Yes</button>
+            <button type="button" class="seg-btn" data-value="false">No</button>
         </div>
         <div id="infection_gate_content" style="display:none; margin-top:12px;">
             
@@ -617,8 +617,8 @@
     <div class="input-box" id="comorbs_wrapper" style="margin-top:20px; padding-top:12px; border-top:2px solid var(--line); margin-bottom:20px;">
         <div class="section-title">Comorbidities?</div>
         <div class="segmented-group" id="seg_comorbs_gate">
-            <button class="seg-btn" data-value="true">Yes</button>
-            <button class="seg-btn" data-value="false">No</button>
+            <button type="button" class="seg-btn" data-value="true">Yes</button>
+            <button type="button" class="seg-btn" data-value="false">No</button>
         </div>
         
         <div id="comorbs_gate_content" style="display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:12px;">
@@ -935,8 +935,8 @@
             <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
                 <label class="question-label" style="font-size:0.9rem; margin-bottom:8px; display:block;">Is Nutrition Adequate?</label>
                 <div class="segmented-group" id="seg_nutrition_adequate" style="margin-bottom:8px;">
-                    <button class="seg-btn" data-value="true">Yes</button>
-                    <button class="seg-btn" data-value="false">No</button>
+                    <button type="button" class="seg-btn" data-value="true">Yes</button>
+                    <button type="button" class="seg-btn" data-value="false">No</button>
                 </div>
                 <div id="nutrition_context_wrapper" style="display:none; margin-top:8px; padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line);">
                     <textarea id="nutrition_context_note" style="min-height:60px;"></textarea>
@@ -995,10 +995,23 @@
           <div class="grid" style="row-gap:12px;">
             <div class="col-6">
               <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
+                <label class="question-label" style="font-size:0.95rem; margin-bottom:4px; display:block; color:var(--accent);">PICS?</label>
+                <div class="segmented-group" id="seg_pics">
+                    <button type="button" class="seg-btn" data-value="positive">Positive</button>
+                    <button type="button" class="seg-btn" data-value="negative">Negative</button>
+                </div>
+                <div id="pics_wrapper" style="display:none; margin-top:8px;">
+                    <textarea id="pics_note" placeholder="additional context..." style="min-height:50px;"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-6">
+              <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
                 <label class="question-label" style="font-size:0.95rem; margin-bottom:4px; display:block; color:var(--accent);">Poor sleep?</label>
                 <div class="segmented-group" id="seg_sleep_quality">
-                    <button class="seg-btn" data-value="true">Yes</button>
-                    <button class="seg-btn" data-value="false">No</button>
+                    <button type="button" class="seg-btn" data-value="true">Yes</button>
+                    <button type="button" class="seg-btn" data-value="false">No</button>
                 </div>
                 <div id="sleep_quality_wrapper" style="display:none; margin-top:8px;">
                     <textarea id="sleep_quality_note" placeholder="details..." style="min-height:50px;"></textarea>
@@ -1010,24 +1023,11 @@
               <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
                 <label class="question-label" style="font-size:0.95rem; margin-bottom:4px; display:block; color:var(--accent);">Any psychological concerns?</label>
                 <div class="segmented-group" id="seg_neuro_psych">
-                    <button class="seg-btn" data-value="true">Yes</button>
-                    <button class="seg-btn" data-value="false">No</button>
+                    <button type="button" class="seg-btn" data-value="true">Yes</button>
+                    <button type="button" class="seg-btn" data-value="false">No</button>
                 </div>
                 <div id="neuro_psych_wrapper" style="display:none; margin-top:8px;">
                     <textarea id="neuro_psych_note" placeholder="details..." style="min-height:50px;"></textarea>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-6">
-              <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
-                <label class="question-label" style="font-size:0.95rem; margin-bottom:4px; display:block; color:var(--accent);">PICS positive?</label>
-                <div class="segmented-group" id="seg_pics">
-                    <button class="seg-btn" data-value="true">Yes</button>
-                    <button class="seg-btn" data-value="false">No</button>
-                </div>
-                <div id="pics_wrapper" style="display:none; margin-top:8px;">
-                    <textarea id="pics_note" placeholder="details..." style="min-height:50px;"></textarea>
                 </div>
               </div>
             </div>
@@ -1251,8 +1251,8 @@
   <div style="text-align:center; color: var(--muted); font-weight: 600; margin: 24px 0 8px 0; letter-spacing: 1px;">- END ASSESSMENT -</div>
   
   <div style="text-align:center; padding:32px 20px 20px 20px; font-size:0.75rem; color:var(--muted); line-height:1.6; word-wrap:break-word; overflow-wrap:break-word;">
-    <div>ALERT Tool v7.7 © 2025-2026 Casey Bond</div>
-    <div>Developed for South Metropolitan Health Service ALERT Team</div>
+    <div>ALERT Tool v7.8 (24 Feb 2026) © 2025-2026 Casey Bond</div>
+    <div>Developed for ALERT at South Metropolitan Health Service, WA, Australia</div>
     <div><a href="https://opensource.org/licenses/MIT" target="_blank" style="color:var(--accent); text-decoration:none;">MIT License</a></div>
   </div>
 </main>

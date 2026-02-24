@@ -307,6 +307,8 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 .seg-btn:first-child { border-right: 1px solid var(--line); }
 .seg-btn[data-value="false"].active { background: var(--muted); opacity: 0.8; color: white; border-color: var(--muted); } 
 .seg-btn[data-value="true"].active { background: var(--accent); }
+.seg-btn[data-value="negative"].active { background: var(--muted); opacity: 0.8; color: white; border-color: var(--muted); }
+.seg-btn[data-value="positive"].active { background: var(--accent); }
 /* Make lactate Stable button grey like Hb Stable */
 .btn.quick-select[data-value="Stable"].active { background: var(--muted); opacity: 0.8; color: white; border-color: var(--muted); }
 

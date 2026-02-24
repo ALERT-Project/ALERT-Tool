@@ -1112,6 +1112,9 @@ function handleSegmentClick(id, value) {
         if (el) {
              if(id === 'stepdown_suitable' || id === 'nutrition_adequate') {
                  el.style.display = (value === "false") ? 'block' : 'none';
+             } else if(id === 'pics') {
+                 // Show textarea when either positive or negative is selected
+                 el.style.display = (value === "positive" || value === "negative") ? 'block' : 'none';
              } else {
                  el.style.display = (value === "true") ? 'block' : 'none';
              }
@@ -1398,7 +1401,8 @@ function clearData() {
     const gatesToHide = [
         '#resp_gate_content', '#renal_gate_content', '#neuro_gate_content', '#electrolyte_gate_content', '#infection_gate_content', '#pressor_gate_content', '#hac_content',
         '#immobility_note_wrapper', '#after_hours_note_wrapper', '#comorb_other_note_wrapper', '#unsuitable_note_wrapper', '#override_reason_box', '#sub_intubated_reason', '#sub_dyspnea_severity',
-        '#pressor_recent_other_note_wrapper', '#dialysis_type_wrapper', '#anticoag_note_wrapper', '#vte_prophylaxis_note_wrapper'
+        '#pressor_recent_other_note_wrapper', '#dialysis_type_wrapper', '#anticoag_note_wrapper', '#vte_prophylaxis_note_wrapper',
+        '#pics_wrapper', '#sleep_quality_wrapper', '#neuro_psych_wrapper', '#pain_context_wrapper', '#nutrition_context_wrapper'
     ];
     gatesToHide.forEach(sel => { const el = document.querySelector(sel); if(el) el.style.display = 'none'; });
     
@@ -2132,8 +2136,8 @@ function computeAll() {
         }
 
         // --- PICS ---
-        if (s.pics) {
-            add(amber, `Post ICU Syndrome positive`, 'seg_pics', 'amber', s.pics_note);
+        if (s.pics === 'positive') {
+            add(amber, `Post ICU Syndrome Positive`, 'seg_pics', 'amber', s.pics_note);
         }
 
         const activeComorbsKeys = toggleInputs.filter(k => k.startsWith('comorb_') && s[k]);
@@ -2540,8 +2544,15 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
-    if (s.sleep_quality) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ''}`);
-    if (s.pics) addLine(`Post ICU Syndrome: Positive${s.pics_note ? ` - ${s.pics_note}` : ''}`);
+    
+    if (s.pics) {
+        const picsStatus = s.pics === 'positive' ? 'Positive' : 'Negative';
+        addLine(`Post ICU Syndrome: ${picsStatus}${s.pics_note ? ` - ${s.pics_note}` : ''}`);
+    }
+    if (s.sleep_quality === true) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ''}`);
+    else if (s.sleep_quality === false) addLine(`Sleep: No sleep issues identified`);
+    if (s.neuro_psych === true) addLine(`Psychological issues: ${s.neuro_psych_note || 'Concerns identified'}`);
+    else if (s.neuro_psych === false) addLine(`Psychological issues: Nil identified`);
     
     if (s.anticoag_note) addLine(`Anticoagulation: ${s.anticoag_note}`);
     if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
@@ -2609,7 +2620,6 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     }
     lines.push('');
 
-    if (s.neuro_psych_note) lines.push(`Psychological: ${s.neuro_psych_note}`);
     if (s.context_other_note) lines.push(`Other: ${s.context_other_note}`);
     lines.push('');
 
