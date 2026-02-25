@@ -775,3 +775,26 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
         transform: translateY(0);
     }
 }
+
+/* A-E Section Cards */
+.ae-section-card {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+.ae-section-heading {
+    display: block;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+.ae-comment-label {
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    color: var(--muted) !important;
+    margin-bottom: 4px !important;
+}
+.ae-section-card textarea {
+    font-size: 0.85rem;
+}

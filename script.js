@@ -87,8 +87,8 @@ const comorbMap = {
 const staticInputs = [
     'reviewTime', 'ptName', 'ptMrn', 'ptAge', 'ptWeight', 'ptWard', 'ptBed', 'ptWardOther', 'ptAdmissionReason', 'icuSummary', 'icuLos', 'stepdownDate',
     'npFlow', 'hfnpFio2', 'hfnpFlow', 'nivFio2', 'nivPeep', 'nivPs', 'override', 'overrideNote',
-    'trache_details_note', 'mods_score', 'mods_details', 'airway_a', 'b_rr', 'b_spo2', 'b_device', 'b_wob',
-    'c_hr', 'c_hr_rhythm', 'c_nibp', 'c_cr', 'c_perf', 'd_alert', 'd_pain', 'e_temp', 'e_bsl', 'e_fluid', 'e_uop', 'atoe_adds',
+    'trache_details_note', 'mods_score', 'mods_details', 'airway_a', 'a_comment', 'b_rr', 'b_spo2', 'b_device', 'b_wob', 'b_comment',
+    'c_hr', 'c_hr_rhythm', 'c_nibp', 'c_cr', 'c_perf', 'c_comment', 'd_alert', 'd_pain', 'd_comment', 'e_temp', 'e_bsl', 'e_fluid', 'e_uop', 'e_comment', 'atoe_adds',
     'ae_mobility', 'ae_diet', 'ae_bowels', 'bowel_date',
     'bl_wcc', 'bl_crp', 'bl_neut', 'bl_lymph', 'bl_hb', 'bl_plts', 'bl_k', 'bl_na',
     'bl_cr_review', 'bl_mg', 'bl_alb', 'bl_lac_review', 'bl_phos',
@@ -355,6 +355,7 @@ function restoreState(state) {
             });
         }
     }
+    updateDevicesSectionVisibility();
 
     document.querySelectorAll('.trend-buttons').forEach(group => {
         if (state[group.id]) group.querySelector(`.trend-btn[data-value="${state[group.id]}"]`)?.classList.add('active');
@@ -1026,7 +1027,7 @@ function initialize() {
     });
 
     document.querySelectorAll('.btn[data-device-type]').forEach(btn => {
-        btn.addEventListener('click', () => { createDeviceEntry(btn.dataset.deviceType); computeAll(); });
+        btn.addEventListener('click', () => { createDeviceEntry(btn.dataset.deviceType); updateDevicesSectionVisibility(); computeAll(); });
     });
 
     // Dark mode removed
@@ -1173,6 +1174,10 @@ function updateWardOtherVisibility() {
     if(w) w.style.display = (v === 'Other') ? 'block' : 'none'; 
 }
 
+function updateDevicesSectionVisibility() {
+    // No-op: section is always visible so users can add devices
+}
+
 function createDeviceEntry(type, val = '', insertionDate = '') {
     const c = $('devices-container');
     if(!c) return;
@@ -1233,6 +1238,7 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
     div.querySelector('.remove-entry').addEventListener('click', () => { 
         div.remove(); 
         window.devicesModifiedSinceLastSummary = true;
+        updateDevicesSectionVisibility();
         saveState(true); 
         computeAll(); // Immediate update for device removal
     });
@@ -1797,16 +1803,16 @@ function computeAll() {
 
         const adds = num(s.adds);
         if (adds !== null) {
-            if (adds >= 6) add(red, `Severe physiological instability ADDS ${adds}`, 'adds', 'red');
+            if (adds >= 6) add(red, `Elevated ADDS ${adds}`, 'adds', 'red');
             else if (adds >= 4) add(red, `Physiological instability ADDS ${adds}`, 'adds', 'red');
             else if (adds === 3 && isRecent) add(amber, `Observation required ADDS 3`, 'adds', 'amber');
         }
 
         const hr = num(s.c_hr);
         if (hr) {
-            if (hr > 130) add(red, `Significant tachycardia HR ${hr}`, 'c_hr', 'red');
+            if (hr > 130) add(red, `Tachycardia HR ${hr}`, 'c_hr', 'red');
             else if (hr > 110) add(amber, `Tachycardia HR ${hr}`, 'c_hr', 'amber');
-            else if (hr < 40) add(red, `Severe bradycardia HR ${hr}`, 'c_hr', 'red');
+            else if (hr < 40) add(red, `Bradycardia HR ${hr}`, 'c_hr', 'red');
             else if (hr < 50) add(amber, `Bradycardia HR ${hr}`, 'c_hr', 'amber');
         }
 
@@ -2042,7 +2048,7 @@ function computeAll() {
             
             if (nlrVal > 10) markers.push(`NLR ${nlrVal.toFixed(1)}`);
             
-            let msg = isRed ? "Severe infection risk" : "Infection risk";
+            let msg = isRed ? "Infection risk" : "Infection risk";
             if (markers.length) msg += ` with ${joinGrammatically(markers)}`;
 
             const shouldSuppress = (s.infection_downtrend === true);
@@ -2065,7 +2071,7 @@ function computeAll() {
         else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Hb ${hb} and dropping`, 'hb_wrapper', 'amber');
 
         const alb = num(s.bl_alb);
-        if(alb && alb < 20) add(amber, `Severe hypoalbuminemia Alb ${alb}`, 'bl_alb', 'amber');
+        if(alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, 'bl_alb', 'amber');
         
         const plts = num(s.bl_plts);
         if(plts && plts < 100) add(amber, `Thrombocytopenia Plts ${plts}`, 'bl_plts', 'amber');
@@ -2075,7 +2081,7 @@ function computeAll() {
         else if (inr && inr > 2.5) add(amber, `Elevated INR ${inr}`, 'bl_inr', 'amber');
 
         const egfr = num(s.bl_egfr);
-        if (egfr && egfr < 30) add(amber, `Low eGFR ${egfr} indicating renal concern`, 'bl_egfr', 'amber');
+        if (egfr && egfr < 30) add(amber, `Low eGFR ${egfr}`, 'bl_egfr', 'amber');
 
         // --- BSL FLAGGING ---
         const bsl = num(s.e_bsl);
@@ -2461,6 +2467,8 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     else addLine(`ADDS: ${s.adds}`);
 
     if (s.airway_a) addLine(`A: ${s.airway_a}`);
+    else if (s.a_comment) addLine(`A:`);
+    if (s.a_comment) addLine(`  - ${s.a_comment}`);
 
     let b = [];
     if (s.b_rr) b.push(`RR ${s.b_rr}`);
@@ -2468,6 +2476,8 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (s.b_device) b.push(s.b_device);
     if (s.b_wob) b.push(`WOB: ${s.b_wob}`);
     if (b.length) addLine(`B: ${b.join(', ')}`);
+    else if (s.b_comment) addLine(`B:`);
+    if (s.b_comment) addLine(`  - ${s.b_comment}`);
 
     let c = [];
     if (s.c_hr) c.push(`HR ${s.c_hr} ${s.c_hr_rhythm ? `(${s.c_hr_rhythm})` : ''}`);
@@ -2475,6 +2485,8 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (s.c_cr) c.push(`CR ${s.c_cr}`);
     if (s.c_perf) c.push(`Perf ${s.c_perf}`);
     if (c.length) addLine(`C: ${c.join(', ')}`);
+    else if (s.c_comment) addLine(`C:`);
+    if (s.c_comment) addLine(`  - ${s.c_comment}`);
 
     let d = [];
     if (s.d_alert) d.push(s.d_alert);
@@ -2486,12 +2498,16 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         }
     }
     if (d.length) addLine(`D: ${d.join(', ')}`);
+    else if (s.d_comment) addLine(`D:`);
+    if (s.d_comment) addLine(`  - ${s.d_comment}`);
 
     let e = [];
     if (s.e_temp) e.push(`Temp ${s.e_temp}`);
     if (s.e_uop) e.push(`UOP ${s.e_uop}`);
     if (s.e_bsl) e.push(`BSL ${s.e_bsl}`);
     if (e.length) addLine(`E: ${e.join(', ')}`);
+    else if (s.e_comment) addLine(`E:`);
+    if (s.e_comment) addLine(`  - ${s.e_comment}`);
 
     lines.push('');
 
@@ -2578,8 +2594,9 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
     lines.push('');
 
-    lines.push('LINES, DRAINS & DEVICES:');
-    if (Object.values(s.devices || {}).some(arr => arr.length)) {
+    const hasAnyDevices = Object.values(s.devices || {}).some(arr => arr.length);
+    if (hasAnyDevices) {
+        lines.push('LINES, DRAINS, DEVICES & WOUNDS:');
         const trackedDevices = ['CVC', 'PICC', 'PIVC', 'Other CVAD', 'IDC', 'Vascath'];
         Object.entries(s.devices).forEach(([k, v]) => { 
             v.forEach(item => {

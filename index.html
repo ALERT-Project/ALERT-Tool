@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--
-  ALERT Nursing Risk Assessment Tool v7.8 (24 Feb 2026)
+  ALERT Nursing Risk Assessment Tool v7.9 (26 Feb 2026)
   Copyright © 2025-2026 Casey Bond
   Developed for ALERT at South Metropolitan Health Service, WA, Australia
   Licensed under MIT License
@@ -227,7 +227,7 @@
         </div>
 
         <!-- Hb Column -->
-        <div class="col-3">
+        <div class="col-3" id="hb_wrapper">
             <div class="input-box">
                 <div class="question-label">Hb (g/L) <span id="prev_hb" class="prev-datum"></span></div>
                 <input id="hb" type="number" step="1" min="0" style="margin-bottom:8px;"/>
@@ -687,207 +687,232 @@
 
         <!-- A: AIRWAY -->
         <div class="col-12">
-            <div class="input-box">
-                <label for="airway_a">A: Airway <span id="prev_airway" class="prev-datum"></span></label>
-                <input id="airway_a" type="text" data-manual="false"/>
-                <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="airway_a" data-value="Patent">Patent</button>
+            <div class="ae-section-card">
+                <label for="airway_a" class="ae-section-heading">A: Airway <span id="prev_airway" class="prev-datum"></span></label>
+                <div class="input-box" style="margin-bottom:10px;">
+                    <input id="airway_a" type="text" data-manual="false"/>
+                    <div class="quick-select-container">
+                        <button type="button" class="btn small quick-select" data-stack="true" data-target="airway_a" data-value="Patent">Patent</button>
+                    </div>
                 </div>
+                <label for="a_comment" class="ae-comment-label">Comments:</label>
+                <textarea id="a_comment" placeholder="Airway notes..." style="min-height:50px; resize:vertical; width:100%; box-sizing:border-box;"></textarea>
             </div>
         </div>
 
         <!-- B: BREATHING -->
         <div class="col-12" style="margin-top:12px; border-top:2px solid var(--line); padding-top:12px;">
-            <label style="display:block; font-weight:700; font-size:0.9rem; margin-bottom:8px;">B: Breathing</label>
-        </div>
-        
-        <div class="col-6">
-            <div class="input-box">
-                <label for="b_rr">RR <span id="prev_rr" class="prev-datum"></span></label>
-                <div class="input-with-trend">
-                    <input id="b_rr" type="text"/>
-                    <div class="trend-buttons" id="b_rr_trend"></div>
-                </div>
-                <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="b_rr" data-value="10-14" style="font-size:0.75rem;">RR 10-14</button>
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="b_rr" data-value="15-20" style="font-size:0.75rem;">RR 15-20</button>
-                </div>
-            </div>
-        </div>
-        <div class="col-6">
-            <div class="input-box">
-                <label for="b_spo2">SpO2 (%) <span id="prev_spo2" class="prev-datum"></span></label>
-                <input id="b_spo2" type="text"/>
-                <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="b_spo2" data-value=">94%">SpO2 >94%</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6">
-            <div class="input-box">
-                <label for="b_device">Oxygen Device <span id="prev_o2_dev" class="prev-datum"></span></label>
-                <input id="b_device" type="text"/>
-                <div class="quick-select-container" style="gap:2px;">
-                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="RA" style="font-size:0.7rem;">RA</button>
-                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="1LNP" style="font-size:0.7rem;">1LNP</button>
-                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="2LNP" style="font-size:0.7rem;">2LNP</button>
-                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="3LNP" style="font-size:0.7rem;">3LNP</button>
-                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="4LNP" style="font-size:0.7rem;">4LNP</button>
-                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="HFNP" style="font-size:0.7rem;">HFNP</button>
-                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="40L/40%" style="font-size:0.7rem;">40L/40%</button>
-                    <button type="button" class="btn small quick-select" data-target="b_device" data-value="30L/30%" style="font-size:0.7rem;">30L/30%</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-6">
-            <div class="input-box">
-                <label for="b_wob">WOB</label>
-                <input id="b_wob" type="text"/>
-                <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select" data-target="b_wob" data-value="Normal">Normal</button>
-                    <button type="button" class="btn small quick-select" data-target="b_wob" data-value="Increased">Increased</button>
+            <div class="ae-section-card">
+                <label class="ae-section-heading">B: Breathing</label>
+                <div class="grid">
+                    <div class="col-6">
+                        <div class="input-box">
+                            <label for="b_rr">RR <span id="prev_rr" class="prev-datum"></span></label>
+                            <div class="input-with-trend">
+                                <input id="b_rr" type="text"/>
+                                <div class="trend-buttons" id="b_rr_trend"></div>
+                            </div>
+                            <div class="quick-select-container">
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="b_rr" data-value="10-14" style="font-size:0.75rem;">RR 10-14</button>
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="b_rr" data-value="15-20" style="font-size:0.75rem;">RR 15-20</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="input-box">
+                            <label for="b_spo2">SpO2 (%) <span id="prev_spo2" class="prev-datum"></span></label>
+                            <input id="b_spo2" type="text"/>
+                            <div class="quick-select-container">
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="b_spo2" data-value=">94%">SpO2 >94%</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="input-box">
+                            <label for="b_device">Oxygen Device <span id="prev_o2_dev" class="prev-datum"></span></label>
+                            <input id="b_device" type="text"/>
+                            <div class="quick-select-container" style="gap:2px;">
+                                <button type="button" class="btn small quick-select" data-target="b_device" data-value="RA" style="font-size:0.7rem;">RA</button>
+                                <button type="button" class="btn small quick-select" data-target="b_device" data-value="1LNP" style="font-size:0.7rem;">1LNP</button>
+                                <button type="button" class="btn small quick-select" data-target="b_device" data-value="2LNP" style="font-size:0.7rem;">2LNP</button>
+                                <button type="button" class="btn small quick-select" data-target="b_device" data-value="3LNP" style="font-size:0.7rem;">3LNP</button>
+                                <button type="button" class="btn small quick-select" data-target="b_device" data-value="4LNP" style="font-size:0.7rem;">4LNP</button>
+                                <button type="button" class="btn small quick-select" data-target="b_device" data-value="HFNP" style="font-size:0.7rem;">HFNP</button>
+                                <button type="button" class="btn small quick-select" data-target="b_device" data-value="40L/40%" style="font-size:0.7rem;">40L/40%</button>
+                                <button type="button" class="btn small quick-select" data-target="b_device" data-value="30L/30%" style="font-size:0.7rem;">30L/30%</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="input-box">
+                            <label for="b_wob">WOB</label>
+                            <input id="b_wob" type="text"/>
+                            <div class="quick-select-container">
+                                <button type="button" class="btn small quick-select" data-target="b_wob" data-value="Normal">Normal</button>
+                                <button type="button" class="btn small quick-select" data-target="b_wob" data-value="Increased">Increased</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12" style="margin-top:4px;">
+                        <label for="b_comment" class="ae-comment-label">Comments:</label>
+                        <textarea id="b_comment" placeholder="Cough strength, secretions, suction..." style="min-height:50px; resize:vertical; width:100%; box-sizing:border-box;"></textarea>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- C: CIRCULATION -->
         <div class="col-12" style="margin-top:12px; border-top:2px solid var(--line); padding-top:12px;">
-            <label style="display:block; font-weight:700; font-size:0.9rem; margin-bottom:8px;">C: Circulation</label>
-        </div>
-        
-        <div class="col-3">
-            <div class="input-box">
-                <label for="c_hr">HR <span id="prev_hr" class="prev-datum"></span></label>
-                <div class="input-with-trend">
-                    <input id="c_hr" type="text"/>
-                    <div class="trend-buttons" id="c_hr_trend"></div>
-                </div>
-                <div class="quick-select-container" style="gap:2px;">
-                    <button type="button" class="btn small quick-select" data-target="c_hr" data-value="60s" style="font-size:0.7rem;">60s</button>
-                    <button type="button" class="btn small quick-select" data-target="c_hr" data-value="70s" style="font-size:0.7rem;">70s</button>
-                    <button type="button" class="btn small quick-select" data-target="c_hr" data-value="80s" style="font-size:0.7rem;">80s</button>
-                    <button type="button" class="btn small quick-select" data-target="c_hr" data-value="90s" style="font-size:0.7rem;">90s</button>
-                    <button type="button" class="btn small quick-select" data-target="c_hr" data-value="100s" style="font-size:0.7rem;">100s</button>
-                </div>
-                <div class="quick-select-container" style="gap:2px; margin-top:4px;">
-                   <button type="button" class="btn small quick-select" data-target="c_hr_rhythm" data-value="Regular" style="flex:1; font-size:0.7rem;">Reg</button>
-                   <button type="button" class="btn small quick-select" data-target="c_hr_rhythm" data-value="Irregular" style="flex:1; font-size:0.7rem;">Irr</button>
-                </div>
-                <input id="c_hr_rhythm" type="text" style="margin-top:2px;"/>
-            </div>
-        </div>
-
-        <div class="col-3">
-            <div class="input-box">
-                <label for="c_nibp">NIBP <span id="prev_bp" class="prev-datum"></span></label>
-                <div class="input-with-trend">
-                    <input id="c_nibp" type="text"/>
-                    <div class="trend-buttons" id="c_nibp_trend"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-3">
-            <div class="input-box">
-                <label for="c_cr">Cap Refill</label>
-                <input id="c_cr" type="text"/>
-                <div class="quick-select-container" style="gap:2px;">
-                    <button type="button" class="btn small quick-select" data-target="c_cr" data-value="<3 sec" style="flex:1; font-size:0.7rem;">&lt;3s</button>
-                    <button type="button" class="btn small quick-select" data-target="c_cr" data-value="4 sec" style="flex:1; font-size:0.7rem;">4s</button>
-                    <button type="button" class="btn small quick-select" data-target="c_cr" data-value="5 sec" style="flex:1; font-size:0.7rem;">5s</button>
-                    <button type="button" class="btn small quick-select" data-target="c_cr" data-value="6 sec" style="flex:1; font-size:0.7rem;">6s</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-3">
-            <div class="input-box">
-                <label for="c_perf">Perfusion</label>
-                <textarea id="c_perf" style="min-height:44px; resize:vertical;"></textarea>
-                <div class="quick-select-container" style="gap:2px; flex-wrap:wrap;">
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Warm, well perfused" style="flex:1 1 30%; font-size:0.65rem;">Warm</button>
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Hot" style="flex:1 1 30%; font-size:0.65rem;">Hot</button>
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Cool, poorly perfused" style="flex:1 1 30%; font-size:0.65rem;">Cool</button>
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Strong pulses" style="flex:1 1 48%; font-size:0.65rem;">Strong</button>
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Thready pulses" style="flex:1 1 48%; font-size:0.65rem;">Thready</button>
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Normal colour" style="flex:1 1 48%; font-size:0.65rem;">Normal</button>
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Pale" style="flex:1 1 48%; font-size:0.65rem;">Pale</button>
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Flushed" style="flex:1 1 100%; font-size:0.65rem;">Flushed</button>
+            <div class="ae-section-card">
+                <label class="ae-section-heading">C: Circulation</label>
+                <div class="grid">
+                    <div class="col-3">
+                        <div class="input-box">
+                            <label for="c_hr">HR <span id="prev_hr" class="prev-datum"></span></label>
+                            <div class="input-with-trend">
+                                <input id="c_hr" type="text"/>
+                                <div class="trend-buttons" id="c_hr_trend"></div>
+                            </div>
+                            <div class="quick-select-container" style="gap:2px;">
+                                <button type="button" class="btn small quick-select" data-target="c_hr" data-value="60s" style="font-size:0.7rem;">60s</button>
+                                <button type="button" class="btn small quick-select" data-target="c_hr" data-value="70s" style="font-size:0.7rem;">70s</button>
+                                <button type="button" class="btn small quick-select" data-target="c_hr" data-value="80s" style="font-size:0.7rem;">80s</button>
+                                <button type="button" class="btn small quick-select" data-target="c_hr" data-value="90s" style="font-size:0.7rem;">90s</button>
+                                <button type="button" class="btn small quick-select" data-target="c_hr" data-value="100s" style="font-size:0.7rem;">100s</button>
+                            </div>
+                            <div class="quick-select-container" style="gap:2px; margin-top:4px;">
+                               <button type="button" class="btn small quick-select" data-target="c_hr_rhythm" data-value="Regular" style="flex:1; font-size:0.7rem;">Reg</button>
+                               <button type="button" class="btn small quick-select" data-target="c_hr_rhythm" data-value="Irregular" style="flex:1; font-size:0.7rem;">Irr</button>
+                            </div>
+                            <input id="c_hr_rhythm" type="text" style="margin-top:2px;"/>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="input-box">
+                            <label for="c_nibp">NIBP <span id="prev_bp" class="prev-datum"></span></label>
+                            <div class="input-with-trend">
+                                <input id="c_nibp" type="text"/>
+                                <div class="trend-buttons" id="c_nibp_trend"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="input-box">
+                            <label for="c_cr">Cap Refill</label>
+                            <input id="c_cr" type="text"/>
+                            <div class="quick-select-container" style="gap:2px;">
+                                <button type="button" class="btn small quick-select" data-target="c_cr" data-value="<3 sec" style="flex:1; font-size:0.7rem;">&lt;3s</button>
+                                <button type="button" class="btn small quick-select" data-target="c_cr" data-value="4 sec" style="flex:1; font-size:0.7rem;">4s</button>
+                                <button type="button" class="btn small quick-select" data-target="c_cr" data-value="5 sec" style="flex:1; font-size:0.7rem;">5s</button>
+                                <button type="button" class="btn small quick-select" data-target="c_cr" data-value="6 sec" style="flex:1; font-size:0.7rem;">6s</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="input-box">
+                            <label for="c_perf">Perfusion</label>
+                            <textarea id="c_perf" style="min-height:44px; resize:vertical;"></textarea>
+                            <div class="quick-select-container" style="gap:2px; flex-wrap:wrap;">
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Warm, well perfused" style="flex:1 1 30%; font-size:0.65rem;">Warm</button>
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Hot" style="flex:1 1 30%; font-size:0.65rem;">Hot</button>
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Cool, poorly perfused" style="flex:1 1 30%; font-size:0.65rem;">Cool</button>
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Strong pulses" style="flex:1 1 48%; font-size:0.65rem;">Strong</button>
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Thready pulses" style="flex:1 1 48%; font-size:0.65rem;">Thready</button>
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Normal colour" style="flex:1 1 48%; font-size:0.65rem;">Normal</button>
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Pale" style="flex:1 1 48%; font-size:0.65rem;">Pale</button>
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="c_perf" data-value="Flushed" style="flex:1 1 100%; font-size:0.65rem;">Flushed</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12" style="margin-top:4px;">
+                        <label for="c_comment" class="ae-comment-label">Comments:</label>
+                        <textarea id="c_comment" placeholder="Perfusion, fluid balance, vasopressors..." style="min-height:50px; resize:vertical; width:100%; box-sizing:border-box;"></textarea>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- D: DISABILITY -->
         <div class="col-12" style="margin-top:12px; border-top:2px solid var(--line); padding-top:12px;">
-            <label style="display:block; font-weight:700; font-size:0.9rem; margin-bottom:8px;">D: Disability</label>
-        </div>
-
-        <div class="col-6">
-            <div class="input-box">
-                <label for="d_alert">Alert? <span id="prev_alert" class="prev-datum"></span></label>
-                <input id="d_alert" type="text"/>
-                 <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="d_alert" data-value="Alert">Alert</button>
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="d_alert" data-value="GCS 15">GCS 15</button>
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="d_alert" data-value="AMT 4/4">AMT 4/4</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-6">
-            <div class="input-box">
-                <label for="d_pain">Pain</label>
-                <input id="d_pain" type="text"/>
-                <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select" data-target="d_pain" data-value="No Pain">No Pain</button>
-                    <button type="button" class="btn small quick-select" data-target="d_pain" data-value="5/10">5/10</button>
-                    <button type="button" class="btn small quick-select" data-target="d_pain" data-value="10/10">10/10</button>
+            <div class="ae-section-card">
+                <label class="ae-section-heading">D: Disability</label>
+                <div class="grid">
+                    <div class="col-6">
+                        <div class="input-box">
+                            <label for="d_alert">Alert? <span id="prev_alert" class="prev-datum"></span></label>
+                            <input id="d_alert" type="text"/>
+                            <div class="quick-select-container">
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="d_alert" data-value="Alert">Alert</button>
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="d_alert" data-value="GCS 15">GCS 15</button>
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="d_alert" data-value="AMT 4/4">AMT 4/4</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="input-box">
+                            <label for="d_pain">Pain</label>
+                            <input id="d_pain" type="text"/>
+                            <div class="quick-select-container">
+                                <button type="button" class="btn small quick-select" data-target="d_pain" data-value="No Pain">No Pain</button>
+                                <button type="button" class="btn small quick-select" data-target="d_pain" data-value="5/10">5/10</button>
+                                <button type="button" class="btn small quick-select" data-target="d_pain" data-value="10/10">10/10</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12" style="margin-top:4px;">
+                        <label for="d_comment" class="ae-comment-label">Comments:</label>
+                        <textarea id="d_comment" placeholder="Cognition, sedation, pain context..." style="min-height:50px; resize:vertical; width:100%; box-sizing:border-box;"></textarea>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- E: EXPOSURE -->
         <div class="col-12" style="margin-top:12px; border-top:2px solid var(--line); padding-top:12px;">
-            <label style="display:block; font-weight:700; font-size:0.9rem; margin-bottom:8px;">E: Exposure</label>
-        </div>
-
-        <div class="col-3">
-            <div class="input-box">
-                <label for="e_temp">Temp <span id="prev_temp" class="prev-datum"></span></label>
-                <input id="e_temp" type="text"/>
-                 <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select" data-stack="true" data-target="e_temp" data-value="Afebrile">Afebrile</button>
-                </div>
-            </div>
-        </div>
-        <div class="col-3"><div class="input-box"><label for="e_bsl">BSL</label><input id="e_bsl" type="text"/></div></div>
-        <div class="col-3">
-            <div class="input-box">
-                <label for="e_fluid">Fluid Status</label>
-                <input id="e_fluid" type="text"/>
-                <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select" data-target="e_fluid" data-value="Euvolaemic">Euvolaemic</button>
-                    <button type="button" class="btn small quick-select" data-target="e_fluid" data-value="Oedema">Oedema</button>
-                    <button type="button" class="btn small quick-select" data-target="e_fluid" data-value="Dehydrated">Dehydrated</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-3">
-            <div class="input-box">
-                <label for="e_uop">UOP</label>
-                <div style="display:flex; align-items:center; gap:4px;">
-                    <input id="e_uop" type="text" />
-                    <div id="target_uop_display" style="font-size:0.75rem; color:var(--blue-hint); font-weight:700; white-space:nowrap; display:none;">Target: >--</div>
-                </div>
-                <div class="quick-select-container">
-                    <button type="button" class="btn small quick-select safe-trigger" data-stack="true" data-target="e_uop" data-value="WNL">WNL</button>
-                    <button type="button" class="btn small quick-select safe-trigger" data-stack="true" data-target="e_uop" data-value=">0.5ml/kg/hr">>0.5ml/kg</button>
-                    <button type="button" class="btn small quick-select risk-trigger" data-stack="true" data-risk="renal" data-target="e_uop" data-value="Oliguric">Oliguric</button>
-                    <button type="button" class="btn small quick-select risk-trigger" data-stack="true" data-risk="renal" data-target="e_uop" data-value="Anuric">Anuric</button>
-                    <button type="button" class="btn small quick-select risk-trigger" data-stack="true" data-risk="renal" data-target="e_uop" data-value="<0.5ml/kg/hr"><0.5ml/kg</button>
+            <div class="ae-section-card">
+                <label class="ae-section-heading">E: Exposure</label>
+                <div class="grid">
+                    <div class="col-3">
+                        <div class="input-box">
+                            <label for="e_temp">Temp <span id="prev_temp" class="prev-datum"></span></label>
+                            <input id="e_temp" type="text"/>
+                            <div class="quick-select-container">
+                                <button type="button" class="btn small quick-select" data-stack="true" data-target="e_temp" data-value="Afebrile">Afebrile</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-3"><div class="input-box"><label for="e_bsl">BSL</label><input id="e_bsl" type="text"/></div></div>
+                    <div class="col-3">
+                        <div class="input-box">
+                            <label for="e_fluid">Fluid Status</label>
+                            <input id="e_fluid" type="text"/>
+                            <div class="quick-select-container">
+                                <button type="button" class="btn small quick-select" data-target="e_fluid" data-value="Euvolaemic">Euvolaemic</button>
+                                <button type="button" class="btn small quick-select" data-target="e_fluid" data-value="Oedema">Oedema</button>
+                                <button type="button" class="btn small quick-select" data-target="e_fluid" data-value="Dehydrated">Dehydrated</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="input-box">
+                            <label for="e_uop">UOP</label>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <input id="e_uop" type="text" />
+                                <div id="target_uop_display" style="font-size:0.75rem; color:var(--blue-hint); font-weight:700; white-space:nowrap; display:none;">Target: >--</div>
+                            </div>
+                            <div class="quick-select-container">
+                                <button type="button" class="btn small quick-select safe-trigger" data-stack="true" data-target="e_uop" data-value="WNL">WNL</button>
+                                <button type="button" class="btn small quick-select safe-trigger" data-stack="true" data-target="e_uop" data-value=">0.5ml/kg/hr">>0.5ml/kg</button>
+                                <button type="button" class="btn small quick-select risk-trigger" data-stack="true" data-risk="renal" data-target="e_uop" data-value="Oliguric">Oliguric</button>
+                                <button type="button" class="btn small quick-select risk-trigger" data-stack="true" data-risk="renal" data-target="e_uop" data-value="Anuric">Anuric</button>
+                                <button type="button" class="btn small quick-select risk-trigger" data-stack="true" data-risk="renal" data-target="e_uop" data-value="<0.5ml/kg/hr"><0.5ml/kg</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12" style="margin-top:4px;">
+                        <label for="e_comment" class="ae-comment-label">Comments:</label>
+                        <textarea id="e_comment" placeholder="Skin, wounds, glycaemic control..." style="min-height:50px; resize:vertical; width:100%; box-sizing:border-box;"></textarea>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1251,7 +1276,9 @@
   <div style="text-align:center; color: var(--muted); font-weight: 600; margin: 24px 0 8px 0; letter-spacing: 1px;">- END ASSESSMENT -</div>
   
   <div style="text-align:center; padding:32px 20px 20px 20px; font-size:0.75rem; color:var(--muted); line-height:1.6; word-wrap:break-word; overflow-wrap:break-word;">
-    <div>ALERT Tool v7.8 (24 Feb 2026) © 2025-2026 Casey Bond</div>
+    <div>ALERT Tool v7.9 (26 Feb 2026) © 2025-2026 Casey Bond</div>
+    <div style="font-size:0.7rem; margin-top:4px;">v7.9 — A–E comment fields; Hb risk fix; moderated risk flag language; LINES/DRAINS/DEVICES &amp; WOUNDS DMR header</div>
+    <div style="font-size:0.7rem;">v7.8 (24 Feb 2026) — Previous release</div>
     <div>Developed for ALERT at South Metropolitan Health Service, WA, Australia</div>
     <div><a href="https://opensource.org/licenses/MIT" target="_blank" style="color:var(--accent); text-decoration:none;">MIT License</a></div>
   </div>
