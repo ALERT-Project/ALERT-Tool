@@ -857,6 +857,10 @@ function initialize() {
                     renal.click();
                 }
             }
+            // Sync comorbidity chips -> PMH textarea immediately
+            if (el.id.startsWith('toggle_comorb_')) {
+                setTimeout(syncComorbsToPMH, 20);
+            }
             saveState(true);
             computeAll(); // Call immediately to update risks
             checkBloodRanges();
@@ -892,7 +896,12 @@ function initialize() {
     $('chk_use_mods')?.addEventListener('change', () => { $('mods_inputs').style.display = $('chk_use_mods').checked ? 'block' : 'none'; compute(); });
     $('chk_aperients')?.addEventListener('change', compute);
     $('chk_unknown_blo_date')?.addEventListener('change', () => { handleUnknownBLODate(); compute(); });
+    // Compute on every keypress for live scoring, but sync PMH only on blur (when user leaves the field)
     $('comorb_other_note')?.addEventListener('input', compute);
+    $('comorb_other_note')?.addEventListener('blur', () => {
+        const toggle = $('toggle_comorb_other');
+        if (toggle && toggle.dataset.value === 'true') syncComorbsToPMH();
+    });
 
     $('chk_discharge_alert')?.addEventListener('change', () => {
         const dischargeChk = $('chk_discharge_alert');
@@ -1434,6 +1443,39 @@ function showClearDataModal() {
 function hideClearDataModal() {
     const modal = $('clearDataModal');
     if (modal) modal.style.display = 'none';
+}
+
+// Sync all active comorbidity chips to the PMH textarea as a newline-separated list
+function syncComorbsToPMH() {
+    const noteEl = $('pmh_note');
+    if (!noteEl) return;
+
+    // Build current chip lines
+    const activeKeys = toggleInputs.filter(k => k.startsWith('comorb_') && $(`toggle_${k}`)?.dataset.value === 'true');
+    const chipLines = [];
+    activeKeys.forEach(k => {
+        if (k === 'comorb_other') {
+            const specVal = $('comorb_other_note')?.value.trim();
+            if (specVal) chipLines.push(specVal); // Only include when user has typed something
+        } else {
+            chipLines.push(comorbMap[k]);
+        }
+    });
+
+    // Build a complete filter of all known chip display names + current comorb_other value
+    // This works across page reloads without needing in-memory state tracking
+    const filterLower = Object.values(comorbMap).map(n => n.toLowerCase());
+    const otherVal = $('comorb_other_note')?.value.trim();
+    if (otherVal) filterLower.push(otherVal.toLowerCase());
+
+    // Keep only user-typed lines that don't match any chip
+    const userLines = noteEl.value.split('\n').filter(line => {
+        const trimmed = line.trim();
+        return trimmed && !filterLower.includes(trimmed.toLowerCase());
+    });
+
+    noteEl.value = [...chipLines, ...userLines].join('\n');
+    noteEl.dispatchEvent(new Event('input'));
 }
 
 function clearData() {
@@ -2241,18 +2283,7 @@ function computeAll() {
 
         const activeComorbsKeys = toggleInputs.filter(k => k.startsWith('comorb_') && s[k]);
         const countComorbs = activeComorbsKeys.length;
-        if (activeComorbsKeys.length > 0) {
-            // Only pre-fill PMH textarea if it's currently empty (avoid overwriting user edits)
-            const noteEl = $('pmh_note');
-            if (noteEl && noteEl.value.trim() === '') {
-                const names = activeComorbsKeys.map(k => {
-                    if (k === 'comorb_other' && s.comorb_other_note) return s.comorb_other_note;
-                    return comorbMap[k];
-                }).join(', ');
-                noteEl.value = names;
-                noteEl.dispatchEvent(new Event('input'));
-            }
-        }
+        // PMH sync is handled directly by toggle-label click events (see initialize)
         if (countComorbs >= 3) {
             add(red, sentenceCase('Multiple comorbidities (three or more)'), null, 'red', null);
             flagged.red.push('comorbs_wrapper');
@@ -2543,19 +2574,13 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     }
 
     // Only add PMH section if there are comorbidities or PMH notes
-    if (activeComorbsKeys.length > 0 || (s.pmh_note && s.pmh_note.trim())) {
+    // pmh_note is the single source of truth (chips auto-sync into it via syncComorbsToPMH)
+    if (s.pmh_note && s.pmh_note.trim()) {
         lines.push('PMH:');
-        activeComorbsKeys.forEach(k => {
-            if (k === 'comorb_other' && s.comorb_other_note) {
-                lines.push(`-${s.comorb_other_note}`);
-            } else {
-                lines.push(`-${comorbMap[k]}`);
-            }
+        s.pmh_note.split('\n').forEach(p => {
+            const trimmed = p.trim().replace(/^-/, '').trim();
+            if (trimmed) lines.push(`-${trimmed}`);
         });
-        if (s.pmh_note) {
-            const splitPmh = s.pmh_note.split('\n');
-            splitPmh.forEach(p => { if (p.trim()) lines.push(`-${p.trim().replace(/^-/, '')}`); });
-        }
         lines.push('');
     }
 
