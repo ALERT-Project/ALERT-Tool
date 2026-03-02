@@ -8,7 +8,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Inject Calculator HTML
     const container = document.getElementById('addsCalculatorContainer');
-    if(container) {
+    if (container) {
         container.innerHTML = `
             <style>
                 .calc-box { 
@@ -139,10 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Logic & Event Listeners
     const btnToggle = document.getElementById('btnToggleCalc');
-    if(btnToggle) {
+    if (btnToggle) {
         btnToggle.addEventListener('click', () => {
             const c = document.getElementById('addsCalculatorContainer');
-            if(c.style.display === 'none') {
+            if (c.style.display === 'none') {
                 c.style.display = 'block';
                 btnToggle.textContent = 'Calc';
             } else {
@@ -151,27 +151,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     // Hide Calc button
     const btnHideCalc = document.getElementById('btnHideCalc');
-    if(btnHideCalc) {
+    if (btnHideCalc) {
         btnHideCalc.addEventListener('click', () => {
             const c = document.getElementById('addsCalculatorContainer');
             const btnToggle = document.getElementById('btnToggleCalc');
-            if(c) c.style.display = 'none';
-            if(btnToggle) btnToggle.textContent = 'Calc';
+            if (c) c.style.display = 'none';
+            if (btnToggle) btnToggle.textContent = 'Calc';
         });
     }
 
     // Inputs
-    const inputs = ['calc_rr','calc_spo2','calc_o2_val','calc_sbp','calc_dbp','calc_hr','calc_temp'];
+    const inputs = ['calc_rr', 'calc_spo2', 'calc_o2_val', 'calc_sbp', 'calc_dbp', 'calc_hr', 'calc_temp'];
     inputs.forEach(id => {
         const el = document.getElementById(id);
-        if(el) el.addEventListener('input', runCalc);
+        if (el) el.addEventListener('input', runCalc);
     });
-    
+
     document.querySelectorAll('input[name="calc_o2_mode"]').forEach(r => r.addEventListener('change', runCalc));
-    
+
     document.querySelectorAll('#calc_avpu .select-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('#calc_avpu .select-btn').forEach(b => b.classList.remove('active'));
@@ -186,121 +186,121 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const targetId = btn.dataset.target;
             const textVal = btn.dataset.val;
-            
-            if(btn.classList.contains('o2-chip')) {
+
+            if (btn.classList.contains('o2-chip')) {
                 const mode = btn.dataset.mode;
                 const radio = document.querySelector(`input[name="calc_o2_mode"][value="${mode}"]`);
-                if(radio) {
+                if (radio) {
                     radio.checked = true;
                     radio.dispatchEvent(new Event('change'));
                 }
             }
 
             const inputEl = document.getElementById(targetId);
-            if(inputEl) {
+            if (inputEl) {
                 inputEl.value = textVal;
-                runCalc(); 
+                runCalc();
             }
         });
     });
 
     // Reset Logic
     document.addEventListener('resetAddsCalc', () => {
-        inputs.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+        inputs.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         const r = document.querySelector('input[name="calc_o2_mode"][value="std"]');
-        if(r) r.checked = true;
+        if (r) r.checked = true;
         document.querySelectorAll('#calc_avpu .select-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('#calc_avpu .select-btn[data-value="A"]')?.classList.add('active');
-        ['rr','spo2','o2','sbp','hr','temp','avpu'].forEach(k => {
+        ['rr', 'spo2', 'o2', 'sbp', 'hr', 'temp', 'avpu'].forEach(k => {
             const el = document.getElementById(`score_${k}`);
-            if(el) el.textContent = ''; 
+            if (el) el.textContent = '';
         });
         const tot = document.getElementById('calc_total_display');
-        if(tot) tot.textContent = '0';
+        if (tot) tot.textContent = '0';
         const mAlert = document.getElementById('mScoreAlert');
-        if(mAlert) mAlert.style.display = 'none';
+        if (mAlert) mAlert.style.display = 'none';
     });
 
     function parseVal(inputStr, type) {
-        if(!inputStr) return NaN;
+        if (!inputStr) return NaN;
         const str = inputStr.toString().toLowerCase().trim();
-        if(str.includes('afebrile')) return 36.8;
-        if(str === 'ra') return 0; 
-        if(str.match(/^\d+s$/)) {
-             const base = parseFloat(str);
-             if(!isNaN(base)) return base + 5;
+        if (str.includes('afebrile')) return 36.8;
+        if (str === 'ra') return 0;
+        if (str.match(/^\d+s$/)) {
+            const base = parseFloat(str);
+            if (!isNaN(base)) return base + 5;
         }
-        if(str.includes('-')) {
+        if (str.includes('-')) {
             const parts = str.split('-');
-            if(parts.length === 2) {
+            if (parts.length === 2) {
                 const n1 = parseFloat(parts[0]);
                 const n2 = parseFloat(parts[1]);
-                if(!isNaN(n1) && !isNaN(n2)) return (n1 + n2) / 2;
+                if (!isNaN(n1) && !isNaN(n2)) return (n1 + n2) / 2;
             }
         }
         const match = str.match(/(\d+(\.\d+)?)/);
-        if(match) return parseFloat(match[1]);
+        if (match) return parseFloat(match[1]);
 
         return parseFloat(str);
     }
 
-    function getScore(type, rawVal, mode='std') {
+    function getScore(type, rawVal, mode = 'std') {
         const n = parseVal(rawVal, type);
-        if(isNaN(n)) return { s: 0, m: false };
+        if (isNaN(n)) return { s: 0, m: false };
 
-        if(type === 'rr') {
-            if(n >= 36 || n <= 4) return { s: 3, m: true };
-            if(n >= 30) return { s: 3, m: false };
-            if(n >= 25) return { s: 2, m: false };
-            if(n >= 21) return { s: 1, m: false };
-            if(n <= 9) return { s: 3, m: false };
+        if (type === 'rr') {
+            if (n >= 36 || n <= 4) return { s: 3, m: true };
+            if (n >= 30) return { s: 3, m: false };
+            if (n >= 25) return { s: 2, m: false };
+            if (n >= 21) return { s: 1, m: false };
+            if (n <= 9) return { s: 3, m: false };
             return { s: 0, m: false };
         }
-        if(type === 'spo2') {
-            if(n >= 94) return { s: 0, m: false };
-            if(n >= 91) return { s: 1, m: false };
-            if(n >= 85) return { s: 2, m: false };
+        if (type === 'spo2') {
+            if (n >= 94) return { s: 0, m: false };
+            if (n >= 91) return { s: 1, m: false };
+            if (n >= 85) return { s: 2, m: false };
             return { s: 3, m: true };
         }
-        if(type === 'o2') {
-            const rawStr = (rawVal||'').toString().toLowerCase();
-            if(rawStr === 'ra') return { s: 0, m: false };
+        if (type === 'o2') {
+            const rawStr = (rawVal || '').toString().toLowerCase();
+            if (rawStr === 'ra') return { s: 0, m: false };
 
-            if(mode === 'std') {
-                if(n > 10) return { s: 3, m: false };
-                if(n >= 5) return { s: 2, m: false };
-                if(n >= 2) return { s: 1, m: false };
+            if (mode === 'std') {
+                if (n > 10) return { s: 3, m: false };
+                if (n >= 5) return { s: 2, m: false };
+                if (n >= 2) return { s: 1, m: false };
                 return { s: 0, m: false };
             } else {
-                if(n >= 60) return { s: 3, m: false };
-                if(n >= 40) return { s: 2, m: false };
-                if(n >= 29) return { s: 1, m: false };
+                if (n > 40) return { s: 3, m: false };
+                if (n >= 29) return { s: 2, m: false };
+                if (n >= 21) return { s: 1, m: false };
                 return { s: 0, m: false };
             }
         }
-        if(type === 'sbp') {
-            if(n >= 200) return { s: 3, m: false };
-            if(n >= 180) return { s: 2, m: false };
-            if(n >= 160) return { s: 1, m: false };
-            if(n <= 89) return { s: 3, m: true };
-            if(n <= 99) return { s: 2, m: false };
-            if(n <= 109) return { s: 1, m: false };
+        if (type === 'sbp') {
+            if (n >= 200) return { s: 3, m: false };
+            if (n >= 180) return { s: 2, m: false };
+            if (n >= 160) return { s: 1, m: false };
+            if (n <= 89) return { s: 3, m: true };
+            if (n <= 99) return { s: 2, m: false };
+            if (n <= 109) return { s: 1, m: false };
             return { s: 0, m: false };
         }
-        if(type === 'hr') {
-            if(n >= 140) return { s: 3, m: true };
-            if(n >= 130) return { s: 3, m: false };
-            if(n >= 110) return { s: 2, m: false };
-            if(n >= 100) return { s: 1, m: false };
-            if(n <= 39) return { s: 3, m: true };
-            if(n <= 49) return { s: 1, m: false };
+        if (type === 'hr') {
+            if (n >= 140) return { s: 3, m: true };
+            if (n >= 130) return { s: 3, m: false };
+            if (n >= 110) return { s: 2, m: false };
+            if (n >= 100) return { s: 1, m: false };
+            if (n <= 39) return { s: 3, m: true };
+            if (n <= 49) return { s: 1, m: false };
             return { s: 0, m: false };
         }
-        if(type === 'temp') {
-            if(n >= 38.6) return { s: 2, m: false };
-            if(n >= 38.0) return { s: 1, m: false };
-            if(n <= 35.0) return { s: 3, m: false };
-            if(n <= 36.0) return { s: 1, m: false };
+        if (type === 'temp') {
+            if (n >= 38.6) return { s: 2, m: false };
+            if (n >= 38.0) return { s: 1, m: false };
+            if (n <= 35.0) return { s: 3, m: false };
+            if (n <= 36.0) return { s: 1, m: false };
             return { s: 0, m: false };
         }
         return { s: 0, m: false };
@@ -327,11 +327,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const rBp = getScore('sbp', sbp);
         const rHr = getScore('hr', hr);
         const rTp = getScore('temp', temp);
-        
-        let rAv = { s:0, m:false };
-        if(avpu === 'V') rAv.s = 2;
-        else if(avpu === 'P') rAv.s = 3;
-        else if(avpu === 'U') { rAv.s = 3; rAv.m = true; }
+
+        let rAv = { s: 0, m: false };
+        if (avpu === 'V') rAv.s = 2;
+        else if (avpu === 'P') rAv.s = 3;
+        else if (avpu === 'U') { rAv.s = 3; rAv.m = true; }
 
         document.getElementById('score_rr').innerText = rR.m ? 'M' : rR.s;
         document.getElementById('score_spo2').innerText = rSp.m ? 'M' : rSp.s;
@@ -342,97 +342,97 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('score_avpu').innerText = rAv.m ? 'M' : rAv.s;
 
         total = rR.s + rSp.s + rO2.s + rBp.s + rHr.s + rTp.s + rAv.s;
-        if(rR.m || rSp.m || rBp.m || rHr.m || rAv.m) isM = true;
+        if (rR.m || rSp.m || rBp.m || rHr.m || rAv.m) isM = true;
 
         document.getElementById('calc_total_display').innerText = total + (isM ? ' (M)' : '');
 
         const mainAdds = document.getElementById('adds');
-        if(mainAdds) {
+        if (mainAdds) {
             mainAdds.value = total;
             mainAdds.dispatchEvent(new Event('input'));
         }
 
         const mAlert = document.getElementById('mScoreAlert');
-        if(mAlert) {
+        if (mAlert) {
             mAlert.style.display = isM ? 'block' : 'none';
         }
 
         // --- SYNC TO A-E (Main Assessment) ---
-        if(rr) syncVal('b_rr', rr);
-        if(spo2) syncVal('b_spo2', spo2 + (spo2.includes('%') ? '' : '%'));
-        
-        if(o2Val) {
-             syncVal('b_device', o2Val); 
-             const devEl = document.getElementById('b_device');
-             if(devEl) devEl.dataset.manual = 'true';
+        if (rr) syncVal('b_rr', rr);
+        if (spo2) syncVal('b_spo2', spo2 + (spo2.includes('%') ? '' : '%'));
+
+        if (o2Val) {
+            syncVal('b_device', o2Val);
+            const devEl = document.getElementById('b_device');
+            if (devEl) devEl.dataset.manual = 'true';
         }
 
         // --- SYNC TO RISK ASSESSMENT (Respiratory) ---
         // If oxygen support selected in calculator, set Risk Assessment and open gate
-        if(o2Val) {
-             const lowerVal = o2Val.toLowerCase();
-             let selectedMode = null;
-             let selectedFlow = null;
-             
-             // Determine which oxygen support mode and extract flow if applicable
-             if(lowerVal === 'ra') {
-                 selectedMode = 'RA';
-             } else if(lowerVal.includes('hfnp') || (lowerVal.includes('hf') && mode === 'hf')) {
-                 selectedMode = 'HFNP';
-             } else if(lowerVal.includes('np') || lowerVal.includes('nasal')) {
-                 selectedMode = 'NP';
-                 // Extract flow for NP
-                 const flowMatch = o2Val.match(/(\d+)/);
-                 if(flowMatch) selectedFlow = flowMatch[1];
-             } else if(lowerVal.includes('niv')) {
-                 selectedMode = 'NIV';
-             } else if(lowerVal.includes('trache')) {
-                 selectedMode = 'Trache';
-             }
-             
-             // Only open respiratory concern gate if NOT room air
-             if(selectedMode && selectedMode !== 'RA') {
-                 const respGateYes = document.querySelector('#seg_resp_concern .seg-btn[data-value="true"]');
-                 if(respGateYes && !respGateYes.classList.contains('active')) {
-                     respGateYes.click();
-                 }
-             }
-             
-             // Click the appropriate oxygen mode button
-             if(selectedMode) {
-                 const oxModBtn = document.querySelector(`#oxMod .select-btn[data-value="${selectedMode}"]`);
-                 if(oxModBtn && !oxModBtn.classList.contains('active')) {
-                     oxModBtn.click();
-                 }
-             }
-             
-             // Set NP flow if applicable
-             if(selectedFlow && selectedMode === 'NP') {
-                 const npFlowInput = document.getElementById('npFlow');
-                 if(npFlowInput) {
-                     npFlowInput.value = selectedFlow;
-                     npFlowInput.dispatchEvent(new Event('input'));
-                 }
-             }
+        if (o2Val) {
+            const lowerVal = o2Val.toLowerCase();
+            let selectedMode = null;
+            let selectedFlow = null;
+
+            // Determine which oxygen support mode and extract flow if applicable
+            if (lowerVal === 'ra') {
+                selectedMode = 'RA';
+            } else if (lowerVal.includes('hfnp') || (lowerVal.includes('hf') && mode === 'hf')) {
+                selectedMode = 'HFNP';
+            } else if (lowerVal.includes('np') || lowerVal.includes('nasal')) {
+                selectedMode = 'NP';
+                // Extract flow for NP
+                const flowMatch = o2Val.match(/(\d+)/);
+                if (flowMatch) selectedFlow = flowMatch[1];
+            } else if (lowerVal.includes('niv')) {
+                selectedMode = 'NIV';
+            } else if (lowerVal.includes('trache')) {
+                selectedMode = 'Trache';
+            }
+
+            // Only open respiratory concern gate if NOT room air
+            if (selectedMode && selectedMode !== 'RA') {
+                const respGateYes = document.querySelector('#seg_resp_concern .seg-btn[data-value="true"]');
+                if (respGateYes && !respGateYes.classList.contains('active')) {
+                    respGateYes.click();
+                }
+            }
+
+            // Click the appropriate oxygen mode button
+            if (selectedMode) {
+                const oxModBtn = document.querySelector(`#oxMod .select-btn[data-value="${selectedMode}"]`);
+                if (oxModBtn && !oxModBtn.classList.contains('active')) {
+                    oxModBtn.click();
+                }
+            }
+
+            // Set NP flow if applicable
+            if (selectedFlow && selectedMode === 'NP') {
+                const npFlowInput = document.getElementById('npFlow');
+                if (npFlowInput) {
+                    npFlowInput.value = selectedFlow;
+                    npFlowInput.dispatchEvent(new Event('input'));
+                }
+            }
         }
-        
-        if(sbp) {
+
+        if (sbp) {
             let bpStr = sbp;
-            if(dbp) bpStr += `/${dbp}`;
+            if (dbp) bpStr += `/${dbp}`;
             syncVal('c_nibp', bpStr);
         }
 
-        if(hr) syncVal('c_hr', hr);
-        if(temp) syncVal('e_temp', temp);
-        
+        if (hr) syncVal('c_hr', hr);
+        if (temp) syncVal('e_temp', temp);
+
         // --- UPDATED AVPU MAPPING ---
-        if(avpu) {
+        if (avpu) {
             // Updated mapping based on request
-            const map = { 
-                'A': 'Alert', 
-                'V': 'alert to voice', 
-                'P': 'alert to pain', 
-                'U': 'unresponsive' 
+            const map = {
+                'A': 'Alert',
+                'V': 'alert to voice',
+                'P': 'alert to pain',
+                'U': 'unresponsive'
             };
             syncVal('d_alert', map[avpu] || '');
         }
@@ -440,9 +440,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function syncVal(id, val) {
         const el = document.getElementById(id);
-        if(el) {
+        if (el) {
             el.value = val;
-            el.dispatchEvent(new Event('input')); 
+            el.dispatchEvent(new Event('input'));
         }
     }
 });

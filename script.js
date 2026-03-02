@@ -87,7 +87,7 @@ const comorbMap = {
 const staticInputs = [
     'reviewTime', 'ptName', 'ptMrn', 'ptAge', 'ptWeight', 'ptWard', 'ptBed', 'ptWardOther', 'ptAdmissionReason', 'icuSummary', 'icuLos', 'stepdownDate',
     'npFlow', 'hfnpFio2', 'hfnpFlow', 'nivFio2', 'nivPeep', 'nivPs', 'override', 'overrideNote',
-    'trache_details_note', 'mods_score', 'mods_details', 'airway_a', 'a_comment', 'b_rr', 'b_spo2', 'b_device', 'b_wob', 'b_comment',
+    'trache_details_note', 'mods_score', 'mods_details', 'airway_a', 'a_comment', 'b_rr', 'b_spo2', 'b_device', 'b_wob', 'b_cough', 'b_comment',
     'c_hr', 'c_hr_rhythm', 'c_nibp', 'c_cr', 'c_perf', 'c_comment', 'd_alert', 'd_pain', 'd_comment', 'e_temp', 'e_bsl', 'e_fluid', 'e_uop', 'e_comment', 'atoe_adds',
     'ae_mobility', 'ae_diet', 'ae_bowels', 'bowel_date',
     'bl_wcc', 'bl_crp', 'bl_neut', 'bl_lymph', 'bl_hb', 'bl_plts', 'bl_k', 'bl_na',
@@ -106,7 +106,7 @@ const segmentedInputs = [
     'resp_concern', 'renal', 'immobility', 'infection', 'new_bloods_ordered',
     'neuro_gate', 'nutrition_adequate', 'electrolyte_gate', 'pressors', 'hac',
     'stepdown_suitable', 'comorbs_gate',
-    'renal_chronic', 'renal_chronic_bloods', 
+    'renal_chronic', 'renal_chronic_bloods',
     'infection_downtrend', 'infection_downtrend_bloods',
     'dialysis_type', 'sleep_quality', 'pain_control', 'neuro_psych', 'pics',
     'lactate_trend', 'resp_dyspnea', 'resp_tachypnea', 'resp_rapid_wean', 'resp_poor_cough', 'resp_poor_swallow'
@@ -132,7 +132,7 @@ const deviceTypes = ['CVC', 'PICC', 'Other CVAD', 'PIVC', 'Arterial Line', 'Ente
 function nowTimeStr() { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 function todayDateStr() { const d = new Date(); return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`; }
 function formatDateDDMMYYYY(isoStr) {
-    if(!isoStr) return '';
+    if (!isoStr) return '';
     const [y, m, d] = isoStr.split('-');
     return `${d}/${m}/${y}`;
 }
@@ -146,16 +146,16 @@ function sentenceCase(str) {
 }
 
 function joinGrammatically(parts) {
-    if(!parts || parts.length === 0) return '';
-    if(parts.length === 1) return sentenceCase(parts[0]);
+    if (!parts || parts.length === 0) return '';
+    if (parts.length === 1) return sentenceCase(parts[0]);
     const [first, ...rest] = parts;
     const procRest = rest.map(s => sentenceCase(s));
     return [sentenceCase(first), ...procRest].join(', ');
 }
 
 function joinGrammatically(parts) {
-    if(!parts || parts.length === 0) return '';
-    if(parts.length === 1) return parts[0];
+    if (!parts || parts.length === 0) return '';
+    if (parts.length === 1) return parts[0];
     const [first, ...rest] = parts;
     const procRest = rest.map(s => s.toLowerCase());
     return [first, ...procRest].join(', ');
@@ -213,8 +213,8 @@ function getState() {
             'lactate_trend'
         ].includes(id)) return;
         const el = $(`toggle_${id}`);
-        if (!el && id === 'chk_aperients') { const chk = $('chk_aperients'); if(chk) state[id] = chk.checked; return; }
-        if (!el && id === 'chk_unknown_blo_date') { const chk = $('chk_unknown_blo_date'); if(chk) state[id] = chk.checked; return; }
+        if (!el && id === 'chk_aperients') { const chk = $('chk_aperients'); if (chk) state[id] = chk.checked; return; }
+        if (!el && id === 'chk_unknown_blo_date') { const chk = $('chk_unknown_blo_date'); if (chk) state[id] = chk.checked; return; }
         state[id] = el ? (el.dataset.value === 'true') : false;
     });
 
@@ -228,7 +228,7 @@ function getState() {
 
     ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods'].forEach(id => {
         const el = $(id);
-        if(el) state[id] = el.checked;
+        if (el) state[id] = el.checked;
     });
 
     state['bowel_mode'] = document.querySelector('#panel_ae .quick-select.active')?.id || null;
@@ -260,20 +260,20 @@ function restoreState(state) {
         const group = $(`seg_${id}`);
         if (!group) return;
         group.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('active'));
-        
+
         let valStr = String(state[id]);
-        if(state[id] === true) valStr = "true";
-        if(state[id] === false) valStr = "false";
-        
+        if (state[id] === true) valStr = "true";
+        if (state[id] === false) valStr = "false";
+
         const target = group.querySelector(`.seg-btn[data-value="${valStr}"]`);
-        if(target) target.classList.add('active');
-        
+        if (target) target.classList.add('active');
+
         handleSegmentClick(id, valStr);
     });
 
     toggleInputs.forEach(id => {
-        if (id === 'chk_aperients') { const chk = $('chk_aperients'); if(chk) chk.checked = state[id]; return; }
-        if (id === 'chk_unknown_blo_date') { const chk = $('chk_unknown_blo_date'); if(chk) chk.checked = state[id]; return; }
+        if (id === 'chk_aperients') { const chk = $('chk_aperients'); if (chk) chk.checked = state[id]; return; }
+        if (id === 'chk_unknown_blo_date') { const chk = $('chk_unknown_blo_date'); if (chk) chk.checked = state[id]; return; }
         const el = $(`toggle_${id}`);
         if (el) {
             el.dataset.value = state[id] ? 'true' : 'false';
@@ -305,19 +305,19 @@ function restoreState(state) {
             if (state[id]) {
                 group.querySelector(`.select-btn[data-value="${state[id]}"]`)?.classList.add('active');
             }
-            if (id === 'neuroType') $('neuro_gate_content').style.display = 'block'; 
+            if (id === 'neuroType') $('neuro_gate_content').style.display = 'block';
         }
     });
 
     if (state['reviewType']) {
         const r = document.querySelector(`input[name="reviewType"][value="${state['reviewType']}"]`);
-        if(r) r.checked = true;
+        if (r) r.checked = true;
         updateWardOptions();
         updateReviewTypeVisibility();
     }
     if (state['clinicianRole']) {
         const r = document.querySelector(`input[name="clinicianRole"][value="${state['clinicianRole']}"]`);
-        if(r) r.checked = true;
+        if (r) r.checked = true;
     }
 
     ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods'].forEach(id => {
@@ -335,12 +335,12 @@ function restoreState(state) {
     if (state.ptWard) {
         updateWardOptions();
         const sel = $('ptWard');
-        if(sel) sel.value = state.ptWard;
+        if (sel) sel.value = state.ptWard;
     }
     updateWardOtherVisibility();
 
     const devCont = $('devices-container');
-    if(devCont) {
+    if (devCont) {
         devCont.innerHTML = '';
         if (state.devices) {
             deviceTypes.forEach(type => {
@@ -368,31 +368,54 @@ function restoreState(state) {
 /* --- 4. INTERACTIVITY & EVENTS --- */
 function initialize() {
     updateLastSaved();
+
+    // Improve keyboard navigation by skipping quick-select and button-group buttons when tabbing
+    document.querySelectorAll('.quick-select, .select-btn, .detail-toggle, .accordion, .trend-btn').forEach(btn => {
+        btn.setAttribute('tabindex', '-1');
+    });
+
+    // Ensure focused elements are not hidden behind the sticky footer
+    document.addEventListener('focusin', (e) => {
+        if (e.target && e.target.tagName && ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+            const footer = document.querySelector('footer');
+            if (footer) {
+                const rect = e.target.getBoundingClientRect();
+                const footerRect = footer.getBoundingClientRect();
+                if (rect.bottom > footerRect.top - 20) {
+                    window.scrollBy({
+                        top: rect.bottom - footerRect.top + 40,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+    });
+
     const compute = debounce(() => { computeAll(); checkBloodRanges(); saveState(true); }, 350);
 
     window.addDevice = (type, val, insertionDate = '') => { createDeviceEntry(type, val, insertionDate); compute(); };
-    
+
     // Export Quick Review functions for importer plugin
     window.showQuickReviewPrompt = showQuickReviewPrompt;
     window.previousCategoryData = previousCategoryData;
-    
+
     // --- Manual Edit Protection ---
     const sumBox = $('summary');
-    if(sumBox) {
+    if (sumBox) {
         sumBox.addEventListener('input', () => {
-            if(!sumBox.classList.contains('script-updating')) {
+            if (!sumBox.classList.contains('script-updating')) {
                 isManuallyEdited = true;
                 const warn = $('manual_edit_warning');
-                if(warn) warn.style.display = 'flex';
+                if (warn) warn.style.display = 'flex';
             }
         });
     }
 
     // Force Update Button
     const forceBtn = $('btn_force_update');
-    if(forceBtn) {
+    if (forceBtn) {
         forceBtn.addEventListener('click', () => {
-            if(confirm("This will overwrite your manual edits with the latest auto-generated data. Continue?")) {
+            if (confirm("This will overwrite your manual edits with the latest auto-generated data. Continue?")) {
                 isManuallyEdited = false;
                 window.devicesModifiedSinceLastSummary = false;
                 $('manual_edit_warning').style.display = 'none';
@@ -405,16 +428,16 @@ function initialize() {
     const btnYes = $('btn_discharge_yes');
     if (btnYes) {
         btnYes.addEventListener('click', (e) => {
-            e.preventDefault(); 
+            e.preventDefault();
             const chk = $('chk_discharge_alert');
             if (chk) {
                 chk.checked = true;
-                compute(); 
+                compute();
                 showToast("Patient marked for discharge", 1500);
             }
         });
     }
-    
+
     const btnNo = $('btn_discharge_no');
     if (btnNo) {
         btnNo.addEventListener('click', (e) => {
@@ -422,7 +445,7 @@ function initialize() {
             window.dismissedDischarge = true;
             const continueChk = $('chk_continue_alert');
             if (continueChk) continueChk.checked = true;
-            compute(); 
+            compute();
         });
     }
 
@@ -430,7 +453,7 @@ function initialize() {
     function syncSegments(id1, id2, type) {
         const g1 = $(id1);
         const g2 = $(id2);
-        if(!g1 || !g2) return;
+        if (!g1 || !g2) return;
 
         [g1, g2].forEach(group => {
             group.querySelectorAll('.seg-btn').forEach(btn => {
@@ -440,10 +463,10 @@ function initialize() {
                         const otherGroup = (group === g1) ? g2 : g1;
                         otherGroup.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
                         otherGroup.querySelector(`.seg-btn[data-value="${val}"]`)?.classList.add('active');
-                        
-                        if(val === "true") {
-                            if(type === 'renal') showToast("Mitigation applied", 1500);
-                            if(type === 'infection') showToast("Mitigation applied", 1500);
+
+                        if (val === "true") {
+                            if (type === 'renal') showToast("Mitigation applied", 1500);
+                            if (type === 'infection') showToast("Mitigation applied", 1500);
                         }
                         compute();
                     }, 50);
@@ -451,7 +474,7 @@ function initialize() {
             });
         });
     }
-    
+
     syncSegments('seg_renal_chronic', 'seg_renal_chronic_bloods', 'renal');
     syncSegments('seg_infection_downtrend', 'seg_infection_downtrend_bloods', 'infection');
 
@@ -483,7 +506,7 @@ function initialize() {
     });
 
     document.addEventListener('input', (e) => {
-        if(e.target && e.target.classList.contains('scraped-data')) {
+        if (e.target && e.target.classList.contains('scraped-data')) {
             e.target.classList.remove('scraped-data');
         }
         const wrapper = e.target?.closest?.('.detail-wrapper');
@@ -518,12 +541,12 @@ function initialize() {
 
     // === AUTO-RISK LISTENERS ===
     const rrInput = $('b_rr');
-    if(rrInput) {
+    if (rrInput) {
         rrInput.addEventListener('input', debounce(() => {
             const val = parseFloat(rrInput.value);
-            if(!isNaN(val) && val > 20) {
+            if (!isNaN(val) && val > 20) {
                 const tachToggle = $('toggle_resp_tachypnea');
-                if(tachToggle && tachToggle.dataset.value === 'false') {
+                if (tachToggle && tachToggle.dataset.value === 'false') {
                     tachToggle.click();
                     showToast('Auto-selected Tachypnea (>20)', 1500);
                 }
@@ -535,48 +558,96 @@ function initialize() {
         btn.addEventListener('click', () => {
             const renalSeg = $('seg_renal');
             const yesBtn = renalSeg.querySelector('.seg-btn[data-value="true"]');
-            if(yesBtn && !yesBtn.classList.contains('active')) yesBtn.click();
-            const btnVal = btn.dataset.value; 
-            if((btnVal === "Oliguric" || btnVal.includes("<0.5")) && $('toggle_renal_oliguria').dataset.value === "false") $('toggle_renal_oliguria').click();
-            if(btnVal === "Anuric" && $('toggle_renal_anuria').dataset.value === "false") $('toggle_renal_anuria').click();
-            if(btnVal === "Dialysis" && $('toggle_renal_dialysis').dataset.value === "false") $('toggle_renal_dialysis').click();
+            if (yesBtn && !yesBtn.classList.contains('active')) yesBtn.click();
+            const btnVal = btn.dataset.value;
+            if ((btnVal === "Oliguric" || btnVal.includes("<0.5")) && $('toggle_renal_oliguria').dataset.value === "false") $('toggle_renal_oliguria').click();
+            if (btnVal === "Anuric" && $('toggle_renal_anuria').dataset.value === "false") $('toggle_renal_anuria').click();
+            if (btnVal === "Dialysis" && $('toggle_renal_dialysis').dataset.value === "false") $('toggle_renal_dialysis').click();
         });
     });
 
     const tempInput = $('e_temp');
-    if(tempInput) {
+    if (tempInput) {
         tempInput.addEventListener('input', debounce(() => {
             const t = parseFloat(tempInput.value);
-            if(!isNaN(t) && t > 38.0) {
+            if (!isNaN(t) && t > 38.0) {
                 const infSeg = $('seg_infection');
                 const yesBtn = infSeg.querySelector('.seg-btn[data-value="true"]');
-                if(yesBtn && !yesBtn.classList.contains('active')) yesBtn.click();
+                if (yesBtn && !yesBtn.classList.contains('active')) yesBtn.click();
             }
         }, 600));
     }
 
     const neuroInput = $('d_alert');
-    if(neuroInput) {
+    if (neuroInput) {
         neuroInput.addEventListener('input', debounce((e) => {
             const val = e.target.value.toLowerCase();
             const keywords = ['confus', 'drows', 'agitat', 'delirium', 'somnolent', 'gcs 14', 'gcs 13', 'gcs 12', 'gcs 11', 'gcs 10', 'gcs 9', 'gcs 8'];
             const isGcsLow = (val.match(/gcs\s*(\d+)/i)?.[1] || 15) < 15;
-            
-            if(keywords.some(k => val.includes(k)) || isGcsLow) {
-                 const neuroSeg = $('seg_neuro_gate');
-                 const yesBtn = neuroSeg.querySelector('.seg-btn[data-value="true"]');
-                 if(yesBtn && !yesBtn.classList.contains('active')) yesBtn.click();
+
+            if (keywords.some(k => val.includes(k)) || isGcsLow) {
+                const neuroSeg = $('seg_neuro_gate');
+                const yesBtn = neuroSeg.querySelector('.seg-btn[data-value="true"]');
+                if (yesBtn && !yesBtn.classList.contains('active')) yesBtn.click();
             }
         }, 800));
+    }
+
+    // === B: COUGH STRENGTH <-> RESP POOR COUGH bidirectional ===
+    const coughInput = $('b_cough');
+    if (coughInput) {
+        coughInput.addEventListener('input', debounce(() => {
+            const val = coughInput.value.toLowerCase();
+            if (val.includes('weak') || val.includes('poor') || val.includes('ineffective')) {
+                const toggle = $('toggle_resp_poor_cough');
+                if (toggle && toggle.dataset.value === 'false') {
+                    toggle.click();
+                    showToast('Auto-selected Poor Cough (B)', 1500);
+                }
+            }
+        }, 600));
+    }
+
+    // Reverse: resp_poor_cough toggle -> write 'Weak' in b_cough if empty
+    const poorCoughToggle = $('toggle_resp_poor_cough');
+    if (poorCoughToggle) {
+        const origHandler = poorCoughToggle.onclick;
+        poorCoughToggle.addEventListener('click', () => {
+            setTimeout(() => {
+                const coughEl = $('b_cough');
+                if (coughEl && !coughEl.value && poorCoughToggle.dataset.value === 'true') {
+                    coughEl.value = 'Weak';
+                    coughEl.dispatchEvent(new Event('input'));
+                }
+            }, 50);
+        });
+    }
+
+
+    const uopInput = $('e_uop');
+    if (uopInput) {
+        uopInput.addEventListener('input', debounce(() => {
+            const val = uopInput.value.toLowerCase();
+            if (val.includes('oligur') || val.includes('<0.5') || val.includes('low') || val.includes('decreas')) {
+                const renalSeg = $('seg_renal');
+                const yesBtn = renalSeg?.querySelector('.seg-btn[data-value="true"]');
+                if (yesBtn && !yesBtn.classList.contains('active')) {
+                    yesBtn.click();
+                    showToast('Auto-selected Renal Concern (UOP)', 1500);
+                }
+                const oliguToggle = $('toggle_renal_oliguria');
+                if (oliguToggle && oliguToggle.dataset.value === 'false') oliguToggle.click();
+            }
+        }, 600));
     }
 
     document.querySelectorAll('.nav-item').forEach(link => {
         link.addEventListener('click', (e) => {
             const targetId = link.getAttribute('href').substring(1);
             const targetEl = document.getElementById(targetId);
-            if(targetEl && targetEl.classList.contains('accordion-wrapper')) {
+            if (targetEl && targetEl.classList.contains('accordion-wrapper')) {
                 const panel = targetEl.querySelector('.panel');
-                if(panel && panel.style.display !== 'block') {
+                if (panel && panel.style.display !== 'block') {
                     panel.style.display = 'block';
                     targetEl.querySelector('.icon').textContent = '[-]';
                 }
@@ -585,11 +656,11 @@ function initialize() {
     });
 
     const weightInput = $('ptWeight');
-    if(weightInput) {
+    if (weightInput) {
         weightInput.addEventListener('input', () => {
             const w = parseFloat(weightInput.value);
             const targetEl = $('target_uop_display');
-            if(w && !isNaN(w)) {
+            if (w && !isNaN(w)) {
                 const target = (w * 0.5).toFixed(1);
                 targetEl.textContent = `Target: >${target} ml/hr`;
                 targetEl.style.display = 'block';
@@ -603,9 +674,9 @@ function initialize() {
         btn.addEventListener('click', () => {
             const time = btn.dataset.time;
             const input = $('pressor_ceased_time');
-            if(input) {
+            if (input) {
                 input.value = time;
-                input.dispatchEvent(new Event('input')); 
+                input.dispatchEvent(new Event('input'));
             }
         });
     });
@@ -618,7 +689,7 @@ function initialize() {
     const fluidInput = $('e_fluid');
     const oedemaToggle = $('toggle_renal_oedema');
     const dehydratedToggle = $('toggle_renal_dehydrated');
-    
+
     if (fluidInput && oedemaToggle && dehydratedToggle) {
         fluidInput.addEventListener('input', () => {
             const val = fluidInput.value.toLowerCase();
@@ -633,7 +704,7 @@ function initialize() {
                 dehydratedToggle.click();
             }
         });
-        
+
         [oedemaToggle, dehydratedToggle].forEach(toggle => {
             toggle.addEventListener('click', () => {
                 setTimeout(() => {
@@ -657,17 +728,17 @@ function initialize() {
     document.querySelectorAll('.quick-select').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
-            if(btn.classList.contains('risk-trigger') || btn.classList.contains('safe-trigger')) {
-                 const targetId = btn.dataset.target;
-                 const target = $(targetId);
-                 if(target) {
-                     if(btn.dataset.stack === "true") {
-                         const current = target.value;
-                         if(!current.includes(btn.dataset.value)) target.value = current ? `${current}, ${btn.dataset.value}` : btn.dataset.value;
-                     } else { target.value = btn.dataset.value; }
-                     target.dispatchEvent(new Event('input'));
-                 }
-                 return;
+            if (btn.classList.contains('risk-trigger') || btn.classList.contains('safe-trigger')) {
+                const targetId = btn.dataset.target;
+                const target = $(targetId);
+                if (target) {
+                    if (btn.dataset.stack === "true") {
+                        const current = target.value;
+                        if (!current.includes(btn.dataset.value)) target.value = current ? `${current}, ${btn.dataset.value}` : btn.dataset.value;
+                    } else { target.value = btn.dataset.value; }
+                    target.dispatchEvent(new Event('input'));
+                }
+                return;
             }
             const targetId = btn.dataset.target;
             if (targetId) {
@@ -776,13 +847,13 @@ function initialize() {
             // Sync dialysis toggles bidirectionally
             if (el.id === 'toggle_renal_dialysis') {
                 const comorb = $('toggle_comorb_dialysis');
-                if(comorb && comorb.dataset.value !== el.dataset.value) {
+                if (comorb && comorb.dataset.value !== el.dataset.value) {
                     comorb.click();
                 }
             }
             if (el.id === 'toggle_comorb_dialysis') {
                 const renal = $('toggle_renal_dialysis');
-                if(renal && renal.dataset.value !== el.dataset.value) {
+                if (renal && renal.dataset.value !== el.dataset.value) {
                     renal.click();
                 }
             }
@@ -797,13 +868,13 @@ function initialize() {
             btn.addEventListener('click', () => {
                 group.querySelectorAll('.select-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
+
                 if (group.id === 'oxMod') {
                     const devEl = $('b_device');
-                    if(devEl) devEl.dataset.manual = 'false';
+                    if (devEl) devEl.dataset.manual = 'false';
                     toggleOxyFields();
                 }
-                
+
                 if (group.id === 'neuroType') $('neuro_gate_content').style.display = 'block';
                 saveState(true); // Save immediately to prevent loss from debouncing
                 computeAll(); // Call immediately to update risks
@@ -813,7 +884,7 @@ function initialize() {
     });
 
     staticInputs.forEach(id => { const el = $(id); if (el) el.addEventListener('input', compute); });
-    
+
     // Date inputs need both input and change events
     $('bowel_date')?.addEventListener('change', compute);
     $('stepdownDate')?.addEventListener('change', compute);
@@ -835,7 +906,7 @@ function initialize() {
         const continueChk = $('chk_continue_alert');
         const dischargeChk = $('chk_discharge_alert');
         const disPrompt = $('discharge_prompt');
-        
+
         if (continueChk && continueChk.checked) {
             // Uncheck discharge checkbox
             if (dischargeChk) dischargeChk.checked = false;
@@ -869,7 +940,7 @@ function initialize() {
 
     $('clearDataBtnTop')?.addEventListener('click', () => showClearDataModal());
     $('footerClear')?.addEventListener('click', () => showClearDataModal());
-    
+
     $('closeClearModal')?.addEventListener('click', hideClearDataModal);
     $('confirmClearData')?.addEventListener('click', () => {
         hideClearDataModal();
@@ -880,7 +951,7 @@ function initialize() {
         if (!text) { showToast('Summary is empty', 1500); return; }
         navigator.clipboard.writeText(text).then(() => showToast('✓ Copied to clipboard', 1500));
     });
-    
+
     // Quick Review Mode handlers
     $('btnQuickReview')?.addEventListener('click', enableQuickReviewMode);
     $('btnFullReview')?.addEventListener('click', () => {
@@ -888,7 +959,7 @@ function initialize() {
         if (prompt) prompt.style.display = 'none';
     });
     $('btnExitQuickReview')?.addEventListener('click', exitQuickReviewMode);
-    
+
     // Mobile Nav handlers
     $('floatingNavBtn')?.addEventListener('click', openMobileNav);
     $('closeMobileNav')?.addEventListener('click', closeMobileNav);
@@ -898,7 +969,7 @@ function initialize() {
     document.querySelectorAll('.mobile-nav-link').forEach(link => {
         link.addEventListener('click', closeMobileNav);
     });
-    
+
     $('footerCopy')?.addEventListener('click', () => {
         const text = $('summary').value;
         if (!text) { showToast('Nothing to copy', 1500); return; }
@@ -912,11 +983,11 @@ function initialize() {
 
 
     $('btnUseSameBloods')?.addEventListener('click', () => {
-         const blMap = { 
-            'lac_review': 'bl_lac_review', 'hb': 'bl_hb', 'wcc': 'bl_wcc', 'cr_review': 'bl_cr_review', 
-            'k': 'bl_k', 'na': 'bl_na', 'mg': 'bl_mg', 'phos': 'bl_phos', 'plts': 'bl_plts', 
+        const blMap = {
+            'lac_review': 'bl_lac_review', 'hb': 'bl_hb', 'wcc': 'bl_wcc', 'cr_review': 'bl_cr_review',
+            'k': 'bl_k', 'na': 'bl_na', 'mg': 'bl_mg', 'phos': 'bl_phos', 'plts': 'bl_plts',
             'alb': 'bl_alb', 'neut': 'bl_neut', 'lymph': 'bl_lymph', 'crp': 'bl_crp',
-            'bili': 'bl_bili', 'alt': 'bl_alt', 'inr': 'bl_inr', 'aptt': 'bl_aptt' 
+            'bili': 'bl_bili', 'alt': 'bl_alt', 'inr': 'bl_inr', 'aptt': 'bl_aptt'
         };
         if (window.prevBloods) {
             let count = 0;
@@ -929,7 +1000,7 @@ function initialize() {
                     count++;
                 }
             });
-            if(count > 0) {
+            if (count > 0) {
                 const ev = new Event('input');
                 Object.values(blMap).forEach(id => $(id)?.dispatchEvent(ev));
                 showToast(`Filled ${count} fields`, 1500);
@@ -943,10 +1014,10 @@ function initialize() {
     $('btnClearCurrentBloods')?.addEventListener('click', () => {
         const bloodFields = [
             'bl_lac_review', 'bl_hb', 'bl_wcc', 'bl_crp', 'bl_cr_review', 'bl_egfr',
-            'bl_k', 'bl_na', 'bl_mg', 'bl_phos', 'bl_plts', 'bl_alb', 
+            'bl_k', 'bl_na', 'bl_mg', 'bl_phos', 'bl_plts', 'bl_alb',
             'bl_neut', 'bl_lymph', 'bl_bili', 'bl_alt', 'bl_inr', 'bl_aptt'
         ];
-        
+
         let count = 0;
         bloodFields.forEach(id => {
             const field = $(id);
@@ -973,13 +1044,13 @@ function initialize() {
     // Clear Previous Blood Results (Prev: labels)
     $('btnClearPreviousBloods')?.addEventListener('click', () => {
         const prevLabels = [
-            'prev_bl_lac_review', 'prev_bl_hb', 'prev_bl_wcc', 'prev_bl_crp', 
-            'prev_bl_cr_review', 'prev_bl_egfr', 'prev_bl_k', 'prev_bl_na', 
-            'prev_bl_mg', 'prev_bl_phos', 'prev_bl_plts', 'prev_bl_alb', 
-            'prev_bl_neut', 'prev_bl_lymph', 'prev_bl_bili', 'prev_bl_alt', 
+            'prev_bl_lac_review', 'prev_bl_hb', 'prev_bl_wcc', 'prev_bl_crp',
+            'prev_bl_cr_review', 'prev_bl_egfr', 'prev_bl_k', 'prev_bl_na',
+            'prev_bl_mg', 'prev_bl_phos', 'prev_bl_plts', 'prev_bl_alb',
+            'prev_bl_neut', 'prev_bl_lymph', 'prev_bl_bili', 'prev_bl_alt',
             'prev_bl_inr', 'prev_bl_aptt'
         ];
-        
+
         let count = 0;
         prevLabels.forEach(id => {
             const label = $(id);
@@ -1004,6 +1075,7 @@ function initialize() {
         ['↑', '↓', '→'].forEach(t => {
             const btn = document.createElement('button');
             btn.className = 'trend-btn'; btn.textContent = t; btn.dataset.value = t;
+            btn.setAttribute('tabindex', '-1'); // Skip during keyboard nav
             btn.addEventListener('click', () => {
                 const was = btn.classList.contains('active');
                 group.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
@@ -1034,9 +1106,9 @@ function initialize() {
 
     ['red', 'amber'].forEach(t => {
         const btn = $(`override_${t}`);
-        if(btn) btn.addEventListener('click', () => {
+        if (btn) btn.addEventListener('click', () => {
             const isActive = btn.classList.contains('active');
-            
+
             // If clicking the same button again, deselect it (toggle off)
             if (isActive) {
                 $('override').value = 'none';
@@ -1090,11 +1162,11 @@ function handleSegmentClick(id, value) {
     const map = {
         'resp_concern': 'resp_gate_content',
         'renal': 'renal_gate_content',
-        'infection': 'infection_gate_content', 
+        'infection': 'infection_gate_content',
         'neuro_gate': 'neuro_gate_content',
         'nutrition_adequate': 'nutrition_context_wrapper',
         'electrolyte_gate': 'electrolyte_gate_content',
-        'pressors': 'pressor_gate_content', 
+        'pressors': 'pressor_gate_content',
         'immobility': 'immobility_note_wrapper',
         'after_hours': 'after_hours_note_wrapper',
         'hac': 'hac_content',
@@ -1111,17 +1183,17 @@ function handleSegmentClick(id, value) {
     if (map[id]) {
         const el = $(map[id]);
         if (el) {
-             if(id === 'stepdown_suitable' || id === 'nutrition_adequate') {
-                 el.style.display = (value === "false") ? 'block' : 'none';
-             } else if(id === 'pics') {
-                 // Show textarea when either positive or negative is selected
-                 el.style.display = (value === "positive" || value === "negative") ? 'block' : 'none';
-             } else {
-                 el.style.display = (value === "true") ? 'block' : 'none';
-             }
+            if (id === 'stepdown_suitable' || id === 'nutrition_adequate') {
+                el.style.display = (value === "false") ? 'block' : 'none';
+            } else if (id === 'pics') {
+                // Show textarea when either positive or negative is selected
+                el.style.display = (value === "positive" || value === "negative") ? 'block' : 'none';
+            } else {
+                el.style.display = (value === "true") ? 'block' : 'none';
+            }
         }
     }
-    
+
     // Clear dyspneaConcern value when resp_dyspnea is set to No
     if (id === 'resp_dyspnea' && value !== 'true') {
         const dyspInput = $('dyspneaConcern');
@@ -1152,26 +1224,26 @@ function updateWardOptions() {
 
 function updateReviewTypeVisibility() {
     const type = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
-    const dis = $('chk_discharge_wrapper'); if(dis) dis.style.display = (type === 'post') ? 'block' : 'none';
-    const uns = $('chk_unsuitable_wrapper'); if(uns) uns.style.display = (type === 'pre') ? 'block' : 'none';
-    const icu = $('icu_summary_wrapper'); if(icu) icu.style.display = (type === 'pre') ? 'block' : 'none';
+    const dis = $('chk_discharge_wrapper'); if (dis) dis.style.display = (type === 'post') ? 'block' : 'none';
+    const uns = $('chk_unsuitable_wrapper'); if (uns) uns.style.display = (type === 'pre') ? 'block' : 'none';
+    const icu = $('icu_summary_wrapper'); if (icu) icu.style.display = (type === 'pre') ? 'block' : 'none';
     const dateWrapper = $('stepdown_date_wrapper'); if (dateWrapper) dateWrapper.style.display = (type === 'post') ? 'contents' : 'none';
-    
+
     // Show/hide medical rounding checkbox based on review type
     const medRoundingWrapper = $('chk_medical_rounding_wrapper');
     const medRoundingPre = $('chk_medical_rounding_prestepdown');
     const continueAlertWrapper = $('chk_continue_alert_wrapper');
-    if(medRoundingWrapper) medRoundingWrapper.style.display = (type === 'post') ? 'block' : 'none';
-    if(medRoundingPre) medRoundingPre.style.display = (type === 'pre') ? 'block' : 'none';
-    if(continueAlertWrapper) continueAlertWrapper.style.display = (type === 'post') ? 'flex' : 'none';
-    
-    if (type === 'pre') { const c = $('chk_discharge_alert'); if(c) c.checked = false; }
+    if (medRoundingWrapper) medRoundingWrapper.style.display = (type === 'post') ? 'block' : 'none';
+    if (medRoundingPre) medRoundingPre.style.display = (type === 'pre') ? 'block' : 'none';
+    if (continueAlertWrapper) continueAlertWrapper.style.display = (type === 'post') ? 'flex' : 'none';
+
+    if (type === 'pre') { const c = $('chk_discharge_alert'); if (c) c.checked = false; }
 }
 
-function updateWardOtherVisibility() { 
+function updateWardOtherVisibility() {
     const w = $('ptWardOtherWrapper');
     const v = $('ptWard').value;
-    if(w) w.style.display = (v === 'Other') ? 'block' : 'none'; 
+    if (w) w.style.display = (v === 'Other') ? 'block' : 'none';
 }
 
 function updateDevicesSectionVisibility() {
@@ -1180,30 +1252,30 @@ function updateDevicesSectionVisibility() {
 
 function createDeviceEntry(type, val = '', insertionDate = '') {
     const c = $('devices-container');
-    if(!c) return;
+    if (!c) return;
     const div = document.createElement('div');
     div.className = 'device-entry';
     div.dataset.type = type;
-    
+
     // Devices that need insertion date tracking
     const trackedDevices = ['CVC', 'PICC', 'PIVC', 'Other CVAD', 'IDC', 'Vascath'];
     const hasDateField = trackedDevices.includes(type);
-    
+
     // Calculate dwell time and status indicator
     let dwellDays = 0;
     let borderColor = 'var(--line)';
     let infoText = '';
     let infoColor = '';
-    
+
     if (hasDateField && insertionDate) {
         const now = new Date();
         const deviceDate = new Date(insertionDate + 'T00:00:00');
         dwellDays = Math.floor((now - deviceDate) / (1000 * 60 * 60 * 24));
-        
+
         // Always show dwell time
         infoText = `${dwellDays}d dwell`;
         infoColor = 'var(--text)';
-        
+
         // Determine status and color based on device type and dwell time
         if (type === 'PIVC') {
             if (dwellDays >= 7) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
@@ -1215,53 +1287,53 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
             else if (dwellDays >= 7) { infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; borderColor = '#9333ea'; }
         }
     }
-    
+
     let html = `<div style="display:flex; flex-direction:column; gap:4px; width:100%; box-sizing:border-box;">`;
     html += `<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px; background:var(--input-bg); border:1px solid ${borderColor}; border-radius:6px; box-sizing:border-box;">`;
     html += `<div style="flex-shrink:0; font-weight:600; font-size:0.85rem; min-width:80px;">${type}</div>`;
-    
+
     if (hasDateField) {
         html += `<input class="device-date" type="date" value="${insertionDate}" placeholder="Date" style="padding:4px 6px; border:1px solid var(--line); border-radius:4px; font-size:0.8rem; width:130px;"/>`;
     }
-    
+
     html += `<input class="device-textarea" type="text" placeholder="details..." value="${val}" style="flex:1; min-width:120px; padding:4px 8px; border:1px solid var(--line); border-radius:4px; font-size:0.85rem; box-sizing:border-box;"/>`;
     html += `<div class="remove-entry" style="cursor:pointer; font-weight:bold; color:var(--accent); font-size:1rem; flex-shrink:0;">✕</div>`;
     html += `</div>`;
-    
+
     if (infoText && infoColor) {
         html += `<div class="device-info-text" style="font-size:0.8rem; font-weight:600; color:${infoColor}; padding-left:8px;">${infoText}</div>`;
     }
-    
+
     html += `</div>`;
-    
+
     div.innerHTML = html;
-    div.querySelector('.remove-entry').addEventListener('click', () => { 
-        div.remove(); 
+    div.querySelector('.remove-entry').addEventListener('click', () => {
+        div.remove();
         window.devicesModifiedSinceLastSummary = true;
         updateDevicesSectionVisibility();
-        saveState(true); 
+        saveState(true);
         computeAll(); // Immediate update for device removal
     });
     const textarea = div.querySelector('.device-textarea');
     if (textarea) {
-        textarea.addEventListener('input', () => { 
+        textarea.addEventListener('input', () => {
             window.devicesModifiedSinceLastSummary = true;
-            saveState(true); 
+            saveState(true);
             computeAll(); // Immediate update when editing device details
         });
     }
     if (hasDateField) {
-        div.querySelector('.device-date').addEventListener('change', () => { 
+        div.querySelector('.device-date').addEventListener('change', () => {
             // Recalculate and update display immediately
             const newDate = div.querySelector('.device-date').value;
             if (newDate) {
                 const deviceDate = new Date(newDate + 'T00:00:00');
                 const dwellDays = Math.floor((new Date() - deviceDate) / (1000 * 60 * 60 * 24));
-                
+
                 let newBorderColor = 'var(--line)';
                 let infoText = `${dwellDays}d dwell`;
                 let infoColor = 'var(--text)';
-                
+
                 if (type === 'PIVC') {
                     if (dwellDays >= 7) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; }
                     else if (dwellDays >= 5) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, long dwell`; infoColor = 'var(--amber)'; }
@@ -1271,13 +1343,13 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
                     else if (dwellDays >= 10) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; }
                     else if (dwellDays >= 7) { newBorderColor = '#9333ea'; infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; }
                 }
-                
+
                 // Update border
                 const innerDiv = div.querySelector('div[style*="border"]');
                 if (innerDiv) {
                     innerDiv.style.borderColor = newBorderColor;
                 }
-                
+
                 // Update or create info text
                 let infoTextEl = div.querySelector('.device-info-text');
                 if (infoText && infoColor) {
@@ -1294,7 +1366,7 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
                 }
             }
             window.devicesModifiedSinceLastSummary = true;
-            saveState(true); 
+            saveState(true);
             computeAll(); // Immediate update for device date change
         });
     }
@@ -1315,17 +1387,17 @@ function toggleOxyFields() {
 function toggleInfusionsBox() {
     const type = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
     const w = $('infusions_wrapper');
-    if(w) w.style.display = 'grid'; // Always show infusions, electrolyte plan, and new bloods
+    if (w) w.style.display = 'grid'; // Always show infusions, electrolyte plan, and new bloods
 }
 
 function toggleBowelDate(mode) {
     const w = $('bowel_date_wrapper');
-    if(w) w.style.display = mode ? 'block' : 'none';
+    if (w) w.style.display = mode ? 'block' : 'none';
     if (mode) {
         const l = $('bowel_date_label');
-        if(l) l.textContent = (mode === 'btn_bno') ? 'Date Last Opened' : 'Date BO';
+        if (l) l.textContent = (mode === 'btn_bno') ? 'Date Last Opened' : 'Date BO';
         const ap = $('aperients_wrapper');
-        if(ap) ap.style.display = (mode === 'btn_bno') ? 'block' : 'none';
+        if (ap) ap.style.display = (mode === 'btn_bno') ? 'block' : 'none';
         handleUnknownBLODate();
     }
 }
@@ -1335,7 +1407,7 @@ function handleUnknownBLODate() {
     const dateInput = $('bowel_date');
     const todayBtn = $('btn_bowel_today');
     const yesterdayBtn = $('btn_bowel_yesterday');
-    
+
     if (unknownChk && dateInput) {
         const isUnknown = unknownChk.checked;
         dateInput.disabled = isUnknown;
@@ -1366,60 +1438,60 @@ function hideClearDataModal() {
 
 function clearData() {
     hideClearDataModal();
-    
+
     // Exit Quick Review Mode if active
     if (isQuickReviewMode) {
         exitQuickReviewMode();
     }
-    
+
     pushUndo(getState());
-    
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
     document.querySelectorAll('.accordion').forEach(btn => {
         btn.setAttribute('aria-expanded', 'false');
         const icon = btn.querySelector('.icon');
-        if(icon) icon.textContent = '[+]';
+        if (icon) icon.textContent = '[+]';
     });
     sessionStorage.removeItem(ACCORDION_KEY);
 
-    staticInputs.forEach(id => { 
+    staticInputs.forEach(id => {
         if ($(id)) {
-            $(id).value = ''; 
-            $(id).classList.remove('scraped-data'); 
+            $(id).value = '';
+            $(id).classList.remove('scraped-data');
         }
     });
 
-    const impTxt = $('importText'); if(impTxt) impTxt.value = '';
+    const impTxt = $('importText'); if (impTxt) impTxt.value = '';
 
     document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
     document.querySelectorAll('input[type="checkbox"]').forEach(e => e.checked = false);
     document.querySelectorAll('.toggle-label').forEach(e => e.dataset.value = 'false');
     document.querySelectorAll('.blood-abnormal').forEach(e => e.classList.remove('blood-abnormal'));
 
-    const dc = $('devices-container'); if(dc) dc.innerHTML = '';
-    const sc = $('selected_comorbs_display'); 
-    if(sc) { sc.innerHTML = ''; sc.style.display = 'none'; }
+    const dc = $('devices-container'); if (dc) dc.innerHTML = '';
+    const sc = $('selected_comorbs_display');
+    if (sc) { sc.innerHTML = ''; sc.style.display = 'none'; }
     document.querySelectorAll('.prev-datum').forEach(el => el.textContent = '');
-    const pb = $('prevRisksBox'); if(pb) pb.style.display = 'none';
-    
+    const pb = $('prevRisksBox'); if (pb) pb.style.display = 'none';
+
     const gatesToHide = [
         '#resp_gate_content', '#renal_gate_content', '#neuro_gate_content', '#electrolyte_gate_content', '#infection_gate_content', '#pressor_gate_content', '#hac_content',
         '#immobility_note_wrapper', '#after_hours_note_wrapper', '#comorb_other_note_wrapper', '#unsuitable_note_wrapper', '#override_reason_box', '#sub_intubated_reason', '#sub_dyspnea_severity',
         '#pressor_recent_other_note_wrapper', '#dialysis_type_wrapper', '#anticoag_note_wrapper', '#vte_prophylaxis_note_wrapper',
         '#pics_wrapper', '#sleep_quality_wrapper', '#neuro_psych_wrapper', '#pain_context_wrapper', '#nutrition_context_wrapper'
     ];
-    gatesToHide.forEach(sel => { const el = document.querySelector(sel); if(el) el.style.display = 'none'; });
-    
+    gatesToHide.forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = 'none'; });
+
     document.querySelectorAll('.concern-note').forEach(e => {
         if (!['immobility_note_wrapper', 'after_hours_note_wrapper', 'comorb_other_note_wrapper', 'unsuitable_note_wrapper', 'pressor_recent_other_note_wrapper'].includes(e.id)) {
             e.style.display = 'block';
         }
     });
-    
+
     // Reset manual edits flag
-    isManuallyEdited = false; 
+    isManuallyEdited = false;
     $('manual_edit_warning').style.display = 'none';
     window.dismissedDischarge = false;
 
@@ -1427,22 +1499,22 @@ function clearData() {
     const m = now.getMinutes();
     const rounded = Math.round(m / 15) * 15;
     now.setMinutes(rounded);
-    const tb = $('reviewTime'); if(tb) tb.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    
-    const p = document.querySelector('input[value="post"]'); if(p) p.checked = true;
+    const tb = $('reviewTime'); if (tb) tb.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    const p = document.querySelector('input[value="post"]'); if (p) p.checked = true;
     updateWardOptions();
     updateReviewTypeVisibility();
-    const listEl = $('flagList'); if(listEl) listEl.innerHTML = '';
-    const sum = $('summary'); if(sum) sum.value = '';
+    const listEl = $('flagList'); if (listEl) listEl.innerHTML = '';
+    const sum = $('summary'); if (sum) sum.value = '';
 
     $('override_reason_box').style.display = 'none';
     $('override_amber').classList.remove('active');
     $('override_red').classList.remove('active');
-    
+
     const resetEv = new CustomEvent('resetAddsCalc');
     document.dispatchEvent(resetEv);
 
-    computeAll(); 
+    computeAll();
     saveState(true);
     showToast("Data cleared", 2000);
 }
@@ -1453,22 +1525,22 @@ function clearData() {
 
 function enableQuickReviewMode() {
     isQuickReviewMode = true;
-    
+
     // Capture current risks before entering Quick Review
     const s = getState();
     initialQuickReviewRisks = { red: [], amber: [] };
-    
+
     // Show quick review banner
     const banner = $('quickReviewBanner');
     if (banner) banner.style.display = 'block';
-    
+
     // Hide the prompt
     const prompt = $('quickReviewPrompt');
     if (prompt) prompt.style.display = 'none';
-    
+
     // Get which risks were previously flagged
     const previousRisks = window.previousCategoryData?.previousRisks || [];
-    
+
     // Map risk types to their section IDs
     const riskSectionMap = {
         'respiratory': 'resp_wrapper',
@@ -1478,16 +1550,16 @@ function enableQuickReviewMode() {
         'vasoactive': 'pressor_wrapper',
         'immobility': 'immobility_wrapper',
         'nutrition': 'nutrition_wrapper',
-        'electrolyte': 'electrolyte_wrapper'
+        'electrolyte': 'elec_wrapper'
     };
-    
+
     // Get all risk section IDs (including HAC, after-hours, comorbidities, and after-hours discharge which should always hide in quick mode)
     const allRiskSections = [...Object.values(riskSectionMap), 'hac_wrapper', 'ah_wrapper', 'comorbs_wrapper', 'after_hours_note_wrapper'];
-    
+
     // Determine which to show (previously flagged) vs hide
     const sectionsToShow = previousRisks.map(risk => riskSectionMap[risk]).filter(Boolean);
     const sectionsToHide = allRiskSections.filter(id => !sectionsToShow.includes(id));
-    
+
     // Hide risk sections that weren't previously flagged
     sectionsToHide.forEach(id => {
         const section = $(id);
@@ -1496,7 +1568,7 @@ function enableQuickReviewMode() {
             section.setAttribute('data-hidden-by-quick-review', 'true');
         }
     });
-    
+
     // Add badge to sections we're reviewing
     sectionsToShow.forEach(id => {
         const section = $(id);
@@ -1511,14 +1583,12 @@ function enableQuickReviewMode() {
             }
         }
     });
-    
+
     // Hide non-essential sections
     const otherSectionsToHide = [
-        'section-psychosocial', 
-        'section-devices',
-        'section-context'
+        'section-psychosocial'
     ];
-    
+
     otherSectionsToHide.forEach(id => {
         const section = $(id);
         if (section) {
@@ -1526,17 +1596,40 @@ function enableQuickReviewMode() {
             section.setAttribute('data-hidden-by-quick-review', 'true');
         }
     });
-    
+
+    // Ensure Devices and Other factors accords are available but closed
+    const accordionsToClose = ['panel_devices', 'panel_other'];
+    accordionsToClose.forEach(panelId => {
+        // Exception: Auto-open Devices if there are devices populated in state
+        if (panelId === 'panel_devices') {
+            const hasDevices = Object.values(s.devices || {}).some(arr => Array.isArray(arr) && arr.length > 0);
+            if (hasDevices) {
+                openAccordion('panel_devices', '[aria-controls="panel_devices"]');
+                return;
+            }
+        }
+
+        const btnSelector = `[aria-controls="${panelId}"]`;
+        const btn = document.querySelector(btnSelector);
+        const panel = $(panelId);
+        if (btn && panel) {
+            panel.style.display = 'none';
+            btn.setAttribute('aria-expanded', 'false');
+            const icon = btn.querySelector('.icon');
+            if (icon) icon.textContent = '[+]';
+        }
+    });
+
     // Auto-open essential sections
     openAccordion('panel_ae', '[aria-controls="panel_ae"]');
     openAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
-    
+
     // Keep Risk section visible but collapsed (so they can expand to see flagged risks)
     const riskSection = $('section-risk');
     if (riskSection) {
         riskSection.style.display = '';
     }
-    
+
     // Update sidebar
     document.querySelectorAll('.nav-item').forEach(item => {
         const href = item.getAttribute('href');
@@ -1545,13 +1638,13 @@ function enableQuickReviewMode() {
             item.style.pointerEvents = 'none';
         }
     });
-    
+
     // Scroll to A-E section
     setTimeout(() => {
         const aeSection = $('section-ae');
         if (aeSection) aeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 300);
-    
+
     const riskNames = previousRisks.join(', ');
     showToast(`⚡ Quick Review - Re-assessing: ${riskNames}`, 3000);
 }
@@ -1559,70 +1652,70 @@ function enableQuickReviewMode() {
 function exitQuickReviewMode() {
     isQuickReviewMode = false;
     initialQuickReviewRisks = { red: [], amber: [] };
-    
+
     // Hide banner
     const banner = $('quickReviewBanner');
     if (banner) banner.style.display = 'none';
-    
+
     // Show all hidden sections
     document.querySelectorAll('[data-hidden-by-quick-review]').forEach(section => {
         section.style.display = '';
         section.removeAttribute('data-hidden-by-quick-review');
     });
-    
+
     // Remove review badges
     document.querySelectorAll('.review-badge').forEach(badge => badge.remove());
-    
+
     // Restore sidebar
     document.querySelectorAll('.nav-item').forEach(item => {
         item.style.opacity = '';
         item.style.pointerEvents = '';
     });
-    
+
     showToast("Full review mode restored", 2000);
 }
 
 function checkStablePatientStatus() {
     // This is called after import to determine if quick review should be offered
     const state = getState();
-    
+
     // Check if we have previous category data from import
     if (!previousCategoryData) return false;
-    
+
     const { category, hoursOnWard } = previousCategoryData;
-    
+
     // Stable patient criteria:
     // 1. Previous review was CAT 3 (Green)
     // 2. Post-stepdown review
     // 3. At least 24 hours on ward
-    
+
     if (category === 'green' && state.reviewType === 'post' && hoursOnWard >= 24) {
         return true;
     }
-    
+
     // Also offer if CAT 2 (Amber) and 48+ hours
     if (category === 'amber' && state.reviewType === 'post' && hoursOnWard >= 48) {
         return true;
     }
-    
+
     return false;
 }
 
 function showQuickReviewPrompt(categoryText, hoursOnWard, previousRisks = []) {
     const prompt = $('quickReviewPrompt');
     if (!prompt) return;
-    
+
     const prevCatText = $('prevCategoryText');
     const timeText = $('timeOnWardText');
-    
+
     if (prevCatText) {
         const riskList = previousRisks.length > 0 ? ` (${previousRisks.join(', ')})` : '';
         prevCatText.textContent = categoryText + riskList;
     }
     if (timeText) timeText.textContent = `${Math.round(hoursOnWard)}h`;
-    
+
     prompt.style.display = 'block';
-    
+
     // Scroll to prompt
     setTimeout(() => {
         prompt.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1632,42 +1725,42 @@ function showQuickReviewPrompt(categoryText, hoursOnWard, previousRisks = []) {
 function checkForExistingRisks(state) {
     // Check if any risk factors exist from imported data
     // This prevents Quick Review when patient already has concerns
-    
+
     // Check respiratory risks
     if (state.resp_rr_concern || state.resp_o2_concern || state.resp_new_therapy) return true;
-    
+
     // Check neurological risks
     if (state.neuro_severity === 'confusion' || state.neuro_severity === 'delirium') return true;
-    
+
     // Check renal risks
     if (state.renal_acute || state.renal_aki_stage) return true;
-    
+
     // Check for infection
     if (state.infection_present) return true;
-    
+
     // Check for recent pressors
-    if (state.pressor_recent_norad || state.pressor_recent_met || state.pressor_recent_gtn || 
+    if (state.pressor_recent_norad || state.pressor_recent_met || state.pressor_recent_gtn ||
         state.pressor_recent_dob || state.pressor_recent_mid) return true;
-    
+
     // Check for immobility concerns
     if (state.immobility) return true;
-    
+
     // Check for nutrition concerns
     if (state.nutrition_concern) return true;
-    
+
     return false;
 }
 
 function calculateWardTime(dateStr, timeOfDay, isPre) {
     if (isPre) return { hours: 0, text: '(Pre-Stepdown)' };
     if (!dateStr) return { hours: 0, text: '' };
-    
+
     // Default to Midday (12) if captured time logic isn't perfect, but we use strict bands here
     const h = { 'Morning': 9, 'Afternoon': 15, 'Evening': 18, 'Night': 21 }[timeOfDay] || 12;
-    
+
     const [y, m, d] = dateStr.split('-');
     const stepObj = new Date(y, m - 1, d, h);
-    const diffHours = (new Date() - stepObj) / 3600000; 
+    const diffHours = (new Date() - stepObj) / 3600000;
 
     if (diffHours < 0) return { hours: diffHours, text: "(Planned Stepdown)" };
 
@@ -1685,11 +1778,11 @@ function calculateWardTime(dateStr, timeOfDay, isPre) {
 function updateSidebarRiskBadges(redCount, amberCount) {
     const badgeContainer = document.getElementById('sidebar-risk-badges');
     const mobileBadgeContainer = document.getElementById('mobile-risk-badges');
-    
+
     let html = '';
     if (redCount > 0) html += `<span class="badge" style="color:var(--red);">🔴${redCount}</span>`;
     if (amberCount > 0) html += `<span class="badge" style="color:var(--amber);">🟡${amberCount}</span>`;
-    
+
     if (badgeContainer) badgeContainer.innerHTML = html;
     if (mobileBadgeContainer) mobileBadgeContainer.innerHTML = html;
 }
@@ -1741,9 +1834,9 @@ function computeAll() {
             }
         }
 
-        const fn = $('footerName'); if(fn) fn.textContent = s.ptName || '--';
-        const fl = $('footerLocation'); if(fl) fl.textContent = `${s.ptWard || '--'} ${s.ptBed || ''}`;
-        const fa = $('footerAdmission'); if(fa) fa.textContent = s.ptAdmissionReason || '--';
+        const fn = $('footerName'); if (fn) fn.textContent = s.ptName || '--';
+        const fl = $('footerLocation'); if (fl) fl.textContent = `${s.ptWard || '--'} ${s.ptBed || ''}`;
+        const fa = $('footerAdmission'); if (fa) fa.textContent = s.ptAdmissionReason || '--';
 
         const isPre = s.reviewType === 'pre';
         const timeData = calculateWardTime(s.stepdownDate, s.stepdownTime, isPre);
@@ -1753,32 +1846,32 @@ function computeAll() {
         const timeOffEl = $('pressor_time_off_display');
         const recentKeys = ['pressor_recent_norad', 'pressor_recent_met', 'pressor_recent_gtn', 'pressor_recent_dob', 'pressor_recent_mid', 'pressor_recent_other'];
         const currentKeys = ['pressor_current_mid', 'pressor_current_other'];
-        
+
         let hasRecent = recentKeys.some(k => s[k]);
         let hasCurrent = currentKeys.some(k => s[k]);
 
-        if(timeOffEl) {
-            if(hasRecent && s.pressor_ceased_time) {
-                 const now = new Date();
-                 const [cH, cM] = s.pressor_ceased_time.split(':');
-                 const ceasedDate = new Date();
-                 ceasedDate.setHours(cH, cM);
-                 if(ceasedDate > now) ceasedDate.setDate(ceasedDate.getDate() - 1);
-                 const diffMs = now - ceasedDate;
-                 const diffHrs = Math.floor(diffMs / 3600000);
-                 timeOffEl.textContent = `~${diffHrs} hrs ago`;
+        if (timeOffEl) {
+            if (hasRecent && s.pressor_ceased_time) {
+                const now = new Date();
+                const [cH, cM] = s.pressor_ceased_time.split(':');
+                const ceasedDate = new Date();
+                ceasedDate.setHours(cH, cM);
+                if (ceasedDate > now) ceasedDate.setDate(ceasedDate.getDate() - 1);
+                const diffMs = now - ceasedDate;
+                const diffHrs = Math.floor(diffMs / 3600000);
+                timeOffEl.textContent = `~${diffHrs} hrs ago`;
             } else {
-                 timeOffEl.textContent = '';
+                timeOffEl.textContent = '';
             }
         }
 
-        if (hasCurrent || hasRecent) { 
+        if (hasCurrent || hasRecent) {
             let details = [];
             let currentList = [];
-            currentKeys.forEach(k => { 
-                if(s[k]) {
-                    let label = k.replace('pressor_current_','').replace('mid','Midodrine');
-                    if(k === 'pressor_current_other') label = `Other (${s.pressor_current_other_note || ''})`;
+            currentKeys.forEach(k => {
+                if (s[k]) {
+                    let label = k.replace('pressor_current_', '').replace('mid', 'Midodrine');
+                    if (k === 'pressor_current_other') label = `Other (${s.pressor_current_other_note || ''})`;
                     currentList.push(label);
                 }
             });
@@ -1787,11 +1880,11 @@ function computeAll() {
             }
             if (hasRecent) {
                 let recentsList = [];
-                recentKeys.forEach(k => { 
-                    if(s[k]) {
-                         let label = k.replace('pressor_recent_','').replace('norad','Noradrenaline').replace('met','Metaraminol').replace('gtn','GTN').replace('dob','Dobutamine').replace('mid','Midodrine');
-                         if(k === 'pressor_recent_other') label = `Other (${s.pressor_recent_other_note || ''})`;
-                         recentsList.push(label);
+                recentKeys.forEach(k => {
+                    if (s[k]) {
+                        let label = k.replace('pressor_recent_', '').replace('norad', 'Noradrenaline').replace('met', 'Metaraminol').replace('gtn', 'GTN').replace('dob', 'Dobutamine').replace('mid', 'Midodrine');
+                        if (k === 'pressor_recent_other') label = `Other (${s.pressor_recent_other_note || ''})`;
+                        recentsList.push(label);
                     }
                 });
                 let recentPart = `Recent vasoactive support included ${joinGrammatically(recentsList)}`;
@@ -1818,7 +1911,7 @@ function computeAll() {
 
         const bpStr = s.c_nibp;
         if (bpStr) {
-            const sbp = parseFloat(bpStr.split('/')[0]); 
+            const sbp = parseFloat(bpStr.split('/')[0]);
             if (!isNaN(sbp)) {
                 if (sbp < 90) add(red, `Hypotension SBP ${sbp}`, 'c_nibp', 'red');
             }
@@ -1833,8 +1926,8 @@ function computeAll() {
 
         const spo2Str = s.b_spo2 ? s.b_spo2.replace('%', '') : '';
         const spo2 = num(spo2Str);
-        if (spo2 && spo2 < 88) add(red, `Hypoxia SpO2 ${spo2}%`, 'b_spo2', 'red'); 
-        
+        if (spo2 && spo2 < 88) add(red, `Hypoxia SpO2 ${spo2}%`, 'b_spo2', 'red');
+
         const temp = num(s.e_temp);
         if (temp) {
             if (temp > 38.5) add(red, `Pyrexia Temp ${temp}`, 'e_temp', 'red');
@@ -1842,15 +1935,15 @@ function computeAll() {
         }
 
         const oxDevInput = $('b_device');
-        if(oxDevInput && oxDevInput.dataset.manual !== 'true') {
+        if (oxDevInput && oxDevInput.dataset.manual !== 'true') {
             let devStr = '';
             const mode = s.oxMod;
-            if(mode === 'RA') devStr = 'RA';
-            else if(mode === 'NP') devStr = `NP ${s.npFlow || ''}L`;
-            else if(mode === 'HFNP') devStr = `HFNP ${s.hfnpFio2 || ''}%/${s.hfnpFlow || ''}L`;
-            else if(mode === 'NIV') devStr = `NIV ${s.nivFio2 || ''}%`;
-            else if(mode === 'Trache') devStr = `Trache (${s.tracheStatus || ''})`;
-            if(devStr) oxDevInput.value = devStr;
+            if (mode === 'RA') devStr = 'RA';
+            else if (mode === 'NP') devStr = `NP ${s.npFlow || ''}L`;
+            else if (mode === 'HFNP') devStr = `HFNP ${s.hfnpFio2 || ''}%/${s.hfnpFlow || ''}L`;
+            else if (mode === 'NIV') devStr = `NIV ${s.nivFio2 || ''}%`;
+            else if (mode === 'Trache') devStr = `Trache (${s.tracheStatus || ''})`;
+            if (devStr) oxDevInput.value = devStr;
         }
 
         if (s.resp_concern === true) {
@@ -1885,17 +1978,17 @@ function computeAll() {
             if (s.resp_rapid_wean === true) { parts.push('rapid O2 wean <12hrs'); flagged.red.push('seg_resp_rapid_wean'); hasRed = true; }
             if (s.resp_poor_cough === true) { parts.push('poor cough effort'); flagged.amber.push('seg_resp_poor_cough'); }
             if (s.resp_poor_swallow === true) { parts.push('poor swallow'); flagged.amber.push('seg_resp_poor_swallow'); }
-            
+
             if (s.hist_o2 === true) { parts.push('recent high O2/NIV requirement <12hrs'); flagged.red.push('seg_hist_o2'); hasRed = true; }
-            
+
             if (s.intubated === true) {
                 const reason = $('intubatedReason')?.querySelector('.active')?.dataset.value;
                 if (reason === 'concern') { parts.push('intubated <24hrs ago'); flagged.red.push('seg_intubated'); hasRed = true; }
                 else { parts.push('intubated <24hrs ago (elective)'); flagged.amber.push('seg_intubated'); }
             }
-            
-            if(s.dyspneaConcern_note && parts.length > 0) {
-                 parts[parts.length-1] += `. Note: ${s.dyspneaConcern_note}`;
+
+            if (s.dyspneaConcern_note && parts.length > 0) {
+                parts[parts.length - 1] += `. Note: ${s.dyspneaConcern_note}`;
             }
 
             if (parts.length > 0) {
@@ -1920,7 +2013,7 @@ function computeAll() {
             if (gcsInput && gcsInput.toLowerCase().includes('gcs')) details.push(gcsInput);
             if (type) details.push(type.toLowerCase());
             if (details.length > 0) txt += ` with ${joinGrammatically(details)}`;
-            
+
             const isRed = (severity === 'severe');
             add(isRed ? red : amber, sentenceCase(txt), 'neuroConcern', isRed ? 'red' : 'amber', s.neuroType_note);
         }
@@ -1934,14 +2027,14 @@ function computeAll() {
                 else if (k < 3.0) { parts.push(`hypokalaemia K+ ${k}`); isRed = true; }
             }
             const na = num(s.bl_na);
-            if(na && (na < 125 || na > 155)) {
-                 parts.push(`severe Na derangement ${na}`);
-                 isRed = true;
+            if (na && (na < 125 || na > 155)) {
+                parts.push(`severe Na derangement ${na}`);
+                isRed = true;
             }
             const sev = s.electrolyteConcern;
-            if (sev === 'severe') { 
-                if (parts.length === 0) parts.push("severe derangement"); 
-                isRed = true; 
+            if (sev === 'severe') {
+                if (parts.length === 0) parts.push("severe derangement");
+                isRed = true;
             } else if (sev === 'mild' && parts.length === 0) {
                 parts.push("mild/moderate derangement");
             }
@@ -1952,27 +2045,27 @@ function computeAll() {
         // --- UPDATED RENAL / FLUID LOGIC ---
         const cr = num(s.bl_cr_review) || num(s.cr_review);
         const renalOpen = (s.renal === true) || (cr && cr > 150);
-        
+
         if (renalOpen) {
             // Chip Groups
             const fluidFlags = [];
             const renalFlags = [];
-            
+
             // Fluid
-            if(s.renal_fluid) fluidFlags.push('fluid overload');
-            if(s.renal_oedema) fluidFlags.push('oedema');
-            if(s.renal_dehydrated) fluidFlags.push('dehydrated'); // New Chip
+            if (s.renal_fluid) fluidFlags.push('fluid overload');
+            if (s.renal_oedema) fluidFlags.push('oedema');
+            if (s.renal_dehydrated) fluidFlags.push('dehydrated'); // New Chip
 
             // Renal
-            if(s.renal_oliguria) renalFlags.push('oliguria <0.5ml/kg/hr');
-            if(s.renal_anuria) renalFlags.push('anuria');
-            if(s.renal_dysfunction) renalFlags.push('AKI');
-            if(cr > 150) renalFlags.push(`Cr ${cr}`);
+            if (s.renal_oliguria) renalFlags.push('oliguria <0.5ml/kg/hr');
+            if (s.renal_anuria) renalFlags.push('anuria');
+            if (s.renal_dysfunction) renalFlags.push('AKI');
+            if (cr > 150) renalFlags.push(`Cr ${cr}`);
 
             // Dialysis Logic
-            if(s.renal_dialysis) {
+            if (s.renal_dialysis) {
                 const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
-                if(dType === 'new') renalFlags.push('acute dialysis');
+                if (dType === 'new') renalFlags.push('acute dialysis');
                 else renalFlags.push('chronic dialysis');
             }
 
@@ -1983,10 +2076,10 @@ function computeAll() {
             let label = "Renal concern"; // Default
             if (hasFluid && hasRenal) label = "Renal and fluid concern";
             else if (hasFluid && !hasRenal) label = "Fluid concern";
-            
+
             // Append Details
             const allFlags = [...renalFlags, ...fluidFlags];
-            if(allFlags.length > 0) label += ` with ${joinGrammatically(allFlags)}`;
+            if (allFlags.length > 0) label += ` with ${joinGrammatically(allFlags)}`;
 
             // Check Mitigation vs Amber Override
             // Chips that override mitigation (Force Amber)
@@ -1994,10 +2087,10 @@ function computeAll() {
                 s.renal_oliguria, s.renal_anuria, s.renal_dysfunction, // Renal overrides
                 s.renal_fluid, s.renal_oedema, s.renal_dehydrated     // Fluid overrides
             ];
-            
+
             // Dialysis overrides only if Acute
             const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
-            if(s.renal_dialysis && dType === 'new') overrideChips.push(true);
+            if (s.renal_dialysis && dType === 'new') overrideChips.push(true);
 
             const isForceAmber = overrideChips.some(x => x === true);
             const isMitigated = (s.renal_chronic === true);
@@ -2009,7 +2102,7 @@ function computeAll() {
                 // Score it
                 // Logic: Red if critical, otherwise Amber
                 const critical = s.renal_anuria || cr > 200 || (hasFluid && hasRenal && s.renal_dysfunction);
-                
+
                 if (critical) add(red, label, 'seg_renal', 'red', s.renal_note);
                 else add(amber, label, 'seg_renal', 'amber', s.renal_note);
             }
@@ -2018,36 +2111,36 @@ function computeAll() {
         // --- INFECTION LOGIC ---
         const wcc = num(s.bl_wcc) || num(s.wcc);
         const crp = num(s.crp) || num(s.bl_crp);
-        const nlrVal = (neut > 0 && lymph > 0) ? (neut/lymph) : 0;
-        
-        const autoTrigger = (wcc && (wcc > 15 || wcc < 2)) || 
-                            (temp && temp > 38) || 
-                            (crp && crp > 100) || 
-                            (nlrVal > 10);
-                            
-        const manualConcern = s.infection === true; 
+        const nlrVal = (neut > 0 && lymph > 0) ? (neut / lymph) : 0;
+
+        const autoTrigger = (wcc && (wcc > 15 || wcc < 2)) ||
+            (temp && temp > 38) ||
+            (crp && crp > 100) ||
+            (nlrVal > 10);
+
+        const manualConcern = s.infection === true;
 
         if (autoTrigger || manualConcern) {
             let markers = [], isRed = false;
-            
+
             // Red flags: CRP >100, Temp >38.5, NLR >10 (but NOT WCC)
             if (crp > 100) isRed = true;
             if (temp > 38.5) isRed = true;
             if (nlrVal > 10) isRed = true;
-            
+
             // Add WCC marker (always amber, never contributes to red)
             if (wcc !== null && (wcc < 3 || wcc > 15)) markers.push(`WCC ${wcc}`);
             else if (wcc !== null && (wcc > 11)) markers.push(`WCC ${wcc}`);
-            
+
             // Add other markers
             if (crp > 100) markers.push(`CRP ${crp}`);
             else if (crp > 50) markers.push(`CRP ${crp}`);
-            
+
             if (temp > 38.5) markers.push(`Temp ${temp}`);
             else if (temp > 37.8) markers.push(`Temp ${temp}`);
-            
+
             if (nlrVal > 10) markers.push(`NLR ${nlrVal.toFixed(1)}`);
-            
+
             let msg = isRed ? "Infection risk" : "Infection risk";
             if (markers.length) msg += ` with ${joinGrammatically(markers)}`;
 
@@ -2071,10 +2164,10 @@ function computeAll() {
         else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Hb ${hb} and dropping`, 'hb_wrapper', 'amber');
 
         const alb = num(s.bl_alb);
-        if(alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, 'bl_alb', 'amber');
-        
+        if (alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, 'bl_alb', 'amber');
+
         const plts = num(s.bl_plts);
-        if(plts && plts < 100) add(amber, `Thrombocytopenia Plts ${plts}`, 'bl_plts', 'amber');
+        if (plts && plts < 100) add(amber, `Thrombocytopenia Plts ${plts}`, 'bl_plts', 'amber');
 
         const inr = num(s.bl_inr);
         if (inr && inr > 3.5) add(red, `High INR ${inr}`, 'bl_inr', 'red');
@@ -2101,7 +2194,7 @@ function computeAll() {
         // Visual indicators only - not scored as readmission risks to avoid alarm fatigue
         // Device dwell times are highlighted with colored borders and info text
         // but do not contribute to risk categorization
-        
+
         // --- WORSENING CREATININE (Auto-detect with leeway) ---
         // First, check if should auto-select the chip
         if (window.prevBloods && window.prevBloods.cr_review && !s.renal_worsening_cr) {
@@ -2118,7 +2211,7 @@ function computeAll() {
                 }
             }
         }
-        
+
         if (s.renal_worsening_cr && window.prevBloods && window.prevBloods.cr_review) {
             const prevCr = num(window.prevBloods.cr_review);
             const currCr = cr; // Cr from renal section above
@@ -2148,20 +2241,27 @@ function computeAll() {
 
         const activeComorbsKeys = toggleInputs.filter(k => k.startsWith('comorb_') && s[k]);
         const countComorbs = activeComorbsKeys.length;
-        const comorbDisplay = $('selected_comorbs_display');
-        if (comorbDisplay) {
-            if (countComorbs > 0) {
-                const names = activeComorbsKeys.map(k => `<span style="color:var(--red)">${comorbMap[k]}</span>`).join(', ');
-                comorbDisplay.innerHTML = `Already selected: ${names}`;
-                comorbDisplay.style.display = 'block';
-            } else { comorbDisplay.style.display = 'none'; }
+        if (activeComorbsKeys.length > 0) {
+            // Only pre-fill PMH textarea if it's currently empty (avoid overwriting user edits)
+            const noteEl = $('pmh_note');
+            if (noteEl && noteEl.value.trim() === '') {
+                const names = activeComorbsKeys.map(k => {
+                    if (k === 'comorb_other' && s.comorb_other_note) return s.comorb_other_note;
+                    return comorbMap[k];
+                }).join(', ');
+                noteEl.value = names;
+                noteEl.dispatchEvent(new Event('input'));
+            }
         }
         if (countComorbs >= 3) {
-            add(red, sentenceCase('Multiple comorbidities (three or more)'), null, 'red', s.comorb_other_note);
+            add(red, sentenceCase('Multiple comorbidities (three or more)'), null, 'red', null);
             flagged.red.push('comorbs_wrapper');
         } else if (countComorbs > 0) {
-            const cList = activeComorbsKeys.map(k => comorbMap[k].toLowerCase());
-            add(amber, sentenceCase(`Comorbidities including ${joinGrammatically(cList)}`), null, 'amber', s.comorb_other_note);
+            const cList = activeComorbsKeys.map(k => {
+                if (k === 'comorb_other' && s.comorb_other_note) return s.comorb_other_note.toLowerCase();
+                return comorbMap[k].toLowerCase();
+            });
+            add(amber, sentenceCase(`Comorbidities including ${joinGrammatically(cList)}`), null, 'amber', null);
             flagged.amber.push('comorbs_wrapper');
         }
 
@@ -2190,16 +2290,16 @@ function computeAll() {
         if (redCount > 0) cat = { id: 'red', text: 'CAT 1' };
         else if (amberCount > 0) cat = { id: 'amber', text: 'CAT 2' };
 
-        const catText = $('catText'); if(catText) { catText.className = `status ${cat.id}`; catText.textContent = cat.text; }
-        const catBox = $('categoryBox'); if(catBox) catBox.style.borderColor = `var(--${cat.id})`;
-        const rc = $('redCount'); if(rc) { rc.textContent = redCount; rc.style.color = redCount ? 'var(--red)' : ''; }
-        const ac = $('amberCount'); if(ac) { ac.textContent = amberCount; ac.style.color = amberCount ? 'var(--amber)' : ''; }
+        const catText = $('catText'); if (catText) { catText.className = `status ${cat.id}`; catText.textContent = cat.text; }
+        const catBox = $('categoryBox'); if (catBox) catBox.style.borderColor = `var(--${cat.id})`;
+        const rc = $('redCount'); if (rc) { rc.textContent = redCount; rc.style.color = redCount ? 'var(--red)' : ''; }
+        const ac = $('amberCount'); if (ac) { ac.textContent = amberCount; ac.style.color = amberCount ? 'var(--amber)' : ''; }
         const stickyScore = $('footerScore');
         if (stickyScore) { stickyScore.className = `footer-score tag ${cat.id}`; stickyScore.textContent = cat.text; }
 
         // Update sidebar risk badges
         updateSidebarRiskBadges(redCount, amberCount);
-        
+
         // Check if Quick Review Mode should auto-exit due to NEW risks (not persisting ones)
         if (isQuickReviewMode) {
             // If this is the first compute in Quick Review, capture baseline risks
@@ -2210,12 +2310,12 @@ function computeAll() {
                 // Check for NEW risks that weren't present initially
                 const newRed = uniqueRed.filter(r => !initialQuickReviewRisks.red.includes(r));
                 const newAmber = uniqueAmber.filter(r => !initialQuickReviewRisks.amber.includes(r));
-                
+
                 if (newRed.length > 0 || newAmber.length > 0) {
                     const newRedCount = newRed.length;
                     const newAmberCount = newAmber.length;
                     exitQuickReviewMode();
-                    
+
                     // Show prominent alert
                     const alertDiv = document.createElement('div');
                     alertDiv.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:var(--red); color:white; padding:24px 32px; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.3); font-size:1.1rem; font-weight:700; text-align:center; min-width:400px;';
@@ -2226,13 +2326,13 @@ function computeAll() {
                         <div style="font-size:0.85rem; margin-top:12px; opacity:0.9;">${newRedCount > 0 ? newRedCount + ' NEW RED' : newAmberCount + ' NEW AMBER'} risk factor(s)</div>
                     `;
                     document.body.appendChild(alertDiv);
-                    
+
                     setTimeout(() => {
                         alertDiv.style.transition = 'opacity 0.3s';
                         alertDiv.style.opacity = '0';
                         setTimeout(() => alertDiv.remove(), 300);
                     }, 3000);
-                    
+
                     // Scroll to risk section
                     setTimeout(() => {
                         const riskSection = $('section-risk');
@@ -2243,7 +2343,7 @@ function computeAll() {
         }
 
         const listEl = $('flagList');
-        if(listEl) {
+        if (listEl) {
             let html = [
                 ...uniqueRed.map(t => `<div style="color:var(--red); font-weight:700;">${t}</div>`),
                 ...uniqueAmber.map(t => `<div style="color:var(--amber); font-weight:700;">${t}</div>`),
@@ -2281,46 +2381,46 @@ function computeAll() {
         // --- PLAN & DISCHARGE LOGIC (UPDATED WITH TIME GATING) ---
         let planHtml = '';
         const hoursSinceStep = timeData.hours;
-        
+
         let dischargeOverride = false;
-        
+
         // Post-Stepdown Discharge Prompt Logic
         const disPrompt = $('discharge_prompt');
         const disMsg = $('discharge_msg');
         const chkDischarge = $('chk_discharge_alert');
         const disWrap = $('chk_discharge_wrapper');
 
-        if(disPrompt) {
+        if (disPrompt) {
             const alreadyChecked = chkDischarge && chkDischarge.checked;
             const dismissed = window.dismissedDischarge === true;
             const isPost = s.reviewType === 'post';
-            
+
             // TIMING GATES
             let showPrompt = false;
-            
+
             if (isPost && !alreadyChecked && !dismissed) {
                 if (cat.id === 'green') showPrompt = true; // Immediate
                 else if (cat.id === 'amber' && hoursSinceStep >= 48) showPrompt = true;
                 else if (cat.id === 'red' && hoursSinceStep >= 72) showPrompt = true;
             }
 
-            if(showPrompt) {
+            if (showPrompt) {
                 disPrompt.style.display = 'block';
                 disPrompt.style.borderColor = `var(--${cat.id})`;
-                if(cat.id === 'green') disPrompt.style.borderColor = `var(--green)`; 
-                
+                if (cat.id === 'green') disPrompt.style.borderColor = `var(--green)`;
+
                 let colorName = "Green";
-                if(cat.id === 'amber') colorName = "Amber";
-                if(cat.id === 'red') colorName = "Red";
-                
+                if (cat.id === 'amber') colorName = "Amber";
+                if (cat.id === 'red') colorName = "Red";
+
                 let hoursTxt = Math.round(hoursSinceStep) + " hours";
-                
+
                 disMsg.innerHTML = `<span style="color:var(--${cat.id})">${cat.text} ${colorName} patient.</span> ${hoursTxt} on ward.<br>Can patient be discharged?`;
-                if(disWrap) disWrap.classList.add('pulse-highlight');
+                if (disWrap) disWrap.classList.add('pulse-highlight');
             } else {
                 disPrompt.style.display = 'none';
-                if(disWrap) disWrap.classList.remove('pulse-highlight');
-                
+                if (disWrap) disWrap.classList.remove('pulse-highlight');
+
                 // Auto-check continue ALERT when discharge prompt is hidden (not enough time elapsed)
                 const continueChk = $('chk_continue_alert');
                 if (continueChk && !s.chk_discharge_alert && s.reviewType === 'post') {
@@ -2336,19 +2436,19 @@ function computeAll() {
         else if (cat.id === 'amber') planHtml = `<div class="status amber">At least daily ALERT review (up to 48h).</div>`;
         else {
             // Green Logic
-            if(s.reviewType === 'pre') planHtml = `<div class="status green">ALERT post ICU review on ward.</div>`;
-            else planHtml = `<div class="status green">Continue ALERT post ICU reviews.</div>`; 
+            if (s.reviewType === 'pre') planHtml = `<div class="status green">ALERT post ICU review on ward.</div>`;
+            else planHtml = `<div class="status green">Continue ALERT post ICU reviews.</div>`;
         }
 
         if (s.chk_medical_rounding) planHtml += `<div style="margin-top:2px; font-weight:600; color:var(--accent);">+ Added to ALERT Medical Rounding List</div>`;
-        const fu = $('followUpInstructions'); if(fu) fu.innerHTML = planHtml;
+        const fu = $('followUpInstructions'); if (fu) fu.innerHTML = planHtml;
 
         checkCompleteness(s, countComorbs);
         console.log('Risks before generateSummary - Red:', uniqueRed.length, 'Amber:', uniqueAmber.length);
         console.log('Red risks:', uniqueRed);
         console.log('Amber risks:', uniqueAmber);
         generateSummary(s, cat, timeData.text, uniqueRed, uniqueAmber, suppressedRisks, activeComorbsKeys);
-    } catch(err) {
+    } catch (err) {
         console.error("Compute Error:", err);
     }
 }
@@ -2364,25 +2464,26 @@ function checkCompleteness(s, comorbCount) {
         if (missing.length > 0) {
             nudge.style.display = 'block';
             nudge.textContent = 'Missing: ' + missing.join(', ');
-            nudge.style.color = 'var(--red)';
+            // Make missing text purple instead of red to reduce color fatigue
+            nudge.style.color = '#7c3aed';
         } else { nudge.style.display = 'none'; }
     });
 }
 
 function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys) {
-    
+
     // Manual Edit Protection: allow auto-fill if summary is empty OR in quick review mode
     const sum = $('summary');
     const hasSummary = !!(sum && sum.value && sum.value.trim());
-    if(isManuallyEdited && hasSummary && !isQuickReviewMode) {
+    if (isManuallyEdited && hasSummary && !isQuickReviewMode) {
         // If devices were modified, show a hint to use Force Update
-        if(window.devicesModifiedSinceLastSummary) {
+        if (window.devicesModifiedSinceLastSummary) {
             const warn = $('manual_edit_warning');
-            if(warn && !warn.textContent.includes('device')) {
+            if (warn && !warn.textContent.includes('device')) {
                 warn.innerHTML = '⚠️ Manual edits detected. Devices modified - use Force Update to refresh DMR.';
             }
         }
-        return; 
+        return;
     }
 
     // Clear device modified flag when summary is successfully regenerated
@@ -2393,18 +2494,18 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     const role = s.clinicianRole;
     const reviewName = (s.reviewType === 'pre') ? 'Pre-Stepdown' : 'post ICU review';
 
-    if(s.reviewType === 'pre') {
+    if (s.reviewType === 'pre') {
         lines.push(`${role} Pre-Stepdown Review`);
     } else {
         lines.push(`${role} ${reviewName}`);
     }
 
-    lines.push(`Patient: ${s.ptName || '--'} | URN: ...${s.ptMrn || ''} | Location: ${s.ptWard || '--'} ${s.ptBed || ''}`);
+    lines.push(`Patient: ${s.ptName || '--'} | URN: ...${s.ptMrn || ''} | Location: ${s.ptWard || '--'}, Room: ${s.ptBed || '--'}`);
     let demo = [];
-    if(s.ptAge) demo.push(`Age: ${s.ptAge}`);
-    if(s.ptWeight) demo.push(`Weight: ${s.ptWeight}kg`);
-    if(demo.length) lines.push(demo.join(', '));
-    
+    if (s.ptAge) demo.push(`Age: ${s.ptAge}`);
+    if (s.ptWeight) demo.push(`Weight: ${s.ptWeight}kg`);
+    if (demo.length) lines.push(demo.join(', '));
+
     lines.push(`Time of review: ${s.reviewTime || nowTimeStr()}`);
 
     if (s.reviewType === 'pre') {
@@ -2435,8 +2536,8 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         lines.push('');
     } else {
         lines.push(`ALERT Nursing Review Category - ${cat.text}`);
-        if(s.stepdown_suitable === true && s.reviewType === 'pre') {
-             lines.push('Patient is suitable for ward stepdown.');
+        if (s.stepdown_suitable === true && s.reviewType === 'pre') {
+            lines.push('Patient is suitable for ward stepdown.');
         }
         lines.push('');
     }
@@ -2444,7 +2545,13 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     // Only add PMH section if there are comorbidities or PMH notes
     if (activeComorbsKeys.length > 0 || (s.pmh_note && s.pmh_note.trim())) {
         lines.push('PMH:');
-        activeComorbsKeys.forEach(k => { lines.push(`-${comorbMap[k]}`); });
+        activeComorbsKeys.forEach(k => {
+            if (k === 'comorb_other' && s.comorb_other_note) {
+                lines.push(`-${s.comorb_other_note}`);
+            } else {
+                lines.push(`-${comorbMap[k]}`);
+            }
+        });
         if (s.pmh_note) {
             const splitPmh = s.pmh_note.split('\n');
             splitPmh.forEach(p => { if (p.trim()) lines.push(`-${p.trim().replace(/^-/, '')}`); });
@@ -2475,6 +2582,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (s.b_spo2) b.push(`SpO2 ${s.b_spo2}`);
     if (s.b_device) b.push(s.b_device);
     if (s.b_wob) b.push(`WOB: ${s.b_wob}`);
+    if (s.b_cough) b.push(`Cough: ${s.b_cough}`);
     if (b.length) addLine(`B: ${b.join(', ')}`);
     else if (s.b_comment) addLine(`B:`);
     if (s.b_comment) addLine(`  - ${s.b_comment}`);
@@ -2525,7 +2633,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         today.setHours(0, 0, 0, 0);
         bd.setHours(0, 0, 0, 0);
         const daysDiff = Math.floor((today - bd) / (1000 * 60 * 60 * 24));
-        
+
         if (s.bowel_mode === 'btn_bo') {
             // For BO: "BO, today (16/2), type xx" or "BO, yesterday (15/2), type xx"
             if (daysDiff === 0) {
@@ -2556,11 +2664,11 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     }
 
     if (bowelTxt) addLine(`Bowels: ${bowelTxt}`);
-    
+
     if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
-    
+
     if (s.pics) {
         const picsStatus = s.pics === 'positive' ? 'Positive' : 'Negative';
         addLine(`Post ICU Syndrome: ${picsStatus}${s.pics_note ? ` - ${s.pics_note}` : ''}`);
@@ -2569,7 +2677,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     else if (s.sleep_quality === false) addLine(`Sleep: No sleep issues identified`);
     if (s.neuro_psych === true) addLine(`Psychological issues: ${s.neuro_psych_note || 'Concerns identified'}`);
     else if (s.neuro_psych === false) addLine(`Psychological issues: Nil identified`);
-    
+
     if (s.anticoag_note) addLine(`Anticoagulation: ${s.anticoag_note}`);
     if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
     if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
@@ -2598,18 +2706,18 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (hasAnyDevices) {
         lines.push('LINES, DRAINS, DEVICES & WOUNDS:');
         const trackedDevices = ['CVC', 'PICC', 'PIVC', 'Other CVAD', 'IDC', 'Vascath'];
-        Object.entries(s.devices).forEach(([k, v]) => { 
+        Object.entries(s.devices).forEach(([k, v]) => {
             v.forEach(item => {
                 let deviceLine = `- ${k}`;
-                
+
                 // Add dwell time if device is tracked and has insertion date
                 if (item.insertionDate && trackedDevices.includes(k)) {
                     const deviceDate = new Date(item.insertionDate + 'T00:00:00');
                     const dwellDays = Math.floor((new Date() - deviceDate) / (1000 * 60 * 60 * 24));
-                    
+
                     // Format: "PICC - left brachial - 5d dwell, inserted 11/2/26"
                     if (item.details) deviceLine += ` - ${item.details}`;
-                    
+
                     const threshold = (k === 'PIVC') ? 5 : 7;
                     if (k === 'PIVC') {
                         if (dwellDays >= 5) deviceLine += ` - ${dwellDays}d long dwell`;
@@ -2618,7 +2726,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
                         if (dwellDays >= 7) deviceLine += ` - ${dwellDays}d long dwell`;
                         else deviceLine += ` - ${dwellDays}d dwell`;
                     }
-                    
+
                     // Add insertion date at the end
                     const bd = new Date(item.insertionDate);
                     deviceLine += `, inserted ${bd.getDate()}/${bd.getMonth() + 1}/${bd.getFullYear().toString().slice(-2)}`;
@@ -2642,15 +2750,15 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
 
     lines.push('IDENTIFIED ICU READMISSION RISK FACTORS:');
     const risks = [...red, ...amber];
-    if (risks.length) { risks.forEach(r => lines.push(`- ${r}`)); } 
+    if (risks.length) { risks.forEach(r => lines.push(`- ${r}`)); }
     // Add suppressed risks text
     if (suppressed.length) { suppressed.forEach(r => lines.push(`- ${r}`)); }
-    
+
     if (risks.length === 0 && suppressed.length === 0) { lines.push('- None identified'); }
     lines.push('');
 
     lines.push('PLAN:');
-    
+
     if (s.stepdown_suitable === false) {
         lines.push('- ICU Senior Review requested due to unsuitability for ward stepdown.');
         lines.push('- Please re-contact ALERT for re-review when appropriate.');
@@ -2664,15 +2772,15 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         lines.push('- At least daily ALERT review for up to 48h post-ICU stepdown.');
     } else {
         // Green
-        if(s.reviewType === 'pre') lines.push('- At least single ALERT nursing follow up on ward.');
+        if (s.reviewType === 'pre') lines.push('- At least single ALERT nursing follow up on ward.');
         else lines.push('- Continue ALERT post ICU reviews.');
     }
-    
+
     if (s.chk_medical_rounding) {
         lines.push('- Patient added to ALERT medical rounding list for further review.');
     }
 
-    if(sum) { 
+    if (sum) {
         sum.classList.add('script-updating');
         sum.value = lines.join('\n');
         sum.classList.remove('script-updating');

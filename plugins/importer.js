@@ -6,45 +6,45 @@
    ========================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
-    
+
     const modal = document.getElementById('importModal');
     const openBtn = document.getElementById('btnOpenImport');
     const closeBtn = document.getElementById('closeImport');
     const runBtn = document.getElementById('runImport');
     const txt = document.getElementById('importText');
 
-    if(openBtn && modal) {
+    if (openBtn && modal) {
         openBtn.addEventListener('click', () => { modal.style.display = 'flex'; });
         closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
     }
 
-    if(runBtn) {
+    if (runBtn) {
         runBtn.addEventListener('click', () => {
             const data = txt.value;
-            if(!data) return;
+            if (!data) return;
             processDMR(data);
             modal.style.display = 'none';
             // Trigger generic input event to update calculations
             const ptName = document.getElementById('ptName');
-            if(ptName) ptName.dispatchEvent(new Event('input'));
+            if (ptName) ptName.dispatchEvent(new Event('input'));
         });
     }
 
     function setVal(id, val) {
         const el = document.getElementById(id);
-        if(el && val) {
+        if (el && val) {
             el.value = val.trim();
-            el.classList.add('scraped-data'); 
+            el.classList.add('scraped-data');
             el.dispatchEvent(new Event('input'));
         }
     }
 
     function setPrev(id, val) {
         const el = document.getElementById(id);
-        if(el && val) {
+        if (el && val) {
             let text = val.trim();
-            text = text.replace(/%/, ''); 
-            if(!id.includes('risk') && text.length > 25) {
+            text = text.replace(/%/, '');
+            if (!id.includes('risk') && text.length > 25) {
                 text = text.substring(0, 23) + '..';
             }
             el.textContent = `(Prev: ${text})`;
@@ -53,177 +53,177 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setRiskText(id, val) {
         const el = document.getElementById(id);
-        if(el && val) {
+        if (el && val) {
             el.textContent = ` (Prev: ${val.trim()})`;
         }
     }
-    
+
     function clickToggle(id) {
         const el = document.getElementById(id);
-        if(el && el.dataset.value === 'false') {
+        if (el && el.dataset.value === 'false') {
             el.click();
         }
     }
 
     function clickSegment(groupId, value) {
         const group = document.getElementById(groupId);
-        if(group) {
+        if (group) {
             const btn = group.querySelector(`.seg-btn[data-value="${value}"]`);
-            if(btn && !btn.classList.contains('active')) btn.click();
+            if (btn && !btn.classList.contains('active')) btn.click();
         }
     }
 
     function openAccordion(panelId, iconBtnSelector) {
         const panel = document.getElementById(panelId);
         const btn = document.querySelector(iconBtnSelector);
-        if(panel) {
+        if (panel) {
             panel.style.display = 'block';
-            if(btn) {
+            if (btn) {
                 const icon = btn.querySelector('.icon');
-                if(icon) icon.textContent = '[-]';
+                if (icon) icon.textContent = '[-]';
             }
         }
     }
 
     function processDMR(text) {
         // --- 0. RESET ---
-        window.prevBloods = {}; 
+        window.prevBloods = {};
         const carryForward = true; // Always carry forward stable sections
 
         // --- 1. DEMOGRAPHICS ---
         const ptMatch = text.match(/Patient:\s*([A-Za-z\s]+?)\s*\|/i);
-        if(ptMatch) setVal('ptName', ptMatch[1]);
+        if (ptMatch) setVal('ptName', ptMatch[1]);
 
         const urnMatch = text.match(/URN:.*?(\d+)/i);
-        if(urnMatch) setVal('ptMrn', urnMatch[1].slice(-3));
-        
+        if (urnMatch) setVal('ptMrn', urnMatch[1].slice(-3));
+
         const ageMatch = text.match(/Age:\s*(\d+)/i);
-        if(ageMatch) setVal('ptAge', ageMatch[1]);
+        if (ageMatch) setVal('ptAge', ageMatch[1]);
 
         const weightMatch = text.match(/Weight:\s*(\d+)/i);
-        if(weightMatch) setVal('ptWeight', weightMatch[1]);
+        if (weightMatch) setVal('ptWeight', weightMatch[1]);
 
         const locMatch = text.match(/Location:\s*([A-Z0-9]+)\s+(\d+)/i);
-        if(locMatch) {
+        if (locMatch) {
             const ward = locMatch[1];
             const wardSelect = document.getElementById('ptWard');
             let found = false;
-            for(let i=0; i<wardSelect.options.length; i++) {
-                if(wardSelect.options[i].value === ward) {
+            for (let i = 0; i < wardSelect.options.length; i++) {
+                if (wardSelect.options[i].value === ward) {
                     wardSelect.selectedIndex = i;
                     wardSelect.classList.add('scraped-data');
                     found = true;
                     break;
                 }
             }
-            if(!found) {
+            if (!found) {
                 wardSelect.value = "Other";
                 const otherWrapper = document.getElementById('ptWardOtherWrapper');
-                if(otherWrapper) otherWrapper.style.display = 'block';
+                if (otherWrapper) otherWrapper.style.display = 'block';
                 setVal('ptWardOther', ward);
             }
             setVal('ptBed', locMatch[2]);
         }
 
         const losMatch = text.match(/ICU LOS:\s*(\d+)/i);
-        if(losMatch) setVal('icuLos', losMatch[1]);
+        if (losMatch) setVal('icuLos', losMatch[1]);
 
         const reasonMatch = text.match(/Reason for ICU Admission:\s*(.*)/i);
-        if(reasonMatch) setVal('ptAdmissionReason', reasonMatch[1]);
+        if (reasonMatch) setVal('ptAdmissionReason', reasonMatch[1]);
 
         // Fix: Date parsing handles DD/MM/YYYY and converts to YYYY-MM-DD for input
         const dateMatch = text.match(/(?:Discharge|Stepdown) Date:\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/i);
-        if(dateMatch) {
+        if (dateMatch) {
             const day = dateMatch[1].padStart(2, '0');
             const month = dateMatch[2].padStart(2, '0');
             let year = dateMatch[3];
-            if(year.length === 2) year = "20" + year;
+            if (year.length === 2) year = "20" + year;
             const isoDate = `${year}-${month}-${day}`;
-            setVal('stepdownDate', isoDate); 
+            setVal('stepdownDate', isoDate);
         }
 
         // --- 2. CONTEXT ---
         if (carryForward) {
             let contextFound = false;
             const gocMatch = text.match(/GOC:\s*[\(]?(.*?)[\)]?$/m) || text.match(/GOC:\s*(.*)/i);
-            if(gocMatch) { setVal('goc_note', gocMatch[1].replace(/^\(|\)$/g, '')); contextFound = true; }
+            if (gocMatch) { setVal('goc_note', gocMatch[1].replace(/^\(|\)$/g, '')); contextFound = true; }
 
             const allergiesMatch = text.match(/Allergies:\s*(.*)/i);
-            if(allergiesMatch) { setVal('allergies_note', allergiesMatch[1]); contextFound = true; }
+            if (allergiesMatch) { setVal('allergies_note', allergiesMatch[1]); contextFound = true; }
 
             const picsMatch = text.match(/PICS Assessment:\s*[\(]?(.*?)[\)]?$/m) || text.match(/PICS Assessment:\s*(.*)/i);
-            if(picsMatch) { setVal('pics_note', picsMatch[1].replace(/^\(|\)$/g, '')); contextFound = true; }
+            if (picsMatch) { setVal('pics_note', picsMatch[1].replace(/^\(|\)$/g, '')); contextFound = true; }
 
             // Regex Improvement: PMH (captures lines starting with - until next section)
             const pmhSection = text.match(/(?:PMH|Significant Past Medical History):([\s\S]*?)(?:A-E ASSESSMENT|PICS|GOC)/i);
-            if(pmhSection && pmhSection[1]) {
+            if (pmhSection && pmhSection[1]) {
                 const rawPmh = pmhSection[1].split('\n')
                     .map(l => l.trim())
                     .filter(l => l.startsWith('-'))
                     .map(l => l.substring(1).trim())
                     .join('\n');
-                if(rawPmh) { setVal('pmh_note', rawPmh); contextFound = true; }
+                if (rawPmh) { setVal('pmh_note', rawPmh); contextFound = true; }
             }
 
-            if(contextFound) openAccordion('panel_context', '[aria-controls="panel_context"]');
+            if (contextFound) openAccordion('panel_context', '[aria-controls="panel_context"]');
         }
 
         // --- 3. PREVIOUS DATA (A-E) ---
-        const aeBlock = text.match(/A-E ASSESSMENT([\s\S]*?)(?:Bloods:|DEVICES:)/i) || [null, text];
+        const aeBlock = text.match(/A-E ASSESSMENT([\s\S]*?)(?:Bloods:|LINES, DRAINS|DEVICES:)/i) || [null, text];
         const aeText = aeBlock[1];
-        if(aeBlock[1]) openAccordion('panel_ae', '[aria-controls="panel_ae"]');
+        if (aeBlock[1]) openAccordion('panel_ae', '[aria-controls="panel_ae"]');
 
-        if(aeText) {
+        if (aeText) {
             const addsMatch = aeText.match(/ADDS\s*[:]?\s*(\d+)/i);
-            if(addsMatch) setPrev('prev_adds', addsMatch[1]);
+            if (addsMatch) setPrev('prev_adds', addsMatch[1]);
 
             const airwayMatch = aeText.match(/A[:\s]\s*(.*?)(?=\n|B[:\s])/i);
-            if(airwayMatch) setPrev('prev_airway', airwayMatch[1]);
+            if (airwayMatch) setPrev('prev_airway', airwayMatch[1]);
 
             const rrMatch = aeText.match(/RR\s*(\d+(?:\s*to\s*\d+|\s*-\s*\d+)?)/i);
-            if(rrMatch) setPrev('prev_rr', rrMatch[1]);
+            if (rrMatch) setPrev('prev_rr', rrMatch[1]);
 
             const spo2Match = aeText.match(/SpO2\s*(?:above\s*|>)?\s*(\d+%?)/i) || aeText.match(/(\d+%?)\s*SpO2/i);
-            if(spo2Match) setPrev('prev_spo2', spo2Match[1]);
+            if (spo2Match) setPrev('prev_spo2', spo2Match[1]);
 
             const o2Match = aeText.match(/(RA|(?:\d+L)?NP|HFNP|NIV|Trache)/i);
-            if(o2Match) setPrev('prev_o2_dev', o2Match[1]);
+            if (o2Match) setPrev('prev_o2_dev', o2Match[1]);
 
             const hrMatch = aeText.match(/HR\s*(\d+s?)/i);
-            if(hrMatch) setPrev('prev_hr', hrMatch[1]);
+            if (hrMatch) setPrev('prev_hr', hrMatch[1]);
 
             const bpMatch = aeText.match(/NIBP\s*(\d+\/\d+)/i);
-            if(bpMatch) setPrev('prev_bp', bpMatch[1]);
+            if (bpMatch) setPrev('prev_bp', bpMatch[1]);
 
             const tempMatch = aeText.match(/E[:\s]\s*(Afebrile|[\d\.]+)/i);
-            if(tempMatch) setPrev('prev_temp', tempMatch[1]);
+            if (tempMatch) setPrev('prev_temp', tempMatch[1]);
 
             const alertMatch = aeText.match(/D[:\s]\s*(.*?)(?=\n|E[:\s])/i);
-            if(alertMatch) setPrev('prev_alert', alertMatch[1]);
+            if (alertMatch) setPrev('prev_alert', alertMatch[1]);
         }
 
         if (carryForward) {
             const mobMatch = text.match(/Mobility:\s*(.*)/i);
-            if(mobMatch) setVal('ae_mobility', mobMatch[1]);
+            if (mobMatch) setVal('ae_mobility', mobMatch[1]);
 
             const dietMatch = text.match(/Diet:\s*(.*)/i);
-            if(dietMatch) setVal('ae_diet', dietMatch[1]);
+            if (dietMatch) setVal('ae_diet', dietMatch[1]);
 
             const bowelMatch = text.match(/Bowels:\s*(.*)/i);
-            if(bowelMatch) setVal('ae_bowels', bowelMatch[1]);
+            if (bowelMatch) setVal('ae_bowels', bowelMatch[1]);
         }
 
         // --- 4. BLOODS ---
-        const bloodsBlock = text.match(/Bloods:\s*([\s\S]*?)(?:DEVICES:|IDENTIFIED ICU READMISSION|IDENTIFIED RISK FACTORS|$)/i);
-        if(bloodsBlock) {
+        const bloodsBlock = text.match(/Bloods:\s*([\s\S]*?)(?:LINES, DRAINS|DEVICES:|IDENTIFIED ICU READMISSION|IDENTIFIED RISK FACTORS|$)/i);
+        if (bloodsBlock) {
             openAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
             const bText = bloodsBlock[1];
-            
+
             const getB = (regex, id, key) => {
                 const m = bText.match(regex);
-                if(m) {
+                if (m) {
                     setPrev(id, m[1]);
-                    if(window.prevBloods) window.prevBloods[key] = m[1];
+                    if (window.prevBloods) window.prevBloods[key] = m[1];
                 }
             };
 
@@ -259,34 +259,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const risksSection = text.match(/(?:IDENTIFIED ICU READMISSION RISK FACTORS|IDENTIFIED RISK FACTORS):([\s\S]*?)PLAN:/i);
         const risksBox = document.getElementById('prevRisksBox');
         const risksList = document.getElementById('prevRisksList');
-        
-        ['resp','neuro','renal','elec','ah','pressors','immob','inf'].forEach(k => {
+
+        ['resp', 'neuro', 'renal', 'elec', 'ah', 'pressors', 'immob', 'inf'].forEach(k => {
             const el = document.getElementById(`prev_risk_${k}`);
-            if(el) el.textContent = '';
+            if (el) el.textContent = '';
         });
 
-        if(risksSection && risksSection[1]) {
+        if (risksSection && risksSection[1]) {
             const riskLines = risksSection[1].split('\n').map(l => l.trim()).filter(l => l.startsWith('-'));
-            if(riskLines.length > 0 && !riskLines[0].toLowerCase().includes('none identified')) {
+            if (riskLines.length > 0 && !riskLines[0].toLowerCase().includes('none identified')) {
                 risksBox.style.display = 'block';
                 risksList.innerHTML = '';
                 riskLines.forEach(line => {
-                    const rawTxt = line.substring(1).trim(); 
+                    const rawTxt = line.substring(1).trim();
                     const li = document.createElement('li');
                     li.textContent = rawTxt;
                     risksList.appendChild(li);
-                    
+
                     const lower = rawTxt.toLowerCase();
-                    
+
                     // --- PREV TEXT UPDATES ---
-                    if(lower.includes('oxygen') || lower.includes('wean') || lower.includes('tachypnea') || lower.includes('respiratory')) setRiskText('prev_risk_resp', rawTxt);
-                    if(lower.includes('neuro') || lower.includes('gcs') || lower.includes('delirium')) setRiskText('prev_risk_neuro', rawTxt);
-                    if(lower.includes('renal') || lower.includes('aki') || lower.includes('creatinine')) setRiskText('prev_risk_renal', rawTxt);
-                    if(lower.includes('infection') || lower.includes('sepsis') || lower.includes('wcc')) setRiskText('prev_risk_inf', rawTxt);
-                    if(lower.includes('electrolyte') || lower.includes('potassium')) setRiskText('prev_risk_elec', rawTxt);
-                    if(lower.includes('after-hours')) setRiskText('prev_risk_ah', rawTxt);
-                    if(lower.includes('vaso') || lower.includes('pressor')) setRiskText('prev_risk_pressors', rawTxt);
-                    if(lower.includes('immobility')) setRiskText('prev_risk_immob', rawTxt);
+                    if (lower.includes('oxygen') || lower.includes('wean') || lower.includes('tachypnea') || lower.includes('respiratory')) setRiskText('prev_risk_resp', rawTxt);
+                    if (lower.includes('neuro') || lower.includes('gcs') || lower.includes('delirium')) setRiskText('prev_risk_neuro', rawTxt);
+                    if (lower.includes('renal') || lower.includes('aki') || lower.includes('creatinine')) setRiskText('prev_risk_renal', rawTxt);
+                    if (lower.includes('infection') || lower.includes('sepsis') || lower.includes('wcc')) setRiskText('prev_risk_inf', rawTxt);
+                    if (lower.includes('electrolyte') || lower.includes('potassium')) setRiskText('prev_risk_elec', rawTxt);
+                    if (lower.includes('after-hours')) setRiskText('prev_risk_ah', rawTxt);
+                    if (lower.includes('vaso') || lower.includes('pressor')) setRiskText('prev_risk_pressors', rawTxt);
+                    if (lower.includes('immobility')) setRiskText('prev_risk_immob', rawTxt);
 
                     // Note: Scraped risks are shown as FYI only, not auto-highlighted
                     // Clinicians should review and manually select concerns
@@ -297,14 +297,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- 6. DEVICES ---
         if (carryForward) {
-            const devSection = text.match(/DEVICES:([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|$)/i);
-            if(devSection && devSection[1]) {
+            const devSection = text.match(/(?:LINES, DRAINS.*?DEVICES.*?:|DEVICES:)([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|$)/i);
+            if (devSection && devSection[1]) {
                 openAccordion('panel_devices', '[aria-controls="panel_devices"]');
-                const devLines = devSection[1].split('\n').map(l => l.trim()).filter(l => l.startsWith('-'));
+                // Remove the filter(l => l.startsWith('-')) to allow all lines, and then we will clean them up.
+                const devLines = devSection[1].split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.endsWith(':') && l.toLowerCase() !== 'wounds:');
                 devLines.forEach(line => {
-                    const txt = line.substring(1).trim();
-                    if(txt.toLowerCase().includes('nil')) return;
-                    
+                    // Remove leading dash if present
+                    let txt = line.startsWith('-') ? line.substring(1).trim() : line;
+                    if (txt.toLowerCase().includes('nil')) return;
+
                     let type = "Other Device";
                     let det = txt;
                     let insertionDate = '';
@@ -336,12 +338,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             insertionDate = `${yyyy}-${mm}-${dd}`;
                         }
                     }
-                    
-                    const known = ['CVC', 'PICC', 'Other CVAD', 'PIVC', 'Arterial Line', 'Enteral Tube', 'IDC', 'Drain', 'Wound', 'Pacing Wire', 'Vascath'];
-                    for(let k of known) {
-                        if(txt.startsWith(k)) {
-                            type = k;
-                            det = txt.substring(k.length).trim().replace(/^\(|\)$/g, '').replace(/^-/, '').trim(); 
+
+                    const known = ['CVC', 'PICC', 'Other CVAD', 'PIVC', 'Arterial Line', 'Enteral Tube', 'IDC', 'Drain', 'Wound', 'Pacing Wire', 'Vascath', 'SPC', 'NG Tube'];
+                    for (let k of known) {
+                        if (txt.startsWith(k)) {
+                            // Map aliases to official types
+                            if (k === 'SPC') type = 'IDC';
+                            else if (k === 'NG Tube') type = 'Enteral Tube';
+                            else type = k;
+
+                            // Remove the device type prefix, any trailing colons/dashes, and trim
+                            det = txt.substring(k.length).replace(/^[\s:-]+/, '').replace(/^\(|\)$/g, '').trim();
                             break;
                         }
                     }
@@ -353,31 +360,31 @@ document.addEventListener('DOMContentLoaded', () => {
                             .replace(/,?\s*\d+\s*days?\s*dwell/gi, '')
                             .replace(/,?\s*\d+d\s*long\s*dwell/gi, '')
                             .replace(/,?\s*\d+d\s*dwell/gi, '')
-                            .replace(/^\(|\)$/g, '')
+                            .replace(/\s*-\s*$/g, '')
                             .replace(/,\s*,/g, ',')
                             .replace(/^,\s*|,\s*$/g, '')
                             .trim();
                     }
 
-                    if(window.addDevice) window.addDevice(type, det, insertionDate);
+                    if (window.addDevice) window.addDevice(type, det, insertionDate);
                 });
             }
         }
-        
+
         // --- QUICK REVIEW DETECTION ---
         // Extract category from imported note
         const catMatch = text.match(/ALERT Nursing Review Category - (CAT \d+)/i);
-        
+
         // Check if imported DMR is from a pre-stepdown review
         const isPreStepdownImport = text.match(/Pre-Stepdown Review/i);
-        
+
         if (catMatch) {
             const categoryText = catMatch[1]; // e.g., "CAT 2"
-            
+
             let category = 'green';
             if (categoryText.includes('CAT 1')) category = 'red';
             else if (categoryText.includes('CAT 2')) category = 'amber';
-            
+
             // Parse which specific risks were flagged in the imported note
             const identifiedRisks = text.match(/IDENTIFIED ICU READMISSION RISK FACTORS:([\s\S]*?)(?=PLAN:|$)/i);
             const previousRisks = [];
@@ -392,13 +399,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (riskText.includes('nutrition') || riskText.includes('feeding')) previousRisks.push('nutrition');
                 if (riskText.includes('electrolyte')) previousRisks.push('electrolyte');
             }
-            
+
             // Calculate CURRENT hours on ward based on stepdown date/time
             // Use the imported stepdownDate (already set above) and get stepdownTime from form
             setTimeout(() => {
                 const stepdownDateEl = document.getElementById('stepdownDate');
                 const stepdownTimeButtons = document.querySelectorAll('#stepdownTime .btn');
-                
+
                 let stepdownDate = stepdownDateEl?.value;
                 let stepdownTime = null;
                 stepdownTimeButtons.forEach(btn => {
@@ -406,12 +413,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         stepdownTime = btn.dataset.value;
                     }
                 });
-                
+
                 // Map time-of-day to hours (same as calculateWardTime function)
                 // Default to 4pm (16:00) if no time specified - most ICU discharges are afternoon
                 const timeMap = { 'Morning': 9, 'Afternoon': 15, 'Evening': 18, 'Night': 21 };
                 const hour = stepdownTime ? (timeMap[stepdownTime] || 16) : 16;
-                
+
                 let currentHoursOnWard = 0;
                 if (stepdownDate) {
                     const [y, m, d] = stepdownDate.split('-');
@@ -420,12 +427,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const diffMs = now - stepdownDateTime;
                     currentHoursOnWard = diffMs / (1000 * 60 * 60);
                 }
-                
+
                 // Store for later use
                 if (window.previousCategoryData !== undefined) {
                     window.previousCategoryData = { category, hoursOnWard: currentHoursOnWard, categoryText, previousRisks };
                 }
-                
+
                 // Determine if quick review should be offered:
                 // - Pre-stepdown DMR import: Only offer for CAT 3 (patient hasn't been on ward yet)
                 // - Post-stepdown DMR import: Offer for CAT 2 or CAT 3 (indicates follow-up review)
@@ -440,14 +447,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Post-stepdown import: CAT 2 or CAT 3 get quick review (confirms it's a follow-up)
                     shouldOfferQuickReview = (currentHoursOnWard > 0 && previousRisks.length > 0);
                 }
-                
+
                 if (shouldOfferQuickReview && window.showQuickReviewPrompt) {
                     window.showQuickReviewPrompt(categoryText, currentHoursOnWard, previousRisks);
                 }
             }, 1000);
         }
-        
+
         const t = document.getElementById('toast');
-        if(t) { t.textContent = "Data Imported Successfully"; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2000); }
+        if (t) { t.textContent = "Data Imported Successfully"; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
     }
 });
