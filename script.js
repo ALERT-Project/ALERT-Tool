@@ -25,10 +25,11 @@
    ========================================= */
 
 /* --- 1. CONFIGURATION & STATE --- */
-let isManuallyEdited = false; // Global flag for manual edits
+// (isManuallyEdited removed — summary is now generated on-demand)
 let isQuickReviewMode = false; // Flag for quick review mode
 let previousCategoryData = null; // Store previous review data for comparison
 let initialQuickReviewRisks = { red: [], amber: [] }; // Track baseline risks when entering Quick Review
+let quickReviewBaselineCaptured = false; // Whether baseline has been captured (fixes empty-baseline bug)
 
 const $ = id => document.getElementById(id);
 const debounce = (fn, wait = 350) => {
@@ -399,27 +400,50 @@ function initialize() {
     window.showQuickReviewPrompt = showQuickReviewPrompt;
     window.previousCategoryData = previousCategoryData;
 
-    // --- Manual Edit Protection ---
-    const sumBox = $('summary');
-    if (sumBox) {
-        sumBox.addEventListener('input', () => {
-            if (!sumBox.classList.contains('script-updating')) {
-                isManuallyEdited = true;
-                const warn = $('manual_edit_warning');
-                if (warn) warn.style.display = 'flex';
-            }
-        });
+    // --- Generate DMR Summary (On-Demand) ---
+    function triggerGenerate() {
+        const summaryEl = $('summary');
+        const actions = $('summary_actions');
+
+        // Ensure PMH is synced from chips
+        syncComorbsToPMH();
+
+        // Run computeAll to ensure all risk calculations are current (stores _last* on window)
+        computeAll();
+
+        // Prepare textarea
+        summaryEl.value = '';
+
+        // Generate the summary using stored data from computeAll
+        generateSummary(
+            window._lastState || getState(),
+            window._lastCat || { id: 'green', text: 'CAT 3' },
+            window._lastWardTime || '',
+            window._lastRed || [],
+            window._lastAmber || [],
+            window._lastSuppressed || [],
+            window._lastActiveComorbsKeys || []
+        );
+
+        // Auto-resize textarea to fit content
+        summaryEl.style.height = 'auto';
+        summaryEl.style.height = summaryEl.scrollHeight + 'px';
+
+        // Show copy button
+        if (actions) actions.style.display = 'block';
+        const btn = $('btn_generate_summary');
+        if (btn) btn.innerHTML = '🔄 Click again to Regenerate DMR Summary <span style="font-size:0.9em; font-weight:normal; opacity:0.9;">(will overwrite any manual edits)</span>';
+        saveState(true);
     }
 
-    // Force Update Button
-    const forceBtn = $('btn_force_update');
-    if (forceBtn) {
-        forceBtn.addEventListener('click', () => {
-            if (confirm("This will overwrite your manual edits with the latest auto-generated data. Continue?")) {
-                isManuallyEdited = false;
-                window.devicesModifiedSinceLastSummary = false;
-                $('manual_edit_warning').style.display = 'none';
-                computeAll();
+    $('btn_generate_summary')?.addEventListener('click', triggerGenerate);
+
+    const summaryInputEl = $('summary');
+    if (summaryInputEl) {
+        summaryInputEl.addEventListener('input', () => {
+            if (!summaryInputEl.classList.contains('script-updating')) {
+                const badge = $('manual_edit_badge');
+                if (badge) badge.style.display = 'block';
             }
         });
     }
@@ -1574,9 +1598,15 @@ function clearData() {
         }
     });
 
-    // Reset manual edits flag
-    isManuallyEdited = false;
-    $('manual_edit_warning').style.display = 'none';
+    // Reset DMR summary
+    const summaryActions = $('summary_actions');
+    if (summaryActions) summaryActions.style.display = 'none';
+    const badge = $('manual_edit_badge');
+    if (badge) badge.style.display = 'none';
+    const btnGen = $('btn_generate_summary');
+    if (btnGen) btnGen.innerHTML = '✨ Click here to generate DMR Summary';
+    const summaryEl = $('summary');
+    if (summaryEl) { summaryEl.value = ''; summaryEl.style.height = ''; }
     window.dismissedDischarge = false;
 
     const now = new Date();
@@ -1613,6 +1643,12 @@ function enableQuickReviewMode() {
     // Capture current risks before entering Quick Review
     const s = getState();
     initialQuickReviewRisks = { red: [], amber: [] };
+    quickReviewBaselineCaptured = false;
+
+    // Eagerly capture baseline by running a compute now (before user enters new data)
+    // This ensures the baseline reflects the CURRENT state, so any new risks
+    // entered by the user (e.g. high lactate) will be correctly detected as "new"
+    computeAll();
 
     // Show quick review banner
     const banner = $('quickReviewBanner');
@@ -1736,6 +1772,7 @@ function enableQuickReviewMode() {
 function exitQuickReviewMode() {
     isQuickReviewMode = false;
     initialQuickReviewRisks = { red: [], amber: [] };
+    quickReviewBaselineCaptured = false;
 
     // Hide banner
     const banner = $('quickReviewBanner');
@@ -2376,9 +2413,10 @@ function computeAll() {
         // Check if Quick Review Mode should auto-exit due to NEW risks (not persisting ones)
         if (isQuickReviewMode) {
             // If this is the first compute in Quick Review, capture baseline risks
-            if (initialQuickReviewRisks.red.length === 0 && initialQuickReviewRisks.amber.length === 0) {
+            if (!quickReviewBaselineCaptured) {
                 initialQuickReviewRisks.red = [...uniqueRed];
                 initialQuickReviewRisks.amber = [...uniqueAmber];
+                quickReviewBaselineCaptured = true;
             } else {
                 // Check for NEW risks that weren't present initially
                 const newRed = uniqueRed.filter(r => !initialQuickReviewRisks.red.includes(r));
@@ -2517,10 +2555,14 @@ function computeAll() {
         const fu = $('followUpInstructions'); if (fu) fu.innerHTML = planHtml;
 
         checkCompleteness(s, countComorbs);
-        console.log('Risks before generateSummary - Red:', uniqueRed.length, 'Amber:', uniqueAmber.length);
-        console.log('Red risks:', uniqueRed);
-        console.log('Amber risks:', uniqueAmber);
-        generateSummary(s, cat, timeData.text, uniqueRed, uniqueAmber, suppressedRisks, activeComorbsKeys);
+        // Store data for on-demand summary generation
+        window._lastRed = uniqueRed;
+        window._lastAmber = uniqueAmber;
+        window._lastSuppressed = suppressedRisks;
+        window._lastState = s;
+        window._lastCat = cat;
+        window._lastWardTime = timeData.text;
+        window._lastActiveComorbsKeys = activeComorbsKeys;
     } catch (err) {
         console.error("Compute Error:", err);
     }
@@ -2545,21 +2587,9 @@ function checkCompleteness(s, comorbCount) {
 
 function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys) {
 
-    // Manual Edit Protection: allow auto-fill if summary is empty OR in quick review mode
     const sum = $('summary');
-    const hasSummary = !!(sum && sum.value && sum.value.trim());
-    if (isManuallyEdited && hasSummary && !isQuickReviewMode) {
-        // If devices were modified, show a hint to use Force Update
-        if (window.devicesModifiedSinceLastSummary) {
-            const warn = $('manual_edit_warning');
-            if (warn && !warn.textContent.includes('device')) {
-                warn.innerHTML = '⚠️ Manual edits detected. Devices modified - use Force Update to refresh DMR.';
-            }
-        }
-        return;
-    }
 
-    // Clear device modified flag when summary is successfully regenerated
+    // Clear device modified flag when summary is generated
     window.devicesModifiedSinceLastSummary = false;
 
     const lines = [];
@@ -2874,6 +2904,8 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         sum.classList.add('script-updating');
         sum.value = lines.join('\n');
         sum.classList.remove('script-updating');
+        const badge = $('manual_edit_badge');
+        if (badge) badge.style.display = 'none';
     }
 }
 

@@ -1719,19 +1719,31 @@
 
         <div id="section-summary" class="card"
             style="margin-top:40px; margin-bottom:40px; display:block; scroll-margin-top:100px;">
-            <div class="section-title">📄 Auto-Generated Summary</div>
-
-            <div id="manual_edit_warning"
-                style="display:none; background:#fff3cd; color:#856404; padding:8px; border-radius:6px; font-size:0.9rem; margin-bottom:8px; border:1px solid #ffeeba; align-items:center; justify-content:space-between;">
-                <span><strong>Note:</strong> You have edited the text manually. Auto-updates paused.</span>
-                <button id="btn_force_update" class="btn small"
-                    style="background:#856404; color:white; border:none; margin-left:8px;">Update Anyway</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div class="section-title" style="margin-bottom:0;">📄 DMR Summary</div>
+                <div id="manual_edit_badge"
+                    style="display:none; background:#f59e0b; color:#fff; font-size:0.75rem; padding:4px 8px; border-radius:12px; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    ✏️ Edited Manually</div>
             </div>
 
-            <textarea id="summary" placeholder="Summary will auto-generate here..."
-                style="min-height:300px; width:100%; display:block;"></textarea>
-            <button id="btnCopySummaryMain" class="btn"
-                style="width:100%; margin-top:8px; background:var(--input-bg);">Copy to DMR (Clipboard)</button>
+            <div
+                style="background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:8px;">
+                <div style="margin-bottom:12px;">
+                    <button id="btn_generate_summary" class="btn"
+                        style="width:100%; padding:14px; font-size:1rem; font-weight:600; background:var(--input-bg); color:var(--accent); border:1px dashed var(--accent); border-radius:8px; cursor:pointer; transition:all 0.2s ease;">
+                        ✨ Click here to generate DMR Summary
+                    </button>
+                </div>
+
+                <textarea id="summary" placeholder="Summary will appear here..."
+                    style="min-height:200px; width:100%; display:block; border:1px solid var(--line); border-radius:8px; background:var(--card); font-size:0.95rem;"></textarea>
+            </div>
+
+            <div id="summary_actions" style="display:none;">
+                <button id="btnCopySummaryMain" class="btn"
+                    style="width:100%; margin-top:6px; background:var(--accent); color:white;">📋 Copy to DMR
+                    (Clipboard)</button>
+            </div>
 
             <div id="completeness_nudge"
                 style="margin-top:8px; margin-bottom:8px; font-size:0.9rem; color:var(--muted); font-weight:600; text-align:left;">
@@ -1744,7 +1756,7 @@
 
         <div
             style="text-align:center; padding:32px 20px 20px 20px; font-size:0.75rem; color:var(--muted); line-height:1.6; word-wrap:break-word; overflow-wrap:break-word;">
-            <div>ALERT Tool A7.93 (3 Mar 2026) © 2025-2026 Casey Bond</div>
+            <div>ALERT Tool A7.94 (3 Mar 2026) © 2025-2026 Casey Bond</div>
             <div>Developed for ALERT at South Metropolitan Health Service, WA, Australia</div>
             <div><a href="https://opensource.org/licenses/MIT" target="_blank"
                     style="color:var(--accent); text-decoration:none;">MIT License</a></div>
