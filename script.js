@@ -432,7 +432,7 @@ function initialize() {
         // Show copy button
         if (actions) actions.style.display = 'block';
         const btn = $('btn_generate_summary');
-        if (btn) btn.innerHTML = '🔄 Click again to Regenerate DMR Summary <span style="font-size:0.9em; font-weight:normal; opacity:0.9;">(will overwrite any manual edits)</span>';
+        if (btn) btn.innerHTML = '🔄 Click again to regenerate DMR summary <span style="font-size:0.9em; font-weight:normal; opacity:0.9;">(will overwrite any manual edits)</span>';
         saveState(true);
     }
 
@@ -1604,7 +1604,7 @@ function clearData() {
     const badge = $('manual_edit_badge');
     if (badge) badge.style.display = 'none';
     const btnGen = $('btn_generate_summary');
-    if (btnGen) btnGen.innerHTML = '✨ Click here to generate DMR Summary';
+    if (btnGen) btnGen.innerHTML = '✨ Click here to generate DMR summary';
     const summaryEl = $('summary');
     if (summaryEl) { summaryEl.value = ''; summaryEl.style.height = ''; }
     window.dismissedDischarge = false;
@@ -2364,7 +2364,7 @@ function computeAll() {
         const countComorbs = activeComorbsKeys.length;
         // PMH sync is handled directly by toggle-label click events (see initialize)
         if (countComorbs >= 3) {
-            add(red, sentenceCase('Multiple comorbidities (three or more)'), null, 'red', null);
+            add(red, sentenceCase('Multiple comorbidities'), null, 'red', null);
             flagged.red.push('comorbs_wrapper');
         } else if (countComorbs > 0) {
             const cList = activeComorbsKeys.map(k => {
