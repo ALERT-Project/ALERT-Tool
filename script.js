@@ -545,10 +545,16 @@ function initialize() {
         rrInput.addEventListener('input', debounce(() => {
             const val = parseFloat(rrInput.value);
             if (!isNaN(val) && val > 20) {
-                const tachToggle = $('toggle_resp_tachypnea');
-                if (tachToggle && tachToggle.dataset.value === 'false') {
-                    tachToggle.click();
-                    showToast('Auto-selected Tachypnea (>20)', 1500);
+                // Open resp concern gate first
+                const respSeg = $('seg_resp_concern');
+                const respYes = respSeg?.querySelector('.seg-btn[data-value="true"]');
+                if (respYes && !respYes.classList.contains('active')) respYes.click();
+                // Then select tachypnea
+                const tachSeg = $('seg_resp_tachypnea');
+                const yesBtn = tachSeg?.querySelector('.seg-btn[data-value="true"]');
+                if (yesBtn && !yesBtn.classList.contains('active')) {
+                    yesBtn.click();
+                    showToast('Auto-selected Resp Concern + Tachypnea (>20)', 1500);
                 }
             }
         }, 500));
@@ -599,27 +605,32 @@ function initialize() {
         coughInput.addEventListener('input', debounce(() => {
             const val = coughInput.value.toLowerCase();
             if (val.includes('weak') || val.includes('poor') || val.includes('ineffective')) {
-                const toggle = $('toggle_resp_poor_cough');
-                if (toggle && toggle.dataset.value === 'false') {
-                    toggle.click();
-                    showToast('Auto-selected Poor Cough (B)', 1500);
+                // Open the resp concern gate first so the sub-factor actually scores
+                const respSeg = $('seg_resp_concern');
+                const respYes = respSeg?.querySelector('.seg-btn[data-value="true"]');
+                if (respYes && !respYes.classList.contains('active')) respYes.click();
+                // Then select poor cough
+                const seg = $('seg_resp_poor_cough');
+                const yesBtn = seg?.querySelector('.seg-btn[data-value="true"]');
+                if (yesBtn && !yesBtn.classList.contains('active')) {
+                    yesBtn.click();
+                    showToast('Auto-selected Resp Concern + Poor Cough (B)', 1500);
                 }
             }
         }, 600));
     }
 
-    // Reverse: resp_poor_cough toggle -> write 'Weak' in b_cough if empty
-    const poorCoughToggle = $('toggle_resp_poor_cough');
-    if (poorCoughToggle) {
-        const origHandler = poorCoughToggle.onclick;
-        poorCoughToggle.addEventListener('click', () => {
-            setTimeout(() => {
+    // Reverse: Poor Cough Yes clicked -> write 'Weak' in b_cough if empty
+    const poorCoughSeg = $('seg_resp_poor_cough');
+    if (poorCoughSeg) {
+        poorCoughSeg.querySelectorAll('.seg-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
                 const coughEl = $('b_cough');
-                if (coughEl && !coughEl.value && poorCoughToggle.dataset.value === 'true') {
+                if (coughEl && !coughEl.value && btn.dataset.value === 'true') {
                     coughEl.value = 'Weak';
                     coughEl.dispatchEvent(new Event('input'));
                 }
-            }, 50);
+            });
         });
     }
 
@@ -639,6 +650,32 @@ function initialize() {
                 if (oliguToggle && oliguToggle.dataset.value === 'false') oliguToggle.click();
             }
         }, 600));
+    }
+
+    // Reverse: Renal Oliguria/Anuria toggle -> write into E: UOP if empty
+    const oliguToggleEl = $('toggle_renal_oliguria');
+    if (oliguToggleEl) {
+        oliguToggleEl.addEventListener('click', () => {
+            setTimeout(() => {
+                const uopEl = $('e_uop');
+                if (uopEl && !uopEl.value.trim() && oliguToggleEl.dataset.value === 'true') {
+                    uopEl.value = 'Oliguric (<0.5ml/kg)';
+                    uopEl.dispatchEvent(new Event('input'));
+                }
+            }, 50);
+        });
+    }
+    const anuriaToggleEl = $('toggle_renal_anuria');
+    if (anuriaToggleEl) {
+        anuriaToggleEl.addEventListener('click', () => {
+            setTimeout(() => {
+                const uopEl = $('e_uop');
+                if (uopEl && !uopEl.value.trim() && anuriaToggleEl.dataset.value === 'true') {
+                    uopEl.value = 'Anuric';
+                    uopEl.dispatchEvent(new Event('input'));
+                }
+            }, 50);
+        });
     }
 
     document.querySelectorAll('.nav-item').forEach(link => {
@@ -857,9 +894,9 @@ function initialize() {
                     renal.click();
                 }
             }
-            // Sync comorbidity chips -> PMH textarea immediately
+            // Sync comorbidity chips -> PMH textarea immediately (must be synchronous before computeAll)
             if (el.id.startsWith('toggle_comorb_')) {
-                setTimeout(syncComorbsToPMH, 20);
+                syncComorbsToPMH();
             }
             saveState(true);
             computeAll(); // Call immediately to update risks
@@ -1446,9 +1483,13 @@ function hideClearDataModal() {
 }
 
 // Sync all active comorbidity chips to the PMH textarea as a newline-separated list
+let _syncingPMH = false; // Re-entrancy guard
 function syncComorbsToPMH() {
+    if (_syncingPMH) return;
+    _syncingPMH = true;
+
     const noteEl = $('pmh_note');
-    if (!noteEl) return;
+    if (!noteEl) { _syncingPMH = false; return; }
 
     // Build current chip lines
     const activeKeys = toggleInputs.filter(k => k.startsWith('comorb_') && $(`toggle_${k}`)?.dataset.value === 'true');
@@ -1456,26 +1497,27 @@ function syncComorbsToPMH() {
     activeKeys.forEach(k => {
         if (k === 'comorb_other') {
             const specVal = $('comorb_other_note')?.value.trim();
-            if (specVal) chipLines.push(specVal); // Only include when user has typed something
+            if (specVal) chipLines.push(specVal);
         } else {
             chipLines.push(comorbMap[k]);
         }
     });
 
-    // Build a complete filter of all known chip display names + current comorb_other value
-    // This works across page reloads without needing in-memory state tracking
+    // Build filter of all known chip display names + current comorb_other value
     const filterLower = Object.values(comorbMap).map(n => n.toLowerCase());
     const otherVal = $('comorb_other_note')?.value.trim();
     if (otherVal) filterLower.push(otherVal.toLowerCase());
 
-    // Keep only user-typed lines that don't match any chip
+    // Keep only user-typed lines that don't match any chip name
     const userLines = noteEl.value.split('\n').filter(line => {
         const trimmed = line.trim();
         return trimmed && !filterLower.includes(trimmed.toLowerCase());
     });
 
     noteEl.value = [...chipLines, ...userLines].join('\n');
-    noteEl.dispatchEvent(new Event('input'));
+    // Don't dispatch 'input' or call saveState here — the caller handles both
+
+    _syncingPMH = false;
 }
 
 function clearData() {
@@ -2573,14 +2615,37 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
         lines.push('');
     }
 
-    // Only add PMH section if there are comorbidities or PMH notes
-    // pmh_note is the single source of truth (chips auto-sync into it via syncComorbsToPMH)
-    if (s.pmh_note && s.pmh_note.trim()) {
-        lines.push('PMH:');
+    // PMH: read chips directly AND pmh_note, deduplicate
+    const pmhItems = [];
+    const pmhSeen = new Set();
+    // First: add active chip names
+    activeComorbsKeys.forEach(k => {
+        let name;
+        if (k === 'comorb_other' && s.comorb_other_note) {
+            name = s.comorb_other_note.trim();
+        } else if (k === 'comorb_other') {
+            return; // skip "Other" with no text
+        } else {
+            name = comorbMap[k];
+        }
+        if (name && !pmhSeen.has(name.toLowerCase())) {
+            pmhSeen.add(name.toLowerCase());
+            pmhItems.push(name);
+        }
+    });
+    // Second: add any extra lines from pmh_note that aren't already listed
+    if (s.pmh_note) {
         s.pmh_note.split('\n').forEach(p => {
             const trimmed = p.trim().replace(/^-/, '').trim();
-            if (trimmed) lines.push(`-${trimmed}`);
+            if (trimmed && !pmhSeen.has(trimmed.toLowerCase())) {
+                pmhSeen.add(trimmed.toLowerCase());
+                pmhItems.push(trimmed);
+            }
         });
+    }
+    if (pmhItems.length > 0) {
+        lines.push('PMH:');
+        pmhItems.forEach(item => lines.push(`-${item}`));
         lines.push('');
     }
 
