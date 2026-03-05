@@ -1788,6 +1788,27 @@
 
     <div id="toast" class="toast"></div>
 
+    <!-- Green Discharge Confirmation Modal -->
+    <div id="greenDischargeConfirmModal"
+        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:white; padding:28px; border-radius:12px; max-width:460px; width:90%; box-shadow:0 4px 20px rgba(0,0,0,0.2); text-align:center;">
+            <div style="font-size:2rem; margin-bottom:12px;">⚠️</div>
+            <h3 style="margin:0 0 12px 0; color:var(--accent); font-size:1.1rem;">Confirm Discharge Criteria</h3>
+            <p style="margin:0 0 20px 0; color:var(--text); font-size:0.95rem; line-height:1.5;">
+                Please confirm: Has this patient completed at least <strong>2 ward reviews</strong> AND has <strong>24
+                    hours passed</strong> since ICU stepdown?
+            </p>
+            <div style="display:flex; gap:12px; justify-content:center;">
+                <button id="btn_green_confirm_yes" class="btn small"
+                    style="background:var(--green); color:white; border-color:var(--green); padding:10px 24px;">Yes,
+                    criteria met</button>
+                <button id="btn_green_confirm_no" class="btn small" style="padding:10px 24px;">No, continue
+                    reviews</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Excel Import Modal -->
     <div id="excelImportModal"
         style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">

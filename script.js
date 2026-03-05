@@ -99,7 +99,8 @@ const staticInputs = [
     'dyspneaConcern', 'dyspneaConcern_note', 'renal_note', 'infection_note',
     'electrolyteConcern_note', 'neuroType_note', 'nutrition_context_note', 'pain_context_note', 'neuro_psych_note', 'sleep_quality_note', 'fluid_restriction_amount',
     'after_hours_note', 'pressors_note', 'immobility_note', 'comorb_other_note',
-    'unsuitable_note', 'pressor_ceased_time', 'pressor_recent_other_note', 'pressor_current_other_note', 'hac_note'
+    'unsuitable_note', 'pressor_ceased_time', 'pressor_recent_other_note', 'pressor_current_other_note', 'hac_note',
+    'wardReviewCount'
 ];
 
 const segmentedInputs = [
@@ -453,12 +454,46 @@ function initialize() {
     if (btnYes) {
         btnYes.addEventListener('click', (e) => {
             e.preventDefault();
+            // Check if green discharge criteria are met — if not, show confirmation modal
+            const catScoreText = $('catText')?.textContent || '';
+            if (catScoreText.includes('CAT 3') || catScoreText.includes('Green')) {
+                // Show confirmation modal for early/approaching discharge
+                const modal = $('greenDischargeConfirmModal');
+                if (modal) modal.style.display = 'flex';
+                return;
+            }
+
+            // Criteria met — proceed directly
             const chk = $('chk_discharge_alert');
             if (chk) {
                 chk.checked = true;
                 compute();
                 showToast("Patient marked for discharge", 1500);
             }
+        });
+    }
+
+    // --- Green Discharge Confirmation Modal Listeners ---
+    const btnConfirmGreenYes = $('btn_green_confirm_yes');
+    if (btnConfirmGreenYes) {
+        btnConfirmGreenYes.addEventListener('click', (e) => {
+            e.preventDefault();
+            const modal = $('greenDischargeConfirmModal');
+            if (modal) modal.style.display = 'none';
+            const chk = $('chk_discharge_alert');
+            if (chk) {
+                chk.checked = true;
+                compute();
+                showToast("Patient marked for discharge (criteria confirmed)", 1500);
+            }
+        });
+    }
+    const btnConfirmGreenNo = $('btn_green_confirm_no');
+    if (btnConfirmGreenNo) {
+        btnConfirmGreenNo.addEventListener('click', (e) => {
+            e.preventDefault();
+            const modal = $('greenDischargeConfirmModal');
+            if (modal) modal.style.display = 'none';
         });
     }
 
@@ -469,6 +504,25 @@ function initialize() {
             window.dismissedDischarge = true;
             const continueChk = $('chk_continue_alert');
             if (continueChk) continueChk.checked = true;
+            compute();
+        });
+    }
+
+    // --- Ward Review Counter Listeners ---
+    const btnRevPlus = $('btn_review_plus');
+    const btnRevMinus = $('btn_review_minus');
+    const revCountEl = $('wardReviewCount');
+    if (btnRevPlus && revCountEl) {
+        btnRevPlus.addEventListener('click', () => {
+            const cur = parseInt(revCountEl.value) || 0;
+            revCountEl.value = cur + 1;
+            compute();
+        });
+    }
+    if (btnRevMinus && revCountEl) {
+        btnRevMinus.addEventListener('click', () => {
+            const cur = parseInt(revCountEl.value) || 0;
+            revCountEl.value = Math.max(0, cur - 1);
             compute();
         });
     }
@@ -967,8 +1021,21 @@ function initialize() {
     $('chk_discharge_alert')?.addEventListener('change', () => {
         const dischargeChk = $('chk_discharge_alert');
         const continueChk = $('chk_continue_alert');
-        if (dischargeChk && dischargeChk.checked && continueChk) {
-            continueChk.checked = false;
+
+        if (dischargeChk && dischargeChk.checked) {
+            // Check green discharge criteria if we're dealing with CAT 3
+            const catScoreText = $('catText')?.textContent || '';
+            if (catScoreText.includes('CAT 3') || catScoreText.includes('Green')) {
+                // We always show the confirmation modal for Green to force the user to confirm 2 reviews and 24h
+                dischargeChk.checked = false; // Revert the check
+                const modal = $('greenDischargeConfirmModal');
+                if (modal) modal.style.display = 'flex';
+                return; // Don't compute yet, let the modal handle it
+            }
+
+            if (continueChk) {
+                continueChk.checked = false;
+            }
         }
         compute();
     });
@@ -1876,8 +1943,8 @@ function calculateWardTime(dateStr, timeOfDay, isPre) {
     if (isPre) return { hours: 0, text: '(Pre-Stepdown)' };
     if (!dateStr) return { hours: 0, text: '' };
 
-    // Default to Midday (12) if captured time logic isn't perfect, but we use strict bands here
-    const h = { 'Morning': 9, 'Afternoon': 15, 'Evening': 18, 'Night': 21 }[timeOfDay] || 12;
+    // Default to Evening (18:00) if no time is explicitly provided or matched
+    const h = { 'Morning': 9, 'Afternoon': 15, 'Evening': 18, 'Night': 21 }[timeOfDay] || 18;
 
     const [y, m, d] = dateStr.split('-');
     const stepObj = new Date(y, m - 1, d, h);
@@ -2489,7 +2556,7 @@ function computeAll() {
             }
         });
 
-        // --- PLAN & DISCHARGE LOGIC (UPDATED WITH TIME GATING) ---
+        // --- PLAN & DISCHARGE LOGIC (UPDATED WITH TIME GATING + GREEN CRITERIA) ---
         let planHtml = '';
         const hoursSinceStep = timeData.hours;
 
@@ -2510,7 +2577,10 @@ function computeAll() {
             let showPrompt = false;
 
             if (isPost && !alreadyChecked && !dismissed) {
-                if (cat.id === 'green') showPrompt = true; // Immediate
+                // GREEN: Show prompt if >= 12h, but rely on confirmation modal to check the 2 reviews & 24h
+                if (cat.id === 'green' && hoursSinceStep >= 12) {
+                    showPrompt = true;
+                }
                 else if (cat.id === 'amber' && hoursSinceStep >= 48) showPrompt = true;
                 else if (cat.id === 'red' && hoursSinceStep >= 72) showPrompt = true;
             }
@@ -2526,7 +2596,11 @@ function computeAll() {
 
                 let hoursTxt = Math.round(hoursSinceStep) + " hours";
 
-                disMsg.innerHTML = `<span style="color:var(--${cat.id})">${cat.text} ${colorName} patient.</span> ${hoursTxt} on ward.<br>Can patient be discharged?`;
+                if (cat.id === 'green') {
+                    disMsg.innerHTML = `<span style="color:var(--green)">${cat.text} Green patient.</span> ${hoursTxt} on ward.<br>Can patient be discharged?`;
+                } else {
+                    disMsg.innerHTML = `<span style="color:var(--${cat.id})">${cat.text} ${colorName} patient.</span> ${hoursTxt} on ward.<br>Can patient be discharged?`;
+                }
                 if (disWrap) disWrap.classList.add('pulse-highlight');
             } else {
                 disPrompt.style.display = 'none';
@@ -2546,9 +2620,9 @@ function computeAll() {
         else if (cat.id === 'red') planHtml = `<div class="status red">At least daily ALERT review (up to 72h).</div>`;
         else if (cat.id === 'amber') planHtml = `<div class="status amber">At least daily ALERT review (up to 48h).</div>`;
         else {
-            // Green Logic
+            // Green Logic — with criteria gating
             if (s.reviewType === 'pre') planHtml = `<div class="status green">ALERT post ICU review on ward.</div>`;
-            else planHtml = `<div class="status green">Continue ALERT post ICU reviews.</div>`;
+            else planHtml = `<div class="status green">Continue ALERT reviews — minimum 2 reviews and 24h post-stepdown required before discharge.</div>`;
         }
 
         if (s.chk_medical_rounding) planHtml += `<div style="margin-top:2px; font-weight:600; color:var(--accent);">+ Added to ALERT Medical Rounding List</div>`;
@@ -2891,9 +2965,15 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     } else if (cat.id === 'amber') {
         lines.push('- At least daily ALERT review for up to 48h post-ICU stepdown.');
     } else {
-        // Green
-        if (s.reviewType === 'pre') lines.push('- At least single ALERT nursing follow up on ward.');
-        else lines.push('- Continue ALERT post ICU reviews.');
+        // Green — with discharge criteria confirmation
+        if (s.reviewType === 'pre') {
+            lines.push('- At least single ALERT nursing follow up on ward.');
+        } else if (s.chk_discharge_alert) {
+            // Checked via the modal confirmation
+            lines.push('- Discharge from ALERT post ICU list. Please re-contact ALERT if further support required.');
+        } else {
+            lines.push('- Continued ALERT nursing reviews for up to 24h post stepdown (minimum 2 reviews required before discharge).');
+        }
     }
 
     if (s.chk_medical_rounding) {
