@@ -14,7 +14,11 @@
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90' font-weight='bold' fill='%23ef4444'>!</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="src/css/style.css">
+    <script>
+        window.onerror = function (m, u, l, c, e) { console.error("GLOBAL ERROR: " + m + " line: " + l, e); };
+        window.addEventListener("unhandledrejection", function (e) { console.error("PROMISE REJECTION: " + e.reason); });
+    </script>
 </head>
 
 <body>
@@ -1937,7 +1941,7 @@
         });
     </script>
 
-    <script src="script.js"></script>
+    <script src="dist/bundle.js"></script>
     <script src="plugins/redcap.js"></script>
     <script src="plugins/adds_calc.js"></script>
     <script src="plugins/importer.js"></script>
