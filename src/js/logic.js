@@ -523,7 +523,7 @@ export function computeAll() {
             ];
 
             if (html.length === 0) listEl.innerHTML = '<div style="color:var(--muted)">No risk factors identified</div>';
-            else listEl.innerHTML = html.join('\\n');
+            else listEl.innerHTML = html.join('');
         }
 
         document.querySelectorAll('.flag-red, .flag-amber').forEach(e => e.classList.remove('flag-red', 'flag-amber'));
