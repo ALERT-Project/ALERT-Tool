@@ -2211,12 +2211,13 @@ function computeAll() {
             let msg = "Electrolyte concern", isRed = false;
             let parts = [];
             if (k) {
-                if (k > 6.0) { parts.push(`hyperkalemia K+ ${k}`); isRed = true; }
-                else if (k < 3.0) { parts.push(`hypokalaemia K+ ${k}`); isRed = true; }
+                if (k > 6.0) { parts.push(`high K+ ${k}`); isRed = true; }
+                else if (k < 3.0) { parts.push(`low K+ ${k}`); isRed = true; }
             }
             const na = num(s.bl_na);
             if (na && (na < 125 || na > 155)) {
-                parts.push(`severe Na derangement ${na}`);
+                if (na < 125) parts.push(`low Na ${na}`);
+                else parts.push(`high Na ${na}`);
                 isRed = true;
             }
             const sev = s.electrolyteConcern;
@@ -2348,14 +2349,14 @@ function computeAll() {
         }
 
         const hb = num(s.hb) || num(s.bl_hb);
-        if (hb && hb <= 70) add(red, `Hb ${hb}`, 'hb_wrapper', 'red');
-        else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Hb ${hb} and dropping`, 'hb_wrapper', 'amber');
+        if (hb && hb <= 70) add(red, `Low Hb ${hb}`, 'hb_wrapper', 'red');
+        else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Low Hb ${hb} and dropping`, 'hb_wrapper', 'amber');
 
         const alb = num(s.bl_alb);
         if (alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, 'bl_alb', 'amber');
 
         const plts = num(s.bl_plts);
-        if (plts && plts < 100) add(amber, `Thrombocytopenia Plts ${plts}`, 'bl_plts', 'amber');
+        if (plts && plts < 100) add(amber, `Low platelets Plts ${plts}`, 'bl_plts', 'amber');
 
         const inr = num(s.bl_inr);
         if (inr && inr > 3.5) add(red, `High INR ${inr}`, 'bl_inr', 'red');
@@ -2367,9 +2368,9 @@ function computeAll() {
         // --- BSL FLAGGING ---
         const bsl = num(s.e_bsl);
         if (bsl) {
-            if (bsl < 4.0) add(red, `Hypoglycemia BSL ${bsl}`, 'e_bsl', 'red');
-            else if (bsl > 20) add(red, `Hyperglycemia BSL ${bsl}`, 'e_bsl', 'red');
-            else if (bsl >= 15) add(amber, `Hyperglycemia BSL ${bsl}`, 'e_bsl', 'amber');
+            if (bsl < 4.0) add(red, `Low BSL ${bsl}`, 'e_bsl', 'red');
+            else if (bsl > 20) add(red, `High BSL ${bsl}`, 'e_bsl', 'red');
+            else if (bsl >= 15) add(amber, `High BSL ${bsl}`, 'e_bsl', 'amber');
         }
 
         // --- PAIN CONTROL ---

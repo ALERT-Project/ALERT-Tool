@@ -256,43 +256,85 @@ Robert Adams,889977,17,70,3B,09,Post-op Fracture,2026-03-07,Afternoon,,,,,,,,,,F
         // --- K and Mg TRIGGERS ---
         const kVal = parseFloat(row.K);
         if (!isNaN(kVal)) {
-            if (kVal > 5.5 || kVal < 3.0) {
+            if (kVal > 6.0) {
                 category = Math.min(category, 1);
-                flags.push({ type: 'red', label: `Critical K: ${kVal}` });
-            } else if (kVal > 5.2 || kVal < 3.5) {
+                flags.push({ type: 'red', label: `High K: ${kVal}` });
+            } else if (kVal < 3.0) {
+                category = Math.min(category, 1);
+                flags.push({ type: 'red', label: `Low K: ${kVal}` });
+            } else if (kVal > 5.2) {
                 category = Math.min(category, 2);
-                flags.push({ type: 'amber', label: `Abnormal K: ${kVal}` });
+                flags.push({ type: 'amber', label: `High K: ${kVal}` });
+            } else if (kVal < 3.5) {
+                category = Math.min(category, 2);
+                flags.push({ type: 'amber', label: `Low K: ${kVal}` });
             }
         }
 
         const mgVal = parseFloat(row.Mg);
         if (!isNaN(mgVal)) {
-            if (mgVal > 1.2 || mgVal < 0.5) {
+            if (mgVal > 1.2) {
                 category = Math.min(category, 1);
-                flags.push({ type: 'red', label: `Critical Mg: ${mgVal}` });
-            } else if (mgVal > 1.1 || mgVal < 0.7) {
+                flags.push({ type: 'red', label: `High Mg: ${mgVal}` });
+            } else if (mgVal < 0.5) {
+                category = Math.min(category, 1);
+                flags.push({ type: 'red', label: `Low Mg: ${mgVal}` });
+            } else if (mgVal > 1.1) {
                 category = Math.min(category, 2);
-                flags.push({ type: 'amber', label: `Abnormal Mg: ${mgVal}` });
+                flags.push({ type: 'amber', label: `High Mg: ${mgVal}` });
+            } else if (mgVal < 0.7) {
+                category = Math.min(category, 2);
+                flags.push({ type: 'amber', label: `Low Mg: ${mgVal}` });
             }
         }
 
-        // --- NEW LOINC/BLOOD TRIGGERS (Cat 1) ---
+        // --- BLOOD TRIGGERS ---
         const lacVal = parseFloat(row.Lac);
-        if (!isNaN(lacVal) && lacVal >= 4.0) {
-            category = 1;
-            flags.push({ type: 'red', label: 'Critical Lactate' });
+        if (!isNaN(lacVal)) {
+            if (lacVal >= 4.0) {
+                category = Math.min(category, 1);
+                flags.push({ type: 'red', label: 'High Lactate' });
+            } else if (lacVal >= 2.0) {
+                category = Math.min(category, 2);
+                flags.push({ type: 'amber', label: 'High Lactate' });
+            }
         }
 
         const hbVal = parseFloat(row.Hb);
-        if (!isNaN(hbVal) && hbVal > 0 && hbVal < 70) {
-            category = 1;
-            flags.push({ type: 'red', label: 'Critical Anaemia' });
+        if (!isNaN(hbVal) && hbVal > 0) {
+            if (hbVal < 70) {
+                category = Math.min(category, 1);
+                flags.push({ type: 'red', label: 'Low Hb' });
+            } else if (hbVal <= 90) {
+                category = Math.min(category, 2);
+                flags.push({ type: 'amber', label: 'Low Hb' });
+            }
         }
 
         const wccVal = parseFloat(row.WCC);
-        if (!isNaN(wccVal) && (wccVal > 25 || wccVal < 2)) {
-            category = 1;
-            flags.push({ type: 'red', label: 'Abnormal WCC' });
+        if (!isNaN(wccVal)) {
+            if (wccVal > 25) {
+                category = Math.min(category, 1);
+                flags.push({ type: 'red', label: 'High WCC' });
+            } else if (wccVal < 2) {
+                category = Math.min(category, 1);
+                flags.push({ type: 'red', label: 'Low WCC' });
+            } else if (wccVal > 11 || wccVal < 4) {
+                category = Math.min(category, 2);
+                flags.push({ type: 'amber', label: 'Abnormal WCC' });
+            }
+        }
+
+        const crVal = parseFloat(row.Cr);
+        if (!isNaN(crVal) && crVal > 120) {
+            category = Math.min(category, 2);
+            flags.push({ type: 'amber', label: `High Cr: ${crVal}` });
+        }
+
+        const crpVal = parseFloat(row.CRP);
+        if (!isNaN(crpVal) && crpVal > 50) {
+            category = Math.min(category, 2);
+            flags.push({ type: 'amber', label: `High CRP: ${crpVal}` });
         }
 
         let isUncategorised = false;
