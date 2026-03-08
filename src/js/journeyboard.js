@@ -156,6 +156,7 @@ Robert Adams,889977,17,70,3B,09,Post-op Fracture,2026-03-04,Afternoon,,,,,,,,,,F
 
         const urnStr = row.URN ? String(row.URN) : '';
         state['ptName'] = row.PatientName || '';
+        state['initials'] = row.PatientName || ''; // Add for fallback compatibility
         state['ptMrn'] = urnStr.slice(-3);
         state['ptAge'] = row.Age || '';
         state['ptWeight'] = row.Weight || '';

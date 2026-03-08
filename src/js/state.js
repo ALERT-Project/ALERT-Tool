@@ -98,6 +98,11 @@ export function getState() {
 
 export function restoreState(state) {
     if (!state) return;
+
+    // Handle name/initials fallback
+    if (state.initials && !state.ptName) state.ptName = state.initials;
+    if (state.ptName && !state.initials) state.initials = state.ptName;
+
     staticInputs.forEach(id => { const el = $(id); if (el && state[id] !== undefined) el.value = state[id]; });
 
     segmentedInputs.forEach(id => {
