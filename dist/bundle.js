@@ -285,7 +285,10 @@
     const [y, m, d] = dateStr.split("-");
     const stepObj = new Date(y, m - 1, d, h, min);
     const diffHours = (/* @__PURE__ */ new Date() - stepObj) / 36e5;
-    if (diffHours < 0) return { hours: diffHours, text: "(Planned Stepdown)" };
+    if (diffHours < 0) {
+      if (isPre) return { hours: diffHours, text: "(Planned Stepdown)" };
+      return { hours: diffHours, text: "< 1 hour" };
+    }
     if (diffHours < 12) {
       return { hours: diffHours, text: `${Math.round(diffHours)} hours` };
     } else if (diffHours <= 48) {
@@ -588,16 +591,17 @@
         let parts = [];
         if (k) {
           if (k > 6) {
-            parts.push(`hyperkalemia K+ ${k}`);
+            parts.push(`high K+ ${k}`);
             isRed = true;
           } else if (k < 3) {
-            parts.push(`hypokalaemia K+ ${k}`);
+            parts.push(`low K+ ${k}`);
             isRed = true;
           }
         }
         const na = num(s.bl_na);
         if (na && (na < 125 || na > 155)) {
-          parts.push(`severe Na derangement ${na}`);
+          if (na < 125) parts.push(`low Na ${na}`);
+          else parts.push(`high Na ${na}`);
           isRed = true;
         }
         const sev = s.electrolyteConcern;
@@ -686,12 +690,12 @@
         else add(amber, "Immobility concern", "seg_immobility", "amber", s.immobility_note);
       }
       const hb = num(s.hb) || num(s.bl_hb);
-      if (hb && hb <= 70) add(red, `Hb ${hb}`, "hb_wrapper", "red");
-      else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Hb ${hb} and dropping`, "hb_wrapper", "amber");
+      if (hb && hb <= 70) add(red, `Low Hb ${hb}`, "hb_wrapper", "red");
+      else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Low Hb ${hb} and dropping`, "hb_wrapper", "amber");
       const alb = num(s.bl_alb);
       if (alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, "bl_alb", "amber");
       const plts = num(s.bl_plts);
-      if (plts && plts < 100) add(amber, `Thrombocytopenia Plts ${plts}`, "bl_plts", "amber");
+      if (plts && plts < 100) add(amber, `Low platelets Plts ${plts}`, "bl_plts", "amber");
       const inr = num(s.bl_inr);
       if (inr && inr > 3.5) add(red, `High INR ${inr}`, "bl_inr", "red");
       else if (inr && inr > 2.5) add(amber, `Elevated INR ${inr}`, "bl_inr", "amber");
@@ -699,9 +703,9 @@
       if (egfr && egfr < 30) add(amber, `Low eGFR ${egfr}`, "bl_egfr", "amber");
       const bsl = num(s.e_bsl);
       if (bsl) {
-        if (bsl < 4) add(red, `Hypoglycemia BSL ${bsl}`, "e_bsl", "red");
-        else if (bsl > 20) add(red, `Hyperglycemia BSL ${bsl}`, "e_bsl", "red");
-        else if (bsl >= 15) add(amber, `Hyperglycemia BSL ${bsl}`, "e_bsl", "amber");
+        if (bsl < 4) add(red, `Low BSL ${bsl}`, "e_bsl", "red");
+        else if (bsl > 20) add(red, `High BSL ${bsl}`, "e_bsl", "red");
+        else if (bsl >= 15) add(amber, `High BSL ${bsl}`, "e_bsl", "amber");
       }
       const painScore = num(s.d_pain);
       if (painScore >= 7) {
@@ -2926,3 +2930,4 @@
     initialize();
   }
 })();
+//# sourceMappingURL=bundle.js.map
