@@ -2823,19 +2823,8 @@
       });
     });
     updateWardOptions();
-    const journeyDataRaw = sessionStorage.getItem("alert_form_data");
-    if (journeyDataRaw) {
-      try {
-        const parsed = JSON.parse(journeyDataRaw);
-        restoreState(parsed);
-        sessionStorage.removeItem("alert_form_data");
-      } catch (e) {
-        console.error(e);
-      }
-    } else {
-      const saved = loadState();
-      if (saved) restoreState(saved);
-    }
+    const saved = loadState();
+    if (saved) restoreState(saved);
     refreshDetailToggleState();
     updateReviewTypeVisibility();
     const accMap = JSON.parse(sessionStorage.getItem(ACCORDION_KEY) || "{}");
@@ -2854,3 +2843,4 @@
     initialize();
   }
 })();
+//# sourceMappingURL=bundle.js.map

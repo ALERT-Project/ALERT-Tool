@@ -852,20 +852,8 @@ function initialize() {
     });
 
     updateWardOptions();
-
-    const journeyDataRaw = sessionStorage.getItem('alert_form_data');
-    if (journeyDataRaw) {
-        try {
-            const parsed = JSON.parse(journeyDataRaw);
-            restoreState(parsed);
-            sessionStorage.removeItem('alert_form_data'); // Clear it so it doesn't persistently load
-        } catch (e) {
-            console.error(e);
-        }
-    } else {
-        const saved = loadState();
-        if (saved) restoreState(saved);
-    }
+    const saved = loadState();
+    if (saved) restoreState(saved);
     refreshDetailToggleState();
     updateReviewTypeVisibility();
 
