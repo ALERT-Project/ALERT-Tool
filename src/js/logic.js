@@ -23,7 +23,7 @@ export function calculateWardTime(dateStr, timeStr, isPre) {
 
     if (diffHours < 0) {
         if (isPre) return { hours: diffHours, text: "(Planned Stepdown)" };
-        return { hours: diffHours, text: "< 1 hour" };
+        return { hours: diffHours, text: "" };
     }
 
     if (diffHours < 12) {
