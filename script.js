@@ -142,8 +142,8 @@ function formatDateDDMMYYYY(isoStr) {
 
 function sentenceCase(str) {
     if (!str) return '';
+    str = str.trim();
     if (/^[0-9]/.test(str) || /^[A-Z]{2}/.test(str) || /^[A-Z][0-9]/.test(str)) return str;
-    str = str.trim().toLowerCase();
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
@@ -159,7 +159,10 @@ function joinGrammatically(parts) {
     if (!parts || parts.length === 0) return '';
     if (parts.length === 1) return parts[0];
     const [first, ...rest] = parts;
-    const procRest = rest.map(s => s.toLowerCase());
+    const procRest = rest.map(s => {
+        if (/^[0-9]/.test(s) || /^[A-Z]{2}/.test(s) || /^[A-Z][0-9]/.test(s) || /\b[A-Z]{2,}\b/.test(s)) return s;
+        return s.toLowerCase();
+    });
     return [first, ...procRest].join(', ');
 }
 
@@ -1588,7 +1591,12 @@ function syncComorbsToPMH() {
     activeKeys.forEach(k => {
         if (k === 'comorb_other') {
             const specVal = $('comorb_other_note')?.value.trim();
-            if (specVal) chipLines.push(specVal);
+            if (specVal) {
+                specVal.split(/[\n,]+/).forEach(v => {
+                    const trimmed = v.trim();
+                    if (trimmed) chipLines.push(trimmed);
+                });
+            }
         } else {
             chipLines.push(comorbMap[k]);
         }
@@ -1597,7 +1605,12 @@ function syncComorbsToPMH() {
     // Build filter of all known chip display names + current comorb_other value
     const filterLower = Object.values(comorbMap).map(n => n.toLowerCase());
     const otherVal = $('comorb_other_note')?.value.trim();
-    if (otherVal) filterLower.push(otherVal.toLowerCase());
+    if (otherVal) {
+        otherVal.split(/[\n,]+/).forEach(v => {
+            const trimmed = v.trim();
+            if (trimmed) filterLower.push(trimmed.toLowerCase());
+        });
+    }
 
     // Keep only user-typed lines that don't match any chip name
     const userLines = noteEl.value.split('\n').filter(line => {
@@ -2245,17 +2258,20 @@ function computeAll() {
             if (s.renal_oedema) fluidFlags.push('oedema');
             if (s.renal_dehydrated) fluidFlags.push('dehydrated'); // New Chip
 
-            // Renal
+            const isMitigated = (s.renal_chronic === true);
+
             if (s.renal_oliguria) renalFlags.push('oliguria <0.5ml/kg/hr');
             if (s.renal_anuria) renalFlags.push('anuria');
             if (s.renal_dysfunction) renalFlags.push('AKI');
-            if (cr > 150) renalFlags.push(`Cr ${cr}`);
+            // Only add high Cr to flags if not mitigated by known CKD at baseline
+            if (cr > 150 && !isMitigated) renalFlags.push(`Cr ${cr}`);
 
             // Dialysis Logic
             if (s.renal_dialysis) {
                 const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
                 if (dType === 'new') renalFlags.push('acute dialysis');
-                else renalFlags.push('chronic dialysis');
+                // Chronic dialysis suppressed when KnownCKD is selected
+                else if (!isMitigated) renalFlags.push('chronic dialysis');
             }
 
             const hasFluid = fluidFlags.length > 0;
@@ -2273,24 +2289,28 @@ function computeAll() {
             // Check Mitigation vs Amber Override
             // Chips that override mitigation (Force Amber)
             const overrideChips = [
-                s.renal_oliguria, s.renal_anuria, s.renal_dysfunction, // Renal overrides
+                // When mitigated (known CKD), oliguria/anuria are expected and don't override
+                ...(isMitigated ? [] : [s.renal_oliguria, s.renal_anuria]),
+                s.renal_dysfunction, // AKI still overrides
                 s.renal_fluid, s.renal_oedema, s.renal_dehydrated     // Fluid overrides
             ];
 
-            // Dialysis overrides only if Acute
+            // Only acute dialysis overrides mitigation (chronic dialysis is expected in known CKD)
             const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
             if (s.renal_dialysis && dType === 'new') overrideChips.push(true);
 
             const isForceAmber = overrideChips.some(x => x === true);
-            const isMitigated = (s.renal_chronic === true);
 
             if (isMitigated && !isForceAmber) {
                 // Fully mitigated (Chronic CKD, no acute flags)
-                suppressedRisks.push(`${label} (mitigated: known CKD and Cr around baseline)`);
+                suppressedRisks.push(`${label} (mitigated: known CKD and Cr/urine output around baseline)`);
             } else {
                 // Score it
                 // Logic: Red if critical, otherwise Amber
-                const critical = s.renal_anuria || cr > 200 || (hasFluid && hasRenal && s.renal_dysfunction);
+                // When mitigated, anuria/high Cr are expected baselines; only AKI+fluid combo escalates to red
+                const critical = (isMitigated
+                    ? (hasFluid && hasRenal && s.renal_dysfunction)
+                    : (s.renal_anuria || cr > 200 || (hasFluid && hasRenal && s.renal_dysfunction)));
 
                 if (critical) add(red, label, 'seg_renal', 'red', s.renal_note);
                 else add(amber, label, 'seg_renal', 'amber', s.renal_note);
@@ -2435,9 +2455,16 @@ function computeAll() {
             add(red, sentenceCase('Multiple comorbidities'), null, 'red', null);
             flagged.red.push('comorbs_wrapper');
         } else if (countComorbs > 0) {
-            const cList = activeComorbsKeys.map(k => {
-                if (k === 'comorb_other' && s.comorb_other_note) return s.comorb_other_note.toLowerCase();
-                return comorbMap[k].toLowerCase();
+            let cList = [];
+            activeComorbsKeys.forEach(k => {
+                if (k === 'comorb_other' && s.comorb_other_note) {
+                    s.comorb_other_note.split(/[\n,]+/).forEach(v => {
+                        const trimmed = v.trim();
+                        if (trimmed) cList.push(trimmed);
+                    });
+                } else if (k !== 'comorb_other') {
+                    cList.push(comorbMap[k]);
+                }
             });
             add(amber, sentenceCase(`Comorbidities including ${joinGrammatically(cList)}`), null, 'amber', null);
             flagged.amber.push('comorbs_wrapper');
@@ -2725,17 +2752,22 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     const pmhSeen = new Set();
     // First: add active chip names
     activeComorbsKeys.forEach(k => {
-        let name;
-        if (k === 'comorb_other' && s.comorb_other_note) {
-            name = s.comorb_other_note.trim();
-        } else if (k === 'comorb_other') {
-            return; // skip "Other" with no text
+        if (k === 'comorb_other') {
+            if (!s.comorb_other_note) return; // skip "Other" with no text
+            // Split by comma or newline — each sub-item is a separate PMH entry
+            s.comorb_other_note.trim().split(/[\n,]+/).forEach(part => {
+                const name = part.trim();
+                if (name && !pmhSeen.has(name.toLowerCase())) {
+                    pmhSeen.add(name.toLowerCase());
+                    pmhItems.push(name);
+                }
+            });
         } else {
-            name = comorbMap[k];
-        }
-        if (name && !pmhSeen.has(name.toLowerCase())) {
-            pmhSeen.add(name.toLowerCase());
-            pmhItems.push(name);
+            const name = comorbMap[k];
+            if (name && !pmhSeen.has(name.toLowerCase())) {
+                pmhSeen.add(name.toLowerCase());
+                pmhItems.push(name);
+            }
         }
     });
     // Second: add any extra lines from pmh_note that aren't already listed
@@ -2983,7 +3015,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
 
     if (sum) {
         sum.classList.add('script-updating');
-        sum.value = lines.join('\n');
+        sum.value = lines.join('\n').replace(/\\bnlr\\b/gi, 'NLR');
         sum.classList.remove('script-updating');
         const badge = $('manual_edit_badge');
         if (badge) badge.style.display = 'none';

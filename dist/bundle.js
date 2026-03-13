@@ -26,15 +26,18 @@
   }
   function sentenceCase(str) {
     if (!str) return "";
+    str = str.trim();
     if (/^[0-9]/.test(str) || /^[A-Z]{2}/.test(str) || /^[A-Z][0-9]/.test(str)) return str;
-    str = str.trim().toLowerCase();
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
   function joinGrammatically(parts) {
     if (!parts || parts.length === 0) return "";
     if (parts.length === 1) return parts[0];
     const [first, ...rest] = parts;
-    const procRest = rest.map((s) => s.toLowerCase());
+    const procRest = rest.map((s) => {
+      if (/^[0-9]/.test(s) || /^[A-Z]{2}/.test(s) || /^[A-Z][0-9]/.test(s) || /\b[A-Z]{2,}\b/.test(s)) return s;
+      return s.toLowerCase();
+    });
     return [first, ...procRest].join(", ");
   }
   function showToast(msg, timeout = 2500) {
@@ -96,6 +99,7 @@
     "icuSummary",
     "icuLos",
     "stepdownDate",
+    "stepdownTime",
     "npFlow",
     "hfnpFio2",
     "hfnpFlow",
@@ -188,8 +192,7 @@
     "pressor_ceased_time",
     "pressor_recent_other_note",
     "pressor_current_other_note",
-    "hac_note",
-    "wardReviewCount"
+    "hac_note"
   ];
   var segmentedInputs = [
     "hb_dropping",
@@ -260,7 +263,6 @@
     "neuroConcern",
     "neuroType",
     "electrolyteConcern",
-    "stepdownTime",
     "tracheType",
     "tracheStatus",
     "intubatedReason"
@@ -268,12 +270,20 @@
   var deviceTypes = ["CVC", "PICC", "Other CVAD", "PIVC", "Arterial Line", "Enteral Tube", "IDC", "Pacing Wire", "Drain", "Wound", "Vascath", "Other Device"];
 
   // src/js/logic.js
-  function calculateWardTime(dateStr, timeOfDay, isPre) {
+  function calculateWardTime(dateStr, timeStr, isPre) {
     if (isPre) return { hours: 0, text: "(Pre-Stepdown)" };
     if (!dateStr) return { hours: 0, text: "" };
-    const h = { "Morning": 9, "Afternoon": 15, "Evening": 18, "Night": 21 }[timeOfDay] || 18;
+    let h = 16;
+    let min = 0;
+    if (timeStr && timeStr.includes(":")) {
+      const parts = timeStr.split(":");
+      h = parseInt(parts[0], 10);
+      min = parseInt(parts[1], 10);
+    } else if (timeStr) {
+      h = { "Morning": 9, "Afternoon": 15, "Evening": 18, "Night": 21 }[timeStr] || 18;
+    }
     const [y, m, d] = dateStr.split("-");
-    const stepObj = new Date(y, m - 1, d, h);
+    const stepObj = new Date(y, m - 1, d, h, min);
     const diffHours = (/* @__PURE__ */ new Date() - stepObj) / 36e5;
     if (diffHours < 0) return { hours: diffHours, text: "(Planned Stepdown)" };
     if (diffHours < 12) {
@@ -326,6 +336,42 @@
       const isPre = s.reviewType === "pre";
       const timeData = calculateWardTime(s.stepdownDate, s.stepdownTime, isPre);
       const isRecent = isPre || timeData.hours < 24;
+      if (!isPre && s.stepdownDate) {
+        const ahGroup = document.querySelector("#seg_after_hours");
+        if (!ahGroup || ahGroup.dataset.manual !== "true") {
+          const now = /* @__PURE__ */ new Date();
+          let revH = now.getHours();
+          let revMin = now.getMinutes();
+          if (s.reviewTime && s.reviewTime.includes(":")) {
+            const parts = s.reviewTime.split(":");
+            revH = parseInt(parts[0], 10);
+            revMin = parseInt(parts[1], 10);
+          }
+          let stepH = 16;
+          if (s.stepdownTime && s.stepdownTime.includes(":")) {
+            stepH = parseInt(s.stepdownTime.split(":")[0], 10);
+          }
+          const reviewDay = now.getDay();
+          const isWeekend = reviewDay === 0 || reviewDay === 6;
+          let autoAh = false;
+          if (timeData.hours <= 24) {
+            const reviewOutsideHours = revH >= 16 || revH < 9;
+            if (reviewOutsideHours || isWeekend) {
+              autoAh = true;
+            }
+          }
+          s.after_hours = autoAh;
+          const toggleAhYes = document.querySelector('#seg_after_hours .seg-btn[data-value="true"]');
+          const toggleAhNo = document.querySelector('#seg_after_hours .seg-btn[data-value="false"]');
+          if (autoAh && toggleAhYes) {
+            toggleAhYes.classList.add("active");
+            toggleAhNo?.classList.remove("active");
+          } else if (!autoAh && toggleAhNo) {
+            toggleAhNo.classList.add("active");
+            toggleAhYes?.classList.remove("active");
+          }
+        }
+      }
       const timeOffEl = $("pressor_time_off_display");
       const recentKeys = ["pressor_recent_norad", "pressor_recent_met", "pressor_recent_gtn", "pressor_recent_dob", "pressor_recent_mid", "pressor_recent_other"];
       const currentKeys = ["pressor_current_mid", "pressor_current_other"];
@@ -367,7 +413,7 @@
               recentsList.push(label);
             }
           });
-          let recentPart = `Recent vasoactive support included ${joinGrammatically(recentsList)}`;
+          let recentPart = `Recent vasoactive support - ${joinGrammatically(recentsList)}`;
           if (s.pressor_ceased_time) recentPart += ` which was ceased at approximately ${s.pressor_ceased_time}`;
           details.push(recentPart);
         }
@@ -479,8 +525,7 @@
         }
         if (s.resp_tachypnea === true) {
           parts.push("tachypnea >20bpm");
-          flagged.red.push("seg_resp_tachypnea");
-          hasRed = true;
+          flagged.amber.push("seg_resp_tachypnea");
         }
         if (s.resp_rapid_wean === true) {
           parts.push("rapid O2 wean <12hrs");
@@ -573,14 +618,15 @@
         if (s.renal_fluid) fluidFlags.push("fluid overload");
         if (s.renal_oedema) fluidFlags.push("oedema");
         if (s.renal_dehydrated) fluidFlags.push("dehydrated");
+        const isMitigated = s.renal_chronic === true;
         if (s.renal_oliguria) renalFlags.push("oliguria <0.5ml/kg/hr");
         if (s.renal_anuria) renalFlags.push("anuria");
         if (s.renal_dysfunction) renalFlags.push("AKI");
-        if (cr > 150) renalFlags.push(`Cr ${cr}`);
+        if (cr > 150 && !isMitigated) renalFlags.push(`Cr ${cr}`);
         if (s.renal_dialysis) {
           const dType2 = $("dialysis_type")?.querySelector(".active")?.dataset.value;
           if (dType2 === "new") renalFlags.push("acute dialysis");
-          else renalFlags.push("chronic dialysis");
+          else if (!isMitigated) renalFlags.push("chronic dialysis");
         }
         const hasFluid = fluidFlags.length > 0;
         const hasRenal = renalFlags.length > 0;
@@ -590,8 +636,8 @@
         const allFlags = [...renalFlags, ...fluidFlags];
         if (allFlags.length > 0) label += ` with ${joinGrammatically(allFlags)}`;
         const overrideChips = [
-          s.renal_oliguria,
-          s.renal_anuria,
+          // When mitigated (known CKD), oliguria/anuria are expected and don't override
+          ...isMitigated ? [] : [s.renal_oliguria, s.renal_anuria],
           s.renal_dysfunction,
           s.renal_fluid,
           s.renal_oedema,
@@ -600,11 +646,10 @@
         const dType = $("dialysis_type")?.querySelector(".active")?.dataset.value;
         if (s.renal_dialysis && dType === "new") overrideChips.push(true);
         const isForceAmber = overrideChips.some((x) => x === true);
-        const isMitigated = s.renal_chronic === true;
         if (isMitigated && !isForceAmber) {
-          suppressedRisks.push(`${label} (mitigated: known CKD and Cr around baseline)`);
+          suppressedRisks.push(`${label} (mitigated: known CKD and Cr/urine output around baseline)`);
         } else {
-          const critical = s.renal_anuria || cr > 200 || hasFluid && hasRenal && s.renal_dysfunction;
+          const critical = isMitigated ? hasFluid && hasRenal && s.renal_dysfunction : s.renal_anuria || cr > 200 || hasFluid && hasRenal && s.renal_dysfunction;
           if (critical) add(red, label, "seg_renal", "red", s.renal_note);
           else add(amber, label, "seg_renal", "amber", s.renal_note);
         }
@@ -700,11 +745,18 @@
         add(red, sentenceCase("Multiple comorbidities"), null, "red", null);
         flagged.red.push("comorbs_wrapper");
       } else if (countComorbs > 0) {
-        const cList = activeComorbsKeys.map((k2) => {
-          if (k2 === "comorb_other" && s.comorb_other_note) return s.comorb_other_note.toLowerCase();
-          return comorbMap[k2].toLowerCase();
+        let cList = [];
+        activeComorbsKeys.forEach((k2) => {
+          if (k2 === "comorb_other" && s.comorb_other_note) {
+            s.comorb_other_note.split(/[\n,]+/).forEach((v) => {
+              const trimmed = v.trim();
+              if (trimmed) cList.push(trimmed);
+            });
+          } else if (k2 !== "comorb_other") {
+            cList.push(comorbMap[k2]);
+          }
         });
-        add(amber, sentenceCase(`Comorbidities including ${joinGrammatically(cList)}`), null, "amber", null);
+        add(amber, sentenceCase(`Comorbidities - ${joinGrammatically(cList)}`), null, "amber", null);
         flagged.amber.push("comorbs_wrapper");
       }
       const lact = num(s.lactate) || num(s.bl_lac_review);
@@ -1207,19 +1259,29 @@
     activeKeys.forEach((k) => {
       if (k === "comorb_other") {
         const specVal = $("comorb_other_note")?.value.trim();
-        if (specVal) chipLines.push(specVal);
+        if (specVal) {
+          specVal.split(/[\n,]+/).forEach((v) => {
+            const trimmed = v.trim();
+            if (trimmed) chipLines.push(trimmed);
+          });
+        }
       } else {
         chipLines.push(comorbMap[k]);
       }
     });
     const filterLower = Object.values(comorbMap).map((n) => n.toLowerCase());
     const otherVal = $("comorb_other_note")?.value.trim();
-    if (otherVal) filterLower.push(otherVal.toLowerCase());
-    const userLines = noteEl.value.split("\\n").filter((line) => {
+    if (otherVal) {
+      otherVal.split(/[\n,]+/).forEach((v) => {
+        const trimmed = v.trim();
+        if (trimmed) filterLower.push(trimmed.toLowerCase());
+      });
+    }
+    const userLines = noteEl.value.split("\n").filter((line) => {
       const trimmed = line.trim();
       return trimmed && !filterLower.includes(trimmed.toLowerCase());
     });
-    noteEl.value = [...chipLines, ...userLines].join("\\n");
+    noteEl.value = [...chipLines, ...userLines].join("\n");
     _syncingPMH = false;
   }
   function clearData() {
@@ -1744,17 +1806,21 @@
     const pmhItems = [];
     const pmhSeen = /* @__PURE__ */ new Set();
     activeComorbsKeys.forEach((k) => {
-      let name;
-      if (k === "comorb_other" && s.comorb_other_note) {
-        name = s.comorb_other_note.trim();
-      } else if (k === "comorb_other") {
-        return;
+      if (k === "comorb_other") {
+        if (!s.comorb_other_note) return;
+        s.comorb_other_note.trim().split(/[\n,]+/).forEach((part) => {
+          const name = part.trim();
+          if (name && !pmhSeen.has(name.toLowerCase())) {
+            pmhSeen.add(name.toLowerCase());
+            pmhItems.push(name);
+          }
+        });
       } else {
-        name = comorbMap[k];
-      }
-      if (name && !pmhSeen.has(name.toLowerCase())) {
-        pmhSeen.add(name.toLowerCase());
-        pmhItems.push(name);
+        const name = comorbMap[k];
+        if (name && !pmhSeen.has(name.toLowerCase())) {
+          pmhSeen.add(name.toLowerCase());
+          pmhItems.push(name);
+        }
       }
     });
     if (s.pmh_note) {
@@ -1964,9 +2030,17 @@
     if (s.chk_medical_rounding) {
       lines.push("- Patient added to ALERT medical rounding list for further review.");
     }
+    if (!s.chk_discharge_alert && s.stepdown_suitable !== false) {
+      lines.push("- Promote day night routine and reorientation strategies");
+      lines.push("- Advocate for optimisation of electrolytes");
+      lines.push("- Consider Allied Health referral as clinically indicated");
+      lines.push("- Encourage mobilisation as tolerated");
+      lines.push("- Optimise analgesia as required");
+      lines.push("- Please contact ALERT if further support required between reviews.");
+    }
     if (sum) {
       sum.classList.add("script-updating");
-      sum.value = lines.join("\n");
+      sum.value = lines.join("\n").replace(/\\bnlr\\b/gi, "NLR");
       sum.classList.remove("script-updating");
       const badge = $("manual_edit_badge");
       if (badge) badge.style.display = "none";
@@ -2100,8 +2174,8 @@
     }
     if (btnRevMinus && revCountEl) {
       btnRevMinus.addEventListener("click", () => {
-        const cur = parseInt(revCountEl.value) || 0;
-        revCountEl.value = Math.max(0, cur - 1);
+        const cur = parseInt(revCountEl.value) || 1;
+        revCountEl.value = Math.max(1, cur - 1);
         compute();
       });
     }
@@ -2469,6 +2543,7 @@
     document.querySelectorAll(".segmented-group").forEach((group) => {
       group.querySelectorAll(".seg-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
+          group.dataset.manual = "true";
           const val = btn.dataset.value;
           const id = group.id.replace("seg_", "");
           const wasActive = btn.classList.contains("active");
@@ -2541,7 +2616,15 @@
     });
     staticInputs.forEach((id) => {
       const el = $(id);
-      if (el) el.addEventListener("input", compute);
+      if (el) {
+        el.addEventListener("input", () => {
+          if (["stepdownTime", "stepdownDate", "reviewTime"].includes(id)) {
+            const ah = $("seg_after_hours");
+            if (ah) ah.dataset.manual = "false";
+          }
+          compute();
+        });
+      }
     });
     $("bowel_date")?.addEventListener("change", compute);
     $("stepdownDate")?.addEventListener("change", compute);
@@ -2843,4 +2926,3 @@
     initialize();
   }
 })();
-//# sourceMappingURL=bundle.js.map

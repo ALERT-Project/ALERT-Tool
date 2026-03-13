@@ -66,17 +66,22 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     const pmhSeen = new Set();
     // First: add active chip names
     activeComorbsKeys.forEach(k => {
-        let name;
-        if (k === 'comorb_other' && s.comorb_other_note) {
-            name = s.comorb_other_note.trim();
-        } else if (k === 'comorb_other') {
-            return; // skip "Other" with no text
+        if (k === 'comorb_other') {
+            if (!s.comorb_other_note) return; // skip "Other" with no text
+            // Split by comma or newline — each sub-item is a separate PMH entry
+            s.comorb_other_note.trim().split(/[\n,]+/).forEach(part => {
+                const name = part.trim();
+                if (name && !pmhSeen.has(name.toLowerCase())) {
+                    pmhSeen.add(name.toLowerCase());
+                    pmhItems.push(name);
+                }
+            });
         } else {
-            name = comorbMap[k];
-        }
-        if (name && !pmhSeen.has(name.toLowerCase())) {
-            pmhSeen.add(name.toLowerCase());
-            pmhItems.push(name);
+            const name = comorbMap[k];
+            if (name && !pmhSeen.has(name.toLowerCase())) {
+                pmhSeen.add(name.toLowerCase());
+                pmhItems.push(name);
+            }
         }
     });
     // Second: add any extra lines from pmh_note that aren't already listed
@@ -106,7 +111,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     }
 
     lines.push('A-E ASSESSMENT:');
-    if (s.chk_use_mods) addLine(`MODS: ${s.mods_score} ${s.mods_details ?`(${s.mods_details})` : ''}`);
+    if (s.chk_use_mods) addLine(`MODS: ${s.mods_score} ${s.mods_details ? `(${s.mods_details})` : ''}`);
     else addLine(`ADDS: ${s.adds}`);
 
     if (s.airway_a) addLine(`A: ${s.airway_a}`);
@@ -124,7 +129,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (s.b_comment) addLine(`  - ${s.b_comment}`);
 
     let c = [];
-    if (s.c_hr) c.push(`HR ${s.c_hr} ${s.c_hr_rhythm ?`(${s.c_hr_rhythm})` : ''}`);
+    if (s.c_hr) c.push(`HR ${s.c_hr} ${s.c_hr_rhythm ? `(${s.c_hr_rhythm})` : ''}`);
     if (s.c_nibp) c.push(`NIBP ${s.c_nibp}`);
     if (s.c_cr) c.push(`CR ${s.c_cr}`);
     if (s.c_perf) c.push(`Perf ${s.c_perf}`);
@@ -197,127 +202,135 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         }
     }
 
-    if (bowelTxt) addLine(`Bowels: ${ bowelTxt } `);
+    if (bowelTxt) addLine(`Bowels: ${bowelTxt} `);
 
-    if (s.ae_diet) addLine(`Diet: ${ s.ae_diet } `);
-    if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${
-                    s.nutrition_context_note ?` - ${s.nutrition_context_note}` : ''}`);
+    if (s.ae_diet) addLine(`Diet: ${s.ae_diet} `);
+    if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
 
-                    if (s.pics) {
-                        const picsStatus = s.pics === 'positive' ? 'Positive' : 'Negative';
-                        addLine(`Post ICU Syndrome: ${picsStatus}${s.pics_note ?` - ${s.pics_note}` : ''}`);
-                    }
-                    if (s.sleep_quality === true) addLine(`Sleep: Poor${s.sleep_quality_note ?` - ${s.sleep_quality_note}` : ''}`);
-                    else if (s.sleep_quality === false) addLine(`Sleep: No sleep issues identified`);
-                    if (s.neuro_psych === true) addLine(`Psychological issues: ${s.neuro_psych_note || 'Concerns identified'}`);
-                    else if (s.neuro_psych === false) addLine(`Psychological issues: Nil identified`);
+    if (s.pics) {
+        const picsStatus = s.pics === 'positive' ? 'Positive' : 'Negative';
+        addLine(`Post ICU Syndrome: ${picsStatus}${s.pics_note ? ` - ${s.pics_note}` : ''}`);
+    }
+    if (s.sleep_quality === true) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ''}`);
+    else if (s.sleep_quality === false) addLine(`Sleep: No sleep issues identified`);
+    if (s.neuro_psych === true) addLine(`Psychological issues: ${s.neuro_psych_note || 'Concerns identified'}`);
+    else if (s.neuro_psych === false) addLine(`Psychological issues: Nil identified`);
 
-                    if (s.anticoag_note) addLine(`Anticoagulation: ${s.anticoag_note}`);
-                    if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
-                    if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
+    if (s.anticoag_note) addLine(`Anticoagulation: ${s.anticoag_note}`);
+    if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
+    if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
 
-                    lines.push('');
+    lines.push('');
 
-                    const blMap = { 'lac_review': 'Lac', 'hb': 'Hb', 'wcc': 'WCC', 'cr_review': 'Cr', 'egfr': 'eGFR', 'k': 'K', 'na': 'Na', 'mg': 'Mg', 'phos': 'PO4', 'plts': 'Plts', 'alb': 'Alb', 'neut': 'Neut', 'lymph': 'Lymph', 'bili': 'Bili', 'alt': 'ALT', 'inr': 'INR', 'aptt': 'APTT' };
-                    const blLines = [];
-                    Object.keys(blMap).forEach(key => {
-                        const currentVal = s[`bl_${key}`];
-                        const prevVal = window.prevBloods ? window.prevBloods[key] : null;
-                        if (currentVal) {
-                            let str = `${blMap[key]} ${currentVal}`;
-                            if (prevVal && prevVal !== currentVal) str += ` (${prevVal})`;
-                            blLines.push(str);
-                        }
-                    });
-                    if (blLines.length) addLine(`Bloods: ${blLines.join(', ')}`);
-                    if (s.new_bloods_ordered === 'ordered') addLine('New bloods ordered for next round');
-                    if (s.new_bloods_ordered === 'requested') addLine('New bloods requested (not yet ordered)');
-                    if (s.new_bloods_ordered === 'not_required') addLine('New bloods not required');
-                    if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
-                    lines.push('');
+    const blMap = { 'lac_review': 'Lac', 'hb': 'Hb', 'wcc': 'WCC', 'cr_review': 'Cr', 'egfr': 'eGFR', 'k': 'K', 'na': 'Na', 'mg': 'Mg', 'phos': 'PO4', 'plts': 'Plts', 'alb': 'Alb', 'neut': 'Neut', 'lymph': 'Lymph', 'bili': 'Bili', 'alt': 'ALT', 'inr': 'INR', 'aptt': 'APTT' };
+    const blLines = [];
+    Object.keys(blMap).forEach(key => {
+        const currentVal = s[`bl_${key}`];
+        const prevVal = window.prevBloods ? window.prevBloods[key] : null;
+        if (currentVal) {
+            let str = `${blMap[key]} ${currentVal}`;
+            if (prevVal && prevVal !== currentVal) str += ` (${prevVal})`;
+            blLines.push(str);
+        }
+    });
+    if (blLines.length) addLine(`Bloods: ${blLines.join(', ')}`);
+    if (s.new_bloods_ordered === 'ordered') addLine('New bloods ordered for next round');
+    if (s.new_bloods_ordered === 'requested') addLine('New bloods requested (not yet ordered)');
+    if (s.new_bloods_ordered === 'not_required') addLine('New bloods not required');
+    if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
+    lines.push('');
 
-                    const hasAnyDevices = Object.values(s.devices || {}).some(arr => arr.length);
-                    if (hasAnyDevices) {
-                        lines.push('LINES, DRAINS, DEVICES & WOUNDS:');
-                        const trackedDevices = ['CVC', 'PICC', 'PIVC', 'Other CVAD', 'IDC', 'Vascath'];
-                        Object.entries(s.devices).forEach(([k, v]) => {
-                            v.forEach(item => {
-                                let deviceLine = `- ${k}`;
+    const hasAnyDevices = Object.values(s.devices || {}).some(arr => arr.length);
+    if (hasAnyDevices) {
+        lines.push('LINES, DRAINS, DEVICES & WOUNDS:');
+        const trackedDevices = ['CVC', 'PICC', 'PIVC', 'Other CVAD', 'IDC', 'Vascath'];
+        Object.entries(s.devices).forEach(([k, v]) => {
+            v.forEach(item => {
+                let deviceLine = `- ${k}`;
 
-                                if (item.insertionDate && trackedDevices.includes(k)) {
-                                    const deviceDate = new Date(item.insertionDate + 'T00:00:00');
-                                    const dwellDays = Math.floor((new Date() - deviceDate) / (1000 * 60 * 60 * 24));
+                if (item.insertionDate && trackedDevices.includes(k)) {
+                    const deviceDate = new Date(item.insertionDate + 'T00:00:00');
+                    const dwellDays = Math.floor((new Date() - deviceDate) / (1000 * 60 * 60 * 24));
 
-                                    if (item.details) deviceLine += ` - ${item.details}`;
+                    if (item.details) deviceLine += ` - ${item.details}`;
 
-                                    const threshold = (k === 'PIVC') ? 5 : 7;
-                                    if (k === 'PIVC') {
-                                        if (dwellDays >= 5) deviceLine += ` - ${dwellDays}d long dwell`;
-                                        else deviceLine += ` - ${dwellDays}d dwell`;
-                                    } else {
-                                        if (dwellDays >= 7) deviceLine += ` - ${dwellDays}d long dwell`;
-                                        else deviceLine += ` - ${dwellDays}d dwell`;
-                                    }
-
-                                    const bd = new Date(item.insertionDate);
-                                    deviceLine += `, inserted ${bd.getDate()}/${bd.getMonth() + 1}/${bd.getFullYear().toString().slice(-2)}`;
-                                } else {
-                                    if (item.details) deviceLine += ` - ${item.details}`;
-                                    if (item.insertionDate) {
-                                        const bd = new Date(item.insertionDate);
-                                        deviceLine += ` - inserted ${bd.getDate()}/${bd.getMonth() + 1}/${bd.getFullYear().toString().slice(-2)}`;
-                                    }
-                                }
-                                lines.push(deviceLine);
-                            });
-                        });
-                    }
-                    lines.push('');
-
-                    if (s.context_other_note) lines.push(`Other: ${s.context_other_note}`);
-                    lines.push('');
-
-                    lines.push('IDENTIFIED ICU READMISSION RISK FACTORS:');
-                    const risks = [...red, ...amber];
-                    if (risks.length) { risks.forEach(r => lines.push(`- ${r}`)); }
-                    if (suppressed.length) { suppressed.forEach(r => lines.push(`- ${r}`)); }
-
-                    if (risks.length === 0 && suppressed.length === 0) { lines.push('- None identified'); }
-                    lines.push('');
-
-                    lines.push('PLAN:');
-
-                    if (s.stepdown_suitable === false) {
-                        lines.push('- ICU Senior Review requested due to unsuitability for ward stepdown.');
-                        lines.push('- Please re-contact ALERT for re-review when appropriate.');
-                    } else if (s.chk_discharge_alert) {
-                        lines.push('- Discharge from ALERT nursing post-ICU list. Please re-contact ALERT if further support required.');
-                    } else if (s.chk_continue_alert) {
-                        lines.push('- Continue ALERT post ICU reviews.');
-                    } else if (cat.id === 'red') {
-                        lines.push('- At least daily ALERT review for up to 72h post-ICU stepdown.');
-                    } else if (cat.id === 'amber') {
-                        lines.push('- At least daily ALERT review for up to 48h post-ICU stepdown.');
+                    const threshold = (k === 'PIVC') ? 5 : 7;
+                    if (k === 'PIVC') {
+                        if (dwellDays >= 5) deviceLine += ` - ${dwellDays}d long dwell`;
+                        else deviceLine += ` - ${dwellDays}d dwell`;
                     } else {
-                        if (s.reviewType === 'pre') {
-                            lines.push('- At least single ALERT nursing follow up on ward.');
-                        } else if (s.chk_discharge_alert) {
-                            lines.push('- Discharge from ALERT post ICU list. Please re-contact ALERT if further support required.');
-                        } else {
-                            lines.push('- Continued ALERT nursing reviews for up to 24h post stepdown (minimum 2 reviews required before discharge).');
-                        }
+                        if (dwellDays >= 7) deviceLine += ` - ${dwellDays}d long dwell`;
+                        else deviceLine += ` - ${dwellDays}d dwell`;
                     }
 
-                    if (s.chk_medical_rounding) {
-                        lines.push('- Patient added to ALERT medical rounding list for further review.');
-                    }
-
-                    if (sum) {
-                        sum.classList.add('script-updating');
-                        sum.value = lines.join('\n');
-                        sum.classList.remove('script-updating');
-                        const badge = $('manual_edit_badge');
-                        if (badge) badge.style.display = 'none';
+                    const bd = new Date(item.insertionDate);
+                    deviceLine += `, inserted ${bd.getDate()}/${bd.getMonth() + 1}/${bd.getFullYear().toString().slice(-2)}`;
+                } else {
+                    if (item.details) deviceLine += ` - ${item.details}`;
+                    if (item.insertionDate) {
+                        const bd = new Date(item.insertionDate);
+                        deviceLine += ` - inserted ${bd.getDate()}/${bd.getMonth() + 1}/${bd.getFullYear().toString().slice(-2)}`;
                     }
                 }
+                lines.push(deviceLine);
+            });
+        });
+    }
+    lines.push('');
+
+    if (s.context_other_note) lines.push(`Other: ${s.context_other_note}`);
+    lines.push('');
+
+    lines.push('IDENTIFIED ICU READMISSION RISK FACTORS:');
+    const risks = [...red, ...amber];
+    if (risks.length) { risks.forEach(r => lines.push(`- ${r}`)); }
+    if (suppressed.length) { suppressed.forEach(r => lines.push(`- ${r}`)); }
+
+    if (risks.length === 0 && suppressed.length === 0) { lines.push('- None identified'); }
+    lines.push('');
+
+    lines.push('PLAN:');
+
+    if (s.stepdown_suitable === false) {
+        lines.push('- ICU Senior Review requested due to unsuitability for ward stepdown.');
+        lines.push('- Please re-contact ALERT for re-review when appropriate.');
+    } else if (s.chk_discharge_alert) {
+        lines.push('- Discharge from ALERT nursing post-ICU list. Please re-contact ALERT if further support required.');
+    } else if (s.chk_continue_alert) {
+        lines.push('- Continue ALERT post ICU reviews.');
+    } else if (cat.id === 'red') {
+        lines.push('- At least daily ALERT review for up to 72h post-ICU stepdown.');
+    } else if (cat.id === 'amber') {
+        lines.push('- At least daily ALERT review for up to 48h post-ICU stepdown.');
+    } else {
+        if (s.reviewType === 'pre') {
+            lines.push('- At least single ALERT nursing follow up on ward.');
+        } else if (s.chk_discharge_alert) {
+            lines.push('- Discharge from ALERT post ICU list. Please re-contact ALERT if further support required.');
+        } else {
+            lines.push('- Continued ALERT nursing reviews for up to 24h post stepdown (minimum 2 reviews required before discharge).');
+        }
+    }
+
+    if (s.chk_medical_rounding) {
+        lines.push('- Patient added to ALERT medical rounding list for further review.');
+    }
+
+    if (!s.chk_discharge_alert && s.stepdown_suitable !== false) {
+        lines.push('- Promote day night routine and reorientation strategies');
+        lines.push('- Advocate for optimisation of electrolytes');
+        lines.push('- Consider Allied Health referral as clinically indicated');
+        lines.push('- Encourage mobilisation as tolerated');
+        lines.push('- Optimise analgesia as required');
+        lines.push('- Please contact ALERT if further support required between reviews.');
+    }
+
+    if (sum) {
+        sum.classList.add('script-updating');
+        sum.value = lines.join('\n').replace(/\\bnlr\\b/gi, 'NLR');
+        sum.classList.remove('script-updating');
+        const badge = $('manual_edit_badge');
+        if (badge) badge.style.display = 'none';
+    }
+}

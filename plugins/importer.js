@@ -142,6 +142,15 @@ document.addEventListener('DOMContentLoaded', () => {
             setVal('stepdownDate', isoDate);
         }
 
+        // Parse stepdown time (HH:MM format)
+        const timeMatch = text.match(/Stepdown Time:\s*(\d{1,2}:\d{2})/i)
+            || text.match(/(?:Discharge|Stepdown) Time:\s*(\d{1,2}:\d{2})/i);
+        if (timeMatch) {
+            const [h, m] = timeMatch[1].split(':');
+            const formatted = `${h.padStart(2, '0')}:${m}`;
+            setVal('stepdownTime', formatted);
+        }
+
         // --- 2. CONTEXT ---
         if (carryForward) {
             let contextFound = false;
@@ -403,26 +412,24 @@ document.addEventListener('DOMContentLoaded', () => {
             // Calculate CURRENT hours on ward based on stepdown date/time
             // Use the imported stepdownDate (already set above) and get stepdownTime from form
             setTimeout(() => {
-                const stepdownDateEl = document.getElementById('stepdownDate');
-                const stepdownTimeButtons = document.querySelectorAll('#stepdownTime .btn');
+                // Get stepdown time from the new time input
+                const stepdownTimeEl = document.getElementById('stepdownTime');
+                let stepdownTime = stepdownTimeEl?.value || null;
 
-                let stepdownDate = stepdownDateEl?.value;
-                let stepdownTime = null;
-                stepdownTimeButtons.forEach(btn => {
-                    if (btn.classList.contains('active')) {
-                        stepdownTime = btn.dataset.value;
-                    }
-                });
-
-                // Map time-of-day to hours (same as calculateWardTime function)
-                // Default to 4pm (16:00) if no time specified - most ICU discharges are afternoon
-                const timeMap = { 'Morning': 9, 'Afternoon': 15, 'Evening': 18, 'Night': 21 };
-                const hour = stepdownTime ? (timeMap[stepdownTime] || 16) : 16;
+                // Default to 16:00 if no time specified
+                let hour = 16;
+                let minute = 0;
+                if (stepdownTime && stepdownTime.includes(':')) {
+                    const parts = stepdownTime.split(':');
+                    hour = parseInt(parts[0], 10);
+                    minute = parseInt(parts[1], 10);
+                }
 
                 let currentHoursOnWard = 0;
+                const stepdownDate = document.getElementById('stepdownDate')?.value;
                 if (stepdownDate) {
                     const [y, m, d] = stepdownDate.split('-');
-                    const stepdownDateTime = new Date(y, m - 1, d, hour);
+                    const stepdownDateTime = new Date(y, m - 1, d, hour, minute);
                     const now = new Date();
                     const diffMs = now - stepdownDateTime;
                     currentHoursOnWard = diffMs / (1000 * 60 * 60);

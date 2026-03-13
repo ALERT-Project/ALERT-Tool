@@ -38,7 +38,7 @@ export const comorbMap = {
 };
 
 export const staticInputs = [
-    'reviewTime', 'ptName', 'ptMrn', 'ptAge', 'ptWeight', 'ptWard', 'ptBed', 'ptWardOther', 'ptAdmissionReason', 'icuSummary', 'icuLos', 'stepdownDate',
+    'reviewTime', 'ptName', 'ptMrn', 'ptAge', 'ptWeight', 'ptWard', 'ptBed', 'ptWardOther', 'ptAdmissionReason', 'icuSummary', 'icuLos', 'stepdownDate', 'stepdownTime',
     'npFlow', 'hfnpFio2', 'hfnpFlow', 'nivFio2', 'nivPeep', 'nivPs', 'override', 'overrideNote',
     'trache_details_note', 'mods_score', 'mods_details', 'airway_a', 'a_comment', 'b_rr', 'b_spo2', 'b_device', 'b_wob', 'b_cough', 'b_comment',
     'c_hr', 'c_hr_rhythm', 'c_nibp', 'c_cr', 'c_perf', 'c_comment', 'd_alert', 'd_pain', 'd_comment', 'e_temp', 'e_bsl', 'e_fluid', 'e_uop', 'e_comment', 'atoe_adds',
@@ -51,8 +51,7 @@ export const staticInputs = [
     'dyspneaConcern', 'dyspneaConcern_note', 'renal_note', 'infection_note',
     'electrolyteConcern_note', 'neuroType_note', 'nutrition_context_note', 'pain_context_note', 'neuro_psych_note', 'sleep_quality_note', 'fluid_restriction_amount',
     'after_hours_note', 'pressors_note', 'immobility_note', 'comorb_other_note',
-    'unsuitable_note', 'pressor_ceased_time', 'pressor_recent_other_note', 'pressor_current_other_note', 'hac_note',
-    'wardReviewCount'
+    'unsuitable_note', 'pressor_ceased_time', 'pressor_recent_other_note', 'pressor_current_other_note', 'hac_note'
 ];
 
 export const segmentedInputs = [
@@ -76,7 +75,7 @@ export const toggleInputs = [
 ];
 
 export const selectInputs = [
-    'oxMod', 'dyspneaConcern', 'neuroConcern', 'neuroType', 'electrolyteConcern', 'stepdownTime',
+    'oxMod', 'dyspneaConcern', 'neuroConcern', 'neuroType', 'electrolyteConcern',
     'tracheType', 'tracheStatus', 'intubatedReason'
 ];
 

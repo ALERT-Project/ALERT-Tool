@@ -25,8 +25,8 @@ export function formatDateDDMMYYYY(isoStr) {
 
 export function sentenceCase(str) {
     if (!str) return '';
+    str = str.trim();
     if (/^[0-9]/.test(str) || /^[A-Z]{2}/.test(str) || /^[A-Z][0-9]/.test(str)) return str;
-    str = str.trim().toLowerCase();
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
@@ -34,7 +34,10 @@ export function joinGrammatically(parts) {
     if (!parts || parts.length === 0) return '';
     if (parts.length === 1) return parts[0];
     const [first, ...rest] = parts;
-    const procRest = rest.map(s => s.toLowerCase());
+    const procRest = rest.map(s => {
+        if (/^[0-9]/.test(s) || /^[A-Z]{2}/.test(s) || /^[A-Z][0-9]/.test(s) || /\b[A-Z]{2,}\b/.test(s)) return s;
+        return s.toLowerCase();
+    });
     return [first, ...procRest].join(', ');
 }
 

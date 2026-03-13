@@ -147,8 +147,8 @@ function initialize() {
     }
     if (btnRevMinus && revCountEl) {
         btnRevMinus.addEventListener('click', () => {
-            const cur = parseInt(revCountEl.value) || 0;
-            revCountEl.value = Math.max(0, cur - 1);
+            const cur = parseInt(revCountEl.value) || 1;
+            revCountEl.value = Math.max(1, cur - 1);
             compute();
         });
     }
@@ -537,6 +537,7 @@ function initialize() {
     document.querySelectorAll('.segmented-group').forEach(group => {
         group.querySelectorAll('.seg-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                group.dataset.manual = 'true';
                 const val = btn.dataset.value;
                 const id = group.id.replace('seg_', '');
                 const wasActive = btn.classList.contains('active');
@@ -609,7 +610,18 @@ function initialize() {
         });
     });
 
-    staticInputs.forEach(id => { const el = $(id); if (el) el.addEventListener('input', compute); });
+    staticInputs.forEach(id => {
+        const el = $(id);
+        if (el) {
+            el.addEventListener('input', () => {
+                if (['stepdownTime', 'stepdownDate', 'reviewTime'].includes(id)) {
+                    const ah = $('seg_after_hours');
+                    if (ah) ah.dataset.manual = 'false';
+                }
+                compute();
+            });
+        }
+    });
 
     $('bowel_date')?.addEventListener('change', compute);
     $('stepdownDate')?.addEventListener('change', compute);

@@ -3,14 +3,22 @@ import { comorbMap, toggleInputs } from './config.js';
 import { getState, isQuickReviewMode, initialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured, previousCategoryData } from './state.js';
 import { exitQuickReviewMode, updateSidebarRiskBadges } from './ui.js';
 
-export function calculateWardTime(dateStr, timeOfDay, isPre) {
+export function calculateWardTime(dateStr, timeStr, isPre) {
     if (isPre) return { hours: 0, text: '(Pre-Stepdown)' };
     if (!dateStr) return { hours: 0, text: '' };
 
-    const h = { 'Morning': 9, 'Afternoon': 15, 'Evening': 18, 'Night': 21 }[timeOfDay] || 18;
+    let h = 16;
+    let min = 0;
+    if (timeStr && timeStr.includes(':')) {
+        const parts = timeStr.split(':');
+        h = parseInt(parts[0], 10);
+        min = parseInt(parts[1], 10);
+    } else if (timeStr) {
+        h = { 'Morning': 9, 'Afternoon': 15, 'Evening': 18, 'Night': 21 }[timeStr] || 18;
+    }
 
     const [y, m, d] = dateStr.split('-');
-    const stepObj = new Date(y, m - 1, d, h);
+    const stepObj = new Date(y, m - 1, d, h, min);
     const diffHours = (new Date() - stepObj) / 3600000;
 
     if (diffHours < 0) return { hours: diffHours, text: "(Planned Stepdown)" };
@@ -69,6 +77,52 @@ export function computeAll() {
         const timeData = calculateWardTime(s.stepdownDate, s.stepdownTime, isPre);
         const isRecent = isPre || (timeData.hours < 24);
 
+        if (!isPre && s.stepdownDate) {
+            const ahGroup = document.querySelector('#seg_after_hours');
+            // Only auto-calculate if there's no manual override
+            if (!ahGroup || ahGroup.dataset.manual !== 'true') {
+                // Get current review time (or now as fallback)
+                const now = new Date();
+                let revH = now.getHours();
+                let revMin = now.getMinutes();
+
+                if (s.reviewTime && s.reviewTime.includes(':')) {
+                    const parts = s.reviewTime.split(':');
+                    revH = parseInt(parts[0], 10);
+                    revMin = parseInt(parts[1], 10);
+                }
+
+                // Parse the stepdown hour — default to 16:00 (4pm) if not set
+                let stepH = 16;
+                if (s.stepdownTime && s.stepdownTime.includes(':')) {
+                    stepH = parseInt(s.stepdownTime.split(':')[0], 10);
+                }
+
+                const reviewDay = now.getDay();
+                const isWeekend = reviewDay === 0 || reviewDay === 6;
+
+                let autoAh = false;
+                if (timeData.hours <= 24) {
+                    // Flag if review itself is outside Mon-Fri 09:00-16:00, or it's a weekend
+                    const reviewOutsideHours = revH >= 16 || revH < 9;
+                    if (reviewOutsideHours || isWeekend) {
+                        autoAh = true;
+                    }
+                }
+
+                s.after_hours = autoAh;
+                const toggleAhYes = document.querySelector('#seg_after_hours .seg-btn[data-value="true"]');
+                const toggleAhNo = document.querySelector('#seg_after_hours .seg-btn[data-value="false"]');
+                if (autoAh && toggleAhYes) {
+                    toggleAhYes.classList.add('active');
+                    toggleAhNo?.classList.remove('active');
+                } else if (!autoAh && toggleAhNo) {
+                    toggleAhNo.classList.add('active');
+                    toggleAhYes?.classList.remove('active');
+                }
+            }
+        }
+
         const timeOffEl = $('pressor_time_off_display');
         const recentKeys = ['pressor_recent_norad', 'pressor_recent_met', 'pressor_recent_gtn', 'pressor_recent_dob', 'pressor_recent_mid', 'pressor_recent_other'];
         const currentKeys = ['pressor_current_mid', 'pressor_current_other'];
@@ -113,7 +167,7 @@ export function computeAll() {
                         recentsList.push(label);
                     }
                 });
-                let recentPart = `Recent vasoactive support included ${joinGrammatically(recentsList)}`;
+                let recentPart = `Recent vasoactive support - ${joinGrammatically(recentsList)}`;
                 if (s.pressor_ceased_time) recentPart += ` which was ceased at approximately ${s.pressor_ceased_time}`;
                 details.push(recentPart);
             }
@@ -197,7 +251,7 @@ export function computeAll() {
                 else if (dysp === 'mild') { parts.push(`mild dyspnea`); flagged.amber.push('dyspneaConcern'); }
                 else if (!dysp) { parts.push(`dyspnea`); flagged.amber.push('seg_resp_dyspnea'); }
             }
-            if (s.resp_tachypnea === true) { parts.push('tachypnea >20bpm'); flagged.red.push('seg_resp_tachypnea'); hasRed = true; }
+            if (s.resp_tachypnea === true) { parts.push('tachypnea >20bpm'); flagged.amber.push('seg_resp_tachypnea'); }
             if (s.resp_rapid_wean === true) { parts.push('rapid O2 wean <12hrs'); flagged.red.push('seg_resp_rapid_wean'); hasRed = true; }
             if (s.resp_poor_cough === true) { parts.push('poor cough effort'); flagged.amber.push('seg_resp_poor_cough'); }
             if (s.resp_poor_swallow === true) { parts.push('poor swallow'); flagged.amber.push('seg_resp_poor_swallow'); }
@@ -276,15 +330,19 @@ export function computeAll() {
             if (s.renal_oedema) fluidFlags.push('oedema');
             if (s.renal_dehydrated) fluidFlags.push('dehydrated');
 
+            const isMitigated = (s.renal_chronic === true);
+
             if (s.renal_oliguria) renalFlags.push('oliguria <0.5ml/kg/hr');
             if (s.renal_anuria) renalFlags.push('anuria');
             if (s.renal_dysfunction) renalFlags.push('AKI');
-            if (cr > 150) renalFlags.push(`Cr ${cr}`);
+            // Only add high Cr to flags if not mitigated by known CKD at baseline
+            if (cr > 150 && !isMitigated) renalFlags.push(`Cr ${cr}`);
 
             if (s.renal_dialysis) {
                 const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
                 if (dType === 'new') renalFlags.push('acute dialysis');
-                else renalFlags.push('chronic dialysis');
+                // Chronic dialysis suppressed when KnownCKD is selected
+                else if (!isMitigated) renalFlags.push('chronic dialysis');
             }
 
             const hasFluid = fluidFlags.length > 0;
@@ -298,20 +356,25 @@ export function computeAll() {
             if (allFlags.length > 0) label += ` with ${joinGrammatically(allFlags)}`;
 
             const overrideChips = [
-                s.renal_oliguria, s.renal_anuria, s.renal_dysfunction,
+                // When mitigated (known CKD), oliguria/anuria are expected and don't override
+                ...(isMitigated ? [] : [s.renal_oliguria, s.renal_anuria]),
+                s.renal_dysfunction,
                 s.renal_fluid, s.renal_oedema, s.renal_dehydrated
             ];
 
             const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
+            // Only acute dialysis overrides mitigation (chronic dialysis is expected in known CKD)
             if (s.renal_dialysis && dType === 'new') overrideChips.push(true);
 
             const isForceAmber = overrideChips.some(x => x === true);
-            const isMitigated = (s.renal_chronic === true);
 
             if (isMitigated && !isForceAmber) {
-                suppressedRisks.push(`${label} (mitigated: known CKD and Cr around baseline)`);
+                suppressedRisks.push(`${label} (mitigated: known CKD and Cr/urine output around baseline)`);
             } else {
-                const critical = s.renal_anuria || cr > 200 || (hasFluid && hasRenal && s.renal_dysfunction);
+                // When mitigated, anuria/high Cr are expected baselines; only AKI+fluid combo escalates to red
+                const critical = (isMitigated
+                    ? (hasFluid && hasRenal && s.renal_dysfunction)
+                    : (s.renal_anuria || cr > 200 || (hasFluid && hasRenal && s.renal_dysfunction)));
                 if (critical) add(red, label, 'seg_renal', 'red', s.renal_note);
                 else add(amber, label, 'seg_renal', 'amber', s.renal_note);
             }
@@ -436,11 +499,18 @@ export function computeAll() {
             add(red, sentenceCase('Multiple comorbidities'), null, 'red', null);
             flagged.red.push('comorbs_wrapper');
         } else if (countComorbs > 0) {
-            const cList = activeComorbsKeys.map(k => {
-                if (k === 'comorb_other' && s.comorb_other_note) return s.comorb_other_note.toLowerCase();
-                return comorbMap[k].toLowerCase();
+            let cList = [];
+            activeComorbsKeys.forEach(k => {
+                if (k === 'comorb_other' && s.comorb_other_note) {
+                    s.comorb_other_note.split(/[\n,]+/).forEach(v => {
+                        const trimmed = v.trim();
+                        if (trimmed) cList.push(trimmed);
+                    });
+                } else if (k !== 'comorb_other') {
+                    cList.push(comorbMap[k]);
+                }
             });
-            add(amber, sentenceCase(`Comorbidities including ${joinGrammatically(cList)}`), null, 'amber', null);
+            add(amber, sentenceCase(`Comorbidities - ${joinGrammatically(cList)}`), null, 'amber', null);
             flagged.amber.push('comorbs_wrapper');
         }
 
