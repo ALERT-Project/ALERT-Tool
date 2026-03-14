@@ -213,7 +213,7 @@
                 <div class="col-3">
                     <div id="reviewTimeWrapper">
                         <label for="reviewTime" style="color:var(--accent);">Time of Review</label>
-                        <input id="reviewTime" type="text" />
+                        <input id="reviewTime" type="time" />
                     </div>
                 </div>
 
@@ -643,13 +643,13 @@
                 style="margin-top:32px; padding-top:24px; border-top:2px solid var(--line);">
                 <div class="question-label bold-heading">Discharged after-hours? <span id="prev_risk_ah"
                         class="prev-datum"></span></div>
-                <div class="segmented-group" id="seg_after_hours" style="pointer-events:none; opacity:0.8;">
+                <div class="segmented-group" id="seg_after_hours">
                     <button type="button" class="seg-btn" data-value="true">Yes</button>
                     <button type="button" class="seg-btn" data-value="false">No</button>
                 </div>
-                <div class="sub-label" style="color:var(--amber); font-weight:600;">
-                    Auto-set — applies when patient stepped down and no home team available on ward (within 24h and
-                    outside Mon–Fri 09:00–16:00).
+                <div class="sub-label" style="color:var(--accent); font-weight:600;">
+                    Only scored within first 24h of stepdown when home team is absent (after 16:00 weekdays or on
+                    weekends).
                 </div>
             </div>
             <div id="after_hours_note_wrapper"

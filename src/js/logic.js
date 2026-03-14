@@ -21,10 +21,7 @@ export function calculateWardTime(dateStr, timeStr, isPre) {
     const stepObj = new Date(y, m - 1, d, h, min);
     const diffHours = (new Date() - stepObj) / 3600000;
 
-    if (diffHours < 0) {
-        if (isPre) return { hours: diffHours, text: "(Planned Stepdown)" };
-        return { hours: diffHours, text: "" };
-    }
+    if (diffHours < 0) return { hours: diffHours, text: "(Planned Stepdown)" };
 
     if (diffHours < 12) {
         return { hours: diffHours, text: `${Math.round(diffHours)} hours` };
