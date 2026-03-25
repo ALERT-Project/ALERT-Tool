@@ -292,25 +292,16 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
     lines.push('PLAN:');
 
+    const hoursMap = { 'red': '72h', 'amber': '48h', 'green': '24h' };
+    const h = hoursMap[cat.id] || '24h';
+
     if (s.stepdown_suitable === false) {
-        lines.push('- ICU Senior Review requested due to unsuitability for ward stepdown.');
-        lines.push('- Please re-contact ALERT for re-review when appropriate.');
+        lines.push(`- ICU Senior Review requested due to unsuitability for ward stepdown.`);
+        lines.push(`- Please re-contact ALERT for re-review when appropriate.`);
     } else if (s.chk_discharge_alert) {
-        lines.push('- Discharge from ALERT nursing post-ICU list. Please re-contact ALERT if further support required.');
-    } else if (s.chk_continue_alert) {
-        lines.push('- Continue ALERT post ICU reviews.');
-    } else if (cat.id === 'red') {
-        lines.push('- At least daily ALERT review for up to 72h post-ICU stepdown.');
-    } else if (cat.id === 'amber') {
-        lines.push('- At least daily ALERT review for up to 48h post-ICU stepdown.');
+        lines.push(`- Discharge from ALERT nursing list. Please re-contact ALERT if further support required.`);
     } else {
-        if (s.reviewType === 'pre') {
-            lines.push('- At least single ALERT nursing follow up on ward.');
-        } else if (s.chk_discharge_alert) {
-            lines.push('- Discharge from ALERT post ICU list. Please re-contact ALERT if further support required.');
-        } else {
-            lines.push('- Continued ALERT nursing reviews for up to 24h post stepdown (minimum 2 reviews required before discharge).');
-        }
+        lines.push(`- At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.`);
     }
 
     if (s.chk_medical_rounding) {
@@ -318,11 +309,6 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     }
 
     if (!s.chk_discharge_alert && s.stepdown_suitable !== false) {
-        lines.push('- Promote day night routine and reorientation strategies');
-        lines.push('- Advocate for optimisation of electrolytes');
-        lines.push('- Consider Allied Health referral as clinically indicated');
-        lines.push('- Encourage mobilisation as tolerated');
-        lines.push('- Optimise analgesia as required');
         lines.push('- Please contact ALERT if further support required between reviews.');
     }
 

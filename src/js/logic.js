@@ -81,31 +81,22 @@ export function computeAll() {
             const ahGroup = document.querySelector('#seg_after_hours');
             // Only auto-calculate if there's no manual override
             if (!ahGroup || ahGroup.dataset.manual !== 'true') {
-                // Get current review time (or now as fallback)
-                const now = new Date();
-                let revH = now.getHours();
-                let revMin = now.getMinutes();
-
-                if (s.reviewTime && s.reviewTime.includes(':')) {
-                    const parts = s.reviewTime.split(':');
-                    revH = parseInt(parts[0], 10);
-                    revMin = parseInt(parts[1], 10);
-                }
-
-                // Parse the stepdown hour — default to 16:00 (4pm) if not set
+                // Parse the actual stepdown date/time to determine if discharge was "after-hours"
+                const [y, m, d] = s.stepdownDate.split('-');
                 let stepH = 16;
                 if (s.stepdownTime && s.stepdownTime.includes(':')) {
                     stepH = parseInt(s.stepdownTime.split(':')[0], 10);
                 }
 
-                const reviewDay = now.getDay();
-                const isWeekend = reviewDay === 0 || reviewDay === 6;
+                const stepObj = new Date(y, m - 1, d, stepH, 0);
+                const stepDay = stepObj.getDay();
+                const isWeekend = stepDay === 0 || stepDay === 6;
+                const isAfterHoursStepdown = stepH >= 16 || stepH < 9;
 
                 let autoAh = false;
                 if (timeData.hours <= 24) {
-                    // Flag if review itself is outside Mon-Fri 09:00-16:00, or it's a weekend
-                    const reviewOutsideHours = revH >= 16 || revH < 9;
-                    if (reviewOutsideHours || isWeekend) {
+                    // Flag if the DISCHARGE was outside Mon-Fri 09:00-16:00, or it was a weekend
+                    if (isAfterHoursStepdown || isWeekend) {
                         autoAh = true;
                     }
                 }
@@ -670,14 +661,17 @@ export function computeAll() {
             }
         }
 
-        if (s.stepdown_suitable === false) planHtml = `<div class="status red">Not suitable for stepdown.</div>`;
-        else if (s.chk_discharge_alert) planHtml = `<div class="status" style="color:var(--blue-hint)">Discharge from ALERT nursing outreach list.</div>`;
-        else if (s.chk_continue_alert) planHtml = `<div class="status green">Continue ALERT post ICU reviews.</div>`;
-        else if (cat.id === 'red') planHtml = `<div class="status red">At least daily ALERT review (up to 72h).</div>`;
-        else if (cat.id === 'amber') planHtml = `<div class="status amber">At least daily ALERT review (up to 48h).</div>`;
-        else {
-            if (s.reviewType === 'pre') planHtml = `<div class="status green">ALERT post ICU review on ward.</div>`;
-            else planHtml = `<div class="status green">Continue ALERT reviews — minimum 2 reviews and 24h post-stepdown required before discharge.</div>`;
+        const hoursMap = { 'red': '72h', 'amber': '48h', 'green': '24h' };
+        const h = hoursMap[cat.id] || '24h';
+        const cssClass = cat.id === 'green' ? 'green' : cat.id === 'amber' ? 'amber' : 'red';
+
+        if (s.stepdown_suitable === false) {
+            planHtml = `<div class="status red">Not suitable for stepdown.</div>`;
+        } else if (s.chk_discharge_alert) {
+            planHtml = `<div class="status" style="color:var(--blue-hint)">Discharge from ALERT nursing list.</div>`;
+        } else {
+            planHtml = `<div class="status ${cssClass}">At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.</div>`;
+            planHtml += `<div style="margin-top:2px; font-weight:500; font-size: 0.9em; color:var(--text-light);">- Please contact ALERT if further support required between reviews.</div>`;
         }
 
         if (s.chk_medical_rounding) planHtml += `<div style="margin-top:2px; font-weight:600; color:var(--accent);">+ Added to ALERT Medical Rounding List</div>`;
