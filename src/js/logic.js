@@ -530,7 +530,7 @@ export function computeAll() {
             if (uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0) {
                 add(red, `Prolonged ICU stay >4 days with additional risk factors`, 'icuLos', 'red');
             } else {
-                suppressedRisks.push(`Prolonged ICU stay >4 days (No other risk factors identified = Low Risk)`);
+                suppressedRisks.push(`Prolonged ICU stay >4 days (No other risk factors identified)`);
             }
         }
 
