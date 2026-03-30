@@ -414,7 +414,9 @@ export function computeAll() {
 
         if (s.immobility === true) {
             const icuLos = num(s.icuLos) || 0;
-            if (icuLos <= 4) {
+            if (icuLos > 4) {
+                add(red, `Immobility concern + long ICU stay`, 'seg_immobility', 'red', s.immobility_note);
+            } else {
                 add(amber, 'Immobility concern', 'seg_immobility', 'amber', s.immobility_note);
             }
         }
@@ -528,7 +530,12 @@ export function computeAll() {
             const uniqueAmberPreLos = [...new Set(amber)];
             
             if (uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0) {
-                add(red, `Prolonged ICU stay >4 days with additional risk factors`, 'icuLos', 'red');
+                // If there is ANY risk at all (including immobility), we check if it is exclusively immobility
+                const hasNonImmobilityRisk = uniqueRedPreLos.some(r => !r.includes('Immobility concern')) || 
+                                             uniqueAmberPreLos.some(a => !a.includes('Immobility concern'));
+                if (hasNonImmobilityRisk) {
+                    add(red, `Prolonged ICU stay >4 days with additional risk factors`, 'icuLos', 'red');
+                }
             } else {
                 suppressedRisks.push(`Prolonged ICU stay >4 days (No other risk factors identified)`);
             }
