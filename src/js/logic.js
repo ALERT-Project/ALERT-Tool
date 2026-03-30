@@ -414,8 +414,9 @@ export function computeAll() {
 
         if (s.immobility === true) {
             const icuLos = num(s.icuLos) || 0;
-            if (icuLos >= 4) add(red, `Immobility concern - prolonged ICU stay`, 'seg_immobility', 'red', s.immobility_note);
-            else add(amber, 'Immobility concern', 'seg_immobility', 'amber', s.immobility_note);
+            if (icuLos <= 4) {
+                add(amber, 'Immobility concern', 'seg_immobility', 'amber', s.immobility_note);
+            }
         }
 
         const hb = num(s.hb) || num(s.bl_hb);
@@ -520,6 +521,18 @@ export function computeAll() {
 
         const age = num(s.ptAge);
         if (age >= 75) add(amber, `Age ${age} (frailty risk)`, 'ptAge', 'amber');
+
+        const icuLos = num(s.icuLos) || 0;
+        if (icuLos > 4) {
+            const uniqueRedPreLos = [...new Set(red)];
+            const uniqueAmberPreLos = [...new Set(amber)];
+            
+            if (uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0) {
+                add(red, `Prolonged ICU stay >4 days with additional risk factors`, 'icuLos', 'red');
+            } else {
+                suppressedRisks.push(`Prolonged ICU stay >4 days (No other risk factors identified = Low Risk)`);
+            }
+        }
 
         const uniqueRed = [...new Set(red)];
         const uniqueAmber = [...new Set(amber)];
