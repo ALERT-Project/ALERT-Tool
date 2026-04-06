@@ -2154,6 +2154,7 @@ function computeAll() {
                 const flow = num(s.npFlow);
                 if (flow >= 3) { parts.push(`high flow NP ${flow}L`); flagged.red.push('npFlow'); hasRed = true; }
                 else if (flow >= 2) { parts.push(`NP ${flow}L`); flagged.amber.push('npFlow'); }
+                // NP 1L: low-level O2 support - not scored to avoid alarm fatigue
             } else if (s.oxMod === 'HFNP') {
                 const fio2 = num(s.hfnpFio2);
                 if (fio2 >= 60) { parts.push(`HFNP - high FiO2 ${fio2}%`); flagged.red.push('oxMod'); hasRed = true; }
@@ -2198,8 +2199,12 @@ function computeAll() {
                 const finalTxt = `Respiratory concern - ${joined}`;
                 if (hasRed) red.push(finalTxt); else amber.push(finalTxt);
             } else {
-                // Gate is open but no specific concerns identified - still flag as amber
-                add(amber, 'Respiratory concern - details required', 'seg_resp_concern', 'amber', s.dyspneaConcern_note);
+                // Gate is open but no specific concerns identified
+                // Suppress fallback amber if only on NP 1L (low-level O2, not clinically significant)
+                const isLowFlowNP = (s.oxMod === 'NP' && (num(s.npFlow) || 0) < 2);
+                if (!isLowFlowNP) {
+                    add(amber, 'Respiratory concern - details required', 'seg_resp_concern', 'amber', s.dyspneaConcern_note);
+                }
             }
         }
 
@@ -2365,8 +2370,16 @@ function computeAll() {
 
         if (s.immobility === true) {
             const icuLos = num(s.icuLos) || 0;
-            if (icuLos >= 4) add(red, `Immobility concern - prolonged ICU stay`, 'seg_immobility', 'red', s.immobility_note);
-            else add(amber, 'Immobility concern', 'seg_immobility', 'amber', s.immobility_note);
+            const ptAge = num(s.ptAge) || 0;
+            const hasOtherRisks = (red.length > 0 || amber.length > 0);
+            if (icuLos > 4 && hasOtherRisks) {
+                // LOS 5+ days combined with other scored risk factors = red
+                add(red, `Immobility concern - prolonged ICU stay`, 'seg_immobility', 'red', s.immobility_note);
+            } else if (icuLos > 4 && ptAge >= 75) {
+                // LOS 5+ days + age >75 only (no other risks) = amber
+                add(amber, `Immobility concern - prolonged ICU stay`, 'seg_immobility', 'amber', s.immobility_note);
+            }
+            // LOS <=4, or LOS 5+ with no other factors and age <=75 = green (no score)
         }
 
         const hb = num(s.hb) || num(s.bl_hb);

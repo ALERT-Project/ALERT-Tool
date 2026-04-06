@@ -390,8 +390,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedMode = 'Trache';
             }
 
-            // Only open respiratory concern gate if NOT room air
-            if (selectedMode && selectedMode !== 'RA') {
+            // Only open respiratory concern gate if NOT room air and NOT low-flow NP (1L) - alarm fatigue
+            const isLowFlowNP = (selectedMode === 'NP' && selectedFlow && parseInt(selectedFlow) < 2);
+            if (selectedMode && selectedMode !== 'RA' && !isLowFlowNP) {
                 const respGateYes = document.querySelector('#seg_resp_concern .seg-btn[data-value="true"]');
                 if (respGateYes && !respGateYes.classList.contains('active')) {
                     respGateYes.click();
