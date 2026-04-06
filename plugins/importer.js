@@ -103,26 +103,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const weightMatch = text.match(/Weight:\s*(\d+)/i);
         if (weightMatch) setVal('ptWeight', weightMatch[1]);
 
-        const locMatch = text.match(/Location:\s*([A-Z0-9]+)\s+(\d+)/i);
+        // Format: 'Location: 3A, Room: 24B' (from summary.js line 22)
+        const locMatch = text.match(/Location:\s*([^,|\n]+?)(?:,\s*(?:Room|Bed):\s*([^|\n]+))?(?:\||\n|$)/i);
         if (locMatch) {
-            const ward = locMatch[1];
+            const ward = locMatch[1].trim();
             const wardSelect = document.getElementById('ptWard');
             let found = false;
-            for (let i = 0; i < wardSelect.options.length; i++) {
-                if (wardSelect.options[i].value === ward) {
-                    wardSelect.selectedIndex = i;
-                    wardSelect.classList.add('scraped-data');
-                    found = true;
-                    break;
+            if (wardSelect) {
+                for (let i = 0; i < wardSelect.options.length; i++) {
+                    if (wardSelect.options[i].value === ward) {
+                        wardSelect.selectedIndex = i;
+                        wardSelect.classList.add('scraped-data');
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    wardSelect.value = 'Other';
+                    const otherWrapper = document.getElementById('ptWardOtherWrapper');
+                    if (otherWrapper) otherWrapper.style.display = 'block';
+                    setVal('ptWardOther', ward);
                 }
             }
-            if (!found) {
-                wardSelect.value = "Other";
-                const otherWrapper = document.getElementById('ptWardOtherWrapper');
-                if (otherWrapper) otherWrapper.style.display = 'block';
-                setVal('ptWardOther', ward);
-            }
-            setVal('ptBed', locMatch[2]);
+            if (locMatch[2]) setVal('ptBed', locMatch[2].trim());
         }
 
         const losMatch = text.match(/ICU LOS:\s*([\d.]+)/i);
@@ -186,8 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const addsMatch = aeText.match(/ADDS\s*[:]?\s*(\d+)/i);
             if (addsMatch) setPrev('prev_adds', addsMatch[1]);
 
-            const airwayMatch = aeText.match(/A[:\s]\s*(.*?)(?=\n|B[:\s])/i);
-            if (airwayMatch) setPrev('prev_airway', airwayMatch[1]);
+            // Use 'A:' (colon only) to avoid matching 'a ' inside words like 'Afebrile', 'ADDS:', etc.
+            const airwayMatch = aeText.match(/^A:\s*(.+?)$/m);
+            if (airwayMatch) setPrev('prev_airway', airwayMatch[1].trim());
 
             const rrMatch = aeText.match(/RR\s*(\d+(?:\s*to\s*\d+|\s*-\s*\d+)?)/i);
             if (rrMatch) setPrev('prev_rr', rrMatch[1]);
@@ -329,19 +333,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- 6. DEVICES ---
         if (carryForward) {
-            // Use multiline flag (m) so ^ anchors match start of each line, preventing false matches
-            // inside ICU Course Summary text that may contain "DEVICES:" in clinical notes
-            const devSection = text.match(/(?:^LINES,\s*DRAINS.*?DEVICES.*?:|^DEVICES:)([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|$)/im);
+            // Device header: handle both 'LINES, DRAINS, DEVICES & WOUNDS:' and 'Lines Drains Devices and Wounds:'
+            const devSection = text.match(/(?:^LINES[,\s]+DRAINS.*?DEVICES.*?:|^DEVICES:)([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|$)/im);
             if (devSection && devSection[1]) {
                 openAccordion('panel_devices', '[aria-controls="panel_devices"]');
-                // Filter out empty lines, section headers (ending in ':'), and
-                // date-prefixed journal lines from ICU Course Summary (e.g. "01/04: Patient intubated")
-                const devLines = devSection[1].split('\n').map(l => l.trim()).filter(l =>
-                    l.length > 0 &&
-                    !l.endsWith(':') &&
-                    l.toLowerCase() !== 'wounds:' &&
-                    !/^\d{1,2}[\/\-]\d{1,2}[\/\-]?\d{0,4}[:\s]/.test(l)  // skip date-prefixed lines (e.g. "01/04: Day 1")
-                );
+                // Split on newlines, then also split any remaining lines that contain ' -' (inline entries)
+                const rawLines = devSection[1].split('\n');
+                const devLines = [];
+                rawLines.forEach(raw => {
+                    const trimmed = raw.trim();
+                    if (!trimmed || trimmed.endsWith(':') || trimmed.toLowerCase() === 'wounds:') return;
+                    // skip date-prefixed journal lines (e.g. "01/04: Day 1")
+                    if (/^\d{1,2}[\/\-]\d{1,2}/.test(trimmed)) return;
+                    // If line contains multiple devices separated by ' and -' or ' -', split them
+                    const subEntries = trimmed.split(/\s+and\s+-|(?<=\w)\s+-(?=[A-Z])/i);
+                    subEntries.forEach(e => { if (e.trim()) devLines.push(e.trim()); });
+                });
                 devLines.forEach(line => {
                     // Remove leading dash if present
                     let txt = line.startsWith('-') ? line.substring(1).trim() : line;

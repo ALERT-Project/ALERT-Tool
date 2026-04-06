@@ -227,22 +227,6 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
     border-radius: 12px;
 }
 
-.input-box:has(.scraped-data)::after {
-    content: "📥 prev";
-    position: absolute;
-    top: 8px;
-    right: 10px;
-    font-size: 0.62rem;
-    font-weight: 700;
-    color: #2563eb;
-    background: rgba(37, 99, 235, 0.1);
-    border: 1px solid #93c5fd;
-    border-radius: 999px;
-    padding: 1px 7px;
-    pointer-events: none;
-    line-height: 1.6;
-}
-
 .concern-note { margin-top: 8px; }
 .concern-note textarea { min-height: 40px; font-size: 0.95rem; }
 
