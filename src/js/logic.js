@@ -168,8 +168,8 @@ export function computeAll() {
         const adds = num(s.adds);
         if (adds !== null) {
             if (adds >= 6) add(red, `Elevated ADDS ${adds}`, 'adds', 'red');
-            else if (adds >= 4) add(red, `Physiological instability ADDS ${adds}`, 'adds', 'red');
-            else if (adds === 3 && isRecent) add(amber, `Observation required ADDS 3`, 'adds', 'amber');
+            else if (adds >= 4) add(red, `Elevated ADDS ${adds}`, 'adds', 'red');
+            else if (adds === 3 && isRecent) add(amber, `Elevated ADDS 3`, 'adds', 'amber');
         }
 
         const hr = num(s.c_hr);
@@ -266,7 +266,7 @@ export function computeAll() {
             } else {
                 const isLowFlowNP = (s.oxMod === 'NP' && (num(s.npFlow) || 0) < 2);
                 if (!isLowFlowNP) {
-                    add(amber, 'Respiratory concern - details required', 'seg_resp_concern', 'amber', s.dyspneaConcern_note);
+                    add(amber, 'Respiratory concern', 'seg_resp_concern', 'amber', s.dyspneaConcern_note);
                 }
             }
         }
@@ -563,14 +563,14 @@ export function computeAll() {
                     uniqueAmberPreLos.some(a => !a.toLowerCase().includes('immobility') && !a.toLowerCase().includes('age'));
                 
                 if (hasNonImmobilityAndNonAgeRisk) {
-                    add(red, `Prolonged ICU stay >4 days with additional risk factors`, 'icuLos', 'red');
+                    add(red, `Prolonged ICU stay >4 days`, 'icuLos', 'red');
                 } else if (age >= 75) {
-                    add(amber, `Prolonged ICU stay >4 days (elderly/frailty)`, 'icuLos', 'amber');
+                    add(amber, `Prolonged ICU stay >4 days`, 'icuLos', 'amber');
                 } else {
-                    suppressedRisks.push(`Prolonged ICU stay >4 days (No other risk factors identified)`);
+                    suppressedRisks.push(`Prolonged ICU stay >4 days`);
                 }
             } else {
-                suppressedRisks.push(`Prolonged ICU stay >4 days (No other risk factors identified)`);
+                suppressedRisks.push(`Prolonged ICU stay >4 days`);
             }
         }
 
