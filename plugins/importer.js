@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setVal('ptBed', locMatch[2]);
         }
 
-        const losMatch = text.match(/ICU LOS:\s*(\d+)/i);
+        const losMatch = text.match(/ICU LOS:\s*([\d.]+)/i);
         if (losMatch) setVal('icuLos', losMatch[1]);
 
         const reasonMatch = text.match(/Reason for ICU Admission:\s*(.*)/i);
@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- 3. PREVIOUS DATA (A-E) ---
-        const aeBlock = text.match(/A-E ASSESSMENT([\s\S]*?)(?:Bloods:|LINES, DRAINS|DEVICES:)/i) || [null, text];
+        const aeBlock = text.match(/A-E ASSESSMENT([\s\S]*?)(?:Bloods:|LINES, DRAINS|DEVICES:)/im) || [null, text];
         const aeText = aeBlock[1];
         if (aeBlock[1]) openAccordion('panel_ae', '[aria-controls="panel_ae"]');
 
@@ -219,7 +219,30 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dietMatch) setVal('ae_diet', dietMatch[1]);
 
             const bowelMatch = text.match(/Bowels:\s*(.*)/i);
-            if (bowelMatch) setVal('ae_bowels', bowelMatch[1]);
+            if (bowelMatch) setPrev('prev_bowels', bowelMatch[1]);
+
+            // --- Medication / treatment fields (prev datum, not carry-forward) ---
+            const anticoagMatch = text.match(/Anticoagulation:\s*(.*)/i);
+            if (anticoagMatch) setPrev('prev_anticoag', anticoagMatch[1]);
+
+            const vteMatch = text.match(/VTE Prophylaxis:\s*(.*)/i);
+            if (vteMatch) setPrev('prev_vte', vteMatch[1]);
+
+            const infusionsMatch = text.match(/Infusions:\s*(.*)/i);
+            if (infusionsMatch) setPrev('prev_infusions', infusionsMatch[1]);
+
+            // --- Psychosocial ghost text (FYI prev datum only, not auto-selected) ---
+            const nutritionMatch = text.match(/Nutrition:\s*(.*)/i);
+            if (nutritionMatch) setPrev('prev_nutrition', nutritionMatch[1]);
+
+            const picsStatusMatch = text.match(/Post ICU Syndrome:\s*(.*)/i);
+            if (picsStatusMatch) setPrev('prev_pics_status', picsStatusMatch[1]);
+
+            const sleepMatch = text.match(/Sleep:\s*(.*)/i);
+            if (sleepMatch) setPrev('prev_sleep', sleepMatch[1]);
+
+            const psychMatch = text.match(/Psychological issues:\s*(.*)/i);
+            if (psychMatch) setPrev('prev_psych', psychMatch[1]);
         }
 
         // --- 4. BLOODS ---
@@ -306,11 +329,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- 6. DEVICES ---
         if (carryForward) {
-            const devSection = text.match(/(?:LINES, DRAINS.*?DEVICES.*?:|DEVICES:)([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|$)/i);
+            // Use multiline flag (m) so ^ anchors match start of each line, preventing false matches
+            // inside ICU Course Summary text that may contain "DEVICES:" in clinical notes
+            const devSection = text.match(/(?:^LINES,\s*DRAINS.*?DEVICES.*?:|^DEVICES:)([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|$)/im);
             if (devSection && devSection[1]) {
                 openAccordion('panel_devices', '[aria-controls="panel_devices"]');
-                // Remove the filter(l => l.startsWith('-')) to allow all lines, and then we will clean them up.
-                const devLines = devSection[1].split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.endsWith(':') && l.toLowerCase() !== 'wounds:');
+                // Filter out empty lines, section headers (ending in ':'), and
+                // date-prefixed journal lines from ICU Course Summary (e.g. "01/04: Patient intubated")
+                const devLines = devSection[1].split('\n').map(l => l.trim()).filter(l =>
+                    l.length > 0 &&
+                    !l.endsWith(':') &&
+                    l.toLowerCase() !== 'wounds:' &&
+                    !/^\d{1,2}[\/\-]\d{1,2}[\/\-]?\d{0,4}[:\s]/.test(l)  // skip date-prefixed lines (e.g. "01/04: Day 1")
+                );
                 devLines.forEach(line => {
                     // Remove leading dash if present
                     let txt = line.startsWith('-') ? line.substring(1).trim() : line;

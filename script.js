@@ -1662,6 +1662,7 @@ function clearData() {
     const sc = $('selected_comorbs_display');
     if (sc) { sc.innerHTML = ''; sc.style.display = 'none'; }
     document.querySelectorAll('.prev-datum').forEach(el => el.textContent = '');
+    window.prevBloods = {};
     const pb = $('prevRisksBox'); if (pb) pb.style.display = 'none';
 
     const gatesToHide = [
