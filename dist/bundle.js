@@ -559,7 +559,10 @@
           if (hasRed) red.push(finalTxt);
           else amber.push(finalTxt);
         } else {
-          add(amber, "Respiratory concern - details required", "seg_resp_concern", "amber", s.dyspneaConcern_note);
+          const isLowFlowNP = s.oxMod === "NP" && (num(s.npFlow) || 0) < 2;
+          if (!isLowFlowNP) {
+            add(amber, "Respiratory concern - details required", "seg_resp_concern", "amber", s.dyspneaConcern_note);
+          }
         }
       }
       if (s.after_hours === true) add(amber, "Discharged after-hours", "seg_after_hours", "amber", s.after_hours_note);
@@ -677,8 +680,25 @@
       }
       if (s.immobility === true) {
         const icuLos2 = num(s.icuLos) || 0;
+        const ptAge = num(s.ptAge) || 0;
+        const uniqueRedPreLos = [...new Set(red)];
+        const uniqueAmberPreLos = [...new Set(amber)];
+        const hasOtherRisks = uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0;
         if (icuLos2 > 4) {
-          add(red, `Immobility concern + long ICU stay`, "seg_immobility", "red", s.immobility_note);
+          if (hasOtherRisks) {
+            const hasNonImmobilityAndNonAgeRisk = uniqueRedPreLos.some((r) => !r.toLowerCase().includes("immobility") && !r.toLowerCase().includes("age")) || uniqueAmberPreLos.some((a) => !a.toLowerCase().includes("immobility") && !a.toLowerCase().includes("age"));
+            if (hasNonImmobilityAndNonAgeRisk) {
+              add(red, `Immobility concern - prolonged ICU stay`, "seg_immobility", "red", s.immobility_note);
+            } else if (ptAge >= 75) {
+              add(amber, `Immobility concern - prolonged ICU stay`, "seg_immobility", "amber", s.immobility_note);
+            } else {
+              add(amber, "Immobility concern", "seg_immobility", "amber", s.immobility_note);
+            }
+          } else if (ptAge >= 75) {
+            add(amber, `Immobility concern - prolonged ICU stay`, "seg_immobility", "amber", s.immobility_note);
+          } else {
+            add(amber, "Immobility concern", "seg_immobility", "amber", s.immobility_note);
+          }
         } else {
           add(amber, "Immobility concern", "seg_immobility", "amber", s.immobility_note);
         }
@@ -774,10 +794,15 @@
       if (icuLos > 4) {
         const uniqueRedPreLos = [...new Set(red)];
         const uniqueAmberPreLos = [...new Set(amber)];
-        if (uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0) {
-          const hasNonImmobilityRisk = uniqueRedPreLos.some((r) => !r.includes("Immobility concern")) || uniqueAmberPreLos.some((a) => !a.includes("Immobility concern"));
-          if (hasNonImmobilityRisk) {
+        const hasOtherRisks = uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0;
+        if (hasOtherRisks) {
+          const hasNonImmobilityAndNonAgeRisk = uniqueRedPreLos.some((r) => !r.toLowerCase().includes("immobility") && !r.toLowerCase().includes("age")) || uniqueAmberPreLos.some((a) => !a.toLowerCase().includes("immobility") && !a.toLowerCase().includes("age"));
+          if (hasNonImmobilityAndNonAgeRisk) {
             add(red, `Prolonged ICU stay >4 days with additional risk factors`, "icuLos", "red");
+          } else if (age >= 75) {
+            add(amber, `Prolonged ICU stay >4 days (elderly/frailty)`, "icuLos", "amber");
+          } else {
+            suppressedRisks.push(`Prolonged ICU stay >4 days (No other risk factors identified)`);
           }
         } else {
           suppressedRisks.push(`Prolonged ICU stay >4 days (No other risk factors identified)`);
