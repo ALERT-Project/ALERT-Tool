@@ -334,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 6. DEVICES ---
         if (carryForward) {
             // Device header: handle both 'LINES, DRAINS, DEVICES & WOUNDS:' and 'Lines Drains Devices and Wounds:'
-            const devSection = text.match(/(?:^LINES[,\s]+DRAINS.*?DEVICES.*?:|^DEVICES:)([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|$)/im);
+            const devSection = text.match(/(?:^LINES[,\s]+DRAINS.*?DEVICES.*?:|^DEVICES:)([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|PLAN:)/im);
             if (devSection && devSection[1]) {
                 openAccordion('panel_devices', '[aria-controls="panel_devices"]');
                 // Split on newlines, then also split any remaining lines that contain ' -' (inline entries)

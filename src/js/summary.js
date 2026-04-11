@@ -224,17 +224,21 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     lines.push('');
 
     const blMap = { 'lac_review': 'Lac', 'hb': 'Hb', 'wcc': 'WCC', 'cr_review': 'Cr', 'egfr': 'eGFR', 'k': 'K', 'na': 'Na', 'mg': 'Mg', 'phos': 'PO4', 'plts': 'Plts', 'alb': 'Alb', 'neut': 'Neut', 'lymph': 'Lymph', 'bili': 'Bili', 'alt': 'ALT', 'inr': 'INR', 'aptt': 'APTT' };
-    const blLines = [];
-    Object.keys(blMap).forEach(key => {
-        const currentVal = s[`bl_${key}`];
-        const prevVal = window.prevBloods ? window.prevBloods[key] : null;
-        if (currentVal) {
-            let str = `${blMap[key]} ${currentVal}`;
-            if (prevVal && prevVal !== currentVal) str += ` (${prevVal})`;
-            blLines.push(str);
-        }
-    });
-    if (blLines.length) addLine(`Bloods: ${blLines.join(', ')}`);
+    if (s.bloods_nil_sig) {
+        addLine('Bloods: Checked, nil significant');
+    } else {
+        const blLines = [];
+        Object.keys(blMap).forEach(key => {
+            const currentVal = s[`bl_${key}`];
+            const prevVal = window.prevBloods ? window.prevBloods[key] : null;
+            if (currentVal) {
+                let str = `${blMap[key]} ${currentVal}`;
+                if (prevVal && prevVal !== currentVal) str += ` (${prevVal})`;
+                blLines.push(str);
+            }
+        });
+        if (blLines.length) addLine(`Bloods: ${blLines.join(', ')}`);
+    }
     if (s.new_bloods_ordered === 'ordered') addLine('New bloods ordered for next round');
     if (s.new_bloods_ordered === 'requested') addLine('New bloods requested (not yet ordered)');
     if (s.new_bloods_ordered === 'not_required') addLine('New bloods not required');

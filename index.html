@@ -1450,18 +1450,17 @@
                     aria-hidden="true">[+]</span></button>
             <div class="panel" id="panel_bloods">
 
-                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:stretch;">
                     <button id="btnUseSameBloods" class="btn small"
-                        style="flex:1; border:1px dashed var(--accent); color:var(--accent); background:transparent;">
+                        style="flex:2; min-width:200px; border:1px dashed var(--accent); color:var(--accent); background:transparent;">
                         ⟲ Use same results as last review (no new bloods)
                     </button>
                     <button id="btnClearCurrentBloods" class="btn danger small"
-                        style="width: 100%; max-width: 250px; margin-top:20px;" title="Clear all current blood results">
+                        style="flex:1; min-width:140px;" title="Clear all current blood results">
                         Clear Current Bloods
                     </button>
                     <button id="btnClearPreviousBloods" class="btn danger small"
-                        style="width: 100%; max-width: 250px; margin-top:8px;"
-                        title="Clear all previous blood results (Prev: labels)">
+                        style="flex:1; min-width:140px;" title="Clear all previous blood results (Prev: labels)">
                         Clear Previous Bloods
                     </button>
                 </div>
@@ -1544,6 +1543,14 @@
                                 class="prev-datum"></span></label><input id="bl_aptt" type="number" />
                         <div class="trend-buttons" id="bl_aptt_trend"></div><span class="range-subtext">(25-38)</span>
                     </div>
+                </div>
+
+                <div style="margin-top:12px; margin-bottom:8px;">
+                    <button id="btnBloodsNilSig" class="btn small"
+                        style="width:100%; border:1px dashed var(--green,#22c55e); color:var(--green,#22c55e); background:transparent; text-align:left; padding:8px 12px;"
+                        title="Toggle: mark bloods as checked with nil significant findings">
+                        ✅ Bloods checked, nil significant
+                    </button>
                 </div>
 
                 <div class="grid" style="margin-top:12px; row-gap:8px;">

@@ -812,6 +812,26 @@ function initialize() {
         }
     });
 
+    const btnBloodsNilSig = $('btnBloodsNilSig');
+    if (btnBloodsNilSig) {
+        btnBloodsNilSig.addEventListener('click', () => {
+            const isActive = btnBloodsNilSig.classList.contains('active');
+            btnBloodsNilSig.classList.toggle('active', !isActive);
+            // Update visual style: solid green background when active
+            if (!isActive) {
+                btnBloodsNilSig.style.background = 'var(--green,#22c55e)';
+                btnBloodsNilSig.style.color = 'white';
+                btnBloodsNilSig.style.borderStyle = 'solid';
+            } else {
+                btnBloodsNilSig.style.background = 'transparent';
+                btnBloodsNilSig.style.color = 'var(--green,#22c55e)';
+                btnBloodsNilSig.style.borderStyle = 'dashed';
+            }
+            saveState(true);
+            compute();
+        });
+    }
+
     document.querySelectorAll('.trend-buttons').forEach(group => {
         ['↑', '↓', '→'].forEach(t => {
             const btn = document.createElement('button');

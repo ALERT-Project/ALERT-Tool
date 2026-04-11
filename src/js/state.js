@@ -75,6 +75,9 @@ export function getState() {
         if (el) state[id] = el.checked;
     });
 
+    const nilSigBtn = $('btnBloodsNilSig');
+    state['bloods_nil_sig'] = nilSigBtn ? nilSigBtn.classList.contains('active') : false;
+
     state['bowel_mode'] = document.querySelector('#panel_ae .quick-select.active')?.id || null;
 
     state.devices = {};
@@ -175,6 +178,15 @@ export function restoreState(state) {
     });
 
     if (state['chk_use_mods']) $('mods_inputs').style.display = 'block';
+
+    const nilSigBtn = $('btnBloodsNilSig');
+    if (nilSigBtn) {
+        const isActive = !!state['bloods_nil_sig'];
+        nilSigBtn.classList.toggle('active', isActive);
+        nilSigBtn.style.background = isActive ? 'var(--green,#22c55e)' : 'transparent';
+        nilSigBtn.style.color = isActive ? 'white' : 'var(--green,#22c55e)';
+        nilSigBtn.style.borderStyle = isActive ? 'solid' : 'dashed';
+    }
 
     if (state['bowel_mode']) {
         $(state['bowel_mode'])?.classList.add('active');
