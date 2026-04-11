@@ -628,6 +628,7 @@ function initialize() {
 
     $('chk_use_mods')?.addEventListener('change', () => { $('mods_inputs').style.display = $('chk_use_mods').checked ? 'block' : 'none'; compute(); });
     $('chk_aperients')?.addEventListener('change', compute);
+    $('chk_bloods_nil_sig')?.addEventListener('change', compute);
     $('chk_unknown_blo_date')?.addEventListener('change', () => { handleUnknownBLODate(); compute(); });
     $('comorb_other_note')?.addEventListener('input', compute);
     $('comorb_other_note')?.addEventListener('blur', () => {

@@ -69,7 +69,7 @@ export const toggleInputs = [
     'comorb_copd', 'comorb_asthma', 'comorb_hf', 'comorb_esrd', 'comorb_dialysis',
     'comorb_diabetes', 'comorb_cirrhosis', 'comorb_malignancy', 'comorb_immuno', 'comorb_other',
     'renal_oliguria', 'renal_anuria', 'renal_fluid', 'renal_oedema', 'renal_dysfunction', 'renal_dialysis', 'renal_dehydrated', 'renal_worsening_cr',
-    'chk_aperients', 'chk_unknown_blo_date', 'chk_bloods_nil_sig',
+    'chk_aperients', 'chk_unknown_blo_date',
     'pressor_recent_norad', 'pressor_recent_met', 'pressor_recent_gtn', 'pressor_recent_dob', 'pressor_recent_mid', 'pressor_recent_other',
     'pressor_current_mid', 'pressor_current_other'
 ];

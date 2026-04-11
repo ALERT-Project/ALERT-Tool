@@ -248,7 +248,6 @@ var ALERTTool = (() => {
     "renal_worsening_cr",
     "chk_aperients",
     "chk_unknown_blo_date",
-    "chk_bloods_nil_sig",
     "pressor_recent_norad",
     "pressor_recent_met",
     "pressor_recent_gtn",
@@ -1661,7 +1660,7 @@ var ALERTTool = (() => {
     });
     state["reviewType"] = document.querySelector('input[name="reviewType"]:checked')?.value || "post";
     state["clinicianRole"] = document.querySelector('input[name="clinicianRole"]:checked')?.value || "ALERT CNS";
-    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods"].forEach((id) => {
+    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig"].forEach((id) => {
       const el = $(id);
       if (el) state[id] = el.checked;
     });
@@ -1754,7 +1753,7 @@ var ALERTTool = (() => {
       const r = document.querySelector(`input[name="clinicianRole"][value="${state["clinicianRole"]}"]`);
       if (r) r.checked = true;
     }
-    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods"].forEach((id) => {
+    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig"].forEach((id) => {
       const el = $(id);
       if (el && state[id] !== void 0) el.checked = state[id];
     });
@@ -2662,6 +2661,7 @@ var ALERTTool = (() => {
       compute();
     });
     $("chk_aperients")?.addEventListener("change", compute);
+    $("chk_bloods_nil_sig")?.addEventListener("change", compute);
     $("chk_unknown_blo_date")?.addEventListener("change", () => {
       handleUnknownBLODate();
       compute();
