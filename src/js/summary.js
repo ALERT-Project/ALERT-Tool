@@ -224,7 +224,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     lines.push('');
 
     const blMap = { 'lac_review': 'Lac', 'hb': 'Hb', 'wcc': 'WCC', 'cr_review': 'Cr', 'egfr': 'eGFR', 'k': 'K', 'na': 'Na', 'mg': 'Mg', 'phos': 'PO4', 'plts': 'Plts', 'alb': 'Alb', 'neut': 'Neut', 'lymph': 'Lymph', 'bili': 'Bili', 'alt': 'ALT', 'inr': 'INR', 'aptt': 'APTT' };
-    if (s.bloods_nil_sig) {
+    if (s.chk_bloods_nil_sig) {
         addLine('Bloods: Checked, nil significant');
     } else {
         const blLines = [];

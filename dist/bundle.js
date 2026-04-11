@@ -248,6 +248,7 @@ var ALERTTool = (() => {
     "renal_worsening_cr",
     "chk_aperients",
     "chk_unknown_blo_date",
+    "chk_bloods_nil_sig",
     "pressor_recent_norad",
     "pressor_recent_met",
     "pressor_recent_gtn",
@@ -1664,8 +1665,6 @@ var ALERTTool = (() => {
       const el = $(id);
       if (el) state[id] = el.checked;
     });
-    const nilSigBtn = $("btnBloodsNilSig");
-    state["bloods_nil_sig"] = nilSigBtn ? nilSigBtn.classList.contains("active") : false;
     state["bowel_mode"] = document.querySelector("#panel_ae .quick-select.active")?.id || null;
     state.devices = {};
     deviceTypes.forEach((type) => {
@@ -1760,14 +1759,6 @@ var ALERTTool = (() => {
       if (el && state[id] !== void 0) el.checked = state[id];
     });
     if (state["chk_use_mods"]) $("mods_inputs").style.display = "block";
-    const nilSigBtn = $("btnBloodsNilSig");
-    if (nilSigBtn) {
-      const isActive = !!state["bloods_nil_sig"];
-      nilSigBtn.classList.toggle("active", isActive);
-      nilSigBtn.style.background = isActive ? "var(--green,#22c55e)" : "transparent";
-      nilSigBtn.style.color = isActive ? "white" : "var(--green,#22c55e)";
-      nilSigBtn.style.borderStyle = isActive ? "solid" : "dashed";
-    }
     if (state["bowel_mode"]) {
       $(state["bowel_mode"])?.classList.add("active");
       toggleBowelDate(state["bowel_mode"]);
@@ -1992,7 +1983,7 @@ var ALERTTool = (() => {
     if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
     lines.push("");
     const blMap = { "lac_review": "Lac", "hb": "Hb", "wcc": "WCC", "cr_review": "Cr", "egfr": "eGFR", "k": "K", "na": "Na", "mg": "Mg", "phos": "PO4", "plts": "Plts", "alb": "Alb", "neut": "Neut", "lymph": "Lymph", "bili": "Bili", "alt": "ALT", "inr": "INR", "aptt": "APTT" };
-    if (s.bloods_nil_sig) {
+    if (s.chk_bloods_nil_sig) {
       addLine("Bloods: Checked, nil significant");
     } else {
       const blLines = [];
@@ -2891,24 +2882,6 @@ var ALERTTool = (() => {
         showToast("No previous blood results to clear", 1500);
       }
     });
-    const btnBloodsNilSig = $("btnBloodsNilSig");
-    if (btnBloodsNilSig) {
-      btnBloodsNilSig.addEventListener("click", () => {
-        const isActive = btnBloodsNilSig.classList.contains("active");
-        btnBloodsNilSig.classList.toggle("active", !isActive);
-        if (!isActive) {
-          btnBloodsNilSig.style.background = "var(--green,#22c55e)";
-          btnBloodsNilSig.style.color = "white";
-          btnBloodsNilSig.style.borderStyle = "solid";
-        } else {
-          btnBloodsNilSig.style.background = "transparent";
-          btnBloodsNilSig.style.color = "var(--green,#22c55e)";
-          btnBloodsNilSig.style.borderStyle = "dashed";
-        }
-        saveState(true);
-        compute();
-      });
-    }
     document.querySelectorAll(".trend-buttons").forEach((group) => {
       ["\u2191", "\u2193", "\u2192"].forEach((t) => {
         const btn = document.createElement("button");
