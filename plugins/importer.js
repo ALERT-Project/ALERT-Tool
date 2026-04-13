@@ -44,7 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el && val) {
             let text = val.trim();
             text = text.replace(/%/, '');
-            if (!id.includes('risk') && text.length > 25) {
+            
+            const noTruncateIds = ['prev_nutrition', 'prev_pics_status', 'prev_sleep', 'prev_psych', 'prev_other_context'];
+            if (!id.includes('risk') && !noTruncateIds.includes(id) && text.length > 25) {
                 text = text.substring(0, 23) + '..';
             }
             el.textContent = `(Prev: ${text})`;
@@ -176,6 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     .join('\n');
                 if (rawPmh) { setVal('pmh_note', rawPmh); contextFound = true; }
             }
+
+            const otherMatch = text.match(/^Other:\s*([\s\S]*?)(?=\nIDENTIFIED|\nPLAN:|$)/im) || text.match(/Other:\s*(.*)/i);
+            if (otherMatch) { setPrev('prev_other_context', otherMatch[1]); }
 
             if (contextFound) openAccordion('panel_context', '[aria-controls="panel_context"]');
         }
@@ -334,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 6. DEVICES ---
         if (carryForward) {
             // Device header: handle both 'LINES, DRAINS, DEVICES & WOUNDS:' and 'Lines Drains Devices and Wounds:'
-            const devSection = text.match(/(?:^LINES[,\s]+DRAINS.*?DEVICES.*?:|^DEVICES:)([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|PLAN:)/im);
+            const devSection = text.match(/(?:^LINES[,\s]+DRAINS.*?DEVICES.*?:|^DEVICES:)([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|PLAN:|^Other:)/im);
             if (devSection && devSection[1]) {
                 openAccordion('panel_devices', '[aria-controls="panel_devices"]');
                 // Split on newlines, then also split any remaining lines that contain ' -' (inline entries)
