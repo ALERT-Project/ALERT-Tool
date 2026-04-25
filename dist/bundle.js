@@ -1,4 +1,4 @@
-var ALERTTool = (() => {
+(() => {
   // src/js/utils.js
   var $ = (id) => document.getElementById(id);
   var debounce = (fn, wait = 350) => {
@@ -704,8 +704,8 @@ var ALERTTool = (() => {
         }
       }
       const hb = num(s.hb) || num(s.bl_hb);
-      if (hb && hb <= 70) add(red, `Low Hb ${hb}`, "hb_wrapper", "red");
-      else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Low Hb ${hb} and dropping`, "hb_wrapper", "amber");
+      if (hb && hb <= 70) add(red, `Low Hb ${hb}`, "hb", "red");
+      else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Low Hb ${hb} and dropping`, "hb", "amber");
       const alb = num(s.bl_alb);
       if (alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, "bl_alb", "amber");
       const plts = num(s.bl_plts);

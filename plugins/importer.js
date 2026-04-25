@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- 4. BLOODS ---
-        const bloodsBlock = text.match(/Bloods:\s*([\s\S]*?)(?:LINES, DRAINS|DEVICES:|IDENTIFIED ICU READMISSION|IDENTIFIED RISK FACTORS|$)/i);
+        const bloodsBlock = text.match(/Bloods:\s*([\s\S]*?)(?:LINES, DRAINS|DEVICES:|IDENTIFIED ICU READMISSION|IDENTIFIED RISK FACTORS|Other:|PLAN:|A-E ASSESSMENT|Psychosocial|PICS|$)/i);
         if (bloodsBlock) {
             openAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
             const bText = bloodsBlock[1];

@@ -1418,13 +1418,13 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
 
         // Determine status and color based on device type and dwell time
         if (type === 'PIVC') {
-            if (dwellDays >= 7) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
-            else if (dwellDays >= 5) { infoText = `${dwellDays}d, long dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
+            if (dwellDays >= 7) { infoText = `${dwellDays}d dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
+            else if (dwellDays >= 5) { infoText = `${dwellDays}d dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
             else if (dwellDays >= 3) { infoText = `${dwellDays}d dwell`; infoColor = '#9333ea'; borderColor = '#9333ea'; }
         } else {
-            if (dwellDays >= 14) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
-            else if (dwellDays >= 10) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
-            else if (dwellDays >= 7) { infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; borderColor = '#9333ea'; }
+            if (dwellDays >= 14) { infoText = `${dwellDays}d dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
+            else if (dwellDays >= 10) { infoText = `${dwellDays}d dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
+            else if (dwellDays >= 7) { infoText = `${dwellDays}d dwell`; infoColor = '#9333ea'; borderColor = '#9333ea'; }
         }
     }
 
@@ -1475,13 +1475,13 @@ function createDeviceEntry(type, val = '', insertionDate = '') {
                 let infoColor = 'var(--text)';
 
                 if (type === 'PIVC') {
-                    if (dwellDays >= 7) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; }
-                    else if (dwellDays >= 5) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, long dwell`; infoColor = 'var(--amber)'; }
+                    if (dwellDays >= 7) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d dwell`; infoColor = 'var(--red)'; }
+                    else if (dwellDays >= 5) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d dwell`; infoColor = 'var(--amber)'; }
                     else if (dwellDays >= 3) { newBorderColor = '#9333ea'; infoText = `${dwellDays}d dwell`; infoColor = '#9333ea'; }
                 } else {
-                    if (dwellDays >= 14) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; }
-                    else if (dwellDays >= 10) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; }
-                    else if (dwellDays >= 7) { newBorderColor = '#9333ea'; infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; }
+                    if (dwellDays >= 14) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d dwell`; infoColor = 'var(--red)'; }
+                    else if (dwellDays >= 10) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d dwell`; infoColor = 'var(--amber)'; }
+                    else if (dwellDays >= 7) { newBorderColor = '#9333ea'; infoText = `${dwellDays}d dwell`; infoColor = '#9333ea'; }
                 }
 
                 // Update border
@@ -2383,8 +2383,8 @@ function computeAll() {
         }
 
         const hb = num(s.hb) || num(s.bl_hb);
-        if (hb && hb <= 70) add(red, `Low Hb ${hb}`, 'hb_wrapper', 'red');
-        else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Low Hb ${hb} and dropping`, 'hb_wrapper', 'amber');
+        if (hb && hb <= 70) add(red, `Low Hb ${hb}`, 'hb', 'red');
+        else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Low Hb ${hb} and dropping`, 'hb', 'amber');
 
         const alb = num(s.bl_alb);
         if (alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, 'bl_alb', 'amber');
@@ -2829,7 +2829,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
     if (s.b_comment) addLine(`  - ${s.b_comment}`);
 
     let c = [];
-    if (s.c_hr) c.push(`HR ${s.c_hr} ${s.c_hr_rhythm ? `(${s.c_hr_rhythm})` : ''}`);
+    if (s.c_hr) c.push(`HR ${s.c_hr}${s.c_hr_rhythm ? ` (${s.c_hr_rhythm})` : ''}`);
     if (s.c_nibp) c.push(`NIBP ${s.c_nibp}`);
     if (s.c_cr) c.push(`CR ${s.c_cr}`);
     if (s.c_perf) c.push(`Perf ${s.c_perf}`);
@@ -2959,14 +2959,7 @@ function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComo
                     // Format: "PICC - left brachial - 5d dwell, inserted 11/2/26"
                     if (item.details) deviceLine += ` - ${item.details}`;
 
-                    const threshold = (k === 'PIVC') ? 5 : 7;
-                    if (k === 'PIVC') {
-                        if (dwellDays >= 5) deviceLine += ` - ${dwellDays}d long dwell`;
-                        else deviceLine += ` - ${dwellDays}d dwell`;
-                    } else {
-                        if (dwellDays >= 7) deviceLine += ` - ${dwellDays}d long dwell`;
-                        else deviceLine += ` - ${dwellDays}d dwell`;
-                    }
+                    deviceLine += ` - ${dwellDays}d dwell`;
 
                     // Add insertion date at the end
                     const bd = new Date(item.insertionDate);
