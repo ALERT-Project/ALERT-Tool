@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--
-  ALERT Nursing Risk Assessment Tool A8.01 (25 Apr 2026)
+  ALERT Nursing Risk Assessment Tool A8.02 (04 May 2026)
   Copyright © 2025-2026 Casey Bond
   Developed for ALERT at South Metropolitan Health Service, WA, Australia
   Licensed under MIT License
@@ -1673,10 +1673,12 @@
             <div id="discharge_prompt"
                 style="display:none; text-align:center; color:var(--blue-hint); font-weight:700; margin-bottom:16px; border:2px dashed var(--blue-hint); padding:12px; border-radius:8px;">
                 <div id="discharge_msg" style="margin-bottom:8px; font-size:1.1rem;"></div>
-                <div style="display:flex; justify-content:center; gap:16px;">
+                <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
                     <button id="btn_discharge_yes" class="btn small"
-                        style="background:var(--blue-hint); color:white; border-color:var(--blue-hint);">Yes</button>
-                    <button id="btn_discharge_no" class="btn small">No</button>
+                        style="background:var(--blue-hint); color:white; border-color:var(--blue-hint);">Yes - Discharge</button>
+                    <button id="btn_discharge_pending" class="btn small"
+                        style="background:#ea580c; color:white; border-color:#ea580c;">Yes - Pending Next Bloods</button>
+                    <button id="btn_discharge_no" class="btn small">No - Keep on list</button>
                 </div>
             </div>
 
@@ -1696,6 +1698,14 @@
                         <input type="checkbox" id="chk_discharge_alert" style="width:auto; transform:scale(1.2);">
                         Discharge from ALERT post ICU rounding list?
                     </label>
+                    <label
+                        style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; font-weight:600; cursor:pointer; color:#ea580c; line-height:1.4;">
+                        <input type="checkbox" id="chk_discharge_pending_bloods" style="width:auto; transform:scale(1.2); margin-top:4px;">
+                        <span>Discharge from ALERT post ICU rounding list - pending next blood results?</span>
+                    </label>
+                    <div id="discharge_pending_bloods_note_wrapper" style="display:none; margin-left: 24px; margin-bottom: 10px;">
+                        <input type="text" id="discharge_pending_bloods_note" placeholder="Please enter any specific bloods being followed here" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 0.9rem;" />
+                    </div>
                 </div>
 
                 <label id="chk_medical_rounding_wrapper"
@@ -1770,7 +1780,7 @@
 
         <div
             style="text-align:center; padding:32px 20px 20px 20px; font-size:0.75rem; color:var(--muted); line-height:1.6; word-wrap:break-word; overflow-wrap:break-word;">
-            <div>ALERT Tool A8.01 (25 Apr 2026) © 2025-2026 Casey Bond</div>
+            <div>ALERT Tool A8.02 (04 May 2026) © 2025-2026 Casey Bond</div>
             <div>Developed for ALERT at South Metropolitan Health Service, WA, Australia</div>
             <div><a href="https://opensource.org/licenses/MIT" target="_blank"
                     style="color:var(--accent); text-decoration:none;">MIT License</a></div>

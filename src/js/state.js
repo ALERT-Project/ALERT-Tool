@@ -70,7 +70,7 @@ export function getState() {
     state['reviewType'] = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
     state['clinicianRole'] = document.querySelector('input[name="clinicianRole"]:checked')?.value || 'ALERT CNS';
 
-    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig'].forEach(id => {
+    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods'].forEach(id => {
         const el = $(id);
         if (el) state[id] = el.checked;
     });
@@ -169,12 +169,17 @@ export function restoreState(state) {
         if (r) r.checked = true;
     }
 
-    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig'].forEach(id => {
+    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods'].forEach(id => {
         const el = $(id);
         if (el && state[id] !== undefined) el.checked = state[id];
     });
 
     if (state['chk_use_mods']) $('mods_inputs').style.display = 'block';
+    
+    if (state['chk_discharge_pending_bloods']) {
+        const wrapper = $('discharge_pending_bloods_note_wrapper');
+        if (wrapper) wrapper.style.display = 'block';
+    }
 
     if (state['bowel_mode']) {
         $(state['bowel_mode'])?.classList.add('active');

@@ -51,7 +51,7 @@ export const staticInputs = [
     'dyspneaConcern', 'dyspneaConcern_note', 'renal_note', 'infection_note',
     'electrolyteConcern_note', 'neuroType_note', 'nutrition_context_note', 'pain_context_note', 'neuro_psych_note', 'sleep_quality_note', 'fluid_restriction_amount',
     'after_hours_note', 'pressors_note', 'immobility_note', 'comorb_other_note',
-    'unsuitable_note', 'pressor_ceased_time', 'pressor_recent_other_note', 'pressor_current_other_note', 'hac_note'
+    'unsuitable_note', 'pressor_ceased_time', 'pressor_recent_other_note', 'pressor_current_other_note', 'hac_note', 'discharge_pending_bloods_note'
 ];
 
 export const segmentedInputs = [

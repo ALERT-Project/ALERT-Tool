@@ -87,6 +87,7 @@ function initialize() {
             e.preventDefault();
             const catScoreText = $('catText')?.textContent || '';
             if (catScoreText.includes('CAT 3') || catScoreText.includes('Green')) {
+                window.dischargeIntent = 'full';
                 const modal = $('greenDischargeConfirmModal');
                 if (modal) modal.style.display = 'flex';
                 return;
@@ -95,8 +96,31 @@ function initialize() {
             const chk = $('chk_discharge_alert');
             if (chk) {
                 chk.checked = true;
+                chk.dispatchEvent(new Event('change'));
                 compute();
                 showToast("Patient marked for discharge", 1500);
+            }
+        });
+    }
+
+    const btnPending = $('btn_discharge_pending');
+    if (btnPending) {
+        btnPending.addEventListener('click', (e) => {
+            e.preventDefault();
+            const catScoreText = $('catText')?.textContent || '';
+            if (catScoreText.includes('CAT 3') || catScoreText.includes('Green')) {
+                window.dischargeIntent = 'pending';
+                const modal = $('greenDischargeConfirmModal');
+                if (modal) modal.style.display = 'flex';
+                return;
+            }
+
+            const chk = $('chk_discharge_pending_bloods');
+            if (chk) {
+                chk.checked = true;
+                chk.dispatchEvent(new Event('change'));
+                compute();
+                showToast("Patient marked for discharge pending bloods", 1500);
             }
         });
     }
@@ -107,12 +131,28 @@ function initialize() {
             e.preventDefault();
             const modal = $('greenDischargeConfirmModal');
             if (modal) modal.style.display = 'none';
-            const chk = $('chk_discharge_alert');
-            if (chk) {
-                chk.checked = true;
-                compute();
-                showToast("Patient marked for discharge (criteria confirmed)", 1500);
+
+            window.dischargeConfirmed = true;
+
+            if (window.dischargeIntent === 'pending') {
+                const chk = $('chk_discharge_pending_bloods');
+                if (chk) {
+                    chk.checked = true;
+                    chk.dispatchEvent(new Event('change'));
+                    compute();
+                    showToast("Patient marked for discharge pending bloods (criteria confirmed)", 1500);
+                }
+            } else {
+                const chk = $('chk_discharge_alert');
+                if (chk) {
+                    chk.checked = true;
+                    chk.dispatchEvent(new Event('change'));
+                    compute();
+                    showToast("Patient marked for discharge (criteria confirmed)", 1500);
+                }
             }
+            window.dischargeIntent = null;
+            window.dischargeConfirmed = false;
         });
     }
     const btnConfirmGreenNo = $('btn_green_confirm_no');
@@ -639,29 +679,72 @@ function initialize() {
     $('chk_discharge_alert')?.addEventListener('change', () => {
         const dischargeChk = $('chk_discharge_alert');
         const continueChk = $('chk_continue_alert');
+        const pendingChk = $('chk_discharge_pending_bloods');
+        const wrapper = $('discharge_pending_bloods_note_wrapper');
 
         if (dischargeChk && dischargeChk.checked) {
             const catScoreText = $('catText')?.textContent || '';
             if (catScoreText.includes('CAT 3') || catScoreText.includes('Green')) {
-                dischargeChk.checked = false;
-                const modal = $('greenDischargeConfirmModal');
-                if (modal) modal.style.display = 'flex';
-                return;
+                if (!window.dischargeConfirmed) {
+                    dischargeChk.checked = false;
+                    window.dischargeIntent = 'full';
+                    const modal = $('greenDischargeConfirmModal');
+                    if (modal) modal.style.display = 'flex';
+                    return;
+                }
             }
 
             if (continueChk) {
                 continueChk.checked = false;
             }
+            if (pendingChk) {
+                pendingChk.checked = false;
+            }
+            if (wrapper) {
+                wrapper.style.display = 'none';
+            }
         }
         compute();
     });
+    
+    $('chk_discharge_pending_bloods')?.addEventListener('change', () => {
+        const pendingChk = $('chk_discharge_pending_bloods');
+        const dischargeChk = $('chk_discharge_alert');
+        const continueChk = $('chk_continue_alert');
+        const wrapper = $('discharge_pending_bloods_note_wrapper');
+
+        if (pendingChk && pendingChk.checked) {
+            const catScoreText = $('catText')?.textContent || '';
+            if (catScoreText.includes('CAT 3') || catScoreText.includes('Green')) {
+                if (!window.dischargeConfirmed) {
+                    pendingChk.checked = false;
+                    window.dischargeIntent = 'pending';
+                    const modal = $('greenDischargeConfirmModal');
+                    if (modal) modal.style.display = 'flex';
+                    return;
+                }
+            }
+
+            if (dischargeChk) dischargeChk.checked = false;
+            if (continueChk) continueChk.checked = false;
+            if (wrapper) wrapper.style.display = 'block';
+        } else {
+            if (wrapper) wrapper.style.display = 'none';
+        }
+        compute();
+    });
+
     $('chk_continue_alert')?.addEventListener('change', () => {
         const continueChk = $('chk_continue_alert');
         const dischargeChk = $('chk_discharge_alert');
+        const pendingChk = $('chk_discharge_pending_bloods');
+        const wrapper = $('discharge_pending_bloods_note_wrapper');
         const disPrompt = $('discharge_prompt');
 
         if (continueChk && continueChk.checked) {
             if (dischargeChk) dischargeChk.checked = false;
+            if (pendingChk) pendingChk.checked = false;
+            if (wrapper) wrapper.style.display = 'none';
             if (disPrompt && disPrompt.style.display !== 'none') {
                 window.dismissedDischarge = true;
             }

@@ -304,6 +304,12 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         lines.push(`- Please re-contact ALERT for re-review when appropriate.`);
     } else if (s.chk_discharge_alert) {
         lines.push(`- Discharge from ALERT nursing list. Please re-contact ALERT if further support required.`);
+    } else if (s.chk_discharge_pending_bloods) {
+        let text = `- Pending discharge from ALERT post ICU list raised (ALERT will check next blood results, if no action required, no further note will be added and patient will be discharged)`;
+        if (s.discharge_pending_bloods_note && s.discharge_pending_bloods_note.trim()) {
+            text += `\n- Specific bloods being followed: ${s.discharge_pending_bloods_note.trim()}`;
+        }
+        lines.push(text);
     } else {
         lines.push(`- At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.`);
     }
@@ -312,7 +318,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         lines.push('- Patient added to ALERT medical rounding list for further review.');
     }
 
-    if (!s.chk_discharge_alert && s.stepdown_suitable !== false) {
+    if (!s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.stepdown_suitable !== false) {
         lines.push('- Please contact ALERT if further support required between reviews.');
     }
 

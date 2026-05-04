@@ -697,18 +697,27 @@ export function computeAll() {
 
                 let hoursTxt = Math.round(hoursSinceStep) + " hours";
 
-                if (cat.id === 'green') {
-                    disMsg.innerHTML = `<span style="color:var(--green)">${cat.text} Green patient.</span> ${hoursTxt} on ward.<br>Can patient be discharged?`;
-                } else {
-                    disMsg.innerHTML = `<span style="color:var(--${cat.id})">${cat.text} ${colorName} patient.</span> ${hoursTxt} on ward.<br>Can patient be discharged?`;
-                }
+                const catColorStr = cat.id === 'green' ? 'var(--green)' : `var(--${cat.id})`;
+                const mainTitle = `${cat.text} ${colorName} - ${hoursTxt} on list`;
+                
+                disMsg.innerHTML = `
+                    <div style="font-size: 1.4rem; font-weight: 800; color: ${catColorStr}; margin-bottom: 12px; text-transform: uppercase;">
+                        ${mainTitle}
+                    </div>
+                    <div style="font-size: 1.1rem; font-style: italic; color: var(--text); margin-bottom: 12px;">
+                        Are bloods and ADDS trends acceptable for this patient?
+                    </div>
+                    <div style="font-size: 1.3rem; font-weight: 700; color: var(--ink); margin-bottom: 16px;">
+                        Can the patient be discharged?
+                    </div>
+                `;
                 if (disWrap) disWrap.classList.add('pulse-highlight');
             } else {
                 disPrompt.style.display = 'none';
                 if (disWrap) disWrap.classList.remove('pulse-highlight');
 
                 const continueChk = $('chk_continue_alert');
-                if (continueChk && !s.chk_discharge_alert && s.reviewType === 'post') {
+                if (continueChk && !s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.reviewType === 'post') {
                     continueChk.checked = true;
                 }
             }
@@ -722,6 +731,8 @@ export function computeAll() {
             planHtml = `<div class="status red">Not suitable for stepdown.</div>`;
         } else if (s.chk_discharge_alert) {
             planHtml = `<div class="status" style="color:var(--blue-hint)">Discharge from ALERT nursing list.</div>`;
+        } else if (s.chk_discharge_pending_bloods) {
+            planHtml = `<div class="status" style="color:#ea580c; font-weight: 700;">Yes - Pending Next Bloods</div>`;
         } else {
             planHtml = `<div class="status ${cssClass}">At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.</div>`;
             planHtml += `<div style="margin-top:2px; font-weight:500; font-size: 0.9em; color:var(--text-light);">- Please contact ALERT if further support required between reviews.</div>`;

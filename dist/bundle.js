@@ -192,7 +192,8 @@
     "pressor_ceased_time",
     "pressor_recent_other_note",
     "pressor_current_other_note",
-    "hac_note"
+    "hac_note",
+    "discharge_pending_bloods_note"
   ];
   var segmentedInputs = [
     "hb_dropping",
@@ -927,17 +928,25 @@
           if (cat.id === "amber") colorName = "Amber";
           if (cat.id === "red") colorName = "Red";
           let hoursTxt = Math.round(hoursSinceStep) + " hours";
-          if (cat.id === "green") {
-            disMsg.innerHTML = `<span style="color:var(--green)">${cat.text} Green patient.</span> ${hoursTxt} on ward.<br>Can patient be discharged?`;
-          } else {
-            disMsg.innerHTML = `<span style="color:var(--${cat.id})">${cat.text} ${colorName} patient.</span> ${hoursTxt} on ward.<br>Can patient be discharged?`;
-          }
+          const catColorStr = cat.id === "green" ? "var(--green)" : `var(--${cat.id})`;
+          const mainTitle = `${cat.text} ${colorName} - ${hoursTxt} on list`;
+          disMsg.innerHTML = `
+                    <div style="font-size: 1.4rem; font-weight: 800; color: ${catColorStr}; margin-bottom: 12px; text-transform: uppercase;">
+                        ${mainTitle}
+                    </div>
+                    <div style="font-size: 1.1rem; font-style: italic; color: var(--text); margin-bottom: 12px;">
+                        Are bloods and ADDS trends acceptable for this patient?
+                    </div>
+                    <div style="font-size: 1.3rem; font-weight: 700; color: var(--ink); margin-bottom: 16px;">
+                        Can the patient be discharged?
+                    </div>
+                `;
           if (disWrap) disWrap.classList.add("pulse-highlight");
         } else {
           disPrompt.style.display = "none";
           if (disWrap) disWrap.classList.remove("pulse-highlight");
           const continueChk = $("chk_continue_alert");
-          if (continueChk && !s.chk_discharge_alert && s.reviewType === "post") {
+          if (continueChk && !s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.reviewType === "post") {
             continueChk.checked = true;
           }
         }
@@ -949,6 +958,8 @@
         planHtml = `<div class="status red">Not suitable for stepdown.</div>`;
       } else if (s.chk_discharge_alert) {
         planHtml = `<div class="status" style="color:var(--blue-hint)">Discharge from ALERT nursing list.</div>`;
+      } else if (s.chk_discharge_pending_bloods) {
+        planHtml = `<div class="status" style="color:#ea580c; font-weight: 700;">Yes - Pending Next Bloods</div>`;
       } else {
         planHtml = `<div class="status ${cssClass}">At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.</div>`;
         planHtml += `<div style="margin-top:2px; font-weight:500; font-size: 0.9em; color:var(--text-light);">- Please contact ALERT if further support required between reviews.</div>`;
@@ -1660,7 +1671,7 @@
     });
     state["reviewType"] = document.querySelector('input[name="reviewType"]:checked')?.value || "post";
     state["clinicianRole"] = document.querySelector('input[name="clinicianRole"]:checked')?.value || "ALERT CNS";
-    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig"].forEach((id) => {
+    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
       const el = $(id);
       if (el) state[id] = el.checked;
     });
@@ -1753,11 +1764,15 @@
       const r = document.querySelector(`input[name="clinicianRole"][value="${state["clinicianRole"]}"]`);
       if (r) r.checked = true;
     }
-    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig"].forEach((id) => {
+    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
       const el = $(id);
       if (el && state[id] !== void 0) el.checked = state[id];
     });
     if (state["chk_use_mods"]) $("mods_inputs").style.display = "block";
+    if (state["chk_discharge_pending_bloods"]) {
+      const wrapper = $("discharge_pending_bloods_note_wrapper");
+      if (wrapper) wrapper.style.display = "block";
+    }
     if (state["bowel_mode"]) {
       $(state["bowel_mode"])?.classList.add("active");
       toggleBowelDate(state["bowel_mode"]);
@@ -2057,13 +2072,20 @@
       lines.push(`- Please re-contact ALERT for re-review when appropriate.`);
     } else if (s.chk_discharge_alert) {
       lines.push(`- Discharge from ALERT nursing list. Please re-contact ALERT if further support required.`);
+    } else if (s.chk_discharge_pending_bloods) {
+      let text = `- Pending discharge from ALERT post ICU list raised (ALERT will check next blood results, if no action required, no further note will be added and patient will be discharged)`;
+      if (s.discharge_pending_bloods_note && s.discharge_pending_bloods_note.trim()) {
+        text += `
+- Specific bloods being followed: ${s.discharge_pending_bloods_note.trim()}`;
+      }
+      lines.push(text);
     } else {
       lines.push(`- At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.`);
     }
     if (s.chk_medical_rounding) {
       lines.push("- Patient added to ALERT medical rounding list for further review.");
     }
-    if (!s.chk_discharge_alert && s.stepdown_suitable !== false) {
+    if (!s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.stepdown_suitable !== false) {
       lines.push("- Please contact ALERT if further support required between reviews.");
     }
     if (sum) {
@@ -2146,6 +2168,7 @@
         e.preventDefault();
         const catScoreText = $("catText")?.textContent || "";
         if (catScoreText.includes("CAT 3") || catScoreText.includes("Green")) {
+          window.dischargeIntent = "full";
           const modal = $("greenDischargeConfirmModal");
           if (modal) modal.style.display = "flex";
           return;
@@ -2153,8 +2176,29 @@
         const chk = $("chk_discharge_alert");
         if (chk) {
           chk.checked = true;
+          chk.dispatchEvent(new Event("change"));
           compute();
           showToast("Patient marked for discharge", 1500);
+        }
+      });
+    }
+    const btnPending = $("btn_discharge_pending");
+    if (btnPending) {
+      btnPending.addEventListener("click", (e) => {
+        e.preventDefault();
+        const catScoreText = $("catText")?.textContent || "";
+        if (catScoreText.includes("CAT 3") || catScoreText.includes("Green")) {
+          window.dischargeIntent = "pending";
+          const modal = $("greenDischargeConfirmModal");
+          if (modal) modal.style.display = "flex";
+          return;
+        }
+        const chk = $("chk_discharge_pending_bloods");
+        if (chk) {
+          chk.checked = true;
+          chk.dispatchEvent(new Event("change"));
+          compute();
+          showToast("Patient marked for discharge pending bloods", 1500);
         }
       });
     }
@@ -2164,12 +2208,26 @@
         e.preventDefault();
         const modal = $("greenDischargeConfirmModal");
         if (modal) modal.style.display = "none";
-        const chk = $("chk_discharge_alert");
-        if (chk) {
-          chk.checked = true;
-          compute();
-          showToast("Patient marked for discharge (criteria confirmed)", 1500);
+        window.dischargeConfirmed = true;
+        if (window.dischargeIntent === "pending") {
+          const chk = $("chk_discharge_pending_bloods");
+          if (chk) {
+            chk.checked = true;
+            chk.dispatchEvent(new Event("change"));
+            compute();
+            showToast("Patient marked for discharge pending bloods (criteria confirmed)", 1500);
+          }
+        } else {
+          const chk = $("chk_discharge_alert");
+          if (chk) {
+            chk.checked = true;
+            chk.dispatchEvent(new Event("change"));
+            compute();
+            showToast("Patient marked for discharge (criteria confirmed)", 1500);
+          }
         }
+        window.dischargeIntent = null;
+        window.dischargeConfirmed = false;
       });
     }
     const btnConfirmGreenNo = $("btn_green_confirm_no");
@@ -2674,26 +2732,65 @@
     $("chk_discharge_alert")?.addEventListener("change", () => {
       const dischargeChk = $("chk_discharge_alert");
       const continueChk = $("chk_continue_alert");
+      const pendingChk = $("chk_discharge_pending_bloods");
+      const wrapper = $("discharge_pending_bloods_note_wrapper");
       if (dischargeChk && dischargeChk.checked) {
         const catScoreText = $("catText")?.textContent || "";
         if (catScoreText.includes("CAT 3") || catScoreText.includes("Green")) {
-          dischargeChk.checked = false;
-          const modal = $("greenDischargeConfirmModal");
-          if (modal) modal.style.display = "flex";
-          return;
+          if (!window.dischargeConfirmed) {
+            dischargeChk.checked = false;
+            window.dischargeIntent = "full";
+            const modal = $("greenDischargeConfirmModal");
+            if (modal) modal.style.display = "flex";
+            return;
+          }
         }
         if (continueChk) {
           continueChk.checked = false;
         }
+        if (pendingChk) {
+          pendingChk.checked = false;
+        }
+        if (wrapper) {
+          wrapper.style.display = "none";
+        }
+      }
+      compute();
+    });
+    $("chk_discharge_pending_bloods")?.addEventListener("change", () => {
+      const pendingChk = $("chk_discharge_pending_bloods");
+      const dischargeChk = $("chk_discharge_alert");
+      const continueChk = $("chk_continue_alert");
+      const wrapper = $("discharge_pending_bloods_note_wrapper");
+      if (pendingChk && pendingChk.checked) {
+        const catScoreText = $("catText")?.textContent || "";
+        if (catScoreText.includes("CAT 3") || catScoreText.includes("Green")) {
+          if (!window.dischargeConfirmed) {
+            pendingChk.checked = false;
+            window.dischargeIntent = "pending";
+            const modal = $("greenDischargeConfirmModal");
+            if (modal) modal.style.display = "flex";
+            return;
+          }
+        }
+        if (dischargeChk) dischargeChk.checked = false;
+        if (continueChk) continueChk.checked = false;
+        if (wrapper) wrapper.style.display = "block";
+      } else {
+        if (wrapper) wrapper.style.display = "none";
       }
       compute();
     });
     $("chk_continue_alert")?.addEventListener("change", () => {
       const continueChk = $("chk_continue_alert");
       const dischargeChk = $("chk_discharge_alert");
+      const pendingChk = $("chk_discharge_pending_bloods");
+      const wrapper = $("discharge_pending_bloods_note_wrapper");
       const disPrompt = $("discharge_prompt");
       if (continueChk && continueChk.checked) {
         if (dischargeChk) dischargeChk.checked = false;
+        if (pendingChk) pendingChk.checked = false;
+        if (wrapper) wrapper.style.display = "none";
         if (disPrompt && disPrompt.style.display !== "none") {
           window.dismissedDischarge = true;
         }

@@ -1,5 +1,5 @@
 /* =========================================
-   ALERT Nursing Risk Assessment Tool v7.7
+   ALERT Nursing Risk Assessment Tool A8.02 (04 May 2026)
    Copyright © 2025-2026 Casey Bond
    Developed for South Metropolitan Health Service ALERT Team
    MIT License - https://opensource.org/licenses/MIT
@@ -411,14 +411,14 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 .trend-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 
 /* --- Highlights --- */
-.flag-red { 
-    box-shadow: 0 0 0 2px var(--red) !important; 
-    border-color: var(--red) !important; 
-    z-index: 5;
-}
 .flag-amber { 
     box-shadow: 0 0 0 2px var(--amber) !important; 
     border-color: var(--amber) !important; 
+    z-index: 5;
+}
+.flag-red { 
+    box-shadow: 0 0 0 2px var(--red) !important; 
+    border-color: var(--red) !important; 
     z-index: 5;
 }
 
