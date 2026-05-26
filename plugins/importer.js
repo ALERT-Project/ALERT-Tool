@@ -504,6 +504,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1000);
         }
 
+        // --- 7. HANDOVER DETECTION ---
+        const handoverMatch = text.match(/Recommend discharge.*pending.*bloods.*DMR/i)
+            || text.match(/stable overnight.*discharge.*bloods.*DMR/i);
+        const handoverChk = document.getElementById('chk_handover_discharge');
+        if (handoverChk) {
+            handoverChk.checked = !!handoverMatch;
+            handoverChk.dispatchEvent(new Event('change'));
+        }
+
         const t = document.getElementById('toast');
         if (t) { t.textContent = "Data Imported Successfully"; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
     }

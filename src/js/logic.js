@@ -447,8 +447,9 @@ export function computeAll() {
         }
 
         const hb = num(s.hb) || num(s.bl_hb);
+        const isHbDropping = s.hb_dropping || s.bl_hb_trend === '↓';
         if (hb && hb <= 70) add(red, `Low Hb ${hb}`, 'hb', 'red');
-        else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Low Hb ${hb} and dropping`, 'hb', 'amber');
+        else if (hb && hb <= 90 && isHbDropping) add(amber, `Low Hb ${hb} and dropping`, 'hb', 'amber');
 
         const alb = num(s.bl_alb);
         if (alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, 'bl_alb', 'amber');

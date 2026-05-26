@@ -47,7 +47,7 @@ export const staticInputs = [
     'bl_cr_review', 'bl_mg', 'bl_alb', 'bl_lac_review', 'bl_phos',
     'bl_bili', 'bl_alt', 'bl_inr', 'bl_aptt', 'bl_egfr', 'anticoag_note', 'vte_prophylaxis_note',
     'elec_replace_note', 'goc_note', 'allergies_note', 'pics_note', 'context_other_note', 'pmh_note',
-    'adds', 'lactate', 'lactate_trend', 'hb', 'wcc', 'crp', 'neut', 'lymph', 'infusions_note',
+    'adds', 'wcc', 'crp', 'neut', 'lymph', 'infusions_note',
     'dyspneaConcern', 'dyspneaConcern_note', 'renal_note', 'infection_note',
     'electrolyteConcern_note', 'neuroType_note', 'nutrition_context_note', 'pain_context_note', 'neuro_psych_note', 'sleep_quality_note', 'fluid_restriction_amount',
     'after_hours_note', 'pressors_note', 'immobility_note', 'comorb_other_note',
@@ -55,14 +55,14 @@ export const staticInputs = [
 ];
 
 export const segmentedInputs = [
-    'hb_dropping', 'after_hours', 'hist_o2', 'intubated',
+    'after_hours', 'hist_o2', 'intubated',
     'resp_concern', 'renal', 'immobility', 'infection', 'new_bloods_ordered',
     'neuro_gate', 'nutrition_adequate', 'electrolyte_gate', 'pressors', 'hac',
     'stepdown_suitable', 'comorbs_gate',
     'renal_chronic', 'renal_chronic_bloods',
     'infection_downtrend', 'infection_downtrend_bloods',
     'dialysis_type', 'sleep_quality', 'pain_control', 'neuro_psych', 'pics',
-    'lactate_trend', 'resp_dyspnea', 'resp_tachypnea', 'resp_rapid_wean', 'resp_poor_cough', 'resp_poor_swallow'
+    'resp_dyspnea', 'resp_tachypnea', 'resp_rapid_wean', 'resp_poor_cough', 'resp_poor_swallow'
 ];
 
 export const toggleInputs = [

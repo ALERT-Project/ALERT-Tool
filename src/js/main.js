@@ -275,8 +275,6 @@ function initialize() {
     }
 
     syncInputs('adds', 'atoe_adds');
-    syncInputs('lactate', 'bl_lac_review');
-    syncInputs('hb', 'bl_hb');
     syncInputs('wcc', 'bl_wcc');
     syncInputs('crp', 'bl_crp');
     syncInputs('neut', 'bl_neut');

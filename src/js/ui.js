@@ -44,12 +44,23 @@ export function handleSegmentClick(id, value) {
     if (map[id]) {
         const el = $(map[id]);
         if (el) {
+            let isShown = false;
             if (id === 'stepdown_suitable' || id === 'nutrition_adequate') {
-                el.style.display = (value === "false") ? 'block' : 'none';
+                isShown = (value === "false");
             } else if (id === 'pics') {
-                el.style.display = (value === "positive" || value === "negative") ? 'block' : 'none';
+                isShown = (value === "positive" || value === "negative");
             } else {
-                el.style.display = (value === "true") ? 'block' : 'none';
+                isShown = (value === "true");
+            }
+            el.style.display = isShown ? 'block' : 'none';
+
+            if (isShown) {
+                setTimeout(() => {
+                    const firstFocusable = el.querySelector('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                    if (firstFocusable) {
+                        firstFocusable.focus();
+                    }
+                }, 50);
             }
         }
     }
@@ -93,6 +104,9 @@ export function updateReviewTypeVisibility() {
     if (medRoundingWrapper) medRoundingWrapper.style.display = (type === 'post') ? 'block' : 'none';
     if (medRoundingPre) medRoundingPre.style.display = (type === 'pre') ? 'block' : 'none';
     if (continueAlertWrapper) continueAlertWrapper.style.display = (type === 'post') ? 'flex' : 'none';
+
+    const alertActionsSection = $('alert_actions_section');
+    if (alertActionsSection) alertActionsSection.style.display = (type === 'post') ? 'block' : 'none';
 
     if (type === 'pre') { const c = $('chk_discharge_alert'); if (c) c.checked = false; }
 }

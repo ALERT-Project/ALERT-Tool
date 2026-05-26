@@ -165,9 +165,6 @@
     "context_other_note",
     "pmh_note",
     "adds",
-    "lactate",
-    "lactate_trend",
-    "hb",
     "wcc",
     "crp",
     "neut",
@@ -196,7 +193,6 @@
     "discharge_pending_bloods_note"
   ];
   var segmentedInputs = [
-    "hb_dropping",
     "after_hours",
     "hist_o2",
     "intubated",
@@ -221,7 +217,6 @@
     "pain_control",
     "neuro_psych",
     "pics",
-    "lactate_trend",
     "resp_dyspnea",
     "resp_tachypnea",
     "resp_rapid_wean",
@@ -705,8 +700,9 @@
         }
       }
       const hb = num(s.hb) || num(s.bl_hb);
+      const isHbDropping = s.hb_dropping || s.bl_hb_trend === "\u2193";
       if (hb && hb <= 70) add(red, `Low Hb ${hb}`, "hb", "red");
-      else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Low Hb ${hb} and dropping`, "hb", "amber");
+      else if (hb && hb <= 90 && isHbDropping) add(amber, `Low Hb ${hb} and dropping`, "hb", "amber");
       const alb = num(s.bl_alb);
       if (alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, "bl_alb", "amber");
       const plts = num(s.bl_plts);
@@ -1037,12 +1033,22 @@
     if (map[id]) {
       const el = $(map[id]);
       if (el) {
+        let isShown = false;
         if (id === "stepdown_suitable" || id === "nutrition_adequate") {
-          el.style.display = value === "false" ? "block" : "none";
+          isShown = value === "false";
         } else if (id === "pics") {
-          el.style.display = value === "positive" || value === "negative" ? "block" : "none";
+          isShown = value === "positive" || value === "negative";
         } else {
-          el.style.display = value === "true" ? "block" : "none";
+          isShown = value === "true";
+        }
+        el.style.display = isShown ? "block" : "none";
+        if (isShown) {
+          setTimeout(() => {
+            const firstFocusable = el.querySelector('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (firstFocusable) {
+              firstFocusable.focus();
+            }
+          }, 50);
         }
       }
     }
@@ -1084,6 +1090,8 @@
     if (medRoundingWrapper) medRoundingWrapper.style.display = type === "post" ? "block" : "none";
     if (medRoundingPre) medRoundingPre.style.display = type === "pre" ? "block" : "none";
     if (continueAlertWrapper) continueAlertWrapper.style.display = type === "post" ? "flex" : "none";
+    const alertActionsSection = $("alert_actions_section");
+    if (alertActionsSection) alertActionsSection.style.display = type === "post" ? "block" : "none";
     if (type === "pre") {
       const c = $("chk_discharge_alert");
       if (c) c.checked = false;
@@ -2343,8 +2351,6 @@
       });
     }
     syncInputs("adds", "atoe_adds");
-    syncInputs("lactate", "bl_lac_review");
-    syncInputs("hb", "bl_hb");
     syncInputs("wcc", "bl_wcc");
     syncInputs("crp", "bl_crp");
     syncInputs("neut", "bl_neut");
@@ -3052,3 +3058,4 @@
     initialize();
   }
 })();
+//# sourceMappingURL=bundle.js.map
