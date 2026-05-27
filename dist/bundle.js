@@ -190,7 +190,9 @@
     "pressor_recent_other_note",
     "pressor_current_other_note",
     "hac_note",
-    "discharge_pending_bloods_note"
+    "discharge_pending_bloods_note",
+    "age_mitigate_reason",
+    "frailty_note"
   ];
   var segmentedInputs = [
     "after_hours",
@@ -221,7 +223,9 @@
     "resp_tachypnea",
     "resp_rapid_wean",
     "resp_poor_cough",
-    "resp_poor_swallow"
+    "resp_poor_swallow",
+    "age_mitigated",
+    "frailty_known"
   ];
   var toggleInputs = [
     "comorb_copd",
@@ -263,7 +267,7 @@
     "tracheStatus",
     "intubatedReason"
   ];
-  var deviceTypes = ["CVC", "PICC", "Other CVAD", "PIVC", "Arterial Line", "Enteral Tube", "IDC", "Pacing Wire", "Drain", "Wound", "Vascath", "Other Device"];
+  var deviceTypes = ["CVC", "PICC", "Other CVAD", "PIVC", "Arterial Line", "Enteral Tube", "IDC", "Pacing Wire", "Drain", "Wound", "Vascath", "Tracheostomy", "Other Device"];
 
   // src/js/logic.js
   function calculateWardTime(dateStr, timeStr, isPre) {
@@ -403,8 +407,8 @@
               recentsList.push(label);
             }
           });
-          let recentPart = `Recent vasoactive support - ${joinGrammatically(recentsList)}`;
-          if (s.pressor_ceased_time) recentPart += ` which was ceased at approximately ${s.pressor_ceased_time}`;
+          let recentPart = `Recent vasoactive support, ${joinGrammatically(recentsList)}`;
+          if (s.pressor_ceased_time) recentPart += ` - ceased at approximately ${s.pressor_ceased_time}`;
           details.push(recentPart);
         }
         add(amber, details.join(". "), "seg_pressors", "amber", s.pressors_note);
@@ -413,7 +417,7 @@
       if (adds !== null) {
         if (adds >= 6) add(red, `Elevated ADDS ${adds}`, "adds", "red");
         else if (adds >= 4) add(red, `Elevated ADDS ${adds}`, "adds", "red");
-        else if (adds === 3 && isRecent) add(amber, `Elevated ADDS 3`, "adds", "amber");
+        else if (adds === 3 && isRecent) add(amber, `ADDS 3`, "adds", "amber");
       }
       const hr = num(s.c_hr);
       if (hr) {
@@ -440,8 +444,8 @@
       if (spo2 && spo2 < 88) add(red, `Hypoxia SpO2 ${spo2}%`, "b_spo2", "red");
       const temp = num(s.e_temp);
       if (temp) {
-        if (temp > 38.5) add(red, `Pyrexia Temp ${temp}`, "e_temp", "red");
-        else if (temp < 35.5) add(red, `Hypothermia Temp ${temp}`, "e_temp", "red");
+        if (temp > 38.5) add(red, `Febrile ${temp}`, "e_temp", "red");
+        else if (temp < 35.5) add(red, `Temp low ${temp}`, "e_temp", "red");
       }
       const oxDevInput = $("b_device");
       if (oxDevInput && oxDevInput.dataset.manual !== "true") {
@@ -451,8 +455,15 @@
         else if (mode === "NP") devStr = `NP ${s.npFlow || ""}L`;
         else if (mode === "HFNP") devStr = `HFNP ${s.hfnpFio2 || ""}%/${s.hfnpFlow || ""}L`;
         else if (mode === "NIV") devStr = `NIV ${s.nivFio2 || ""}%`;
-        else if (mode === "Trache") devStr = `Trache (${s.tracheStatus || ""})`;
-        if (devStr) oxDevInput.value = devStr;
+        oxDevInput.value = devStr;
+      }
+      const airwayInput = $("airway_a");
+      if (airwayInput && airwayInput.dataset.manual !== "true") {
+        if (s.oxMod === "Trache") {
+          airwayInput.value = `${s.tracheType || "Tracheostomy"}${s.tracheStatus === "New" ? " (New)" : ""}`;
+        } else if (airwayInput.value.startsWith("Tracheostomy") || airwayInput.value.startsWith("Laryngectomy")) {
+          airwayInput.value = "";
+        }
       }
       if (s.resp_concern === true) {
         let parts = [], hasRed = false;
@@ -463,53 +474,44 @@
             flagged.red.push("npFlow");
             hasRed = true;
           } else if (flow >= 2) {
-            parts.push(`NP ${flow}L`);
+            parts.push(`Oxygen requirement - ${flow}LNP`);
             flagged.amber.push("npFlow");
           }
         } else if (s.oxMod === "HFNP") {
-          const fio2 = num(s.hfnpFio2);
-          if (fio2 >= 60) {
-            parts.push(`HFNP - high FiO2 ${fio2}%`);
+          const fio2Val = num(s.hfnpFio2);
+          if (fio2Val >= 60) {
+            parts.push(`HFNP - high FiO2 ${s.hfnpFio2 || ""}%`);
             flagged.red.push("oxMod");
             hasRed = true;
           } else {
-            parts.push(`HFNP requirement`);
+            parts.push(`HFNP - FiO2 ${s.hfnpFio2 || ""}%`);
             flagged.red.push("oxMod");
             hasRed = true;
           }
         } else if (s.oxMod === "NIV") {
-          const fio2 = num(s.nivFio2);
-          if (fio2 >= 60) {
-            parts.push(`NIV - high FiO2 ${fio2}%`);
+          const fio2Val = num(s.nivFio2);
+          if (fio2Val >= 60) {
+            parts.push(`NIV - high FiO2 ${s.nivFio2 || ""}%`);
             flagged.red.push("oxMod");
             hasRed = true;
           } else {
-            parts.push(`NIV requirement`);
+            parts.push(`NIV - FiO2 ${s.nivFio2 || ""}%`);
             flagged.red.push("oxMod");
             hasRed = true;
-          }
-        } else if (s.oxMod === "Trache") {
-          if (s.tracheStatus === "New") {
-            parts.push(`new or unstable tracheostomy`);
-            flagged.red.push("tracheStatus");
-            hasRed = true;
-          } else {
-            parts.push(`tracheostomy`);
-            flagged.amber.push("oxMod");
           }
         } else if (s.oxMod === "RA") {
         }
         if (s.resp_dyspnea === true) {
           const dysp = s.dyspneaConcern;
           if (dysp === "severe" || dysp === "moderate") {
-            parts.push(`${dysp} dyspnea`);
+            parts.push(`Dyspnea ${dysp}`);
             flagged.red.push("dyspneaConcern");
             hasRed = true;
           } else if (dysp === "mild") {
-            parts.push(`mild dyspnea`);
+            parts.push(`Dyspnea mild`);
             flagged.amber.push("dyspneaConcern");
           } else if (!dysp) {
-            parts.push(`dyspnea`);
+            parts.push(`Dyspnea`);
             flagged.amber.push("seg_resp_dyspnea");
           }
         }
@@ -518,7 +520,7 @@
           flagged.amber.push("seg_resp_tachypnea");
         }
         if (s.resp_rapid_wean === true) {
-          parts.push("rapid O2 wean <12hrs");
+          parts.push("rapid O2 wean within last 12h");
           flagged.red.push("seg_resp_rapid_wean");
           hasRed = true;
         }
@@ -559,6 +561,15 @@
           if (!isLowFlowNP) {
             add(amber, "Respiratory concern", "seg_resp_concern", "amber", s.dyspneaConcern_note);
           }
+        }
+      }
+      if (s.oxMod === "Trache") {
+        const isLary = s.tracheType === "Laryngectomy";
+        const label = isLary ? "Laryngectomy patient" : "Tracheostomy patient";
+        if (s.tracheStatus === "New") {
+          add(red, `New ${label.toLowerCase()}`, "tracheStatus", "red");
+        } else {
+          add(amber, label, "oxMod", "amber");
         }
       }
       if (s.after_hours === true) add(amber, "Discharged after-hours", "seg_after_hours", "amber", s.after_hours_note);
@@ -710,8 +721,6 @@
       const inr = num(s.bl_inr);
       if (inr && inr > 3.5) add(red, `High INR ${inr}`, "bl_inr", "red");
       else if (inr && inr > 2.5) add(amber, `Elevated INR ${inr}`, "bl_inr", "amber");
-      const egfr = num(s.bl_egfr);
-      if (egfr && egfr < 30) add(amber, `Low eGFR ${egfr}`, "bl_egfr", "amber");
       const bsl = num(s.e_bsl);
       if (bsl) {
         if (bsl < 4) add(red, `Low BSL ${bsl}`, "e_bsl", "red");
@@ -744,9 +753,6 @@
             add(amber, `Worsening Cr ${prevCr}\u2192${currCr}`, "bl_cr_review", "amber");
           }
         }
-      }
-      if (s.nutrition_adequate === false) {
-        add(amber, `Inadequate nutrition`, "diet_section", "amber", s.nutrition_context_note);
       }
       if (s.neuro_psych) {
         add(amber, `Psychological concern`, "neuro_section", "amber", s.neuro_psych_note);
@@ -786,7 +792,16 @@
         add(amber, reason, "override_amber", "amber");
       }
       const age = num(s.ptAge);
-      if (age >= 75) add(amber, `Age ${age} (frailty risk)`, "ptAge", "amber");
+      if (age >= 75) {
+        if (s.age_mitigated === true) {
+          suppressedRisks.push(`Age ${age} (frailty risk - mitigated: ${s.age_mitigate_reason || "baseline function active"})`);
+        } else {
+          add(amber, `Age ${age}, increased risk of complications`, "ptAge", "amber");
+        }
+      }
+      if (s.frailty_known === true) {
+        add(amber, "Known frailty at baseline", "seg_frailty_known", "amber", s.frailty_note);
+      }
       const icuLos = num(s.icuLos) || 0;
       if (icuLos > 4) {
         const uniqueRedPreLos = [...new Set(red)];
@@ -861,9 +876,9 @@
               alertDiv.style.opacity = "0";
               setTimeout(() => alertDiv.remove(), 300);
             }, 3e3);
+            const newRiskNames = [...newRed, ...newAmber].join(', ');
             setTimeout(() => {
-              const riskSection = $("section-risk");
-              if (riskSection) riskSection.scrollIntoView({ behavior: "smooth", block: "start" });
+              showToast(`⚠️ New risk auto-flagged: ${newRiskNames}`, 3000);
             }, 500);
           }
         }
@@ -1028,7 +1043,9 @@
       "neuro_psych": "neuro_psych_wrapper",
       "pics": "pics_wrapper",
       "resp_dyspnea": "sub_dyspnea_severity",
-      "intubated": "sub_intubated_reason"
+      "intubated": "sub_intubated_reason",
+      "age_mitigated": "age_mitigate_reason_wrapper",
+      "frailty_known": "frailty_note_wrapper"
     };
     if (map[id]) {
       const el = $(map[id]);
@@ -1046,7 +1063,7 @@
           setTimeout(() => {
             const firstFocusable = el.querySelector('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
             if (firstFocusable) {
-              firstFocusable.focus();
+              firstFocusable.focus({ preventScroll: true });
             }
           }, 50);
         }
@@ -1166,8 +1183,42 @@
     }
     html += `</div>`;
     div.innerHTML = html;
+    if (type === "Tracheostomy") {
+      const tracheBtn = document.querySelector('#oxMod .select-btn[data-value="Trache"]');
+      if (tracheBtn && !tracheBtn.classList.contains("active")) {
+        tracheBtn.click();
+      }
+      const tracheTypeBtn = document.querySelector('#tracheType .select-btn[data-value="Tracheostomy"]');
+      if (tracheTypeBtn && !tracheTypeBtn.classList.contains("active")) {
+        tracheTypeBtn.click();
+      }
+    }
     div.querySelector(".remove-entry").addEventListener("click", () => {
+      const textarea2 = div.querySelector(".device-textarea");
       div.remove();
+      if (type === "Tracheostomy") {
+        const raBtn = document.querySelector('#oxMod .select-btn[data-value="RA"]');
+        if (raBtn) {
+          raBtn.click();
+        }
+        const airwayInput = $("airway_a");
+        if (airwayInput && airwayInput.dataset.manual !== "true") {
+          if (airwayInput.value.startsWith("Tracheostomy")) {
+            airwayInput.value = "";
+          }
+        }
+      } else if (type === "Other Device" && textarea2 && textarea2.value.toLowerCase().includes("lary")) {
+        const raBtn = document.querySelector('#oxMod .select-btn[data-value="RA"]');
+        if (raBtn) {
+          raBtn.click();
+        }
+        const airwayInput = $("airway_a");
+        if (airwayInput && airwayInput.dataset.manual !== "true") {
+          if (airwayInput.value.startsWith("Laryngectomy")) {
+            airwayInput.value = "";
+          }
+        }
+      }
       window.devicesModifiedSinceLastSummary = true;
       updateDevicesSectionVisibility();
       saveState(true);
@@ -1176,6 +1227,19 @@
     const textarea = div.querySelector(".device-textarea");
     if (textarea) {
       textarea.addEventListener("input", () => {
+        if (type === "Other Device") {
+          const val2 = textarea.value.toLowerCase().trim();
+          if (val2.includes("lary")) {
+            const tracheBtn = document.querySelector('#oxMod .select-btn[data-value="Trache"]');
+            if (tracheBtn && !tracheBtn.classList.contains("active")) {
+              tracheBtn.click();
+            }
+            const laryBtn = document.querySelector('#tracheType .select-btn[data-value="Laryngectomy"]');
+            if (laryBtn && !laryBtn.classList.contains("active")) {
+              laryBtn.click();
+            }
+          }
+        }
         window.devicesModifiedSinceLastSummary = true;
         saveState(true);
         computeAll();
@@ -1359,6 +1423,10 @@
       if ($(id)) {
         $(id).value = "";
         $(id).classList.remove("scraped-data");
+        const el = $(id);
+        if (["b_device", "airway_a"].includes(id)) {
+          el.dataset.manual = "false";
+        }
       }
     });
     const impTxt = $("importText");
@@ -1401,7 +1469,8 @@
       "#sleep_quality_wrapper",
       "#neuro_psych_wrapper",
       "#pain_context_wrapper",
-      "#nutrition_context_wrapper"
+      "#nutrition_context_wrapper",
+      "#frailty_note_wrapper"
     ];
     gatesToHide.forEach((sel) => {
       const el = document.querySelector(sel);
@@ -1597,6 +1666,88 @@
   function closeMobileNav() {
     const overlay = $("mobileNavOverlay");
     if (overlay) overlay.classList.remove("active");
+  }
+  function updateAgeMitigationUI() {
+    const ageInput = $("ptAge");
+    const wrapper = $("age_risk_wrapper");
+    const reasonWrapper = $("age_mitigate_reason_wrapper");
+    const reasonInput = $("age_mitigate_reason");
+    const seg = $("seg_age_mitigated");
+    const ageLabel = $("lbl_ptAge");
+    const clickBox = $("btn_age_mitigated");
+    const colWrapper = $("wrapper_ptAge");
+    if (!ageInput || !wrapper) return;
+    const age = parseFloat(ageInput.value);
+    if (!isNaN(age) && age >= 75) {
+      wrapper.style.display = "block";
+      if (colWrapper) colWrapper.classList.add("input-box");
+      const activeBtn = seg?.querySelector(".seg-btn.active");
+      const isMitigated = activeBtn ? activeBtn.dataset.value === "true" : false;
+      if (reasonWrapper) {
+        reasonWrapper.style.display = isMitigated ? "block" : "none";
+      }
+      if (isMitigated) {
+        if (colWrapper) {
+          colWrapper.style.borderColor = "var(--line)";
+          colWrapper.style.background = "";
+          colWrapper.style.boxShadow = "";
+        }
+        if (ageLabel) {
+          ageLabel.innerHTML = "Age";
+          ageLabel.style.color = "";
+        }
+        ageInput.style.borderColor = "";
+        ageInput.style.boxShadow = "";
+        if (clickBox) {
+          clickBox.removeAttribute("style");
+          clickBox.className = "age-mitigate-btn mitigated";
+          clickBox.innerHTML = "\u2713 Mitigated for good baseline";
+        }
+      } else {
+        if (colWrapper) {
+          colWrapper.style.borderColor = "var(--amber)";
+          colWrapper.style.background = "rgba(245,158,11,0.03)";
+          colWrapper.style.boxShadow = "0 0 0 1px var(--amber)";
+        }
+        if (ageLabel) {
+          ageLabel.innerHTML = 'Age <span style="color: var(--amber); font-weight: bold; font-size: 0.72rem;">- Frailty risk identified</span>';
+          ageLabel.style.color = "var(--amber)";
+        }
+        ageInput.style.borderColor = "";
+        ageInput.style.boxShadow = "";
+        if (clickBox) {
+          clickBox.removeAttribute("style");
+          clickBox.className = "age-mitigate-btn";
+          clickBox.innerHTML = "Click here to mitigate age risk for good baseline";
+        }
+      }
+    } else {
+      wrapper.style.display = "none";
+      if (reasonInput) reasonInput.value = "";
+      if (reasonWrapper) reasonWrapper.style.display = "none";
+      if (seg) {
+        seg.querySelectorAll(".seg-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.value === "false");
+        });
+      }
+      if (colWrapper) {
+        colWrapper.classList.remove("input-box");
+        colWrapper.style.borderColor = "transparent";
+        colWrapper.style.background = "transparent";
+        colWrapper.style.boxShadow = "none";
+      }
+      if (ageLabel) {
+        ageLabel.innerHTML = "Age";
+        ageLabel.style.color = "";
+      }
+      ageInput.style.borderColor = "";
+      ageInput.style.boxShadow = "";
+      if (clickBox) {
+        clickBox.removeAttribute("style");
+        clickBox.className = "age-mitigate-btn";
+        clickBox.innerHTML = "Click here to mitigate age risk for good baseline";
+      }
+    }
   }
 
   // src/js/state.js
@@ -2129,6 +2280,7 @@
     const compute = debounce(() => {
       computeAll();
       checkBloodRanges();
+      updateAgeMitigationUI();
       saveState(true);
     }, 350);
     window.addDevice = (type, val, insertionDate = "") => {
@@ -2371,6 +2523,89 @@
           }
         }
       }, 500));
+    }
+    const airwayInput = $("airway_a");
+    if (airwayInput) {
+      airwayInput.addEventListener("input", () => {
+        airwayInput.dataset.manual = "true";
+        const val = airwayInput.value;
+        if (!val) return;
+        const lowerVal = val.toLowerCase().trim();
+        if (lowerVal.includes("trache")) {
+          const oxModBtn = document.querySelector(`#oxMod .select-btn[data-value="Trache"]`);
+          if (oxModBtn && !oxModBtn.classList.contains("active")) {
+            oxModBtn.click();
+          }
+        }
+      });
+    }
+    const devInput = $("b_device");
+    if (devInput) {
+      devInput.addEventListener("input", () => {
+        devInput.dataset.manual = "true";
+        const val = devInput.value;
+        if (!val) return;
+        const lowerVal = val.toLowerCase().trim();
+        let selectedMode = null;
+        let selectedFlow = null;
+        let selectedFiO2 = null;
+        if (lowerVal === "ra" || lowerVal === "room air") {
+          selectedMode = "RA";
+        } else if (lowerVal.includes("hfnp") || lowerVal.includes("high flow") || lowerVal.includes("l/") || lowerVal.includes("%")) {
+          selectedMode = "HFNP";
+          const parts = lowerVal.split("/");
+          parts.forEach((p) => {
+            if (p.includes("l")) selectedFlow = p.replace("l", "").trim();
+            if (p.includes("%")) selectedFiO2 = p.replace("%", "").trim();
+          });
+        } else if (lowerVal.includes("np") || lowerVal.includes("nasal") || lowerVal.includes("prong")) {
+          selectedMode = "NP";
+          const flowMatch = val.match(/(\d+)/);
+          if (flowMatch) selectedFlow = flowMatch[1];
+        } else if (lowerVal.includes("niv")) {
+          selectedMode = "NIV";
+        } else if (lowerVal.includes("trache")) {
+          selectedMode = "Trache";
+        }
+        if (selectedMode) {
+          const oxModBtn = document.querySelector(`#oxMod .select-btn[data-value="${selectedMode}"]`);
+          if (oxModBtn && !oxModBtn.classList.contains("active")) {
+            oxModBtn.click();
+          }
+        }
+        if (selectedFlow && selectedMode === "NP") {
+          const npFlowInput = document.getElementById("npFlow");
+          if (npFlowInput) {
+            npFlowInput.value = selectedFlow;
+            npFlowInput.dispatchEvent(new Event("input"));
+          }
+        }
+        if (selectedMode === "HFNP") {
+          if (selectedFlow) {
+            const hfnpFlowInput = $("hfnpFlow");
+            if (hfnpFlowInput) {
+              hfnpFlowInput.value = selectedFlow;
+              hfnpFlowInput.dispatchEvent(new Event("input"));
+            }
+          }
+          if (selectedFiO2) {
+            const hfnpFio2Input = $("hfnpFio2");
+            if (hfnpFio2Input) {
+              hfnpFio2Input.value = selectedFiO2;
+              hfnpFio2Input.dispatchEvent(new Event("input"));
+            }
+          }
+        }
+        const isLowFlowNP = selectedMode === "NP" && selectedFlow && parseInt(selectedFlow) < 2;
+        if (selectedMode && selectedMode !== "RA" && !isLowFlowNP) {
+          const respSeg = $("seg_resp_concern");
+          const respYes = respSeg?.querySelector('.seg-btn[data-value="true"]');
+          if (respYes && !respYes.classList.contains("active")) {
+            respYes.click();
+            showToast(`Auto-selected Resp Concern (${val})`, 1500);
+          }
+        }
+      });
     }
     document.querySelectorAll('.risk-trigger[data-risk="renal"]').forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -2694,9 +2929,53 @@
         btn.addEventListener("click", () => {
           group.querySelectorAll(".select-btn").forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
-          if (group.id === "oxMod") {
+          if (["oxMod", "tracheType", "tracheStatus"].includes(group.id)) {
             const devEl = $("b_device");
             if (devEl) devEl.dataset.manual = "false";
+            const airwayEl = $("airway_a");
+            if (airwayEl) airwayEl.dataset.manual = "false";
+            const oxModActive = document.querySelector("#oxMod .select-btn.active")?.dataset.value;
+            if (oxModActive === "Trache") {
+              const container = $("devices-container");
+              if (container) {
+                const type = document.querySelector("#tracheType .select-btn.active")?.dataset.value || "Tracheostomy";
+                const status = document.querySelector("#tracheStatus .select-btn.active")?.dataset.value || "Stable";
+                const details = status === "New" ? `${type} (New)` : type;
+                if (type === "Laryngectomy") {
+                  const existingLary = Array.from(container.querySelectorAll('.device-entry[data-type="Other Device"]')).find((el) => el.querySelector(".device-textarea")?.value.toLowerCase().includes("lary"));
+                  if (!existingLary) {
+                    createDeviceEntry("Other Device", details);
+                  } else {
+                    const area = existingLary.querySelector(".device-textarea");
+                    if (area && !area.value.includes("-")) {
+                      area.value = details;
+                    }
+                  }
+                  const tracheEntry = container.querySelector('.device-entry[data-type="Tracheostomy"]');
+                  if (tracheEntry) tracheEntry.remove();
+                } else {
+                  const existingTrache = container.querySelector('.device-entry[data-type="Tracheostomy"]');
+                  if (!existingTrache) {
+                    createDeviceEntry("Tracheostomy", details);
+                  } else {
+                    const area = existingTrache.querySelector(".device-textarea");
+                    if (area && !area.value.includes("-")) {
+                      area.value = details;
+                    }
+                  }
+                  const existingLary = Array.from(container.querySelectorAll('.device-entry[data-type="Other Device"]')).find((el) => el.querySelector(".device-textarea")?.value.toLowerCase().includes("lary"));
+                  if (existingLary) existingLary.remove();
+                }
+              }
+            } else {
+              const container = $("devices-container");
+              if (container) {
+                const tracheEntry = container.querySelector('.device-entry[data-type="Tracheostomy"]');
+                if (tracheEntry) tracheEntry.remove();
+                const existingLary = Array.from(container.querySelectorAll('.device-entry[data-type="Other Device"]')).find((el) => el.querySelector(".device-textarea")?.value.toLowerCase().includes("lary"));
+                if (existingLary) existingLary.remove();
+              }
+            }
             toggleOxyFields();
           }
           if (group.id === "neuroType") $("neuro_gate_content").style.display = "block";
@@ -2720,6 +2999,20 @@
     });
     $("bowel_date")?.addEventListener("change", compute);
     $("stepdownDate")?.addEventListener("change", compute);
+    $("btn_age_mitigated")?.addEventListener("click", () => {
+      const seg = $("seg_age_mitigated");
+      if (seg) {
+        const activeBtn = seg.querySelector(".seg-btn.active");
+        const isMitigated = activeBtn ? activeBtn.dataset.value === "true" : false;
+        const newValStr = !isMitigated ? "true" : "false";
+        seg.querySelectorAll(".seg-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.value === newValStr);
+        });
+        handleSegmentClick("age_mitigated", newValStr);
+      }
+      compute();
+    });
+    $("age_mitigate_reason")?.addEventListener("input", compute);
     $("chk_use_mods")?.addEventListener("change", () => {
       $("mods_inputs").style.display = $("chk_use_mods").checked ? "block" : "none";
       compute();
@@ -3040,6 +3333,7 @@
     updateWardOptions();
     const saved = loadState();
     if (saved) restoreState(saved);
+    updateAgeMitigationUI();
     refreshDetailToggleState();
     updateReviewTypeVisibility();
     const accMap = JSON.parse(sessionStorage.getItem(ACCORDION_KEY) || "{}");
@@ -3058,4 +3352,3 @@
     initialize();
   }
 })();
-//# sourceMappingURL=bundle.js.map

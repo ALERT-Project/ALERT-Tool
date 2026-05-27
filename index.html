@@ -155,10 +155,10 @@
         </div>
 
         <div id="section-patient" class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-                <h2 style="margin:0; font-size:1.4rem; font-weight:700;">👤 Patient Details</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+                <h2 style="margin:0; font-size:1.15rem; font-weight:700;">👤 Patient Details</h2>
                 <button id="btnOpenImport" class="btn small"
-                    style="border:1px dashed var(--accent); color:var(--accent); background:transparent; font-weight:600; padding:6px 14px; border-radius:8px; cursor:pointer; margin:0;">⬇
+                    style="border:2px dashed var(--accent); color:var(--accent); background:transparent; font-weight:700; padding:10px 20px; border-radius:12px; cursor:pointer; margin:0; font-size:0.9rem;">⬇
                     Import data from last DMR note</button>
             </div>
             <div class="grid">
@@ -168,7 +168,7 @@
                         <label><input type="radio" name="clinicianRole" value="ALERT CNS" checked> CNS</label>
                         <label><input type="radio" name="clinicianRole" value="ALERT CN"> CN</label>
                     </div>
-                    <div id="prevRisksBox">
+                    <div id="prevRisksBox" style="display:none;">
                         <h4>Previous Risk Factors</h4>
                         <ul id="prevRisksList"></ul>
                     </div>
@@ -206,34 +206,30 @@
                     <label for="ptMrn">URN (Last 3)</label>
                     <input id="ptMrn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" />
                 </div>
-                <div class="col-3">
-                    <label for="ptAge">Age</label>
+                <div class="col-3 age-column-wrapper" id="wrapper_ptAge">
+                    <label for="ptAge" id="lbl_ptAge">Age</label>
                     <input id="ptAge" type="number" min="0" />
-                </div>
-                <div class="col-3">
-                    <label for="ptWeight">Weight (kg)</label>
-                    <input id="ptWeight" type="number" min="0" />
-                </div>
-
-                <!-- Age risk mitigator — shown by JS when age >= 75 -->
-                <div id="age_risk_wrapper" class="col-12" style="display:none;">
-                    <div style="padding:10px 14px; background:rgba(245,158,11,0.08); border-radius:10px; border:1px solid var(--amber); display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start;">
-                        <div style="flex:1; min-width:180px;">
-                            <div style="font-size:0.82rem; color:var(--amber); font-weight:700; margin-bottom:6px;">⚠ Age ≥75 — increased risk identified</div>
-                            <div style="font-size:0.78rem; color:var(--muted);">If baseline function suggests this is not a meaningful risk, you may mitigate below.</div>
+                    
+                    <!-- Compact Age risk mitigator — shown by JS when age >= 75 -->
+                    <div id="age_risk_wrapper" style="display:none; margin-top: 6px;">
+                        <div id="btn_age_mitigated" class="age-mitigate-btn">
+                            Click here to mitigate age risk for good baseline
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:6px; min-width:160px;">
-                            <button type="button" id="btn_age_mitigate" style="padding:6px 14px; border-radius:8px; border:1px solid var(--amber); color:var(--amber); background:transparent; font-weight:600; font-size:0.82rem; cursor:pointer; transition:all 0.2s;">Mitigate Risk</button>
-                            <div id="age_mitigate_reason_wrapper" style="display:none;">
-                                <input type="text" id="age_mitigate_reason" placeholder="e.g. marathon runner, highly functional" style="font-size:0.82rem; padding:6px 10px;" />
-                            </div>
+                        
+                        <div id="age_mitigate_reason_wrapper" style="display:none; margin-top: 6px;">
+                            <input type="text" id="age_mitigate_reason" placeholder="Reason (e.g. runner)" style="font-size:0.75rem; padding:6px 10px; width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:4px; background:var(--input-bg); color:var(--text);" />
                         </div>
                     </div>
+                    
                     <!-- Hidden seg group for state persistence of age_mitigated -->
                     <div class="segmented-group" id="seg_age_mitigated" style="display:none;">
                         <button type="button" class="seg-btn" data-value="true">Yes</button>
                         <button type="button" class="seg-btn" data-value="false">No</button>
                     </div>
+                </div>
+                <div class="col-3">
+                    <label for="ptWeight">Weight (kg)</label>
+                    <input id="ptWeight" type="number" min="0" />
                 </div>
 
                 <!-- Grouped Ward & Stay Parameters -->
@@ -247,11 +243,9 @@
                     <label for="ptBed">Bed</label>
                     <input id="ptBed" type="number" min="1" />
                 </div>
-                <div class="col-3">
-                    <div id="reviewTimeWrapper">
-                        <label for="reviewTime">Time of Review</label>
-                        <input id="reviewTime" type="time" />
-                    </div>
+                <div class="col-3" id="reviewTimeWrapper">
+                    <label for="reviewTime">Time of Review</label>
+                    <input id="reviewTime" type="time" />
                 </div>
                 <div class="col-3">
                     <label for="icuLos">ICU LOS (days)</label>
@@ -294,6 +288,7 @@
         </div>
 
         <div id="section-risk" class="card">
+            <h2 style="margin:0 0 12px 0; font-size:1.15rem; font-weight:700;">⚠️ Risk Assessment</h2>
             <div class="risk-gates-grid">
                 <!-- ADDS Score Trigger & Drawer -->
                 <div class="input-box" id="adds_wrapper">
@@ -643,7 +638,7 @@
                     <div class="gate-trigger-area">
                         <div>
                             <div class="question-label bold-heading">Hospital Acquired Complication?</div>
-                            <div class="sub-label" style="font-size:0.75rem; margin-top:2px; margin-bottom:0;">e.g. HAI, Sepsis, New Arrythmias, AKI, Haemorrhage</div>
+                            <div class="sub-label" style="font-size:0.7rem; margin-top:2px; margin-bottom:0;">e.g. HAI, Sepsis, New Arrythmia, AKI</div>
                         </div>
                         <div class="segmented-group" id="seg_hac">
                             <button type="button" class="seg-btn" data-value="true">Yes</button>
@@ -691,7 +686,7 @@
                         <div>
                             <div class="question-label bold-heading">Immobility Concern? <span id="prev_risk_immob"
                                     class="prev-datum"></span></div>
-                            <div class="sub-label" style="font-size:0.75rem; margin-top:2px; margin-bottom:0;">(cannot sit out in chair)</div>
+                            <div class="sub-label" style="font-size:0.7rem; margin-top:2px; margin-bottom:0;">Cannot sit out in chair</div>
                         </div>
                         <div class="segmented-group" id="seg_immobility">
                             <button type="button" class="seg-btn" data-value="true">Yes</button>
@@ -767,11 +762,19 @@
                     <div class="gate-trigger-area">
                         <div>
                             <div class="question-label bold-heading">Known Frailty at Baseline?</div>
-                            <div class="sub-label" style="font-size:0.75rem; margin-top:2px; margin-bottom:0;">Reduced reserve prior to admission (e.g. CFS ≥5, care-dependent)</div>
+                            <div class="sub-label" style="font-size:0.7rem; margin-top:2px; margin-bottom:0;">Reduced reserve prior to admission</div>
                         </div>
                         <div class="segmented-group" id="seg_frailty_known">
                             <button type="button" class="seg-btn" data-value="true">Yes</button>
                             <button type="button" class="seg-btn" data-value="false">No</button>
+                        </div>
+                    </div>
+
+                    <!-- Frailty Gate Content (Nested inside the card) -->
+                    <div id="frailty_note_wrapper" class="risk-nested-panel" style="display:none; margin-top:12px;">
+                        <button type="button" class="btn small detail-toggle" data-target="frailty_details_wrapper">Add details</button>
+                        <div id="frailty_details_wrapper" class="detail-wrapper" style="display:none; margin-top:6px;">
+                            <textarea id="frailty_note"></textarea>
                         </div>
                     </div>
                 </div>
@@ -1654,6 +1657,7 @@
                     <button class="btn small" data-device-type="Pacing Wire">+ Add Pacing Wire</button>
                     <button class="btn small" data-device-type="Drain">+ Add Drain</button>
                     <button class="btn small" data-device-type="Wound">+ Add Wound</button>
+                    <button class="btn small" data-device-type="Tracheostomy">+ Add Tracheostomy</button>
                     <button class="btn small" data-device-type="Other Device">+ Add Other Device</button>
                 </div>
             </div>
@@ -2057,6 +2061,7 @@
     <script src="plugins/redcap.js"></script>
     <script src="plugins/adds_calc.js"></script>
     <script src="plugins/importer.js"></script>
+    <script src="plugins/auditor.js"></script>
 </body>
 
 </html>

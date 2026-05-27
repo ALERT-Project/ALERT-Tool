@@ -1057,4 +1057,109 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
     }
 }
 
+/* --- Compact Age Mitigate Button --- */
+.age-mitigate-btn {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  background: var(--card);
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  margin-bottom: 6px;
+}
+
+.age-mitigate-btn:hover {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.15);
+  transform: translateY(-1px);
+}
+
+.age-mitigate-btn.mitigated {
+  border-color: var(--line);
+  color: var(--muted);
+  background: var(--input-bg);
+  font-weight: 600;
+  box-shadow: none;
+  cursor: default;
+}
+
+.age-mitigate-btn.mitigated:hover {
+  background: var(--input-bg);
+  color: var(--muted);
+  box-shadow: none;
+  transform: none;
+}
+
+/* --- Dynamic Column Alert Wrapper --- */
+.age-column-wrapper {
+  position: relative;
+  transition: all 0.2s ease;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+}
+
+/* --- Sleek Compact Patient Details --- */
+#section-patient {
+    padding: 16px;
+}
+
+#section-patient h2 {
+    font-size: 1.2rem !important;
+    margin-bottom: 0 !important;
+}
+
+#section-patient .grid {
+    row-gap: 10px;
+    column-gap: 10px;
+}
+
+#section-patient label {
+    font-size: 0.8rem;
+    margin-bottom: 3px;
+    font-weight: 600;
+}
+
+#section-patient input[type="text"],
+#section-patient input[type="number"],
+#section-patient input[type="date"],
+#section-patient input[type="time"],
+#section-patient textarea,
+#section-patient select {
+    padding: 7px 10px;
+    font-size: 0.88rem;
+    border-radius: 8px;
+    min-height: 34px;
+}
+
+#section-patient textarea {
+    min-height: 48px !important;
+}
+
+#section-patient .radio-segmented-group label {
+    min-height: 34px;
+    font-size: 0.82rem;
+    padding: 5px 10px;
+}
+
+#section-patient .quick-select-container {
+    margin-top: 4px;
+}
+
+#section-patient .btn.small.quick-select {
+    font-size: 0.72rem;
+    padding: 4px 8px;
+    min-height: 28px;
+}
+
+#section-patient .sub-label {
+    margin-top: 2px;
+    font-size: 0.75rem;
+}
+
 

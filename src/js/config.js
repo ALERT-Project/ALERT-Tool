@@ -51,7 +51,8 @@ export const staticInputs = [
     'dyspneaConcern', 'dyspneaConcern_note', 'renal_note', 'infection_note',
     'electrolyteConcern_note', 'neuroType_note', 'nutrition_context_note', 'pain_context_note', 'neuro_psych_note', 'sleep_quality_note', 'fluid_restriction_amount',
     'after_hours_note', 'pressors_note', 'immobility_note', 'comorb_other_note',
-    'unsuitable_note', 'pressor_ceased_time', 'pressor_recent_other_note', 'pressor_current_other_note', 'hac_note', 'discharge_pending_bloods_note'
+    'unsuitable_note', 'pressor_ceased_time', 'pressor_recent_other_note', 'pressor_current_other_note', 'hac_note', 'discharge_pending_bloods_note',
+    'age_mitigate_reason', 'frailty_note'
 ];
 
 export const segmentedInputs = [
@@ -62,7 +63,8 @@ export const segmentedInputs = [
     'renal_chronic', 'renal_chronic_bloods',
     'infection_downtrend', 'infection_downtrend_bloods',
     'dialysis_type', 'sleep_quality', 'pain_control', 'neuro_psych', 'pics',
-    'resp_dyspnea', 'resp_tachypnea', 'resp_rapid_wean', 'resp_poor_cough', 'resp_poor_swallow'
+    'resp_dyspnea', 'resp_tachypnea', 'resp_rapid_wean', 'resp_poor_cough', 'resp_poor_swallow',
+    'age_mitigated', 'frailty_known'
 ];
 
 export const toggleInputs = [
@@ -79,4 +81,4 @@ export const selectInputs = [
     'tracheType', 'tracheStatus', 'intubatedReason'
 ];
 
-export const deviceTypes = ['CVC', 'PICC', 'Other CVAD', 'PIVC', 'Arterial Line', 'Enteral Tube', 'IDC', 'Pacing Wire', 'Drain', 'Wound', 'Vascath', 'Other Device'];
+export const deviceTypes = ['CVC', 'PICC', 'Other CVAD', 'PIVC', 'Arterial Line', 'Enteral Tube', 'IDC', 'Pacing Wire', 'Drain', 'Wound', 'Vascath', 'Tracheostomy', 'Other Device'];

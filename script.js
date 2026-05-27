@@ -1,31 +1,6 @@
 (() => {
   // src/js/utils.js
   var $ = (id) => document.getElementById(id);
-  function syncDecisionGroupFromCheckboxes() {
-    const continueChk = $("chk_continue_alert")?.checked;
-    const dischargeChk = $("chk_discharge_alert")?.checked;
-    const pendingChk = $("chk_discharge_pending_bloods")?.checked;
-    const handoverChk = $("chk_handover_discharge")?.checked;
-    
-    let val = "continue";
-    if (dischargeChk) val = "discharge";
-    else if (pendingChk) val = "pending_bloods";
-    else if (handoverChk) val = "handover";
-    
-    document.querySelectorAll("#seg_post_icu_decision .seg-btn").forEach((b) => {
-      b.classList.toggle("active", b.dataset.value === val);
-    });
-    
-    const wrapper = $("discharge_pending_bloods_note_wrapper");
-    if (wrapper) {
-      wrapper.style.display = val === "pending_bloods" ? "block" : "none";
-    }
-
-    const medRounding = $("chk_medical_rounding")?.checked;
-    document.querySelectorAll("#seg_medical_rounding .seg-btn, #seg_medical_rounding_prestepdown .seg-btn").forEach((b) => {
-      b.classList.toggle("active", b.dataset.value === String(medRounding));
-    });
-  }
   var debounce = (fn, wait = 350) => {
     let t;
     return (...a) => {
@@ -190,9 +165,6 @@
     "context_other_note",
     "pmh_note",
     "adds",
-    "lactate",
-    "lactate_trend",
-    "hb",
     "wcc",
     "crp",
     "neut",
@@ -219,10 +191,10 @@
     "pressor_current_other_note",
     "hac_note",
     "discharge_pending_bloods_note",
-    "age_mitigate_reason"
+    "age_mitigate_reason",
+    "frailty_note"
   ];
   var segmentedInputs = [
-    "hb_dropping",
     "after_hours",
     "hist_o2",
     "intubated",
@@ -247,14 +219,13 @@
     "pain_control",
     "neuro_psych",
     "pics",
-    "lactate_trend",
     "resp_dyspnea",
     "resp_tachypnea",
     "resp_rapid_wean",
     "resp_poor_cough",
     "resp_poor_swallow",
-    "frailty_known",
-    "age_mitigated"
+    "age_mitigated",
+    "frailty_known"
   ];
   var toggleInputs = [
     "comorb_copd",
@@ -296,7 +267,7 @@
     "tracheStatus",
     "intubatedReason"
   ];
-  var deviceTypes = ["CVC", "PICC", "Other CVAD", "PIVC", "Arterial Line", "Enteral Tube", "IDC", "Pacing Wire", "Drain", "Wound", "Vascath", "Other Device"];
+  var deviceTypes = ["CVC", "PICC", "Other CVAD", "PIVC", "Arterial Line", "Enteral Tube", "IDC", "Pacing Wire", "Drain", "Wound", "Vascath", "Tracheostomy", "Other Device"];
 
   // src/js/logic.js
   function calculateWardTime(dateStr, timeStr, isPre) {
@@ -436,16 +407,16 @@
               recentsList.push(label);
             }
           });
-          let recentPart = `Recent vasoactive support - ${joinGrammatically(recentsList)}`;
-          if (s.pressor_ceased_time) recentPart += ` which was ceased at approximately ${s.pressor_ceased_time}`;
+          let recentPart = `Recent vasoactive support, ${joinGrammatically(recentsList)}`;
+          if (s.pressor_ceased_time) recentPart += ` - ceased at approximately ${s.pressor_ceased_time}`;
           details.push(recentPart);
         }
         add(amber, details.join(". "), "seg_pressors", "amber", s.pressors_note);
       }
       const adds = num(s.adds);
       if (adds !== null) {
-        if (adds >= 6) add(red, `ADDS ${adds}`, "adds", "red");
-        else if (adds >= 4) add(red, `ADDS ${adds}`, "adds", "red");
+        if (adds >= 6) add(red, `Elevated ADDS ${adds}`, "adds", "red");
+        else if (adds >= 4) add(red, `Elevated ADDS ${adds}`, "adds", "red");
         else if (adds === 3 && isRecent) add(amber, `ADDS 3`, "adds", "amber");
       }
       const hr = num(s.c_hr);
@@ -473,8 +444,8 @@
       if (spo2 && spo2 < 88) add(red, `Hypoxia SpO2 ${spo2}%`, "b_spo2", "red");
       const temp = num(s.e_temp);
       if (temp) {
-        if (temp > 38.5) add(red, `Febrile Temp ${temp}`, "e_temp", "red");
-        else if (temp < 35.5) add(red, `Hypothermia Temp ${temp}`, "e_temp", "red");
+        if (temp > 38.5) add(red, `Febrile ${temp}`, "e_temp", "red");
+        else if (temp < 35.5) add(red, `Temp low ${temp}`, "e_temp", "red");
       }
       const oxDevInput = $("b_device");
       if (oxDevInput && oxDevInput.dataset.manual !== "true") {
@@ -484,8 +455,15 @@
         else if (mode === "NP") devStr = `NP ${s.npFlow || ""}L`;
         else if (mode === "HFNP") devStr = `HFNP ${s.hfnpFio2 || ""}%/${s.hfnpFlow || ""}L`;
         else if (mode === "NIV") devStr = `NIV ${s.nivFio2 || ""}%`;
-        else if (mode === "Trache") devStr = `Trache (${s.tracheStatus || ""})`;
-        if (devStr) oxDevInput.value = devStr;
+        oxDevInput.value = devStr;
+      }
+      const airwayInput = $("airway_a");
+      if (airwayInput && airwayInput.dataset.manual !== "true") {
+        if (s.oxMod === "Trache") {
+          airwayInput.value = `${s.tracheType || "Tracheostomy"}${s.tracheStatus === "New" ? " (New)" : ""}`;
+        } else if (airwayInput.value.startsWith("Tracheostomy") || airwayInput.value.startsWith("Laryngectomy")) {
+          airwayInput.value = "";
+        }
       }
       if (s.resp_concern === true) {
         let parts = [], hasRed = false;
@@ -496,53 +474,44 @@
             flagged.red.push("npFlow");
             hasRed = true;
           } else if (flow >= 2) {
-            parts.push(`NP ${flow}L`);
+            parts.push(`Oxygen requirement - ${flow}LNP`);
             flagged.amber.push("npFlow");
           }
         } else if (s.oxMod === "HFNP") {
-          const fio2 = num(s.hfnpFio2);
-          if (fio2 >= 60) {
-            parts.push(`HFNP - high FiO2 ${fio2}%`);
+          const fio2Val = num(s.hfnpFio2);
+          if (fio2Val >= 60) {
+            parts.push(`HFNP - high FiO2 ${s.hfnpFio2 || ""}%`);
             flagged.red.push("oxMod");
             hasRed = true;
           } else {
-            parts.push(`HFNP requirement`);
+            parts.push(`HFNP - FiO2 ${s.hfnpFio2 || ""}%`);
             flagged.red.push("oxMod");
             hasRed = true;
           }
         } else if (s.oxMod === "NIV") {
-          const fio2 = num(s.nivFio2);
-          if (fio2 >= 60) {
-            parts.push(`NIV - high FiO2 ${fio2}%`);
+          const fio2Val = num(s.nivFio2);
+          if (fio2Val >= 60) {
+            parts.push(`NIV - high FiO2 ${s.nivFio2 || ""}%`);
             flagged.red.push("oxMod");
             hasRed = true;
           } else {
-            parts.push(`NIV requirement`);
+            parts.push(`NIV - FiO2 ${s.nivFio2 || ""}%`);
             flagged.red.push("oxMod");
             hasRed = true;
-          }
-        } else if (s.oxMod === "Trache") {
-          if (s.tracheStatus === "New") {
-            parts.push(`new or unstable tracheostomy`);
-            flagged.red.push("tracheStatus");
-            hasRed = true;
-          } else {
-            parts.push(`tracheostomy`);
-            flagged.amber.push("oxMod");
           }
         } else if (s.oxMod === "RA") {
         }
         if (s.resp_dyspnea === true) {
           const dysp = s.dyspneaConcern;
           if (dysp === "severe" || dysp === "moderate") {
-            parts.push(`${dysp} dyspnea`);
+            parts.push(`Dyspnea ${dysp}`);
             flagged.red.push("dyspneaConcern");
             hasRed = true;
           } else if (dysp === "mild") {
-            parts.push(`mild dyspnea`);
+            parts.push(`Dyspnea mild`);
             flagged.amber.push("dyspneaConcern");
           } else if (!dysp) {
-            parts.push(`dyspnea`);
+            parts.push(`Dyspnea`);
             flagged.amber.push("seg_resp_dyspnea");
           }
         }
@@ -551,7 +520,7 @@
           flagged.amber.push("seg_resp_tachypnea");
         }
         if (s.resp_rapid_wean === true) {
-          parts.push("rapid O2 wean <12hrs");
+          parts.push("rapid O2 wean within last 12h");
           flagged.red.push("seg_resp_rapid_wean");
           hasRed = true;
         }
@@ -592,6 +561,15 @@
           if (!isLowFlowNP) {
             add(amber, "Respiratory concern", "seg_resp_concern", "amber", s.dyspneaConcern_note);
           }
+        }
+      }
+      if (s.oxMod === "Trache") {
+        const isLary = s.tracheType === "Laryngectomy";
+        const label = isLary ? "Laryngectomy patient" : "Tracheostomy patient";
+        if (s.tracheStatus === "New") {
+          add(red, `New ${label.toLowerCase()}`, "tracheStatus", "red");
+        } else {
+          add(amber, label, "oxMod", "amber");
         }
       }
       if (s.after_hours === true) add(amber, "Discharged after-hours", "seg_after_hours", "amber", s.after_hours_note);
@@ -733,17 +711,16 @@
         }
       }
       const hb = num(s.hb) || num(s.bl_hb);
+      const isHbDropping = s.hb_dropping || s.bl_hb_trend === "\u2193";
       if (hb && hb <= 70) add(red, `Low Hb ${hb}`, "hb", "red");
-      else if (hb && hb <= 90 && s.hb_dropping) add(amber, `Low Hb ${hb} and dropping`, "hb", "amber");
+      else if (hb && hb <= 90 && isHbDropping) add(amber, `Low Hb ${hb} and dropping`, "hb", "amber");
       const alb = num(s.bl_alb);
-      if (alb && alb < 20) add(amber, `Low albumin (${alb})`, "bl_alb", "amber");
+      if (alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, "bl_alb", "amber");
       const plts = num(s.bl_plts);
-      if (plts && plts < 100) add(amber, `Thrombocytopenia (Plts, ${plts})`, "bl_plts", "amber");
+      if (plts && plts < 100) add(amber, `Low platelets Plts ${plts}`, "bl_plts", "amber");
       const inr = num(s.bl_inr);
       if (inr && inr > 3.5) add(red, `High INR ${inr}`, "bl_inr", "red");
       else if (inr && inr > 2.5) add(amber, `Elevated INR ${inr}`, "bl_inr", "amber");
-      const egfr = num(s.bl_egfr);
-      if (egfr && egfr < 30) add(amber, `Low eGFR ${egfr}`, "bl_egfr", "amber");
       const bsl = num(s.e_bsl);
       if (bsl) {
         if (bsl < 4) add(red, `Low BSL ${bsl}`, "e_bsl", "red");
@@ -776,9 +753,6 @@
             add(amber, `Worsening Cr ${prevCr}\u2192${currCr}`, "bl_cr_review", "amber");
           }
         }
-      }
-      if (s.nutrition_adequate === false) {
-        add(amber, `Inadequate nutrition`, "diet_section", "amber", s.nutrition_context_note);
       }
       if (s.neuro_psych) {
         add(amber, `Psychological concern`, "neuro_section", "amber", s.neuro_psych_note);
@@ -818,19 +792,15 @@
         add(amber, reason, "override_amber", "amber");
       }
       const age = num(s.ptAge);
-      // Age risk flag — evidence-based, no frailty inference
       if (age >= 75) {
-        const ageLabel = `Age ${age} — increased risk`;
         if (s.age_mitigated === true) {
-          const reason = s.age_mitigate_reason ? s.age_mitigate_reason.trim() : "clinician assessment";
-          suppressedRisks.push(`Age ${age} [mitigated: ${reason}]`);
+          suppressedRisks.push(`Age ${age} (frailty risk - mitigated: ${s.age_mitigate_reason || "baseline function active"})`);
         } else {
-          add(amber, ageLabel, "ptAge", "amber");
+          add(amber, `Age ${age}, increased risk of complications`, "ptAge", "amber");
         }
       }
-      // Frailty — independent risk factor, always scored when known, regardless of age
       if (s.frailty_known === true) {
-        add(amber, "Known frailty at baseline", "seg_frailty_known", "amber");
+        add(amber, "Known frailty at baseline", "seg_frailty_known", "amber", s.frailty_note);
       }
       const icuLos = num(s.icuLos) || 0;
       if (icuLos > 4) {
@@ -838,7 +808,7 @@
         const uniqueAmberPreLos = [...new Set(amber)];
         const hasOtherRisks = uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0;
         if (hasOtherRisks) {
-          const hasNonImmobilityAndNonAgeRisk = uniqueRedPreLos.some((r) => !r.toLowerCase().includes("immobility") && !r.toLowerCase().includes("age") && !r.toLowerCase().includes("frailty")) || uniqueAmberPreLos.some((a) => !a.toLowerCase().includes("immobility") && !a.toLowerCase().includes("age") && !a.toLowerCase().includes("frailty"));
+          const hasNonImmobilityAndNonAgeRisk = uniqueRedPreLos.some((r) => !r.toLowerCase().includes("immobility") && !r.toLowerCase().includes("age")) || uniqueAmberPreLos.some((a) => !a.toLowerCase().includes("immobility") && !a.toLowerCase().includes("age"));
           if (hasNonImmobilityAndNonAgeRisk) {
             add(red, `Prolonged ICU stay >4 days`, "icuLos", "red");
           } else if (age >= 75) {
@@ -906,9 +876,9 @@
               alertDiv.style.opacity = "0";
               setTimeout(() => alertDiv.remove(), 300);
             }, 3e3);
+            const newRiskNames = [...newRed, ...newAmber].join(', ');
             setTimeout(() => {
-              const riskSection = $("section-risk");
-              if (riskSection) riskSection.scrollIntoView({ behavior: "smooth", block: "start" });
+              showToast(`⚠️ New risk auto-flagged: ${newRiskNames}`, 3000);
             }, 500);
           }
         }
@@ -950,14 +920,6 @@
       const disMsg = $("discharge_msg");
       const chkDischarge = $("chk_discharge_alert");
       const disWrap = $("chk_discharge_wrapper");
-
-      // Handover Banner Visibility
-      const handoverBanner = $("handoverBanner");
-      if (handoverBanner) {
-        const isHandoverActive = s.chk_handover_discharge === true && !s.chk_discharge_alert && !s.chk_discharge_pending_bloods;
-        handoverBanner.style.display = isHandoverActive ? "flex" : "none";
-      }
-
       if (disPrompt) {
         const alreadyChecked = chkDischarge && chkDischarge.checked;
         const dismissed = window.dismissedDischarge === true;
@@ -1006,25 +968,16 @@
       if (s.stepdown_suitable === false) {
         planHtml = `<div class="status red">Not suitable for stepdown.</div>`;
       } else if (s.chk_discharge_alert) {
-        if (s.chk_handover_discharge) {
-          planHtml = `<div class="status" style="color:var(--blue-hint)">Discharge from ALERT post ICU list (overnight stability + bloods cleared).</div>`;
-        } else {
-          planHtml = `<div class="status" style="color:var(--blue-hint)">Discharge from ALERT nursing list.</div>`;
-        }
+        planHtml = `<div class="status" style="color:var(--blue-hint)">Discharge from ALERT nursing list.</div>`;
       } else if (s.chk_discharge_pending_bloods) {
         planHtml = `<div class="status" style="color:#ea580c; font-weight: 700;">Yes - Pending Next Bloods</div>`;
       } else {
         planHtml = `<div class="status ${cssClass}">At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.</div>`;
-        if (s.chk_handover_discharge) {
-          planHtml += `<div style="margin-top:2px; font-weight:600; font-size: 0.9em; color:#0284c7;">+ Recommended for discharge pending bloods & DMR review</div>`;
-        } else {
-          planHtml += `<div style="margin-top:2px; font-weight:500; font-size: 0.9em; color:var(--text-light);">- Please contact ALERT if further support required between reviews.</div>`;
-        }
+        planHtml += `<div style="margin-top:2px; font-weight:500; font-size: 0.9em; color:var(--text-light);">- Please contact ALERT if further support required between reviews.</div>`;
       }
       if (s.chk_medical_rounding) planHtml += `<div style="margin-top:2px; font-weight:600; color:var(--accent);">+ Added to ALERT Medical Rounding List</div>`;
       const fu = $("followUpInstructions");
       if (fu) fu.innerHTML = planHtml;
-      syncDecisionGroupFromCheckboxes();
       checkCompleteness(s, countComorbs);
       window._lastRed = uniqueRed;
       window._lastAmber = uniqueAmber;
@@ -1090,7 +1043,9 @@
       "neuro_psych": "neuro_psych_wrapper",
       "pics": "pics_wrapper",
       "resp_dyspnea": "sub_dyspnea_severity",
-      "intubated": "sub_intubated_reason"
+      "intubated": "sub_intubated_reason",
+      "age_mitigated": "age_mitigate_reason_wrapper",
+      "frailty_known": "frailty_note_wrapper"
     };
     if (map[id]) {
       const el = $(map[id]);
@@ -1104,12 +1059,11 @@
           isShown = value === "true";
         }
         el.style.display = isShown ? "block" : "none";
-
         if (isShown) {
           setTimeout(() => {
             const firstFocusable = el.querySelector('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
             if (firstFocusable) {
-              firstFocusable.focus();
+              firstFocusable.focus({ preventScroll: true });
             }
           }, 50);
         }
@@ -1229,8 +1183,42 @@
     }
     html += `</div>`;
     div.innerHTML = html;
+    if (type === "Tracheostomy") {
+      const tracheBtn = document.querySelector('#oxMod .select-btn[data-value="Trache"]');
+      if (tracheBtn && !tracheBtn.classList.contains("active")) {
+        tracheBtn.click();
+      }
+      const tracheTypeBtn = document.querySelector('#tracheType .select-btn[data-value="Tracheostomy"]');
+      if (tracheTypeBtn && !tracheTypeBtn.classList.contains("active")) {
+        tracheTypeBtn.click();
+      }
+    }
     div.querySelector(".remove-entry").addEventListener("click", () => {
+      const textarea2 = div.querySelector(".device-textarea");
       div.remove();
+      if (type === "Tracheostomy") {
+        const raBtn = document.querySelector('#oxMod .select-btn[data-value="RA"]');
+        if (raBtn) {
+          raBtn.click();
+        }
+        const airwayInput = $("airway_a");
+        if (airwayInput && airwayInput.dataset.manual !== "true") {
+          if (airwayInput.value.startsWith("Tracheostomy")) {
+            airwayInput.value = "";
+          }
+        }
+      } else if (type === "Other Device" && textarea2 && textarea2.value.toLowerCase().includes("lary")) {
+        const raBtn = document.querySelector('#oxMod .select-btn[data-value="RA"]');
+        if (raBtn) {
+          raBtn.click();
+        }
+        const airwayInput = $("airway_a");
+        if (airwayInput && airwayInput.dataset.manual !== "true") {
+          if (airwayInput.value.startsWith("Laryngectomy")) {
+            airwayInput.value = "";
+          }
+        }
+      }
       window.devicesModifiedSinceLastSummary = true;
       updateDevicesSectionVisibility();
       saveState(true);
@@ -1239,6 +1227,19 @@
     const textarea = div.querySelector(".device-textarea");
     if (textarea) {
       textarea.addEventListener("input", () => {
+        if (type === "Other Device") {
+          const val2 = textarea.value.toLowerCase().trim();
+          if (val2.includes("lary")) {
+            const tracheBtn = document.querySelector('#oxMod .select-btn[data-value="Trache"]');
+            if (tracheBtn && !tracheBtn.classList.contains("active")) {
+              tracheBtn.click();
+            }
+            const laryBtn = document.querySelector('#tracheType .select-btn[data-value="Laryngectomy"]');
+            if (laryBtn && !laryBtn.classList.contains("active")) {
+              laryBtn.click();
+            }
+          }
+        }
         window.devicesModifiedSinceLastSummary = true;
         saveState(true);
         computeAll();
@@ -1422,6 +1423,10 @@
       if ($(id)) {
         $(id).value = "";
         $(id).classList.remove("scraped-data");
+        const el = $(id);
+        if (["b_device", "airway_a"].includes(id)) {
+          el.dataset.manual = "false";
+        }
       }
     });
     const impTxt = $("importText");
@@ -1464,7 +1469,8 @@
       "#sleep_quality_wrapper",
       "#neuro_psych_wrapper",
       "#pain_context_wrapper",
-      "#nutrition_context_wrapper"
+      "#nutrition_context_wrapper",
+      "#frailty_note_wrapper"
     ];
     gatesToHide.forEach((sel) => {
       const el = document.querySelector(sel);
@@ -1661,6 +1667,88 @@
     const overlay = $("mobileNavOverlay");
     if (overlay) overlay.classList.remove("active");
   }
+  function updateAgeMitigationUI() {
+    const ageInput = $("ptAge");
+    const wrapper = $("age_risk_wrapper");
+    const reasonWrapper = $("age_mitigate_reason_wrapper");
+    const reasonInput = $("age_mitigate_reason");
+    const seg = $("seg_age_mitigated");
+    const ageLabel = $("lbl_ptAge");
+    const clickBox = $("btn_age_mitigated");
+    const colWrapper = $("wrapper_ptAge");
+    if (!ageInput || !wrapper) return;
+    const age = parseFloat(ageInput.value);
+    if (!isNaN(age) && age >= 75) {
+      wrapper.style.display = "block";
+      if (colWrapper) colWrapper.classList.add("input-box");
+      const activeBtn = seg?.querySelector(".seg-btn.active");
+      const isMitigated = activeBtn ? activeBtn.dataset.value === "true" : false;
+      if (reasonWrapper) {
+        reasonWrapper.style.display = isMitigated ? "block" : "none";
+      }
+      if (isMitigated) {
+        if (colWrapper) {
+          colWrapper.style.borderColor = "var(--line)";
+          colWrapper.style.background = "";
+          colWrapper.style.boxShadow = "";
+        }
+        if (ageLabel) {
+          ageLabel.innerHTML = "Age";
+          ageLabel.style.color = "";
+        }
+        ageInput.style.borderColor = "";
+        ageInput.style.boxShadow = "";
+        if (clickBox) {
+          clickBox.removeAttribute("style");
+          clickBox.className = "age-mitigate-btn mitigated";
+          clickBox.innerHTML = "\u2713 Mitigated for good baseline";
+        }
+      } else {
+        if (colWrapper) {
+          colWrapper.style.borderColor = "var(--amber)";
+          colWrapper.style.background = "rgba(245,158,11,0.03)";
+          colWrapper.style.boxShadow = "0 0 0 1px var(--amber)";
+        }
+        if (ageLabel) {
+          ageLabel.innerHTML = 'Age <span style="color: var(--amber); font-weight: bold; font-size: 0.72rem;">- Frailty risk identified</span>';
+          ageLabel.style.color = "var(--amber)";
+        }
+        ageInput.style.borderColor = "";
+        ageInput.style.boxShadow = "";
+        if (clickBox) {
+          clickBox.removeAttribute("style");
+          clickBox.className = "age-mitigate-btn";
+          clickBox.innerHTML = "Click here to mitigate age risk for good baseline";
+        }
+      }
+    } else {
+      wrapper.style.display = "none";
+      if (reasonInput) reasonInput.value = "";
+      if (reasonWrapper) reasonWrapper.style.display = "none";
+      if (seg) {
+        seg.querySelectorAll(".seg-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.value === "false");
+        });
+      }
+      if (colWrapper) {
+        colWrapper.classList.remove("input-box");
+        colWrapper.style.borderColor = "transparent";
+        colWrapper.style.background = "transparent";
+        colWrapper.style.boxShadow = "none";
+      }
+      if (ageLabel) {
+        ageLabel.innerHTML = "Age";
+        ageLabel.style.color = "";
+      }
+      ageInput.style.borderColor = "";
+      ageInput.style.boxShadow = "";
+      if (clickBox) {
+        clickBox.removeAttribute("style");
+        clickBox.className = "age-mitigate-btn";
+        clickBox.innerHTML = "Click here to mitigate age risk for good baseline";
+      }
+    }
+  }
 
   // src/js/state.js
   window.prevBloods = {};
@@ -1742,7 +1830,7 @@
     });
     state["reviewType"] = document.querySelector('input[name="reviewType"]:checked')?.value || "post";
     state["clinicianRole"] = document.querySelector('input[name="clinicianRole"]:checked')?.value || "ALERT CNS";
-    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods", "chk_handover_discharge"].forEach((id) => {
+    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
       const el = $(id);
       if (el) state[id] = el.checked;
     });
@@ -1835,7 +1923,7 @@
       const r = document.querySelector(`input[name="clinicianRole"][value="${state["clinicianRole"]}"]`);
       if (r) r.checked = true;
     }
-    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods", "chk_handover_discharge"].forEach((id) => {
+    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
       const el = $(id);
       if (el && state[id] !== void 0) el.checked = state[id];
     });
@@ -1875,7 +1963,6 @@
     });
     toggleOxyFields();
     toggleInfusionsBox();
-    syncDecisionGroupFromCheckboxes();
   }
 
   // src/js/summary.js
@@ -2143,11 +2230,7 @@
       lines.push(`- ICU Senior Review requested due to unsuitability for ward stepdown.`);
       lines.push(`- Please re-contact ALERT for re-review when appropriate.`);
     } else if (s.chk_discharge_alert) {
-      if (s.chk_handover_discharge) {
-        lines.push(`- Discharged from ALERT post ICU list based on overnight clinical stability and satisfactory bloods/DMR review.`);
-      } else {
-        lines.push(`- Discharge from ALERT post ICU list. Please re-contact ALERT if further support required.`);
-      }
+      lines.push(`- Discharge from ALERT nursing list. Please re-contact ALERT if further support required.`);
     } else if (s.chk_discharge_pending_bloods) {
       let text = `- Pending discharge from ALERT post ICU list raised (ALERT will check next blood results, if no action required, no further note will be added and patient will be discharged)`;
       if (s.discharge_pending_bloods_note && s.discharge_pending_bloods_note.trim()) {
@@ -2157,14 +2240,11 @@
       lines.push(text);
     } else {
       lines.push(`- At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.`);
-      if (s.chk_handover_discharge) {
-        lines.push(`- Clinical issues stable overnight. Recommend discharge from ALERT post ICU list pending daytime bloods and latest DMR notes check.`);
-      }
     }
     if (s.chk_medical_rounding) {
       lines.push("- Patient added to ALERT medical rounding list for further review.");
     }
-    if (!s.chk_discharge_alert && !s.chk_discharge_pending_bloods && !s.chk_handover_discharge && s.stepdown_suitable !== false) {
+    if (!s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.stepdown_suitable !== false) {
       lines.push("- Please contact ALERT if further support required between reviews.");
     }
     if (sum) {
@@ -2200,6 +2280,7 @@
     const compute = debounce(() => {
       computeAll();
       checkBloodRanges();
+      updateAgeMitigationUI();
       saveState(true);
     }, 350);
     window.addDevice = (type, val, insertionDate = "") => {
@@ -2214,11 +2295,9 @@
       const actions = $("summary_actions");
       syncComorbsToPMH();
       computeAll();
-      const freshState = getState();
-      window._lastState = freshState;
       summaryEl.value = "";
       generateSummary(
-        freshState,
+        window._lastState || getState(),
         window._lastCat || { id: "green", text: "CAT 3" },
         window._lastWardTime || "",
         window._lastRed || [],
@@ -2259,8 +2338,6 @@
           chk.checked = true;
           chk.dispatchEvent(new Event("change"));
           compute();
-          syncDecisionGroupFromCheckboxes();
-          if ($("summary").value.trim() !== "") triggerGenerate();
           showToast("Patient marked for discharge", 1500);
         }
       });
@@ -2281,8 +2358,6 @@
           chk.checked = true;
           chk.dispatchEvent(new Event("change"));
           compute();
-          syncDecisionGroupFromCheckboxes();
-          if ($("summary").value.trim() !== "") triggerGenerate();
           showToast("Patient marked for discharge pending bloods", 1500);
         }
       });
@@ -2300,8 +2375,6 @@
             chk.checked = true;
             chk.dispatchEvent(new Event("change"));
             compute();
-            syncDecisionGroupFromCheckboxes();
-            if ($("summary").value.trim() !== "") triggerGenerate();
             showToast("Patient marked for discharge pending bloods (criteria confirmed)", 1500);
           }
         } else {
@@ -2310,8 +2383,6 @@
             chk.checked = true;
             chk.dispatchEvent(new Event("change"));
             compute();
-            syncDecisionGroupFromCheckboxes();
-            if ($("summary").value.trim() !== "") triggerGenerate();
             showToast("Patient marked for discharge (criteria confirmed)", 1500);
           }
         }
@@ -2432,8 +2503,6 @@
       });
     }
     syncInputs("adds", "atoe_adds");
-    syncInputs("lactate", "bl_lac_review");
-    syncInputs("hb", "bl_hb");
     syncInputs("wcc", "bl_wcc");
     syncInputs("crp", "bl_crp");
     syncInputs("neut", "bl_neut");
@@ -2454,6 +2523,89 @@
           }
         }
       }, 500));
+    }
+    const airwayInput = $("airway_a");
+    if (airwayInput) {
+      airwayInput.addEventListener("input", () => {
+        airwayInput.dataset.manual = "true";
+        const val = airwayInput.value;
+        if (!val) return;
+        const lowerVal = val.toLowerCase().trim();
+        if (lowerVal.includes("trache")) {
+          const oxModBtn = document.querySelector(`#oxMod .select-btn[data-value="Trache"]`);
+          if (oxModBtn && !oxModBtn.classList.contains("active")) {
+            oxModBtn.click();
+          }
+        }
+      });
+    }
+    const devInput = $("b_device");
+    if (devInput) {
+      devInput.addEventListener("input", () => {
+        devInput.dataset.manual = "true";
+        const val = devInput.value;
+        if (!val) return;
+        const lowerVal = val.toLowerCase().trim();
+        let selectedMode = null;
+        let selectedFlow = null;
+        let selectedFiO2 = null;
+        if (lowerVal === "ra" || lowerVal === "room air") {
+          selectedMode = "RA";
+        } else if (lowerVal.includes("hfnp") || lowerVal.includes("high flow") || lowerVal.includes("l/") || lowerVal.includes("%")) {
+          selectedMode = "HFNP";
+          const parts = lowerVal.split("/");
+          parts.forEach((p) => {
+            if (p.includes("l")) selectedFlow = p.replace("l", "").trim();
+            if (p.includes("%")) selectedFiO2 = p.replace("%", "").trim();
+          });
+        } else if (lowerVal.includes("np") || lowerVal.includes("nasal") || lowerVal.includes("prong")) {
+          selectedMode = "NP";
+          const flowMatch = val.match(/(\d+)/);
+          if (flowMatch) selectedFlow = flowMatch[1];
+        } else if (lowerVal.includes("niv")) {
+          selectedMode = "NIV";
+        } else if (lowerVal.includes("trache")) {
+          selectedMode = "Trache";
+        }
+        if (selectedMode) {
+          const oxModBtn = document.querySelector(`#oxMod .select-btn[data-value="${selectedMode}"]`);
+          if (oxModBtn && !oxModBtn.classList.contains("active")) {
+            oxModBtn.click();
+          }
+        }
+        if (selectedFlow && selectedMode === "NP") {
+          const npFlowInput = document.getElementById("npFlow");
+          if (npFlowInput) {
+            npFlowInput.value = selectedFlow;
+            npFlowInput.dispatchEvent(new Event("input"));
+          }
+        }
+        if (selectedMode === "HFNP") {
+          if (selectedFlow) {
+            const hfnpFlowInput = $("hfnpFlow");
+            if (hfnpFlowInput) {
+              hfnpFlowInput.value = selectedFlow;
+              hfnpFlowInput.dispatchEvent(new Event("input"));
+            }
+          }
+          if (selectedFiO2) {
+            const hfnpFio2Input = $("hfnpFio2");
+            if (hfnpFio2Input) {
+              hfnpFio2Input.value = selectedFiO2;
+              hfnpFio2Input.dispatchEvent(new Event("input"));
+            }
+          }
+        }
+        const isLowFlowNP = selectedMode === "NP" && selectedFlow && parseInt(selectedFlow) < 2;
+        if (selectedMode && selectedMode !== "RA" && !isLowFlowNP) {
+          const respSeg = $("seg_resp_concern");
+          const respYes = respSeg?.querySelector('.seg-btn[data-value="true"]');
+          if (respYes && !respYes.classList.contains("active")) {
+            respYes.click();
+            showToast(`Auto-selected Resp Concern (${val})`, 1500);
+          }
+        }
+      });
     }
     document.querySelectorAll('.risk-trigger[data-risk="renal"]').forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -2715,7 +2867,7 @@
     $("btn_stepdown_yesterday")?.addEventListener("click", () => setDateInput("stepdownDate", -1));
     $("btn_bowel_today")?.addEventListener("click", () => setDateInput("bowel_date", 0));
     $("btn_bowel_yesterday")?.addEventListener("click", () => setDateInput("bowel_date", -1));
-    document.querySelectorAll(".segmented-group:not(.vertical)").forEach((group) => {
+    document.querySelectorAll(".segmented-group").forEach((group) => {
       group.querySelectorAll(".seg-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
           group.dataset.manual = "true";
@@ -2777,9 +2929,53 @@
         btn.addEventListener("click", () => {
           group.querySelectorAll(".select-btn").forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
-          if (group.id === "oxMod") {
+          if (["oxMod", "tracheType", "tracheStatus"].includes(group.id)) {
             const devEl = $("b_device");
             if (devEl) devEl.dataset.manual = "false";
+            const airwayEl = $("airway_a");
+            if (airwayEl) airwayEl.dataset.manual = "false";
+            const oxModActive = document.querySelector("#oxMod .select-btn.active")?.dataset.value;
+            if (oxModActive === "Trache") {
+              const container = $("devices-container");
+              if (container) {
+                const type = document.querySelector("#tracheType .select-btn.active")?.dataset.value || "Tracheostomy";
+                const status = document.querySelector("#tracheStatus .select-btn.active")?.dataset.value || "Stable";
+                const details = status === "New" ? `${type} (New)` : type;
+                if (type === "Laryngectomy") {
+                  const existingLary = Array.from(container.querySelectorAll('.device-entry[data-type="Other Device"]')).find((el) => el.querySelector(".device-textarea")?.value.toLowerCase().includes("lary"));
+                  if (!existingLary) {
+                    createDeviceEntry("Other Device", details);
+                  } else {
+                    const area = existingLary.querySelector(".device-textarea");
+                    if (area && !area.value.includes("-")) {
+                      area.value = details;
+                    }
+                  }
+                  const tracheEntry = container.querySelector('.device-entry[data-type="Tracheostomy"]');
+                  if (tracheEntry) tracheEntry.remove();
+                } else {
+                  const existingTrache = container.querySelector('.device-entry[data-type="Tracheostomy"]');
+                  if (!existingTrache) {
+                    createDeviceEntry("Tracheostomy", details);
+                  } else {
+                    const area = existingTrache.querySelector(".device-textarea");
+                    if (area && !area.value.includes("-")) {
+                      area.value = details;
+                    }
+                  }
+                  const existingLary = Array.from(container.querySelectorAll('.device-entry[data-type="Other Device"]')).find((el) => el.querySelector(".device-textarea")?.value.toLowerCase().includes("lary"));
+                  if (existingLary) existingLary.remove();
+                }
+              }
+            } else {
+              const container = $("devices-container");
+              if (container) {
+                const tracheEntry = container.querySelector('.device-entry[data-type="Tracheostomy"]');
+                if (tracheEntry) tracheEntry.remove();
+                const existingLary = Array.from(container.querySelectorAll('.device-entry[data-type="Other Device"]')).find((el) => el.querySelector(".device-textarea")?.value.toLowerCase().includes("lary"));
+                if (existingLary) existingLary.remove();
+              }
+            }
             toggleOxyFields();
           }
           if (group.id === "neuroType") $("neuro_gate_content").style.display = "block";
@@ -2797,49 +2993,26 @@
             const ah = $("seg_after_hours");
             if (ah) ah.dataset.manual = "false";
           }
-          if (id === "ptAge") updateAgeMitigatorVisibility();
-          if (id === "age_mitigate_reason") compute();
           compute();
         });
       }
     });
-    // Age mitigator banner: show when age >= 75, hide otherwise
-    function updateAgeMitigatorVisibility() {
-      const ageVal = num($("ptAge")?.value);
-      const wrapper = $("age_risk_wrapper");
-      if (!wrapper) return;
-      wrapper.style.display = (ageVal !== null && ageVal >= 75) ? "block" : "none";
-    }
-    // Mitigate Risk button toggles the age_mitigated state
-    $("btn_age_mitigate")?.addEventListener("click", () => {
-      const s = getState();
-      const isCurrentlyMitigated = s.age_mitigated === true;
-      const newVal = !isCurrentlyMitigated;
-      // Update the hidden seg input for state tracking
-      const segEl = $("seg_age_mitigated");
-      if (segEl) {
-        segEl.querySelectorAll(".seg-btn").forEach(btn => btn.classList.remove("active"));
-        const activeBtn = segEl.querySelector(`.seg-btn[data-value="${newVal}"]`);
-        if (activeBtn) activeBtn.classList.add("active");
-      }
-      // Show/hide the reason textbox
-      const reasonWrapper = $("age_mitigate_reason_wrapper");
-      const btn = $("btn_age_mitigate");
-      if (newVal) {
-        if (reasonWrapper) reasonWrapper.style.display = "block";
-        if (btn) { btn.textContent = "Risk Mitigated ✓"; btn.style.background = "var(--green)"; btn.style.color = "white"; btn.style.border = "none"; }
-        setTimeout(() => $("age_mitigate_reason")?.focus(), 50);
-      } else {
-        if (reasonWrapper) reasonWrapper.style.display = "none";
-        if (btn) { btn.textContent = "Mitigate Risk"; btn.style.background = "transparent"; btn.style.color = "var(--amber)"; btn.style.border = "1px solid var(--amber)"; }
-        const reasonInput = $("age_mitigate_reason");
-        if (reasonInput) reasonInput.value = "";
-      }
-      saveState(true);
-      compute();
-    });
     $("bowel_date")?.addEventListener("change", compute);
     $("stepdownDate")?.addEventListener("change", compute);
+    $("btn_age_mitigated")?.addEventListener("click", () => {
+      const seg = $("seg_age_mitigated");
+      if (seg) {
+        const activeBtn = seg.querySelector(".seg-btn.active");
+        const isMitigated = activeBtn ? activeBtn.dataset.value === "true" : false;
+        const newValStr = !isMitigated ? "true" : "false";
+        seg.querySelectorAll(".seg-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.value === newValStr);
+        });
+        handleSegmentClick("age_mitigated", newValStr);
+      }
+      compute();
+    });
+    $("age_mitigate_reason")?.addEventListener("input", compute);
     $("chk_use_mods")?.addEventListener("change", () => {
       $("mods_inputs").style.display = $("chk_use_mods").checked ? "block" : "none";
       compute();
@@ -2907,97 +3080,30 @@
       }
       compute();
     });
-    // Segmented Post ICU Decision Group Event Listener
-    document.querySelectorAll("#seg_post_icu_decision .seg-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const val = btn.dataset.value;
-
-        const continueChk = $("chk_continue_alert");
-        const dischargeChk = $("chk_discharge_alert");
-        const pendingChk = $("chk_discharge_pending_bloods");
-        const handoverChk = $("chk_handover_discharge");
-
-        if (continueChk) continueChk.checked = (val === "continue" || val === "handover");
-        if (dischargeChk) dischargeChk.checked = (val === "discharge");
-        if (pendingChk) {
-          if (val === "pending_bloods") {
-            const catScoreText = $("catText")?.textContent || "";
-            if (catScoreText.includes("CAT 3") || catScoreText.includes("Green")) {
-              if (!window.dischargeConfirmed) {
-                window.dischargeIntent = "pending";
-                const modal = $("greenDischargeConfirmModal");
-                if (modal) {
-                  modal.style.display = "flex";
-                  return;
-                }
-              }
-            }
-            pendingChk.checked = true;
-          } else {
-            pendingChk.checked = false;
-          }
-        }
-        if (handoverChk) handoverChk.checked = (val === "handover");
-
-        syncDecisionGroupFromCheckboxes();
-        compute();
-
-        const sum = $("summary");
-        if (sum && sum.value.trim() !== "") {
-          triggerGenerate();
-        }
-      });
-    });
-
-    $("btnApproveHandoverDischarge")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      const dischargeChk = $("chk_discharge_alert");
+    $("chk_continue_alert")?.addEventListener("change", () => {
       const continueChk = $("chk_continue_alert");
-      const handoverChk = $("chk_handover_discharge");
-
-      if (dischargeChk) dischargeChk.checked = true;
-      if (continueChk) continueChk.checked = false;
-      if (handoverChk) handoverChk.checked = true;
-
-      const banner = $("handoverBanner");
-      if (banner) banner.style.display = "none";
-      
-      syncDecisionGroupFromCheckboxes();
-      compute();
-      triggerGenerate();
-      showToast("Handover approved: patient marked for discharge", 1500);
-    });
-    document.querySelectorAll("#seg_medical_rounding .seg-btn, #seg_medical_rounding_prestepdown .seg-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const val = btn.dataset.value === "true";
-        const mainCheckbox = $("chk_medical_rounding");
-        const preCheckbox = $("chk_medical_rounding_pre");
-
-        if (mainCheckbox) mainCheckbox.checked = val;
-        if (preCheckbox) preCheckbox.checked = val;
-
-        syncDecisionGroupFromCheckboxes();
-        compute();
-
-        const sum = $("summary");
-        if (sum && sum.value.trim() !== "") {
-          triggerGenerate();
+      const dischargeChk = $("chk_discharge_alert");
+      const pendingChk = $("chk_discharge_pending_bloods");
+      const wrapper = $("discharge_pending_bloods_note_wrapper");
+      const disPrompt = $("discharge_prompt");
+      if (continueChk && continueChk.checked) {
+        if (dischargeChk) dischargeChk.checked = false;
+        if (pendingChk) pendingChk.checked = false;
+        if (wrapper) wrapper.style.display = "none";
+        if (disPrompt && disPrompt.style.display !== "none") {
+          window.dismissedDischarge = true;
         }
-      });
+      }
+      compute();
     });
-
     $("chk_medical_rounding")?.addEventListener("change", () => {
       const preCheckbox = $("chk_medical_rounding_pre");
       if (preCheckbox) preCheckbox.checked = $("chk_medical_rounding").checked;
-      syncDecisionGroupFromCheckboxes();
       compute();
     });
     $("chk_medical_rounding_pre")?.addEventListener("change", () => {
       const mainCheckbox = $("chk_medical_rounding");
       if (mainCheckbox) mainCheckbox.checked = $("chk_medical_rounding_pre").checked;
-      syncDecisionGroupFromCheckboxes();
       compute();
     });
     document.querySelectorAll('input[name="reviewType"]').forEach((r) => r.addEventListener("change", () => {
@@ -3227,6 +3333,7 @@
     updateWardOptions();
     const saved = loadState();
     if (saved) restoreState(saved);
+    updateAgeMitigationUI();
     refreshDetailToggleState();
     updateReviewTypeVisibility();
     const accMap = JSON.parse(sessionStorage.getItem(ACCORDION_KEY) || "{}");

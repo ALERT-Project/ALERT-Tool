@@ -1,4 +1,4 @@
-import { $, num, sentenceCase, joinGrammatically } from './utils.js';
+import { $, num, sentenceCase, joinGrammatically, showToast } from './utils.js';
 import { comorbMap, toggleInputs } from './config.js';
 import { getState, isQuickReviewMode, initialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured, previousCategoryData } from './state.js';
 import { exitQuickReviewMode, updateSidebarRiskBadges } from './ui.js';
@@ -158,8 +158,8 @@ export function computeAll() {
                         recentsList.push(label);
                     }
                 });
-                let recentPart = `Recent vasoactive support - ${joinGrammatically(recentsList)}`;
-                if (s.pressor_ceased_time) recentPart += ` which was ceased at approximately ${s.pressor_ceased_time}`;
+                let recentPart = `Recent vasoactive support, ${joinGrammatically(recentsList)}`;
+                if (s.pressor_ceased_time) recentPart += ` - ceased at approximately ${s.pressor_ceased_time}`;
                 details.push(recentPart);
             }
             add(amber, details.join('. '), 'seg_pressors', 'amber', s.pressors_note);
@@ -169,7 +169,7 @@ export function computeAll() {
         if (adds !== null) {
             if (adds >= 6) add(red, `Elevated ADDS ${adds}`, 'adds', 'red');
             else if (adds >= 4) add(red, `Elevated ADDS ${adds}`, 'adds', 'red');
-            else if (adds === 3 && isRecent) add(amber, `Elevated ADDS 3`, 'adds', 'amber');
+            else if (adds === 3 && isRecent) add(amber, `ADDS 3`, 'adds', 'amber');
         }
 
         const hr = num(s.c_hr);
@@ -201,8 +201,8 @@ export function computeAll() {
 
         const temp = num(s.e_temp);
         if (temp) {
-            if (temp > 38.5) add(red, `Pyrexia Temp ${temp}`, 'e_temp', 'red');
-            else if (temp < 35.5) add(red, `Hypothermia Temp ${temp}`, 'e_temp', 'red');
+            if (temp > 38.5) add(red, `Febrile ${temp}`, 'e_temp', 'red');
+            else if (temp < 35.5) add(red, `Temp low ${temp}`, 'e_temp', 'red');
         }
 
         const oxDevInput = $('b_device');
@@ -213,8 +213,16 @@ export function computeAll() {
             else if (mode === 'NP') devStr = `NP ${s.npFlow || ''}L`;
             else if (mode === 'HFNP') devStr = `HFNP ${s.hfnpFio2 || ''}%/${s.hfnpFlow || ''}L`;
             else if (mode === 'NIV') devStr = `NIV ${s.nivFio2 || ''}%`;
-            else if (mode === 'Trache') devStr = `Trache (${s.tracheStatus || ''})`;
-            if (devStr) oxDevInput.value = devStr;
+            oxDevInput.value = devStr;
+        }
+
+        const airwayInput = $('airway_a');
+        if (airwayInput && airwayInput.dataset.manual !== 'true') {
+            if (s.oxMod === 'Trache') {
+                airwayInput.value = `${s.tracheType || 'Tracheostomy'}${s.tracheStatus === 'New' ? ' (New)' : ''}`;
+            } else if (airwayInput.value.startsWith('Tracheostomy') || airwayInput.value.startsWith('Laryngectomy')) {
+                airwayInput.value = '';
+            }
         }
 
         if (s.resp_concern === true) {
@@ -222,28 +230,25 @@ export function computeAll() {
             if (s.oxMod === 'NP') {
                 const flow = num(s.npFlow);
                 if (flow >= 3) { parts.push(`high flow NP ${flow}L`); flagged.red.push('npFlow'); hasRed = true; }
-                else if (flow >= 2) { parts.push(`NP ${flow}L`); flagged.amber.push('npFlow'); }
+                else if (flow >= 2) { parts.push(`Oxygen requirement - ${flow}LNP`); flagged.amber.push('npFlow'); }
             } else if (s.oxMod === 'HFNP') {
-                const fio2 = num(s.hfnpFio2);
-                if (fio2 >= 60) { parts.push(`HFNP - high FiO2 ${fio2}%`); flagged.red.push('oxMod'); hasRed = true; }
-                else { parts.push(`HFNP requirement`); flagged.red.push('oxMod'); hasRed = true; }
+                const fio2Val = num(s.hfnpFio2);
+                if (fio2Val >= 60) { parts.push(`HFNP - high FiO2 ${s.hfnpFio2 || ''}%`); flagged.red.push('oxMod'); hasRed = true; }
+                else { parts.push(`HFNP - FiO2 ${s.hfnpFio2 || ''}%`); flagged.red.push('oxMod'); hasRed = true; }
             } else if (s.oxMod === 'NIV') {
-                const fio2 = num(s.nivFio2);
-                if (fio2 >= 60) { parts.push(`NIV - high FiO2 ${fio2}%`); flagged.red.push('oxMod'); hasRed = true; }
-                else { parts.push(`NIV requirement`); flagged.red.push('oxMod'); hasRed = true; }
-            } else if (s.oxMod === 'Trache') {
-                if (s.tracheStatus === 'New') { parts.push(`new or unstable tracheostomy`); flagged.red.push('tracheStatus'); hasRed = true; }
-                else { parts.push(`tracheostomy`); flagged.amber.push('oxMod'); }
+                const fio2Val = num(s.nivFio2);
+                if (fio2Val >= 60) { parts.push(`NIV - high FiO2 ${s.nivFio2 || ''}%`); flagged.red.push('oxMod'); hasRed = true; }
+                else { parts.push(`NIV - FiO2 ${s.nivFio2 || ''}%`); flagged.red.push('oxMod'); hasRed = true; }
             } else if (s.oxMod === 'RA') {
             }
             if (s.resp_dyspnea === true) {
                 const dysp = s.dyspneaConcern;
-                if (dysp === 'severe' || dysp === 'moderate') { parts.push(`${dysp} dyspnea`); flagged.red.push('dyspneaConcern'); hasRed = true; }
-                else if (dysp === 'mild') { parts.push(`mild dyspnea`); flagged.amber.push('dyspneaConcern'); }
-                else if (!dysp) { parts.push(`dyspnea`); flagged.amber.push('seg_resp_dyspnea'); }
+                if (dysp === 'severe' || dysp === 'moderate') { parts.push(`Dyspnea ${dysp}`); flagged.red.push('dyspneaConcern'); hasRed = true; }
+                else if (dysp === 'mild') { parts.push(`Dyspnea mild`); flagged.amber.push('dyspneaConcern'); }
+                else if (!dysp) { parts.push(`Dyspnea`); flagged.amber.push('seg_resp_dyspnea'); }
             }
             if (s.resp_tachypnea === true) { parts.push('tachypnea >20bpm'); flagged.amber.push('seg_resp_tachypnea'); }
-            if (s.resp_rapid_wean === true) { parts.push('rapid O2 wean <12hrs'); flagged.red.push('seg_resp_rapid_wean'); hasRed = true; }
+            if (s.resp_rapid_wean === true) { parts.push('rapid O2 wean within last 12h'); flagged.red.push('seg_resp_rapid_wean'); hasRed = true; }
             if (s.resp_poor_cough === true) { parts.push('poor cough effort'); flagged.amber.push('seg_resp_poor_cough'); }
             if (s.resp_poor_swallow === true) { parts.push('poor swallow'); flagged.amber.push('seg_resp_poor_swallow'); }
 
@@ -268,6 +273,16 @@ export function computeAll() {
                 if (!isLowFlowNP) {
                     add(amber, 'Respiratory concern', 'seg_resp_concern', 'amber', s.dyspneaConcern_note);
                 }
+            }
+        }
+
+        if (s.oxMod === 'Trache') {
+            const isLary = s.tracheType === 'Laryngectomy';
+            const label = isLary ? 'Laryngectomy patient' : 'Tracheostomy patient';
+            if (s.tracheStatus === 'New') {
+                add(red, `New ${label.toLowerCase()}`, 'tracheStatus', 'red');
+            } else {
+                add(amber, label, 'oxMod', 'amber');
             }
         }
 
@@ -461,8 +476,6 @@ export function computeAll() {
         if (inr && inr > 3.5) add(red, `High INR ${inr}`, 'bl_inr', 'red');
         else if (inr && inr > 2.5) add(amber, `Elevated INR ${inr}`, 'bl_inr', 'amber');
 
-        const egfr = num(s.bl_egfr);
-        if (egfr && egfr < 30) add(amber, `Low eGFR ${egfr}`, 'bl_egfr', 'amber');
 
         const bsl = num(s.e_bsl);
         if (bsl) {
@@ -501,9 +514,6 @@ export function computeAll() {
             }
         }
 
-        if (s.nutrition_adequate === false) {
-            add(amber, `Inadequate nutrition`, 'diet_section', 'amber', s.nutrition_context_note);
-        }
 
         if (s.neuro_psych) {
             add(amber, `Psychological concern`, 'neuro_section', 'amber', s.neuro_psych_note);
@@ -548,7 +558,17 @@ export function computeAll() {
         }
 
         const age = num(s.ptAge);
-        if (age >= 75) add(amber, `Age ${age} (frailty risk)`, 'ptAge', 'amber');
+        if (age >= 75) {
+            if (s.age_mitigated === true) {
+                suppressedRisks.push(`Age ${age} (frailty risk - mitigated: ${s.age_mitigate_reason || 'baseline function active'})`);
+            } else {
+                add(amber, `Age ${age}, increased risk of complications`, 'ptAge', 'amber');
+            }
+        }
+
+        if (s.frailty_known === true) {
+            add(amber, 'Known frailty at baseline', 'seg_frailty_known', 'amber', s.frailty_note);
+        }
 
         const icuLos = num(s.icuLos) || 0;
         if (icuLos > 4) {
@@ -622,9 +642,10 @@ export function computeAll() {
                         setTimeout(() => alertDiv.remove(), 300);
                     }, 3000);
 
+                    // Don't scroll away from A-to-E — just show a toast so the user knows
+                    const newRiskNames = [...newRed, ...newAmber].join(', ');
                     setTimeout(() => {
-                        const riskSection = $('section-risk');
-                        if (riskSection) riskSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        showToast(`⚠️ New risk auto-flagged: ${newRiskNames}`, 3000);
                     }, 500);
                 }
             }

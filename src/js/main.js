@@ -8,7 +8,7 @@ import {
     createDeviceEntry, updateDevicesSectionVisibility, toggleOxyFields, toggleInfusionsBox,
     handleUnknownBLODate, showClearDataModal, hideClearDataModal, syncComorbsToPMH, clearData,
     enableQuickReviewMode, exitQuickReviewMode, showQuickReviewPrompt, openMobileNav, closeMobileNav,
-    handleSegmentClick, toggleBowelDate
+    handleSegmentClick, toggleBowelDate, updateAgeMitigationUI
 } from './ui.js';
 
 function initialize() {
@@ -34,7 +34,7 @@ function initialize() {
         }
     });
 
-    const compute = debounce(() => { computeAll(); checkBloodRanges(); saveState(true); }, 350);
+    const compute = debounce(() => { computeAll(); checkBloodRanges(); updateAgeMitigationUI(); saveState(true); }, 350);
 
     window.addDevice = (type, val, insertionDate = '') => { createDeviceEntry(type, val, insertionDate); compute(); };
     window.compute = compute;
@@ -297,6 +297,105 @@ function initialize() {
             }
         }, 500));
     }
+
+    const airwayInput = $('airway_a');
+    if (airwayInput) {
+        airwayInput.addEventListener('input', () => {
+            airwayInput.dataset.manual = 'true';
+            const val = airwayInput.value;
+            if (!val) return;
+
+            const lowerVal = val.toLowerCase().trim();
+            if (lowerVal.includes('trache')) {
+                const oxModBtn = document.querySelector(`#oxMod .select-btn[data-value="Trache"]`);
+                if (oxModBtn && !oxModBtn.classList.contains('active')) {
+                    oxModBtn.click();
+                }
+            }
+        });
+    }
+
+    const devInput = $('b_device');
+    if (devInput) {
+        devInput.addEventListener('input', () => {
+            // Mark as manually edited in A-E so computeAll doesn't overwrite it
+            devInput.dataset.manual = 'true';
+
+            const val = devInput.value;
+            if (!val) return;
+
+            const lowerVal = val.toLowerCase().trim();
+            let selectedMode = null;
+            let selectedFlow = null;
+            let selectedFiO2 = null;
+
+            if (lowerVal === 'ra' || lowerVal === 'room air') {
+                selectedMode = 'RA';
+            } else if (lowerVal.includes('hfnp') || lowerVal.includes('high flow') || lowerVal.includes('l/') || lowerVal.includes('%')) {
+                selectedMode = 'HFNP';
+                const parts = lowerVal.split('/');
+                parts.forEach(p => {
+                    if (p.includes('l')) selectedFlow = p.replace('l', '').trim();
+                    if (p.includes('%')) selectedFiO2 = p.replace('%', '').trim();
+                });
+            } else if (lowerVal.includes('np') || lowerVal.includes('nasal') || lowerVal.includes('prong')) {
+                selectedMode = 'NP';
+                const flowMatch = val.match(/(\d+)/);
+                if (flowMatch) selectedFlow = flowMatch[1];
+            } else if (lowerVal.includes('niv')) {
+                selectedMode = 'NIV';
+            } else if (lowerVal.includes('trache')) {
+                selectedMode = 'Trache';
+            }
+
+            // Click the appropriate oxygen mode button in the Respiratory Gate
+            if (selectedMode) {
+                const oxModBtn = document.querySelector(`#oxMod .select-btn[data-value="${selectedMode}"]`);
+                if (oxModBtn && !oxModBtn.classList.contains('active')) {
+                    oxModBtn.click();
+                }
+            }
+
+            // Set NP flow if applicable
+            if (selectedFlow && selectedMode === 'NP') {
+                const npFlowInput = document.getElementById('npFlow');
+                if (npFlowInput) {
+                    npFlowInput.value = selectedFlow;
+                    npFlowInput.dispatchEvent(new Event('input'));
+                }
+            }
+
+            // Set HFNP flow/fio2 if applicable
+            if (selectedMode === 'HFNP') {
+                if (selectedFlow) {
+                    const hfnpFlowInput = $('hfnpFlow');
+                    if (hfnpFlowInput) {
+                        hfnpFlowInput.value = selectedFlow;
+                        hfnpFlowInput.dispatchEvent(new Event('input'));
+                    }
+                }
+                if (selectedFiO2) {
+                    const hfnpFio2Input = $('hfnpFio2');
+                    if (hfnpFio2Input) {
+                        hfnpFio2Input.value = selectedFiO2;
+                        hfnpFio2Input.dispatchEvent(new Event('input'));
+                    }
+                }
+            }
+
+            // Auto-flag the respiratory concern gate if NOT room air and NOT low-flow NP (<2L)
+            const isLowFlowNP = (selectedMode === 'NP' && selectedFlow && parseInt(selectedFlow) < 2);
+            if (selectedMode && selectedMode !== 'RA' && !isLowFlowNP) {
+                const respSeg = $('seg_resp_concern');
+                const respYes = respSeg?.querySelector('.seg-btn[data-value="true"]');
+                if (respYes && !respYes.classList.contains('active')) {
+                    respYes.click();
+                    showToast(`Auto-selected Resp Concern (${val})`, 1500);
+                }
+            }
+        });
+    }
+
 
     document.querySelectorAll('.risk-trigger[data-risk="renal"]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -634,9 +733,58 @@ function initialize() {
                 group.querySelectorAll('.select-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
 
-                if (group.id === 'oxMod') {
+                if (['oxMod', 'tracheType', 'tracheStatus'].includes(group.id)) {
                     const devEl = $('b_device');
                     if (devEl) devEl.dataset.manual = 'false';
+                    const airwayEl = $('airway_a');
+                    if (airwayEl) airwayEl.dataset.manual = 'false';
+
+                    const oxModActive = document.querySelector('#oxMod .select-btn.active')?.dataset.value;
+                    if (oxModActive === 'Trache') {
+                        const container = $('devices-container');
+                        if (container) {
+                            const type = document.querySelector('#tracheType .select-btn.active')?.dataset.value || 'Tracheostomy';
+                            const status = document.querySelector('#tracheStatus .select-btn.active')?.dataset.value || 'Stable';
+                            const details = status === 'New' ? `${type} (New)` : type;
+
+                            if (type === 'Laryngectomy') {
+                                const existingLary = Array.from(container.querySelectorAll('.device-entry[data-type="Other Device"]'))
+                                    .find(el => el.querySelector('.device-textarea')?.value.toLowerCase().includes('lary'));
+                                if (!existingLary) {
+                                    createDeviceEntry('Other Device', details);
+                                } else {
+                                    const area = existingLary.querySelector('.device-textarea');
+                                    if (area && !area.value.includes('-')) {
+                                        area.value = details;
+                                    }
+                                }
+                                const tracheEntry = container.querySelector('.device-entry[data-type="Tracheostomy"]');
+                                if (tracheEntry) tracheEntry.remove();
+                            } else {
+                                const existingTrache = container.querySelector('.device-entry[data-type="Tracheostomy"]');
+                                if (!existingTrache) {
+                                    createDeviceEntry('Tracheostomy', details);
+                                } else {
+                                    const area = existingTrache.querySelector('.device-textarea');
+                                    if (area && !area.value.includes('-')) {
+                                        area.value = details;
+                                    }
+                                }
+                                const existingLary = Array.from(container.querySelectorAll('.device-entry[data-type="Other Device"]'))
+                                    .find(el => el.querySelector('.device-textarea')?.value.toLowerCase().includes('lary'));
+                                if (existingLary) existingLary.remove();
+                            }
+                        }
+                    } else {
+                        const container = $('devices-container');
+                        if (container) {
+                            const tracheEntry = container.querySelector('.device-entry[data-type="Tracheostomy"]');
+                            if (tracheEntry) tracheEntry.remove();
+                            const existingLary = Array.from(container.querySelectorAll('.device-entry[data-type="Other Device"]'))
+                                    .find(el => el.querySelector('.device-textarea')?.value.toLowerCase().includes('lary'));
+                            if (existingLary) existingLary.remove();
+                        }
+                    }
                     toggleOxyFields();
                 }
 
@@ -663,6 +811,23 @@ function initialize() {
 
     $('bowel_date')?.addEventListener('change', compute);
     $('stepdownDate')?.addEventListener('change', compute);
+
+    $('btn_age_mitigated')?.addEventListener('click', () => {
+        const seg = $('seg_age_mitigated');
+        if (seg) {
+            const activeBtn = seg.querySelector('.seg-btn.active');
+            const isMitigated = activeBtn ? (activeBtn.dataset.value === 'true') : false;
+            const newValStr = !isMitigated ? 'true' : 'false';
+            
+            seg.querySelectorAll('.seg-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.value === newValStr);
+            });
+            handleSegmentClick('age_mitigated', newValStr);
+        }
+        compute();
+    });
+
+    $('age_mitigate_reason')?.addEventListener('input', compute);
 
     $('chk_use_mods')?.addEventListener('change', () => { $('mods_inputs').style.display = $('chk_use_mods').checked ? 'block' : 'none'; compute(); });
     $('chk_aperients')?.addEventListener('change', compute);
@@ -948,6 +1113,7 @@ function initialize() {
     updateWardOptions();
     const saved = loadState();
     if (saved) restoreState(saved);
+    updateAgeMitigationUI();
     refreshDetailToggleState();
     updateReviewTypeVisibility();
 

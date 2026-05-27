@@ -15,125 +15,293 @@ document.addEventListener('DOMContentLoaded', () => {
                     border: 1px solid var(--line); 
                     background: var(--input-bg); 
                     border-radius: 8px; 
-                    padding: 10px; 
-                    margin-bottom: 10px; 
+                    padding: 6px 10px; 
+                    margin-bottom: 6px; 
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
                 }
                 .quick-chip-group { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-                .quick-calc { padding: 4px 8px; font-size: 0.8rem; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); cursor:pointer; }
-                .quick-calc:hover { background: var(--line); }
+                .quick-calc {
+                    padding: 2px 6px !important;
+                    font-size: 0.72rem !important;
+                    font-weight: 600 !important;
+                    border-radius: 4px !important;
+                    background: var(--bg) !important;
+                    border: 1px solid var(--line) !important;
+                    color: var(--muted) !important;
+                    cursor: pointer !important;
+                    margin: 0 !important;
+                    height: 22px !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    transition: all 0.15s ease !important;
+                }
+                .quick-calc:hover {
+                    background: var(--line) !important;
+                    color: var(--ink) !important;
+                    border-color: var(--accent) !important;
+                }
+                .adds-calc-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 10px;
+                    width: 100%;
+                }
+                .adds-calc-content {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+                .adds-calc-label {
+                    display: block !important;
+                    font-size: 0.78rem !important;
+                    color: var(--muted) !important;
+                    margin-bottom: 2px !important;
+                    font-weight: 700 !important;
+                    text-transform: uppercase !important;
+                    letter-spacing: 0.5px !important;
+                }
+                .adds-calc-input {
+                    height: 28px !important;
+                    padding: 2px 8px !important;
+                    font-size: 0.82rem !important;
+                    margin: 0 !important;
+                    border-radius: 6px !important;
+                    border: 1px solid var(--line) !important;
+                    background: var(--bg) !important;
+                    color: var(--ink) !important;
+                    width: 100% !important;
+                    box-sizing: border-box !important;
+                    outline: none !important;
+                }
+                .adds-calc-input:focus {
+                    border-color: var(--accent) !important;
+                    box-shadow: 0 0 0 2px rgba(0, 122, 122, 0.1) !important;
+                }
+                .adds-calc-score-wrapper {
+                    width: 48px;
+                    flex-shrink: 0;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    align-self: center;
+                }
+                .adds-calc-score-label {
+                    font-size: 0.6rem;
+                    color: var(--muted);
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 1px;
+                }
+                .adds-calc-score-value {
+                    font-weight: 800;
+                    font-size: 1.2rem;
+                    color: var(--accent);
+                    line-height: 1;
+                    min-height: 1.2rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .o2-mode-label {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 4px !important;
+                    font-weight: 600 !important;
+                    font-size: 0.75rem !important;
+                    color: var(--muted) !important;
+                    cursor: pointer !important;
+                    margin-bottom: 0 !important;
+                }
+                .o2-mode-label input {
+                    margin: 0 !important;
+                    width: 12px !important;
+                    height: 12px !important;
+                }
+                .bp-input-unified-container {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    background: var(--bg);
+                    border-radius: 6px;
+                    overflow: hidden;
+                    border: 1px solid var(--line);
+                    transition: all 0.2s ease;
+                }
+                .bp-input-unified-container:focus-within {
+                    border-color: var(--accent);
+                }
+                .bp-input-unified-field {
+                    width: 100% !important;
+                    box-sizing: border-box !important;
+                    margin: 0 !important;
+                    border: none !important;
+                    background: transparent !important;
+                    text-align: center !important;
+                    height: 26px !important;
+                    outline: none !important;
+                    box-shadow: none !important;
+                    font-size: 0.82rem !important;
+                    padding: 2px 8px !important;
+                    color: var(--ink) !important;
+                }
+                .bp-input-unified-divider {
+                    border-top: 1px solid var(--line);
+                    width: 100%;
+                }
+                #calc_avpu .select-btn {
+                    padding: 3px 6px !important;
+                    font-size: 0.72rem !important;
+                    height: 24px !important;
+                    line-height: 1 !important;
+                    font-weight: 600 !important;
+                    border-radius: 4px !important;
+                }
             </style>
 
-            <div style="font-size:0.9rem; margin-bottom:12px; font-weight:600; color:var(--muted);">ADDS Calculator</div>
+            <div style="font-size:0.85rem; margin-bottom:8px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">ADDS Calculator</div>
             
             <div class="calc-box">
-                <div class="grid" style="row-gap:8px;">
-                    <div class="col-6"><label>RR</label><input type="text" id="calc_rr" placeholder="Rate (e.g. 15-20)"></div>
-                    <div class="col-6" style="align-self:end;"><div id="score_rr" style="font-weight:700; color:var(--accent);"></div></div>
-                    <div class="col-12">
+                <div class="adds-calc-row">
+                    <div class="adds-calc-content">
+                        <label class="adds-calc-label">Respiratory Rate (RR)</label>
+                        <input type="text" id="calc_rr" placeholder="Rate (e.g. 15-20)" class="adds-calc-input">
                         <div class="quick-chip-group">
-                            <button class="btn small quick-calc" data-target="calc_rr" data-val="12-14">12-14</button>
-                            <button class="btn small quick-calc" data-target="calc_rr" data-val="15-20">15-20</button>
-                            <button class="btn small quick-calc" data-target="calc_rr" data-val="21-24">21-24</button>
+                            <button class="quick-calc" data-target="calc_rr" data-val="12-14">12-14</button>
+                            <button class="quick-calc" data-target="calc_rr" data-val="15-20">15-20</button>
+                            <button class="quick-calc" data-target="calc_rr" data-val="21-24">21-24</button>
                         </div>
+                    </div>
+                    <div class="adds-calc-score-wrapper">
+                        <span class="adds-calc-score-label">Score</span>
+                        <div id="score_rr" class="adds-calc-score-value"></div>
                     </div>
                 </div>
             </div>
 
             <div class="calc-box">
-                <div class="grid" style="row-gap:8px;">
-                    <div class="col-6"><label>SpO2 (%)</label><input type="text" id="calc_spo2" placeholder="%"></div>
-                    <div class="col-6" style="align-self:end;"><div id="score_spo2" style="font-weight:700; color:var(--accent);"></div></div>
-                    <div class="col-12">
+                <div class="adds-calc-row">
+                    <div class="adds-calc-content">
+                        <label class="adds-calc-label">SpO2 (%)</label>
+                        <input type="text" id="calc_spo2" placeholder="%" class="adds-calc-input">
                         <div class="quick-chip-group">
-                            <button class="btn small quick-calc" data-target="calc_spo2" data-val=">94%">SpO2 >94%</button>
+                            <button class="quick-calc" data-target="calc_spo2" data-val=">94%">SpO2 >94%</button>
                         </div>
+                    </div>
+                    <div class="adds-calc-score-wrapper">
+                        <span class="adds-calc-score-label">Score</span>
+                        <div id="score_spo2" class="adds-calc-score-value"></div>
                     </div>
                 </div>
             </div>
 
             <div class="calc-box">
-                <div class="grid" style="row-gap:8px;">
-                    <div class="col-12">
-                        <label>Oxygen Support</label>
-                        <div style="display:flex; gap:8px; margin-bottom:8px;">
-                            <label><input type="radio" name="calc_o2_mode" value="std" checked> Standard (L/min)</label>
-                            <label><input type="radio" name="calc_o2_mode" value="hf"> High Flow / FiO2</label>
+                <div class="adds-calc-row">
+                    <div class="adds-calc-content">
+                        <label class="adds-calc-label">Oxygen Support</label>
+                        <div style="display:flex; gap:10px; margin-bottom:2px;">
+                            <label class="o2-mode-label"><input type="radio" name="calc_o2_mode" value="std" checked> Standard (L/min)</label>
+                            <label class="o2-mode-label"><input type="radio" name="calc_o2_mode" value="hf"> High Flow / FiO2</label>
                         </div>
-                    </div>
-                    <div class="col-6"><input type="text" id="calc_o2_val" placeholder="Liters or %"></div>
-                    <div class="col-6" style="align-self:end;"><div id="score_o2" style="font-weight:700; color:var(--accent);"></div></div>
-                    <div class="col-12">
+                        <input type="text" id="calc_o2_val" placeholder="Liters or %" class="adds-calc-input">
                         <div class="quick-chip-group">
-                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="RA">RA</button>
-                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="1LNP">1LNP</button>
-                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="2LNP">2LNP</button>
-                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="3LNP">3LNP</button>
-                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="4LNP">4LNP</button>
-                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="hf" data-val="30%">HFNP 30%</button>
-                            <button class="btn small quick-calc o2-chip" data-target="calc_o2_val" data-mode="hf" data-val="40%">HFNP 40%</button>
+                            <button class="quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="RA">RA</button>
+                            <button class="quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="1LNP">1LNP</button>
+                            <button class="quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="2LNP">2LNP</button>
+                            <button class="quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="3LNP">3LNP</button>
+                            <button class="quick-calc o2-chip" data-target="calc_o2_val" data-mode="std" data-val="4LNP">4LNP</button>
+                            <button class="quick-calc o2-chip" data-target="calc_o2_val" data-mode="hf" data-val="30%">HFNP 30%</button>
+                            <button class="quick-calc o2-chip" data-target="calc_o2_val" data-mode="hf" data-val="40%">HFNP 40%</button>
                         </div>
+                    </div>
+                    <div class="adds-calc-score-wrapper">
+                        <span class="adds-calc-score-label">Score</span>
+                        <div id="score_o2" class="adds-calc-score-value"></div>
                     </div>
                 </div>
             </div>
 
             <div class="calc-box">
-                <div class="grid" style="row-gap:8px;">
-                    <div class="col-12"><label>Blood Pressure</label></div>
-                    <div class="col-3"><input type="number" id="calc_sbp" placeholder="SBP"></div>
-                    <div class="col-3"><input type="number" id="calc_dbp" placeholder="DBP"></div>
-                    <div class="col-6" style="align-self:center;"><div id="score_sbp" style="font-weight:700; color:var(--accent);"></div></div>
+                <div class="adds-calc-row">
+                    <div class="adds-calc-content">
+                        <label class="adds-calc-label">Blood Pressure</label>
+                        <div class="bp-input-unified-container">
+                            <input type="number" id="calc_sbp" placeholder="SBP" class="bp-input-unified-field">
+                            <div class="bp-input-unified-divider"></div>
+                            <input type="number" id="calc_dbp" placeholder="DBP" class="bp-input-unified-field">
+                        </div>
+                    </div>
+                    <div class="adds-calc-score-wrapper">
+                        <span class="adds-calc-score-label">Score</span>
+                        <div id="score_sbp" class="adds-calc-score-value"></div>
+                    </div>
                 </div>
             </div>
 
             <div class="calc-box">
-                <div class="grid" style="row-gap:8px;">
-                    <div class="col-6"><label>Heart Rate</label><input type="text" id="calc_hr" placeholder="BPM"></div>
-                    <div class="col-6" style="align-self:end;"><div id="score_hr" style="font-weight:700; color:var(--accent);"></div></div>
-                    <div class="col-12">
+                <div class="adds-calc-row">
+                    <div class="adds-calc-content">
+                        <label class="adds-calc-label">Heart Rate</label>
+                        <input type="text" id="calc_hr" placeholder="BPM" class="adds-calc-input">
                         <div class="quick-chip-group">
-                            <button class="btn small quick-calc" data-target="calc_hr" data-val="60s">60s</button>
-                            <button class="btn small quick-calc" data-target="calc_hr" data-val="70s">70s</button>
-                            <button class="btn small quick-calc" data-target="calc_hr" data-val="80s">80s</button>
-                            <button class="btn small quick-calc" data-target="calc_hr" data-val="90s">90s</button>
-                            <button class="btn small quick-calc" data-target="calc_hr" data-val="100s">100s</button>
+                            <button class="quick-calc" data-target="calc_hr" data-val="60s">60s</button>
+                            <button class="quick-calc" data-target="calc_hr" data-val="70s">70s</button>
+                            <button class="quick-calc" data-target="calc_hr" data-val="80s">80s</button>
+                            <button class="quick-calc" data-target="calc_hr" data-val="90s">90s</button>
+                            <button class="quick-calc" data-target="calc_hr" data-val="100s">100s</button>
                         </div>
+                    </div>
+                    <div class="adds-calc-score-wrapper">
+                        <span class="adds-calc-score-label">Score</span>
+                        <div id="score_hr" class="adds-calc-score-value"></div>
                     </div>
                 </div>
             </div>
 
             <div class="calc-box">
-                <div class="grid" style="row-gap:8px;">
-                    <div class="col-6"><label>Temp</label><input type="text" id="calc_temp" placeholder="°C"></div>
-                    <div class="col-6" style="align-self:end;"><div id="score_temp" style="font-weight:700; color:var(--accent);"></div></div>
-                     <div class="col-12">
+                <div class="adds-calc-row">
+                    <div class="adds-calc-content">
+                        <label class="adds-calc-label">Temperature</label>
+                        <input type="text" id="calc_temp" placeholder="°C" class="adds-calc-input">
                         <div class="quick-chip-group">
-                            <button class="btn small quick-calc" data-target="calc_temp" data-val="Afebrile">Afebrile</button>
+                            <button class="quick-calc" data-target="calc_temp" data-val="Afebrile">Afebrile</button>
                         </div>
+                    </div>
+                    <div class="adds-calc-score-wrapper">
+                        <span class="adds-calc-score-label">Score</span>
+                        <div id="score_temp" class="adds-calc-score-value"></div>
                     </div>
                 </div>
             </div>
 
             <div class="calc-box">
-                <div class="grid" style="row-gap:8px;">
-                    <div class="col-12">
-                        <label>Consciousness</label>
-                        <div class="button-group" id="calc_avpu">
+                <div class="adds-calc-row">
+                    <div class="adds-calc-content">
+                        <label class="adds-calc-label">Consciousness</label>
+                        <div class="button-group" id="calc_avpu" style="margin-top:2px;">
                             <button class="select-btn active" data-value="A">Alert</button>
                             <button class="select-btn" data-value="V">Voice</button>
                             <button class="select-btn" data-value="P">Pain</button>
                             <button class="select-btn" data-value="U">Unresp</button>
                         </div>
-                        <div id="score_avpu" style="font-weight:700; color:var(--accent); margin-top:4px; text-align:right;"></div>
+                    </div>
+                    <div class="adds-calc-score-wrapper">
+                        <span class="adds-calc-score-label">Score</span>
+                        <div id="score_avpu" class="adds-calc-score-value"></div>
                     </div>
                 </div>
             </div>
             
-            <div style="margin-top:12px; margin-bottom:48px; padding-top:8px; border-top:2px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-weight:600;">Total Score:</div>
-                <div id="calc_total_display" style="font-size:1.4rem; font-weight:800; color:var(--ink);">0</div>
+            <div style="margin-top:8px; margin-bottom:28px; padding-top:8px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:0.5px;">Total Score</div>
+                <div id="calc_total_display" style="font-size:1.3rem; font-weight:800; color:var(--ink);">0</div>
             </div>
             
-            <button id="btnHideCalc" class="btn small" style="position:absolute; bottom:8px; right:8px; background:var(--muted); color:white; z-index:10;">Hide Calc</button>
+            <button id="btnHideCalc" class="quick-calc" style="position:absolute; bottom:6px; right:6px; background:var(--muted) !important; color:white !important; border:none !important; height:24px !important; padding:0 8px !important; font-size:0.75rem !important;">Hide Calc</button>
         `;
     }
 

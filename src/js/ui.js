@@ -38,7 +38,9 @@ export function handleSegmentClick(id, value) {
         'neuro_psych': 'neuro_psych_wrapper',
         'pics': 'pics_wrapper',
         'resp_dyspnea': 'sub_dyspnea_severity',
-        'intubated': 'sub_intubated_reason'
+        'intubated': 'sub_intubated_reason',
+        'age_mitigated': 'age_mitigate_reason_wrapper',
+        'frailty_known': 'frailty_note_wrapper'
     };
 
     if (map[id]) {
@@ -58,7 +60,7 @@ export function handleSegmentClick(id, value) {
                 setTimeout(() => {
                     const firstFocusable = el.querySelector('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
                     if (firstFocusable) {
-                        firstFocusable.focus();
+                        firstFocusable.focus({ preventScroll: true });
                     }
                 }, 50);
             }
@@ -171,8 +173,44 @@ export function createDeviceEntry(type, val = '', insertionDate = '') {
     html += `</div>`;
 
     div.innerHTML = html;
+    
+    if (type === 'Tracheostomy') {
+        const tracheBtn = document.querySelector('#oxMod .select-btn[data-value="Trache"]');
+        if (tracheBtn && !tracheBtn.classList.contains('active')) {
+            tracheBtn.click();
+        }
+        const tracheTypeBtn = document.querySelector('#tracheType .select-btn[data-value="Tracheostomy"]');
+        if (tracheTypeBtn && !tracheTypeBtn.classList.contains('active')) {
+            tracheTypeBtn.click();
+        }
+    }
+
     div.querySelector('.remove-entry').addEventListener('click', () => {
+        const textarea = div.querySelector('.device-textarea');
         div.remove();
+        if (type === 'Tracheostomy') {
+            const raBtn = document.querySelector('#oxMod .select-btn[data-value="RA"]');
+            if (raBtn) {
+                raBtn.click();
+            }
+            const airwayInput = $('airway_a');
+            if (airwayInput && airwayInput.dataset.manual !== 'true') {
+                if (airwayInput.value.startsWith('Tracheostomy')) {
+                    airwayInput.value = '';
+                }
+            }
+        } else if (type === 'Other Device' && textarea && textarea.value.toLowerCase().includes('lary')) {
+            const raBtn = document.querySelector('#oxMod .select-btn[data-value="RA"]');
+            if (raBtn) {
+                raBtn.click();
+            }
+            const airwayInput = $('airway_a');
+            if (airwayInput && airwayInput.dataset.manual !== 'true') {
+                if (airwayInput.value.startsWith('Laryngectomy')) {
+                    airwayInput.value = '';
+                }
+            }
+        }
         window.devicesModifiedSinceLastSummary = true;
         updateDevicesSectionVisibility();
         saveState(true);
@@ -181,6 +219,19 @@ export function createDeviceEntry(type, val = '', insertionDate = '') {
     const textarea = div.querySelector('.device-textarea');
     if (textarea) {
         textarea.addEventListener('input', () => {
+            if (type === 'Other Device') {
+                const val = textarea.value.toLowerCase().trim();
+                if (val.includes('lary')) {
+                    const tracheBtn = document.querySelector('#oxMod .select-btn[data-value="Trache"]');
+                    if (tracheBtn && !tracheBtn.classList.contains('active')) {
+                        tracheBtn.click();
+                    }
+                    const laryBtn = document.querySelector('#tracheType .select-btn[data-value="Laryngectomy"]');
+                    if (laryBtn && !laryBtn.classList.contains('active')) {
+                        laryBtn.click();
+                    }
+                }
+            }
             window.devicesModifiedSinceLastSummary = true;
             saveState(true);
             computeAll();
@@ -360,6 +411,10 @@ export function clearData() {
         if ($(id)) {
             $(id).value = '';
             $(id).classList.remove('scraped-data');
+            const el = $(id);
+            if (['b_device', 'airway_a'].includes(id)) {
+                el.dataset.manual = 'false';
+            }
         }
     });
 
@@ -381,7 +436,8 @@ export function clearData() {
         '#resp_gate_content', '#renal_gate_content', '#neuro_gate_content', '#electrolyte_gate_content', '#infection_gate_content', '#pressor_gate_content', '#hac_content',
         '#immobility_note_wrapper', '#after_hours_note_wrapper', '#comorb_other_note_wrapper', '#unsuitable_note_wrapper', '#override_reason_box', '#sub_intubated_reason', '#sub_dyspnea_severity',
         '#pressor_recent_other_note_wrapper', '#dialysis_type_wrapper', '#anticoag_note_wrapper', '#vte_prophylaxis_note_wrapper',
-        '#pics_wrapper', '#sleep_quality_wrapper', '#neuro_psych_wrapper', '#pain_context_wrapper', '#nutrition_context_wrapper'
+        '#pics_wrapper', '#sleep_quality_wrapper', '#neuro_psych_wrapper', '#pain_context_wrapper', '#nutrition_context_wrapper',
+        '#frailty_note_wrapper'
     ];
     gatesToHide.forEach(sel => { const el = document.querySelector(sel); if (el) el.style.display = 'none'; });
 
@@ -639,3 +695,102 @@ export function closeMobileNav() {
     const overlay = $('mobileNavOverlay');
     if (overlay) overlay.classList.remove('active');
 }
+
+export function updateAgeMitigationUI() {
+    const ageInput = $('ptAge');
+    const wrapper = $('age_risk_wrapper');
+    const reasonWrapper = $('age_mitigate_reason_wrapper');
+    const reasonInput = $('age_mitigate_reason');
+    const seg = $('seg_age_mitigated');
+    const ageLabel = $('lbl_ptAge');
+    const clickBox = $('btn_age_mitigated');
+    const colWrapper = $('wrapper_ptAge');
+    
+    if (!ageInput || !wrapper) return;
+    
+    const age = parseFloat(ageInput.value);
+    if (!isNaN(age) && age >= 75) {
+        wrapper.style.display = 'block';
+        
+        // Add the card wrapper dynamically
+        if (colWrapper) colWrapper.classList.add('input-box');
+        
+        // Find if mitigated
+        const activeBtn = seg?.querySelector('.seg-btn.active');
+        const isMitigated = activeBtn ? (activeBtn.dataset.value === 'true') : false;
+        
+        if (reasonWrapper) {
+            reasonWrapper.style.display = isMitigated ? 'block' : 'none';
+        }
+        
+        if (isMitigated) {
+            // Mitigated — subtle clean border
+            if (colWrapper) {
+                colWrapper.style.borderColor = 'var(--line)';
+                colWrapper.style.background = '';
+                colWrapper.style.boxShadow = '';
+            }
+            
+            if (ageLabel) {
+                ageLabel.innerHTML = 'Age';
+                ageLabel.style.color = '';
+            }
+            ageInput.style.borderColor = '';
+            ageInput.style.boxShadow = '';
+            
+            if (clickBox) {
+                clickBox.removeAttribute('style');
+                clickBox.className = 'age-mitigate-btn mitigated';
+                clickBox.innerHTML = '✓ Mitigated for good baseline';
+            }
+        } else {
+            // Unmitigated — amber highlight on the card
+            if (colWrapper) {
+                colWrapper.style.borderColor = 'var(--amber)';
+                colWrapper.style.background = 'rgba(245,158,11,0.03)';
+                colWrapper.style.boxShadow = '0 0 0 1px var(--amber)';
+            }
+            
+            if (ageLabel) {
+                ageLabel.innerHTML = 'Age <span style="color: var(--amber); font-weight: bold; font-size: 0.72rem;">- Frailty risk identified</span>';
+                ageLabel.style.color = 'var(--amber)';
+            }
+            ageInput.style.borderColor = '';
+            ageInput.style.boxShadow = '';
+            
+            if (clickBox) {
+                clickBox.removeAttribute('style');
+                clickBox.className = 'age-mitigate-btn';
+                clickBox.innerHTML = 'Click here to mitigate age risk for good baseline';
+            }
+        }
+    } else {
+        wrapper.style.display = 'none';
+        if (reasonInput) reasonInput.value = '';
+        if (reasonWrapper) reasonWrapper.style.display = 'none';
+        if (seg) {
+            seg.querySelectorAll('.seg-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.value === 'false');
+            });
+        }
+        // Remove the card wrapper and restore bare style
+        if (colWrapper) {
+            colWrapper.classList.remove('input-box');
+            colWrapper.style.borderColor = 'transparent';
+            colWrapper.style.background = 'transparent';
+            colWrapper.style.boxShadow = 'none';
+        }
+        if (ageLabel) {
+            ageLabel.innerHTML = 'Age';
+            ageLabel.style.color = '';
+        }
+        ageInput.style.borderColor = '';
+        ageInput.style.boxShadow = '';
+        if (clickBox) {
+            clickBox.removeAttribute('style');
+            clickBox.className = 'age-mitigate-btn';
+            clickBox.innerHTML = 'Click here to mitigate age risk for good baseline';
+        }
+    }
+}
+
