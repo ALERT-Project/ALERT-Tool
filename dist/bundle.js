@@ -876,9 +876,9 @@
               alertDiv.style.opacity = "0";
               setTimeout(() => alertDiv.remove(), 300);
             }, 3e3);
-            const newRiskNames = [...newRed, ...newAmber].join(', ');
+            const newRiskNames = [...newRed, ...newAmber].join(", ");
             setTimeout(() => {
-              showToast(`⚠️ New risk auto-flagged: ${newRiskNames}`, 3000);
+              showToast(`\u26A0\uFE0F New risk auto-flagged: ${newRiskNames}`, 3e3);
             }, 500);
           }
         }
@@ -1410,7 +1410,6 @@
     if (isQuickReviewMode) {
       exitQuickReviewMode();
     }
-    pushUndo(getState());
     window.scrollTo({ top: 0, behavior: "smooth" });
     document.querySelectorAll(".panel").forEach((p2) => p2.style.display = "none");
     document.querySelectorAll(".accordion").forEach((btn) => {
@@ -1418,7 +1417,13 @@
       const icon = btn.querySelector(".icon");
       if (icon) icon.textContent = "[+]";
     });
+    sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(UNDO_KEY);
+    sessionStorage.removeItem("alertToolLastSaved_v7_7");
+    localStorage.removeItem(ACCORDION_KEY);
     sessionStorage.removeItem(ACCORDION_KEY);
+    localStorage.removeItem("alert_audit_log_v1");
+    updateLastSaved();
     staticInputs.forEach((id) => {
       if ($(id)) {
         $(id).value = "";
@@ -1514,7 +1519,6 @@
     const resetEv = new CustomEvent("resetAddsCalc");
     document.dispatchEvent(resetEv);
     computeAll();
-    saveState(true);
     showToast("Data cleared", 2e3);
   }
   function openAccordion(panelId, btnSelector) {
@@ -1782,9 +1786,6 @@
     const iso = sessionStorage.getItem("alertToolLastSaved_v7_7");
     const el = $("lastSaved");
     if (el) el.textContent = iso ? "Last saved: " + new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Last saved: --:--";
-  }
-  function pushUndo(snapshot) {
-    sessionStorage.setItem(UNDO_KEY, JSON.stringify({ snapshot, created: Date.now() }));
   }
   function getState() {
     const state = {};

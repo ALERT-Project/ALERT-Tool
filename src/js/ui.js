@@ -1,6 +1,6 @@
 import { $, debounce, showToast } from './utils.js';
-import { normalRanges, comorbMap, toggleInputs, staticInputs, ACCORDION_KEY } from './config.js';
-import { getState, saveState, pushUndo, isQuickReviewMode, setQuickReviewMode, initialQuickReviewRisks, setInitialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured, previousCategoryData } from './state.js';
+import { normalRanges, comorbMap, toggleInputs, staticInputs, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY } from './config.js';
+import { getState, saveState, pushUndo, isQuickReviewMode, setQuickReviewMode, initialQuickReviewRisks, setInitialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured, previousCategoryData, updateLastSaved } from './state.js';
 import { computeAll } from './logic.js';
 
 export function checkBloodRanges() {
@@ -396,7 +396,6 @@ export function clearData() {
         exitQuickReviewMode();
     }
 
-    pushUndo(getState());
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
@@ -405,7 +404,13 @@ export function clearData() {
         const icon = btn.querySelector('.icon');
         if (icon) icon.textContent = '[+]';
     });
+    sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(UNDO_KEY);
+    sessionStorage.removeItem('alertToolLastSaved_v7_7');
+    localStorage.removeItem(ACCORDION_KEY);
     sessionStorage.removeItem(ACCORDION_KEY);
+    localStorage.removeItem('alert_audit_log_v1');
+    updateLastSaved();
 
     staticInputs.forEach(id => {
         if ($(id)) {
@@ -477,7 +482,6 @@ export function clearData() {
     document.dispatchEvent(resetEv);
 
     computeAll();
-    saveState(true);
     showToast("Data cleared", 2000);
 }
 
