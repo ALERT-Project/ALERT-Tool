@@ -230,7 +230,7 @@ export function computeAll() {
             if (s.oxMod === 'NP') {
                 const flow = num(s.npFlow);
                 if (flow >= 3) { parts.push(`high flow NP ${flow}L`); flagged.red.push('npFlow'); hasRed = true; }
-                else if (flow >= 2) { parts.push(`Oxygen requirement - ${flow}LNP`); flagged.amber.push('npFlow'); }
+                else if (flow > 2) { parts.push(`Oxygen requirement - ${flow}LNP`); flagged.amber.push('npFlow'); }
             } else if (s.oxMod === 'HFNP') {
                 const fio2Val = num(s.hfnpFio2);
                 if (fio2Val >= 60) { parts.push(`HFNP - high FiO2 ${s.hfnpFio2 || ''}%`); flagged.red.push('oxMod'); hasRed = true; }
@@ -269,7 +269,7 @@ export function computeAll() {
                 const finalTxt = `Respiratory concern - ${joined}`;
                 if (hasRed) red.push(finalTxt); else amber.push(finalTxt);
             } else {
-                const isLowFlowNP = (s.oxMod === 'NP' && (num(s.npFlow) || 0) < 2);
+                const isLowFlowNP = (s.oxMod === 'NP' && (num(s.npFlow) || 0) <= 2);
                 if (!isLowFlowNP) {
                     add(amber, 'Respiratory concern', 'seg_resp_concern', 'amber', s.dyspneaConcern_note);
                 }

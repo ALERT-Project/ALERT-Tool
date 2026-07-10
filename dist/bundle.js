@@ -473,7 +473,7 @@
             parts.push(`high flow NP ${flow}L`);
             flagged.red.push("npFlow");
             hasRed = true;
-          } else if (flow >= 2) {
+          } else if (flow > 2) {
             parts.push(`Oxygen requirement - ${flow}LNP`);
             flagged.amber.push("npFlow");
           }
@@ -557,7 +557,7 @@
           if (hasRed) red.push(finalTxt);
           else amber.push(finalTxt);
         } else {
-          const isLowFlowNP = s.oxMod === "NP" && (num(s.npFlow) || 0) < 2;
+          const isLowFlowNP = s.oxMod === "NP" && (num(s.npFlow) || 0) <= 2;
           if (!isLowFlowNP) {
             add(amber, "Respiratory concern", "seg_resp_concern", "amber", s.dyspneaConcern_note);
           }
@@ -2597,7 +2597,7 @@
             }
           }
         }
-        const isLowFlowNP = selectedMode === "NP" && selectedFlow && parseInt(selectedFlow) < 2;
+        const isLowFlowNP = selectedMode === "NP" && selectedFlow && parseFloat(selectedFlow) <= 2;
         if (selectedMode && selectedMode !== "RA" && !isLowFlowNP) {
           const respSeg = $("seg_resp_concern");
           const respYes = respSeg?.querySelector('.seg-btn[data-value="true"]');
@@ -3353,3 +3353,4 @@
     initialize();
   }
 })();
+//# sourceMappingURL=bundle.js.map

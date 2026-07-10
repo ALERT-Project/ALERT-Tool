@@ -383,8 +383,8 @@ function initialize() {
                 }
             }
 
-            // Auto-flag the respiratory concern gate if NOT room air and NOT low-flow NP (<2L)
-            const isLowFlowNP = (selectedMode === 'NP' && selectedFlow && parseInt(selectedFlow) < 2);
+            // Auto-flag the respiratory concern gate if NOT room air and NOT low-flow NP (<=2L)
+            const isLowFlowNP = (selectedMode === 'NP' && selectedFlow && parseFloat(selectedFlow) <= 2);
             if (selectedMode && selectedMode !== 'RA' && !isLowFlowNP) {
                 const respSeg = $('seg_resp_concern');
                 const respYes = respSeg?.querySelector('.seg-btn[data-value="true"]');
