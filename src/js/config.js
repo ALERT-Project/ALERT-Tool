@@ -2,6 +2,21 @@ export const STORAGE_KEY = 'alertToolData_v7_7';
 export const ACCORDION_KEY = 'alertToolAccordions_v7_7';
 export const UNDO_KEY = 'alertToolUndo_v7_7';
 
+// Bloods that actually feed a risk gate: Cr -> renal, WCC/CRP/Neut/Lymph -> infection,
+// K/Na/Mg/PO4 -> electrolytes, lactate -> its own rule. Everything else still highlights in
+// the grid when out of range, but staging it as an issue was noise rather than signal.
+// (Mg and PO4 are listed for visibility; the electrolyte rule itself still tests only K and Na.)
+export const GATE_LINKED_BLOODS = ['cr_review', 'wcc', 'crp', 'neut', 'lymph', 'k', 'na', 'mg', 'phos', 'lac_review'];
+
+// Display names for blood keys - "Abnormal CR 180" reads as shouting, and the handover line
+// inherits the same text.
+export const BLOOD_LABELS = {
+    wcc: 'WCC', crp: 'CRP', neut: 'Neut', lymph: 'Lymph', hb: 'Hb', plts: 'Plts',
+    k: 'K+', na: 'Na', cr_review: 'Cr', egfr: 'eGFR', mg: 'Mg', alb: 'Alb',
+    lac_review: 'Lactate', phos: 'PO4', bili: 'Bili', alt: 'ALT', inr: 'INR',
+    aptt: 'APTT', bsl: 'BSL'
+};
+
 export const normalRanges = {
     wcc: { low: 4, high: 11 },
     crp: { low: 0, high: 5 },
@@ -38,8 +53,8 @@ export const comorbMap = {
 };
 
 export const staticInputs = [
-    'reviewTime', 'ptName', 'ptMrn', 'ptAge', 'ptWeight', 'ptWard', 'ptBed', 'ptWardOther', 'ptAdmissionReason', 'icuSummary', 'icuLos', 'stepdownDate', 'stepdownTime',
-    'npFlow', 'hfnpFio2', 'hfnpFlow', 'nivFio2', 'nivPeep', 'nivPs', 'override', 'overrideNote',
+    'reviewTime', 'reviewerInitials', 'quickNotes', 'ptName', 'ptMrn', 'ptAge', 'ptWeight', 'ptWard', 'ptBed', 'ptWardOther', 'ptAdmissionReason', 'icuSummary', 'icuLos', 'stepdownDate', 'stepdownTime',
+    'npFlow', 'hfnpFio2', 'hfnpFlow', 'nivFio2', 'nivPeep', 'nivPs', 'override', 'overrideNote', 'addsManual', 'addsOverrideNote',
     'trache_details_note', 'mods_score', 'mods_details', 'airway_a', 'a_comment', 'b_rr', 'b_spo2', 'b_device', 'b_wob', 'b_cough', 'b_comment',
     'c_hr', 'c_hr_rhythm', 'c_nibp', 'c_cr', 'c_perf', 'c_comment', 'd_alert', 'd_pain', 'd_comment', 'e_temp', 'e_bsl', 'e_fluid', 'e_uop', 'e_comment', 'atoe_adds',
     'ae_mobility', 'ae_diet', 'ae_bowels', 'bowel_date',
@@ -56,6 +71,7 @@ export const staticInputs = [
 ];
 
 export const segmentedInputs = [
+    'bloods_status',
     'after_hours', 'hist_o2', 'intubated',
     'resp_concern', 'renal', 'immobility', 'infection', 'new_bloods_ordered',
     'neuro_gate', 'nutrition_adequate', 'electrolyte_gate', 'pressors', 'hac',

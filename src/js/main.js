@@ -1,14 +1,19 @@
 import { $, debounce, showToast } from './utils.js';
 import { ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs } from './config.js';
-import { getState, saveState, loadState, restoreState, previousCategoryData, updateLastSaved } from './state.js';
+import {
+    getState, saveState, loadState, restoreState, previousCategoryData, updateLastSaved,
+    isQuickReviewMode, setQuickReviewDismissed, addActiveIssue, addManualIssue,
+    getUnresolvedActiveIssues, renderScrapedIssuesList
+} from './state.js';
 import { computeAll } from './logic.js';
-import { generateSummary } from './summary.js';
+import { generateSummary, generateHandoverLine } from './summary.js';
 import {
     checkBloodRanges, updateWardOptions, updateReviewTypeVisibility, updateWardOtherVisibility,
     createDeviceEntry, updateDevicesSectionVisibility, toggleOxyFields, toggleInfusionsBox,
     handleUnknownBLODate, showClearDataModal, hideClearDataModal, syncComorbsToPMH, clearData,
     enableQuickReviewMode, exitQuickReviewMode, showQuickReviewPrompt, openMobileNav, closeMobileNav,
-    handleSegmentClick, toggleBowelDate, updateAgeMitigationUI
+    handleSegmentClick, toggleBowelDate, updateAgeMitigationUI, openAccordion, closeAccordion,
+    setBloodsOverlay, closeQuickOverlays, toggleAddsOverride, refreshAddsOverrideUI
 } from './ui.js';
 
 function initialize() {
@@ -40,6 +45,11 @@ function initialize() {
     window.compute = compute;
     window.showQuickReviewPrompt = showQuickReviewPrompt;
     window.previousCategoryData = previousCategoryData;
+    // Used by plugins/importer.js to stage scraped issues.
+    window.addActiveIssue = addActiveIssue;
+    window.renderScrapedIssuesList = renderScrapedIssuesList;
+    // plugins/adds_calc.js pings this after each recalculation.
+    window.refreshAddsOverrideUI = refreshAddsOverrideUI;
 
     function triggerGenerate() {
         const summaryEl = $('summary');
@@ -66,10 +76,46 @@ function initialize() {
         if (actions) actions.style.display = 'block';
         const btn = $('btn_generate_summary');
         if (btn) btn.innerHTML = '🔄 Click again to regenerate DMR summary <span style="font-size:0.9em; font-weight:normal; opacity:0.9;">(will overwrite any manual edits)</span>';
+
+        const handoverEl = $('handoverLine');
+        // Same computed risks the DMR note uses, so the line reads identically in either mode.
+        if (handoverEl) handoverEl.value = generateHandoverLine(
+            window._lastState || getState(),
+            getUnresolvedActiveIssues(),
+            window._lastCat,
+            window._lastRed || [],
+            window._lastAmber || []
+        );
+        const handoverActions = $('handover_actions');
+        if (handoverActions) handoverActions.style.display = 'block';
+
         saveState(true);
     }
 
     $('btn_generate_summary')?.addEventListener('click', triggerGenerate);
+
+    $('btnCopyHandoverLine')?.addEventListener('click', () => {
+        const text = $('handoverLine')?.value;
+        if (!text) { showToast('Nothing to copy', 1500); return; }
+        navigator.clipboard.writeText(text).then(() => showToast('Handover line copied', 1500));
+    });
+
+    // Add-issue row: Enter commits and keeps focus, so several issues can be typed in a row.
+    const commitManualIssue = () => {
+        const input = $('manualIssueInput');
+        const val = input?.value.trim();
+        if (!val) return;
+        addManualIssue(val);
+        input.value = '';
+        renderScrapedIssuesList();
+        input.focus();
+    };
+    $('manualIssueInput')?.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        commitManualIssue();
+    });
+    $('btnAddIssue')?.addEventListener('click', commitManualIssue);
 
     const summaryInputEl = $('summary');
     if (summaryInputEl) {
@@ -217,6 +263,16 @@ function initialize() {
             });
         });
     }
+
+    // Answering a carried-forward gate - either way - makes it this review's own finding.
+    document.addEventListener('click', (e) => {
+        const btn = e.target?.closest?.('.seg-btn');
+        if (!btn) return;
+        const box = btn.closest('.input-box.carried-forward');
+        if (!box) return;
+        box.classList.remove('carried-forward');
+        delete box.dataset.carriedFrom;
+    });
 
     syncSegments('seg_renal_chronic', 'seg_renal_chronic_bloods', 'renal');
     syncSegments('seg_infection_downtrend', 'seg_infection_downtrend_bloods', 'infection');
@@ -519,7 +575,7 @@ function initialize() {
                     const panel = targetEl.querySelector('.panel');
                     if (panel && panel.style.display !== 'block') {
                         panel.style.display = 'block';
-                        targetEl.querySelector('.icon').textContent = '[-]';
+                        targetEl.querySelector('.accordion')?.setAttribute('aria-expanded', 'true');
                     }
                 }
             }
@@ -831,7 +887,11 @@ function initialize() {
 
     $('chk_use_mods')?.addEventListener('change', () => { $('mods_inputs').style.display = $('chk_use_mods').checked ? 'block' : 'none'; compute(); });
     $('chk_aperients')?.addEventListener('change', compute);
-    $('chk_bloods_nil_sig')?.addEventListener('change', compute);
+    $('chk_bloods_nil_sig')?.addEventListener('change', (e) => {
+        const bloodsGrid = document.querySelector('.bloods-grid');
+        if (bloodsGrid) bloodsGrid.style.display = e.target.checked ? 'none' : '';
+        compute();
+    });
     $('chk_unknown_blo_date')?.addEventListener('change', () => { handleUnknownBLODate(); compute(); });
     $('comorb_other_note')?.addEventListener('input', compute);
     $('comorb_other_note')?.addEventListener('blur', () => {
@@ -949,10 +1009,31 @@ function initialize() {
 
     $('btnQuickReview')?.addEventListener('click', enableQuickReviewMode);
     $('btnFullReview')?.addEventListener('click', () => {
+        setQuickReviewDismissed(true);
         const prompt = $('quickReviewPrompt');
         if (prompt) prompt.style.display = 'none';
     });
     $('btnExitQuickReview')?.addEventListener('click', exitQuickReviewMode);
+
+    $('btnManualQuickReview')?.addEventListener('click', () => {
+        if (isQuickReviewMode) exitQuickReviewMode();
+        else { setQuickReviewDismissed(false); enableQuickReviewMode(); }
+    });
+
+    // "Details" reveals the full bloods grid without leaving Quick Review. In Quick Review
+    // the card floats over the page, since the grid needs more room than the left rail has.
+    const toggleBloodsDetails = () => {
+        const panel = $('panel_bloods');
+        const isOpen = panel && panel.style.display === 'block';
+        if (isOpen) closeAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
+        else openAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
+        setBloodsOverlay(!isOpen);
+    };
+    $('btnBloodsDetailsToggle')?.addEventListener('click', toggleBloodsDetails);
+    $('qrBackdrop')?.addEventListener('click', closeQuickOverlays);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.querySelector('.qr-expanded')) closeQuickOverlays();
+    });
 
     $('floatingNavBtn')?.addEventListener('click', openMobileNav);
     $('closeMobileNav')?.addEventListener('click', closeMobileNav);
@@ -1079,10 +1160,12 @@ function initialize() {
             const panel = w.querySelector('.panel');
             const isOpen = panel.style.display === 'block';
             panel.style.display = isOpen ? 'none' : 'block';
-            w.querySelector('.icon').textContent = isOpen ? '[+]' : '[-]';
+            w.querySelector('.accordion').setAttribute('aria-expanded', String(!isOpen));
             const map = JSON.parse(localStorage.getItem(ACCORDION_KEY) || '{}');
             map[w.dataset.accordionId] = !isOpen;
             localStorage.setItem(ACCORDION_KEY, JSON.stringify(map));
+            // Bloods opened from its own header still gets the Quick Review overlay treatment.
+            if (w.id === 'section-bloods') setBloodsOverlay(!isOpen);
         });
     });
 
@@ -1090,36 +1173,48 @@ function initialize() {
         btn.addEventListener('click', () => { createDeviceEntry(btn.dataset.deviceType); updateDevicesSectionVisibility(); computeAll(); });
     });
 
-    ['red', 'amber'].forEach(t => {
-        const btn = $(`override_${t}`);
-        if (btn) btn.addEventListener('click', () => {
-            const isActive = btn.classList.contains('active');
+    // Select Category: red/amber upgrade the computed category, green downgrades it.
+    // Clicking the active button, or Clear, hands the category back to the calculation.
+    const CATEGORY_CHOICES = ['red', 'amber', 'green'];
+    // compute() -> refreshCategorySelect() owns the button/reason-box visuals, so restoring a
+    // saved state lands in the same place as a click.
+    const setCategoryChoice = (choice) => {
+        $('override').value = choice;
+        compute();
+        if (choice !== 'none') $('overrideNote')?.focus();
+    };
 
-            if (isActive) {
-                $('override').value = 'none';
-                $('override_reason_box').style.display = 'none';
-                $('override_amber').classList.remove('active');
-                $('override_red').classList.remove('active');
-            } else {
-                $('override').value = t;
-                $('override_reason_box').style.display = 'block';
-                $('override_amber').classList.toggle('active', t === 'amber');
-                $('override_red').classList.toggle('active', t === 'red');
-            }
-            compute();
+    CATEGORY_CHOICES.forEach(t => {
+        $(`override_${t}`)?.addEventListener('click', () => {
+            const isActive = $(`override_${t}`).classList.contains('active');
+            setCategoryChoice(isActive ? 'none' : t);
         });
+    });
+    $('override_clear')?.addEventListener('click', () => setCategoryChoice('none'));
+
+    $('btnAddsOverride')?.addEventListener('click', () => { toggleAddsOverride(); compute(); });
+    $('adds')?.addEventListener('input', refreshAddsOverrideUI);
+    $('addsOverrideNote')?.addEventListener('input', refreshAddsOverrideUI);
+
+    $('btnDeviceMore')?.addEventListener('click', (e) => {
+        const group = document.querySelector('.device-add-group');
+        if (!group) return;
+        const showAll = group.classList.toggle('show-all');
+        e.currentTarget.textContent = showAll ? 'Fewer ▴' : 'More ▾';
+        e.currentTarget.setAttribute('aria-expanded', String(showAll));
     });
 
     updateWardOptions();
     const saved = loadState();
     if (saved) restoreState(saved);
     updateAgeMitigationUI();
+    refreshAddsOverrideUI();
     refreshDetailToggleState();
     updateReviewTypeVisibility();
 
     const accMap = JSON.parse(sessionStorage.getItem(ACCORDION_KEY) || '{}');
     document.querySelectorAll('.accordion-wrapper').forEach(w => {
-        if (accMap[w.dataset.accordionId]) { w.querySelector('.panel').style.display = 'block'; w.querySelector('.icon').textContent = '[-]'; }
+        if (accMap[w.dataset.accordionId]) { w.querySelector('.panel').style.display = 'block'; w.querySelector('.accordion').setAttribute('aria-expanded', 'true'); }
     });
 
     compute();

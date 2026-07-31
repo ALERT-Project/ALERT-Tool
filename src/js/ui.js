@@ -1,6 +1,12 @@
 import { $, debounce, showToast } from './utils.js';
 import { normalRanges, comorbMap, toggleInputs, staticInputs, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY } from './config.js';
-import { getState, saveState, pushUndo, isQuickReviewMode, setQuickReviewMode, initialQuickReviewRisks, setInitialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured, previousCategoryData, updateLastSaved } from './state.js';
+import {
+    getState, saveState, pushUndo, isQuickReviewMode, setQuickReviewMode, initialQuickReviewRisks,
+    setInitialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured,
+    previousCategoryData, updateLastSaved,
+    quickReviewDismissedBySession, setQuickReviewDismissed, quickReviewOffered, setQuickReviewOffered,
+    clearActiveIssues, renderScrapedIssuesList
+} from './state.js';
 import { computeAll } from './logic.js';
 
 export function checkBloodRanges() {
@@ -155,21 +161,20 @@ export function createDeviceEntry(type, val = '', insertionDate = '') {
         }
     }
 
-    let html = `<div style="display:flex; flex-direction:column; gap:4px; width:100%; box-sizing:border-box;">`;
-    html += `<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px; background:var(--input-bg); border:1px solid ${borderColor}; border-radius:6px; box-sizing:border-box;">`;
-    html += `<div style="flex-shrink:0; font-weight:600; font-size:0.85rem; min-width:80px;">${type}</div>`;
+    // One row per device: type, insertion date, details, dwell warning, remove. The dwell
+    // text sits inline rather than on its own line so a long line list stays scannable.
+    let html = `<div class="device-row" style="border-color:${borderColor};">`;
+    html += `<div class="device-type">${type}</div>`;
 
     if (hasDateField) {
-        html += `<input class="device-date" type="date" value="${insertionDate}" placeholder="Date" style="padding:4px 6px; border:1px solid var(--line); border-radius:4px; font-size:0.8rem; width:130px;"/>`;
+        html += `<input class="device-date" type="date" value="${insertionDate}" placeholder="Date"/>`;
     }
 
-    html += `<input class="device-textarea" type="text" placeholder="details..." value="${val}" style="flex:1; min-width:120px; padding:4px 8px; border:1px solid var(--line); border-radius:4px; font-size:0.85rem; box-sizing:border-box;"/>`;
-    html += `<div class="remove-entry" style="cursor:pointer; font-weight:bold; color:var(--accent); font-size:1rem; flex-shrink:0;">✕</div>`;
-    html += `</div>`;
-
+    html += `<input class="device-textarea" type="text" placeholder="details..." value="${val}"/>`;
     if (infoText && infoColor) {
-        html += `<div class="device-info-text" style="font-size:0.8rem; font-weight:600; color:${infoColor}; padding-left:8px;">${infoText}</div>`;
+        html += `<div class="device-info-text" style="color:${infoColor};">${infoText}</div>`;
     }
+    html += `<div class="remove-entry" title="Remove">✕</div>`;
     html += `</div>`;
 
     div.innerHTML = html;
@@ -401,8 +406,7 @@ export function clearData() {
     document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
     document.querySelectorAll('.accordion').forEach(btn => {
         btn.setAttribute('aria-expanded', 'false');
-        const icon = btn.querySelector('.icon');
-        if (icon) icon.textContent = '[+]';
+
     });
     sessionStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(UNDO_KEY);
@@ -437,6 +441,17 @@ export function clearData() {
     window.prevBloods = {};
     const pb = $('prevRisksBox'); if (pb) pb.style.display = 'none';
 
+    // Fresh patient: drop staged issues and let the >24h offer re-evaluate from scratch.
+    setQuickReviewDismissed(false);
+    setQuickReviewOffered(false);
+    const qrPrompt = $('quickReviewPrompt');
+    if (qrPrompt) qrPrompt.style.display = 'none';
+    clearActiveIssues();
+    clearNewRiskAlert();
+    // Bloods must come back as a true null state, not 'nil significant' with the grid hidden.
+    const bloodsGrid = document.querySelector('.bloods-grid');
+    if (bloodsGrid) bloodsGrid.style.display = '';
+
     const gatesToHide = [
         '#resp_gate_content', '#renal_gate_content', '#neuro_gate_content', '#electrolyte_gate_content', '#infection_gate_content', '#pressor_gate_content', '#hac_content',
         '#immobility_note_wrapper', '#after_hours_note_wrapper', '#comorb_other_note_wrapper', '#unsuitable_note_wrapper', '#override_reason_box', '#sub_intubated_reason', '#sub_dyspnea_severity',
@@ -460,6 +475,10 @@ export function clearData() {
     if (btnGen) btnGen.innerHTML = '✨ Click here to generate DMR summary';
     const summaryEl = $('summary');
     if (summaryEl) { summaryEl.value = ''; summaryEl.style.height = ''; }
+    const handoverEl = $('handoverLine');
+    if (handoverEl) handoverEl.value = '';
+    const handoverActions = $('handover_actions');
+    if (handoverActions) handoverActions.style.display = 'none';
     window.dismissedDischarge = false;
 
     const now = new Date();
@@ -477,6 +496,8 @@ export function clearData() {
     const orReason = $('override_reason_box'); if (orReason) orReason.style.display = 'none';
     $('override_amber')?.classList.remove('active');
     $('override_red')?.classList.remove('active');
+    $('override_green')?.classList.remove('active');
+    const orClear = $('override_clear'); if (orClear) orClear.style.display = 'none';
 
     const resetEv = new CustomEvent('resetAddsCalc');
     document.dispatchEvent(resetEv);
@@ -485,50 +506,348 @@ export function clearData() {
     showToast("Data cleared", 2000);
 }
 
+// Keeps the Select Category card honest about what the tool calculated versus what the
+// clinician chose, and shows the CAT 3 downgrade as pending until a reason is typed.
+export function refreshCategorySelect(autoCat, override, reason, redCount, amberCount) {
+    const hint = $('override_auto_hint');
+    if (hint) hint.textContent = `Auto-calculated: ${autoCat.text}`;
+
+    const chosen = (override && override !== 'none') ? override : null;
+    ['red', 'amber', 'green'].forEach(c => $(`override_${c}`)?.classList.toggle('active', c === chosen));
+
+    const clearBtn = $('override_clear');
+    if (clearBtn) clearBtn.style.display = chosen ? '' : 'none';
+
+    const box = $('override_reason_box');
+    if (box) box.style.display = chosen ? 'block' : 'none';
+    const warn = $('override_downgrade_warn');
+    const label = $('override_reason_label');
+    const required = $('override_reason_required');
+    const isDowngrade = override === 'green';
+
+    if (label) label.textContent = isDowngrade ? 'Reason for CAT 3 downgrade (required)' : 'Reason for override';
+    if (required) required.style.display = (isDowngrade && !reason) ? 'block' : 'none';
+    if (box) box.classList.toggle('reason-missing', isDowngrade && !reason);
+
+    if (warn) {
+        if (isDowngrade && (redCount > 0 || amberCount > 0)) {
+            const parts = [];
+            if (redCount) parts.push(`${redCount} red flag${redCount > 1 ? 's' : ''}`);
+            if (amberCount) parts.push(`${amberCount} amber flag${amberCount > 1 ? 's' : ''}`);
+            warn.textContent = `⚠ Downgrading to CAT 3 with ${parts.join(' and ')} present. The flags stay in the summary.`;
+            warn.style.display = 'block';
+        } else {
+            warn.style.display = 'none';
+        }
+    }
+}
+
+// MODS patients are scored on MODS, not ADDS, and consultants sometimes modify the
+// observation parameters - either way the recorded score must not be overwritten by the ADDS
+// calculator. Entering MODS suppresses that write and mirrors the score and details into the
+// existing MODS fields, so the DMR note and handover line report MODS rather than ADDS.
+export function refreshAddsOverrideUI() {
+    const manual = $('addsManual')?.value === 'true';
+    const btn = $('btnAddsOverride');
+    const box = $('adds_override_box');
+    const hint = $('adds_calc_hint');
+    const addsInput = $('adds');
+
+    if (btn) {
+        btn.textContent = manual ? 'MODS score - calculator not applied' : 'Enter MODS';
+        btn.classList.toggle('active', manual);
+        btn.setAttribute('aria-pressed', String(manual));
+    }
+    if (box) box.style.display = manual ? 'block' : 'none';
+
+    // Keep the A-E MODS fields as the single record of the score; this control is just a
+    // faster way in from the risk card.
+    const modsChk = $('chk_use_mods');
+    if (modsChk) {
+        modsChk.checked = manual;
+        const modsInputs = $('mods_inputs');
+        if (modsInputs) modsInputs.style.display = manual ? 'block' : 'none';
+    }
+    if (manual) {
+        const score = $('mods_score'); if (score) score.value = addsInput?.value || '';
+        const details = $('mods_details'); if (details) details.value = $('addsOverrideNote')?.value || '';
+    }
+
+    const calcTotal = $('calc_total_display')?.textContent?.trim();
+    const recorded = addsInput?.value?.trim();
+    if (hint) {
+        if (manual && calcTotal && recorded && calcTotal !== recorded) {
+            hint.textContent = `ADDS calculator ${calcTotal} · MODS recorded ${recorded}`;
+            hint.style.display = 'inline';
+        } else {
+            hint.style.display = 'none';
+        }
+    }
+}
+
+export function toggleAddsOverride() {
+    const field = $('addsManual');
+    if (!field) return;
+    const manual = field.value !== 'true';
+    field.value = String(manual);
+
+    if (manual) {
+        $('adds')?.focus();
+        $('adds')?.select();
+    } else {
+        // Switching back to ADDS hands the field to the calculator again and clears the MODS
+        // record, so a stale MODS score can't linger in the summary.
+        const calcTotal = $('calc_total_display')?.textContent?.trim();
+        const addsInput = $('adds');
+        if (addsInput && calcTotal && calcTotal !== '0') {
+            addsInput.value = calcTotal;
+            addsInput.dispatchEvent(new Event('input'));
+        }
+        const note = $('addsOverrideNote'); if (note) note.value = '';
+        const score = $('mods_score'); if (score) score.value = '';
+        const details = $('mods_details'); if (details) details.value = '';
+    }
+    refreshAddsOverrideUI();
+}
+
+// Gates the importer answered from the previous note. The concern carried over; the values
+// behind it did not, so this asks the one question that makes them today's data. Deliberately
+// unobtrusive: no modal, no repeat prompting, and ignoring it leaves the risk flagged as it is.
+export function renderCarriedForward() {
+    const card = $('carried_forward_card');
+    const list = $('carried_forward_list');
+    if (!card || !list) return;
+
+    const wrappers = [...document.querySelectorAll('.input-box.carried-forward')];
+    if (!wrappers.length) {
+        card.style.display = 'none';
+        list.innerHTML = '';
+        return;
+    }
+
+    list.innerHTML = wrappers.map(w => {
+        // The question label carries a "(Prev: ...)" span; the row states that separately.
+        const labelEl = w.querySelector('.question-label')?.cloneNode(true);
+        labelEl?.querySelector('.prev-datum')?.remove();
+        const label = (labelEl?.textContent || 'Concern').replace(/\?$/, '').trim();
+        const was = w.dataset.carriedFrom || '';
+        return `
+            <div class="cf-row" data-wrapper="${w.id}">
+                <div class="cf-row-text">
+                    <div class="cf-row-title">${label}</div>
+                    ${was ? `<div class="cf-row-was">was: ${was}</div>` : ''}
+                </div>
+                <div class="cf-row-actions">
+                    <button type="button" class="btn small cf-chip" data-action="resolved" data-wrapper="${w.id}">Resolved</button>
+                    <button type="button" class="btn small cf-chip" data-action="present" data-wrapper="${w.id}">Still present</button>
+                    <button type="button" class="btn small cf-chip" data-action="improving" data-wrapper="${w.id}">Improving</button>
+                </div>
+            </div>`;
+    }).join('');
+
+    list.querySelectorAll('.cf-chip').forEach(btn => {
+        btn.addEventListener('click', () => answerCarriedForward(btn.dataset.wrapper, btn.dataset.action));
+    });
+    card.style.display = 'block';
+}
+
+function answerCarriedForward(wrapperId, action) {
+    const wrapper = $(wrapperId);
+    if (!wrapper) return;
+    const group = wrapper.querySelector('.segmented-group');
+
+    if (action === 'resolved') {
+        // Answering No runs the app's own handler, which closes the drawer and recomputes.
+        group?.querySelector('.seg-btn[data-value="false"]')?.click();
+    } else if (action === 'improving') {
+        const noteEl = wrapper.dataset.carriedNote ? $(wrapper.dataset.carriedNote) : null;
+        // "Improving" is the clinician's assessment today, so it belongs in today's note.
+        if (noteEl && !/improving/i.test(noteEl.value)) {
+            noteEl.value = noteEl.value.trim() ? `${noteEl.value.trim()}, improving` : 'improving';
+            noteEl.dispatchEvent(new Event('input'));
+        }
+    }
+
+    wrapper.classList.remove('carried-forward');
+    delete wrapper.dataset.carriedFrom;
+    delete wrapper.dataset.carriedNote;
+    renderCarriedForward();
+    computeAll();
+}
+
+// Risks flagged since Quick Review started. Shown in place, not as a mode switch: the
+// clinician stays in Quick Review and decides whether the full assessment is warranted.
+let newRiskLog = [];
+
+export function showNewRiskAlert(newRed = [], newAmber = []) {
+    const box = $('qrNewRiskAlert');
+    if (!box) return;
+
+    // The same wording can arrive from two sources (e.g. a gate and its detail field);
+    // list it once so the count matches what's on screen.
+    const seen = new Set(newRiskLog.map(r => r.text));
+    [...newRed.map(text => ({ text, severity: 'red' })), ...newAmber.map(text => ({ text, severity: 'amber' }))]
+        .forEach(entry => {
+            if (seen.has(entry.text)) return;
+            seen.add(entry.text);
+            newRiskLog.push(entry);
+        });
+    // The risk model sometimes emits a headline and a more specific variant of the same
+    // concern ("Respiratory concern" / "Respiratory concern - tachypnea >20bpm"); keep the
+    // one that says more.
+    newRiskLog = newRiskLog.filter(r =>
+        !newRiskLog.some(other => other !== r && other.text.startsWith(r.text)));
+    if (!newRiskLog.length) return;
+
+    const redCount = newRiskLog.filter(r => r.severity === 'red').length;
+    const amberCount = newRiskLog.length - redCount;
+    const counts = [
+        redCount ? `${redCount} red` : '',
+        amberCount ? `${amberCount} amber` : ''
+    ].filter(Boolean).join(' and ');
+
+    box.className = redCount ? 'qr-new-risk red' : 'qr-new-risk amber';
+    box.innerHTML = `
+        <div class="qr-new-risk-head">
+            <span>⚠️ New risk flagged since this review started (${counts})</span>
+            <button type="button" id="qrNewRiskDismiss" class="btn small">Dismiss</button>
+        </div>
+        <ul>${newRiskLog.map(r => `<li class="${r.severity}">${r.text}</li>`).join('')}</ul>
+        <div class="qr-new-risk-foot">Staged in the issues list. Add detail there or in Quick Notes, or exit to
+            the full assessment if this needs a fuller work-up.</div>`;
+    box.hidden = false;
+    $('qrNewRiskDismiss')?.addEventListener('click', clearNewRiskAlert);
+
+    showToast(`⚠️ New risk flagged: ${[...newRed, ...newAmber].join(', ')}`, 4000);
+}
+
+export function clearNewRiskAlert() {
+    newRiskLog = [];
+    const box = $('qrNewRiskAlert');
+    if (box) { box.hidden = true; box.innerHTML = ''; }
+}
+
+// Quick Review only: float the bloods card over the page while its details are open.
+export function setBloodsOverlay(open) {
+    const section = $('section-bloods');
+    if (!section) return;
+    section.classList.toggle('qr-expanded', !!open && isQuickReviewMode);
+    syncQuickOverlayBackdrop();
+}
+
+function syncQuickOverlayBackdrop() {
+    const backdrop = $('qrBackdrop');
+    if (!backdrop) return;
+    const anyOpen = !!document.querySelector('.qr-expanded');
+    backdrop.hidden = !anyOpen;
+}
+
+// The ADDS calculator is opened by plugins/adds_calc.js, which only knows how to show and
+// hide its container. Watching that container keeps the overlay in step without the plugin
+// needing to know Quick Review exists.
+let addsCalcObserver = null;
+function watchAddsCalculator() {
+    const container = $('addsCalculatorContainer');
+    const wrapper = $('adds_wrapper');
+    if (!container || !wrapper || addsCalcObserver) return;
+    const sync = () => {
+        const open = container.style.display === 'block';
+        wrapper.classList.toggle('qr-expanded', open && isQuickReviewMode);
+        syncQuickOverlayBackdrop();
+    };
+    addsCalcObserver = new MutationObserver(sync);
+    addsCalcObserver.observe(container, { attributes: true, attributeFilter: ['style'] });
+    sync();
+}
+
+export function closeQuickOverlays() {
+    const wrapper = $('adds_wrapper');
+    if (wrapper?.classList.contains('qr-expanded')) $('btnToggleCalc')?.click();
+    if ($('section-bloods')?.classList.contains('qr-expanded')) $('btnBloodsDetailsToggle')?.click();
+    syncQuickOverlayBackdrop();
+}
+
 export function openAccordion(panelId, btnSelector) {
     const panel = $(panelId);
     const btn = document.querySelector(btnSelector);
     if (panel && btn) {
         panel.style.display = 'block';
         btn.setAttribute('aria-expanded', 'true');
-        const icon = btn.querySelector('.icon');
-        if (icon) icon.textContent = '[-]';
     }
+}
+
+export function closeAccordion(panelId, btnSelector) {
+    const panel = $(panelId);
+    const btn = document.querySelector(btnSelector);
+    if (panel && btn) {
+        panel.style.display = 'none';
+        btn.setAttribute('aria-expanded', 'false');
+    }
+}
+
+// Quick Review keeps only what a Day 2+ follow-up needs: ADDS (+calculator), Bloods,
+// Lines, category selection, Issues and Quick Notes - laid out as one page so the review
+// can be done in ~5 minutes. Everything else is hidden.
+const QUICK_REVIEW_SECTIONS_TO_HIDE = ['section-patient', 'section-risk', 'section-ae', 'section-context'];
+const QUICK_REVIEW_ONLY_SECTIONS = ['quick_notes_wrapper', 'scraped_risks_wrapper'];
+
+// Which live nodes get moved into which cell of #quickGrid, in the order they should appear.
+// Nothing is cloned: IDs must stay unique and every listener already bound to these elements
+// has to keep working, so the elements themselves move and are put back on exit.
+// Lines live in the wide column: at 2/3 width each device fits on one row instead of
+// wrapping to three in the rail, and they fill the space the notes card leaves over.
+const QUICK_GRID_LAYOUT = {
+    qgLeft: ['adds_wrapper', 'section-bloods', 'override_card', 'quick_notes_wrapper'],
+    qgRight: ['carried_forward_card', 'scraped_risks_wrapper', 'section-devices'],
+    qgBottom: ['section-category']
+};
+
+function moveIntoQuickGrid() {
+    Object.entries(QUICK_GRID_LAYOUT).forEach(([cellId, ids]) => {
+        const cell = $(cellId);
+        if (!cell) return;
+        ids.forEach(id => {
+            const el = $(id);
+            if (!el || el.dataset.qrMoved === 'true' || !el.parentNode) return;
+            // A hidden marker left behind at the original position, so exit restores the
+            // exact document order rather than appending everything to the end.
+            const anchor = document.createElement('span');
+            anchor.setAttribute('data-qr-anchor', id);
+            anchor.style.display = 'none';
+            el.parentNode.insertBefore(anchor, el);
+            cell.appendChild(el);
+            el.dataset.qrMoved = 'true';
+        });
+    });
+}
+
+function restoreFromQuickGrid() {
+    document.querySelectorAll('[data-qr-moved="true"]').forEach(el => {
+        const anchor = document.querySelector(`[data-qr-anchor="${el.id}"]`);
+        if (anchor && anchor.parentNode) {
+            anchor.parentNode.insertBefore(el, anchor);
+            anchor.remove();
+        }
+        delete el.dataset.qrMoved;
+    });
 }
 
 export function enableQuickReviewMode() {
     setQuickReviewMode(true);
-    const s = getState();
     setInitialQuickReviewRisks({ red: [], amber: [] });
     setQuickReviewBaselineCaptured(false);
+    clearNewRiskAlert();
 
     computeAll();
 
+    document.body.classList.add('quick-review-active');
+
     const banner = $('quickReviewBanner');
     if (banner) banner.style.display = 'block';
-
     const prompt = $('quickReviewPrompt');
     if (prompt) prompt.style.display = 'none';
 
-    const previousRisks = previousCategoryData?.previousRisks || [];
-
-    const riskSectionMap = {
-        'respiratory': 'resp_wrapper',
-        'neuro': 'neuro_wrapper',
-        'renal': 'renal_wrapper',
-        'infection': 'infection_wrapper',
-        'vasoactive': 'pressor_wrapper',
-        'immobility': 'immobility_wrapper',
-        'nutrition': 'nutrition_wrapper',
-        'electrolyte': 'elec_wrapper'
-    };
-
-    const allRiskSections = [...Object.values(riskSectionMap), 'hac_wrapper', 'ah_wrapper', 'comorbs_wrapper', 'after_hours_note_wrapper'];
-
-    const sectionsToShow = previousRisks.map(risk => riskSectionMap[risk]).filter(Boolean);
-    const sectionsToHide = allRiskSections.filter(id => !sectionsToShow.includes(id));
-
-    sectionsToHide.forEach(id => {
+    QUICK_REVIEW_SECTIONS_TO_HIDE.forEach(id => {
         const section = $(id);
         if (section) {
             section.style.display = 'none';
@@ -536,95 +855,94 @@ export function enableQuickReviewMode() {
         }
     });
 
-    sectionsToShow.forEach(id => {
+    QUICK_REVIEW_ONLY_SECTIONS.forEach(id => {
         const section = $(id);
-        if (section) {
-            const heading = section.querySelector('.bold-heading');
-            if (heading && !heading.querySelector('.review-badge')) {
-                const badge = document.createElement('span');
-                badge.className = 'review-badge';
-                badge.style.cssText = 'display:inline-block; margin-left:8px; padding:2px 8px; background:var(--amber); color:white; font-size:0.75rem; border-radius:4px; font-weight:600;';
-                badge.textContent = '↻ Re-assess';
-                heading.appendChild(badge);
-            }
-        }
+        if (section) section.style.display = 'block';
     });
 
-    const otherSectionsToHide = ['section-psychosocial'];
+    moveIntoQuickGrid();
+    watchAddsCalculator();
 
-    otherSectionsToHide.forEach(id => {
-        const section = $(id);
-        if (section) {
-            section.style.display = 'none';
-            section.setAttribute('data-hidden-by-quick-review', 'true');
-        }
-    });
+    // Bloods stay behind the three quick buttons; lines open, since the add-chips are the
+    // whole point of having the section on the page.
+    closeAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
+    openAccordion('panel_devices', '[aria-controls="panel_devices"]');
 
-    const accordionsToClose = ['panel_devices', 'panel_other'];
-    accordionsToClose.forEach(panelId => {
-        if (panelId === 'panel_devices') {
-            const hasDevices = Object.values(s.devices || {}).some(arr => Array.isArray(arr) && arr.length > 0);
-            if (hasDevices) {
-                openAccordion('panel_devices', '[aria-controls="panel_devices"]');
-                return;
-            }
-        }
-
-        const btnSelector = `[aria-controls="${panelId}"]`;
-        const btn = document.querySelector(btnSelector);
-        const panel = $(panelId);
-        if (btn && panel) {
-            panel.style.display = 'none';
-            btn.setAttribute('aria-expanded', 'false');
-            const icon = btn.querySelector('.icon');
-            if (icon) icon.textContent = '[+]';
-        }
-    });
-
-    openAccordion('panel_ae', '[aria-controls="panel_ae"]');
-    openAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
-
-    const riskSection = $('section-risk');
-    if (riskSection) {
-        riskSection.style.display = '';
-    }
+    const bloodsQuick = $('bloods_quick_controls');
+    if (bloodsQuick) bloodsQuick.style.display = 'block';
 
     document.querySelectorAll('.nav-item').forEach(item => {
-        const href = item.getAttribute('href');
-        if (href && otherSectionsToHide.includes(href.substring(1))) {
+        const href = item.getAttribute('href')?.substring(1);
+        if (href && QUICK_REVIEW_SECTIONS_TO_HIDE.includes(href)) {
             item.style.opacity = '0.3';
             item.style.pointerEvents = 'none';
         }
     });
 
-    setTimeout(() => {
-        const aeSection = $('section-ae');
-        if (aeSection) aeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 300);
+    const toggleBtn = $('btnManualQuickReview');
+    if (toggleBtn) toggleBtn.textContent = 'Exit Quick Review';
 
-    const riskNames = previousRisks.join(', ');
-    showToast(`⚡ Quick Review - Re-assessing: ${riskNames}`, 3000);
+    renderScrapedIssuesList();
+
+    setTimeout(() => {
+        const target = $('quickGrid');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+
+    showToast('Quick Review mode', 2000);
+}
+
+// >24h since stepdown (stepdown time defaults to 16:00 upstream) *offers* Quick Review.
+// The clinician decides - never switch modes out from under them.
+export function maybeOfferQuickReview(timeData, s) {
+    if (!s.stepdownDate) return;
+    if (s.reviewType === 'pre') return;
+    if (isQuickReviewMode) return;
+    if (quickReviewDismissedBySession) return;
+    if (timeData.hours > 24) {
+        showQuickReviewPrompt($('catText')?.textContent || '', timeData.hours);
+    }
 }
 
 export function exitQuickReviewMode() {
     setQuickReviewMode(false);
     setInitialQuickReviewRisks({ red: [], amber: [] });
     setQuickReviewBaselineCaptured(false);
+    // Without this the >24h auto-trigger would immediately re-enter on the next compute.
+    setQuickReviewDismissed(true);
+
+    document.body.classList.remove('quick-review-active');
 
     const banner = $('quickReviewBanner');
     if (banner) banner.style.display = 'none';
+
+    clearNewRiskAlert();
+    $('adds_wrapper')?.classList.remove('qr-expanded');
+    setBloodsOverlay(false);
+    restoreFromQuickGrid();
+    document.querySelector('.device-add-group')?.classList.remove('show-all');
+    $('btnDeviceMore')?.setAttribute('aria-expanded', 'false');
 
     document.querySelectorAll('[data-hidden-by-quick-review]').forEach(section => {
         section.style.display = '';
         section.removeAttribute('data-hidden-by-quick-review');
     });
 
-    document.querySelectorAll('.review-badge').forEach(badge => badge.remove());
+    QUICK_REVIEW_ONLY_SECTIONS.forEach(id => {
+        const section = $(id);
+        if (section) section.style.display = 'none';
+    });
+
+    const bloodsQuick = $('bloods_quick_controls');
+    if (bloodsQuick) bloodsQuick.style.display = 'none';
 
     document.querySelectorAll('.nav-item').forEach(item => {
         item.style.opacity = '';
         item.style.pointerEvents = '';
     });
+
+    const toggleBtn = $('btnManualQuickReview');
+    if (toggleBtn) toggleBtn.textContent = 'Quick Review';
 
     showToast("Full review mode restored", 2000);
 }
@@ -649,21 +967,32 @@ export function checkStablePatientStatus() {
 export function showQuickReviewPrompt(categoryText, hoursOnWard, previousRisks = []) {
     const prompt = $('quickReviewPrompt');
     if (!prompt) return;
+    // computeAll runs on every debounced input; offer once or we re-scroll on every keystroke.
+    // This also de-duplicates the two trigger paths (DMR import and the >24h check).
+    if (quickReviewOffered) return;
+    setQuickReviewOffered(true);
 
     const prevCatText = $('prevCategoryText');
     const timeText = $('timeOnWardText');
 
-    if (prevCatText) {
-        const riskList = previousRisks.length > 0 ? ` (${previousRisks.join(', ')})` : '';
-        prevCatText.textContent = categoryText + riskList;
+    // The >24h path has no previous category; only show that clause when it's known.
+    if (prevCatText) prevCatText.textContent = categoryText ? `Previous: ${categoryText}` : '';
+    if (timeText) timeText.textContent = `${Math.round(hoursOnWard)}h since stepdown`;
+
+    // Risks carried over from the scraped note get their own list - they're what the
+    // follow-up is actually about.
+    const risksBox = $('qrPromptRisks');
+    if (risksBox) {
+        if (previousRisks.length) {
+            risksBox.innerHTML = `<strong>Previously flagged</strong><ul>${previousRisks.map(r => `<li>${r}</li>`).join('')}</ul>`;
+            risksBox.style.display = 'block';
+        } else {
+            risksBox.style.display = 'none';
+        }
     }
-    if (timeText) timeText.textContent = `${Math.round(hoursOnWard)}h`;
 
-    prompt.style.display = 'block';
-
-    setTimeout(() => {
-        prompt.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 500);
+    prompt.style.display = 'flex';
+    setTimeout(() => $('btnQuickReview')?.focus(), 100);
 }
 
 export function checkForExistingRisks(state) {

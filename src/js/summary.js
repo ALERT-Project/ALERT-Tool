@@ -10,6 +10,8 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
     const lines = [];
     const addLine = (txt) => { if (txt) lines.push(txt); };
+    // Collapses accidental double blank lines so sections are separated by exactly one break.
+    const pushBlank = () => { if (lines.length && lines[lines.length - 1] !== '') lines.push(''); };
     const role = s.clinicianRole;
     const reviewName = (s.reviewType === 'pre') ? 'Pre-Stepdown' : 'post ICU review';
 
@@ -32,33 +34,37 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     } else if (s.stepdownDate) {
         lines.push(`ICU Discharge Date: ${formatDateDDMMYYYY(s.stepdownDate)}`);
     }
-    lines.push('');
+    pushBlank();
 
     if (wardTimeTxt && s.reviewType !== 'pre') lines.push(`Time since stepdown: ${wardTimeTxt}`);
     if (s.icuLos) lines.push(`ICU LOS: ${s.icuLos} days`);
     lines.push(`Reason for ICU Admission: ${s.ptAdmissionReason || '--'}`);
 
     if (s.reviewType === 'pre' && s.icuSummary) {
-        lines.push('');
+        pushBlank();
         lines.push(`ICU Course Summary: ${s.icuSummary}`);
     }
-    lines.push('');
+    pushBlank();
 
     if (s.stepdown_suitable === false) {
         lines.push(`ALERT Nursing Review Category - Not suitable for stepdown`);
-        lines.push('');
+        pushBlank();
         lines.push('Assessed as not presently suitable for ward stepdown.');
         lines.push(`Reason: ${s.unsuitable_note || 'Clinical concerns (see notes)'}`);
         lines.push('Plan: ICU Senior Review requested. Please contact ALERT for re-review when appropriate.');
-        lines.push('');
+        pushBlank();
         lines.push('--- FULL ASSESSMENT BELOW ---');
-        lines.push('');
+        pushBlank();
     } else {
         lines.push(`ALERT Nursing Review Category - ${cat.text}`);
+        // A manual downgrade must never be silent: the note has to show both categories.
+        if (cat.downgradedFrom) {
+            lines.push(`Category manually set to ${cat.text} by clinician - ${cat.downgradeReason} (auto-calculated: ${cat.downgradedFrom})`);
+        }
         if (s.stepdown_suitable === true && s.reviewType === 'pre') {
             lines.push('Patient is suitable for ward stepdown.');
         }
-        lines.push('');
+        pushBlank();
     }
 
     // PMH: read chips directly AND pmh_note, deduplicate
@@ -97,17 +103,17 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (pmhItems.length > 0) {
         lines.push('PMH:');
         pmhItems.forEach(item => lines.push(`-${item}`));
-        lines.push('');
+        pushBlank();
     }
 
     if (s.allergies_note) {
         lines.push(`Allergies: ${s.allergies_note}`);
-        lines.push('');
+        pushBlank();
     }
 
     if (s.goc_note) {
         lines.push(`GOC: ${s.goc_note}`);
-        lines.push('');
+        pushBlank();
     }
 
     lines.push('A-E ASSESSMENT:');
@@ -158,7 +164,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     else if (s.e_comment) addLine(`E:`);
     if (s.e_comment) addLine(`  - ${s.e_comment}`);
 
-    lines.push('');
+    pushBlank();
 
     if (s.ae_mobility) addLine(`Mobility: ${s.ae_mobility}`);
 
@@ -202,9 +208,9 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         }
     }
 
-    if (bowelTxt) addLine(`Bowels: ${bowelTxt} `);
+    if (bowelTxt) addLine(`Bowels: ${bowelTxt}`);
 
-    if (s.ae_diet) addLine(`Diet: ${s.ae_diet} `);
+    if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
 
@@ -221,11 +227,15 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
     if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
 
-    lines.push('');
+    pushBlank();
 
     const blMap = { 'lac_review': 'Lac', 'hb': 'Hb', 'wcc': 'WCC', 'cr_review': 'Cr', 'egfr': 'eGFR', 'k': 'K', 'na': 'Na', 'mg': 'Mg', 'phos': 'PO4', 'plts': 'Plts', 'alb': 'Alb', 'neut': 'Neut', 'lymph': 'Lymph', 'bili': 'Bili', 'alt': 'ALT', 'inr': 'INR', 'aptt': 'APTT' };
-    if (s.chk_bloods_nil_sig) {
+    if (s.chk_bloods_nil_sig || s.bloods_status === 'nil_sig') {
         addLine('Bloods: Checked, nil significant');
+    } else if (s.bloods_status === 'improving') {
+        addLine('Bloods: Improving trend');
+    } else if (s.bloods_status === 'not_checked') {
+        addLine('Bloods: Not checked this review');
     } else {
         const blLines = [];
         Object.keys(blMap).forEach(key => {
@@ -243,7 +253,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (s.new_bloods_ordered === 'requested') addLine('New bloods requested (not yet ordered)');
     if (s.new_bloods_ordered === 'not_required') addLine('New bloods not required');
     if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
-    lines.push('');
+    pushBlank();
 
     const hasAnyDevices = Object.values(s.devices || {}).some(arr => arr.length);
     if (hasAnyDevices) {
@@ -281,10 +291,10 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
             });
         });
     }
-    lines.push('');
+    pushBlank();
 
     if (s.context_other_note) lines.push(`Other: ${s.context_other_note}`);
-    lines.push('');
+    pushBlank();
 
     lines.push('IDENTIFIED ICU READMISSION RISK FACTORS:');
     const risks = [...red, ...amber];
@@ -292,7 +302,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (suppressed.length) { suppressed.forEach(r => lines.push(`- ${r}`)); }
 
     if (risks.length === 0 && suppressed.length === 0) { lines.push('- None identified'); }
-    lines.push('');
+    pushBlank();
 
     lines.push('PLAN:');
 
@@ -329,4 +339,72 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         const badge = $('manual_edit_badge');
         if (badge) badge.style.display = 'none';
     }
+}
+
+// --- Excel handover line -----------------------------------------------------
+// One terse line for the handover spreadsheet, identical in full and Quick Review since both
+// modes feed the same computed risks:
+//   "30/7 05:30 CB. Physical r/v. ADDS 4. Bloods: Cr 180, Mg 0.4. CAT 1 - Renal concern,
+//    Infection risk (improving). Continue ALERT."
+// Time and initials lead, then the score, then what was actually found.
+
+// Risk wording is written for the DMR note, which is wordier than a spreadsheet cell needs.
+const HANDOVER_RISK_TRIMS = [
+    [/^Elevated (ADDS|MODS) /, '$1 '],
+    [/, increased risk of complications$/, ''],
+    [/ concern - /, ' - '],
+    [/^Comorbidities - /, 'PMH: ']
+];
+
+function trimRiskForHandover(text) {
+    return HANDOVER_RISK_TRIMS.reduce((acc, [re, rep]) => acc.replace(re, rep), text).trim();
+}
+
+export function generateHandoverLine(s, activeIssuesList = [], cat = null, red = [], amber = []) {
+    const now = new Date();
+    const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
+    const initials = s.reviewerInitials || '--';
+    const time = s.reviewTime || nowTimeStr();
+    const parts = [`${dateStr} ${time} ${initials}.`];
+
+    parts.push(s.reviewModeType === 'chart' ? 'Chart r/v.' : 'Physical r/v.');
+    parts.push(s.chk_use_mods ? `MODS ${s.mods_score || '--'}.` : `ADDS ${s.adds || '--'}.`);
+
+    if (s.chk_bloods_nil_sig || s.bloods_status === 'nil_sig') parts.push('Bloods nil sig.');
+    else if (s.bloods_status === 'improving') parts.push('Bloods improving.');
+    else if (s.bloods_status === 'not_checked') parts.push('Bloods not checked.');
+    else {
+        const abnormal = activeIssuesList
+            .filter(i => (i.key || '').startsWith('bl_'))
+            .map(i => i.text.replace(/^Abnormal /, ''));
+        if (abnormal.length) parts.push(`Bloods: ${abnormal.join(', ')}.`);
+        else if (Object.keys(s).some(k => k.startsWith('bl_') && s[k])) parts.push('Bloods reviewed.');
+    }
+
+    // The computed flags are the risks; manual and scraped list entries are added after them
+    // so anything typed during the review is handed over too. Notes are context, not risks.
+    // The score is already stated up front, so its own flag would just repeat it.
+    const risks = [...red, ...amber]
+        .filter(r => !/^(Elevated )?(ADDS|MODS) \d/.test(r))
+        .map(trimRiskForHandover);
+    const seen = new Set(risks.map(r => r.toLowerCase()));
+    activeIssuesList.forEach(issue => {
+        if (issue.severity === 'info' || issue.source === 'auto' || issue.source === 'bloods') return;
+        const txt = trimRiskForHandover(issue.text);
+        if (seen.has(txt.toLowerCase())) return;
+        seen.add(txt.toLowerCase());
+        risks.push(txt);
+    });
+
+    const catText = cat?.text || $('catText')?.textContent || '';
+    // Semicolons between risks: a typed entry can contain commas of its own.
+    if (catText) parts.push(risks.length ? `${catText} - ${risks.join('; ')}.` : `${catText} - nil risks.`);
+
+    if (s.stepdown_suitable === false) parts.push('Not suitable for stepdown.');
+    else if (s.chk_discharge_alert) parts.push('D/C from ALERT.');
+    else if (s.chk_discharge_pending_bloods) parts.push('D/C pending bloods.');
+    else if (s.chk_continue_alert) parts.push('Continue ALERT.');
+    if (s.chk_medical_rounding) parts.push('+ Medical rounding.');
+
+    return parts.join(' ').replace(/\s{2,}/g, ' ');
 }

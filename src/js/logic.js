@@ -1,7 +1,11 @@
 import { $, num, sentenceCase, joinGrammatically, showToast } from './utils.js';
-import { comorbMap, toggleInputs } from './config.js';
-import { getState, isQuickReviewMode, initialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured, previousCategoryData } from './state.js';
-import { exitQuickReviewMode, updateSidebarRiskBadges } from './ui.js';
+import { comorbMap, toggleInputs, normalRanges, GATE_LINKED_BLOODS, BLOOD_LABELS } from './config.js';
+import {
+    getState, isQuickReviewMode, initialQuickReviewRisks, quickReviewBaselineCaptured,
+    setQuickReviewBaselineCaptured, previousCategoryData,
+    addActiveIssue, maybeToastNewRisk, reconcileAutoIssues, renderScrapedIssuesList
+} from './state.js';
+import { updateSidebarRiskBadges, maybeOfferQuickReview, refreshCategorySelect, showNewRiskAlert, renderCarriedForward } from './ui.js';
 
 export function calculateWardTime(dateStr, timeStr, isPre) {
     if (isPre) return { hours: 0, text: '(Pre-Stepdown)' };
@@ -49,12 +53,39 @@ export function computeAll() {
             pmhSubtitle.style.display = (hasComorbidities || hasPmhNote) ? 'block' : 'none';
         }
 
+        const riskEntries = [];
         const add = (list, txt, id, type, noteValue = null) => {
             let finalTxt = txt;
             if (noteValue && noteValue.trim()) finalTxt = `${txt} (${noteValue.trim()})`;
             list.push(finalTxt);
-            if (id) flagged[type].push(id);
+            if (id) {
+                flagged[type].push(id);
+                riskEntries.push({ text: finalTxt, id, type });
+                // Every risk factor tees into Active Issues; toast only on first appearance.
+                const { isNew } = addActiveIssue({ text: finalTxt, source: 'auto', severity: type, key: id });
+                if (isNew) maybeToastNewRisk(id, finalTxt);
+            }
         };
+
+        // Abnormal bloods are surfaced as informational issues only - deliberately NOT pushed
+        // into red/amber, so they never force a category on their own. Category behaviour is
+        // therefore identical in Quick Review and full review; out-of-range values keep their
+        // existing visual highlight via checkBloodRanges().
+        const bloodIssueKeys = [];
+        if (!s.chk_bloods_nil_sig && s.bloods_status !== 'nil_sig' && s.bloods_status !== 'not_checked') {
+            GATE_LINKED_BLOODS.forEach(key => {
+                const range = normalRanges[key];
+                if (!range) return;
+                const bid = `bl_${key}`;
+                const val = num(s[bid]);
+                if (val === null) return;
+                if (val < range.low || val > range.high) {
+                    const label = BLOOD_LABELS[key] || key.replace(/_review$/, '').toUpperCase();
+                    bloodIssueKeys.push(bid);
+                    addActiveIssue({ text: `Abnormal ${label} ${val}`, source: 'bloods', severity: 'info', key: bid });
+                }
+            });
+        }
 
         const neut = num(s.bl_neut) || num(s.neut);
         const lymph = num(s.bl_lymph) || num(s.lymph);
@@ -166,10 +197,13 @@ export function computeAll() {
         }
 
         const adds = num(s.adds);
+        // The score field holds MODS when the clinician has switched to it, so the flag has to
+        // name the chart the number actually came from.
+        const scoreName = s.chk_use_mods ? 'MODS' : 'ADDS';
         if (adds !== null) {
-            if (adds >= 6) add(red, `Elevated ADDS ${adds}`, 'adds', 'red');
-            else if (adds >= 4) add(red, `Elevated ADDS ${adds}`, 'adds', 'red');
-            else if (adds === 3 && isRecent) add(amber, `ADDS 3`, 'adds', 'amber');
+            if (adds >= 6) add(red, `Elevated ${scoreName} ${adds}`, 'adds', 'red');
+            else if (adds >= 4) add(red, `Elevated ${scoreName} ${adds}`, 'adds', 'red');
+            else if (adds === 3 && isRecent) add(amber, `${scoreName} 3`, 'adds', 'amber');
         }
 
         const hr = num(s.c_hr);
@@ -304,7 +338,14 @@ export function computeAll() {
         }
 
         const k = num(s.bl_k);
-        if (s.electrolyte_gate === true || (k && (k < 3.0 || k > 6.0))) {
+        // Mg and PO4 open the gate and are described, but never escalate it on their own -
+        // they stay amber whatever the value; only K, Na or a severe rating can make it red.
+        const mg = num(s.bl_mg);
+        const phos = num(s.bl_phos);
+        const mgAbnormal = mg !== null && (mg < normalRanges.mg.low || mg > normalRanges.mg.high);
+        const phosAbnormal = phos !== null && (phos < normalRanges.phos.low || phos > normalRanges.phos.high);
+
+        if (s.electrolyte_gate === true || (k && (k < 3.0 || k > 6.0)) || mgAbnormal || phosAbnormal) {
             let msg = "Electrolyte concern", isRed = false;
             let parts = [];
             if (k) {
@@ -317,6 +358,8 @@ export function computeAll() {
                 else parts.push(`high Na ${na}`);
                 isRed = true;
             }
+            if (mgAbnormal) parts.push(`${mg < normalRanges.mg.low ? 'low' : 'high'} Mg ${mg}`);
+            if (phosAbnormal) parts.push(`${phos < normalRanges.phos.low ? 'low' : 'high'} PO4 ${phos}`);
             const sev = s.electrolyteConcern;
             if (sev === 'severe') {
                 if (parts.length === 0) parts.push("severe derangement");
@@ -324,7 +367,9 @@ export function computeAll() {
             } else if (sev === 'mild' && parts.length === 0) {
                 parts.push("mild/moderate derangement");
             }
-            if (parts.length > 0) msg += ` with ${joinGrammatically(parts)}`;
+            // Plain join here: joinGrammatically lower-cases trailing items, which turns the
+            // analyte names into "low mg" / "low po4". Same separator, correct case.
+            if (parts.length > 0) msg += ` with ${parts.join(', ')}`;
             add(isRed ? red : amber, msg, 'electrolyteConcern', isRed ? 'red' : 'amber', s.electrolyteConcern_note);
         }
 
@@ -599,9 +644,25 @@ export function computeAll() {
         const uniqueAmber = [...new Set(amber)];
         const redCount = uniqueRed.length;
         const amberCount = uniqueAmber.length;
-        let cat = { id: 'green', text: 'CAT 3' };
-        if (redCount > 0) cat = { id: 'red', text: 'CAT 1' };
-        else if (amberCount > 0) cat = { id: 'amber', text: 'CAT 2' };
+        let autoCat = { id: 'green', text: 'CAT 3' };
+        if (redCount > 0) autoCat = { id: 'red', text: 'CAT 1' };
+        else if (amberCount > 0) autoCat = { id: 'amber', text: 'CAT 2' };
+
+        // A CAT 3 selection is a genuine downgrade, not another flag: it wins over the
+        // computed category. The flags themselves are still counted, listed and carried into
+        // the summary - the clinician overrules the conclusion, not the evidence. A reason is
+        // mandatory, so an unexplained downgrade simply doesn't apply.
+        let cat = autoCat;
+        const downgradeReason = (s.overrideNote || '').trim();
+        if (s.override === 'green' && downgradeReason) {
+            cat = {
+                id: 'green',
+                text: 'CAT 3',
+                downgradedFrom: autoCat.text,
+                downgradeReason
+            };
+        }
+        refreshCategorySelect(autoCat, s.override, downgradeReason, redCount, amberCount);
 
         const catText = $('catText'); if (catText) { catText.className = `status ${cat.id}`; catText.textContent = cat.text; }
         const catBox = $('categoryBox'); if (catBox) catBox.style.borderColor = `var(--${cat.id})`;
@@ -612,41 +673,36 @@ export function computeAll() {
 
         updateSidebarRiskBadges(redCount, amberCount);
 
+        reconcileAutoIssues(new Set([...riskEntries.map(e => e.id), ...bloodIssueKeys]));
+        renderScrapedIssuesList();
+        renderCarriedForward();
+        maybeOfferQuickReview(timeData, s);
+
         if (isQuickReviewMode) {
             if (!quickReviewBaselineCaptured) {
                 initialQuickReviewRisks.red = [...uniqueRed];
                 initialQuickReviewRisks.amber = [...uniqueAmber];
                 setQuickReviewBaselineCaptured(true);
             } else {
-                const newRed = uniqueRed.filter(r => !initialQuickReviewRisks.red.includes(r));
-                const newAmber = uniqueAmber.filter(r => !initialQuickReviewRisks.amber.includes(r));
+                // ADDS/bloods are handled silently in the background - they must not kick the
+                // clinician out of Quick Review, only genuinely new clinical risks do that.
+                // A manual category choice is the clinician's own deliberate act, so it isn't
+                // "detected" and shouldn't alert them about themselves.
+                const silentTexts = new Set(
+                    riskEntries
+                        .filter(e => e.id === 'adds' || e.id.startsWith('bl_') || e.id.startsWith('override_'))
+                        .map(e => e.text)
+                );
+                const newRed = uniqueRed.filter(r => !initialQuickReviewRisks.red.includes(r) && !silentTexts.has(r));
+                const newAmber = uniqueAmber.filter(r => !initialQuickReviewRisks.amber.includes(r) && !silentTexts.has(r));
 
                 if (newRed.length > 0 || newAmber.length > 0) {
-                    const newRedCount = newRed.length;
-                    const newAmberCount = newAmber.length;
-                    exitQuickReviewMode();
-
-                    const alertDiv = document.createElement('div');
-                    alertDiv.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:var(--red); color:white; padding:24px 32px; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.3); font-size:1.1rem; font-weight:700; text-align:center; min-width:400px;';
-                    alertDiv.innerHTML = `
-                        <div style="font-size:2rem; margin-bottom:12px;">⚠️</div>
-                        <div style="margin-bottom:8px;">NEW RISK DETECTED</div>
-                        <div style="font-size:0.9rem; font-weight:500; opacity:0.95;">Quick Review Mode Exited</div>
-                        <div style="font-size:0.85rem; margin-top:12px; opacity:0.9;">${newRedCount > 0 ? newRedCount + ' NEW RED' : newAmberCount + ' NEW AMBER'} risk factor(s)</div>
-                    `;
-                    document.body.appendChild(alertDiv);
-
-                    setTimeout(() => {
-                        alertDiv.style.transition = 'opacity 0.3s';
-                        alertDiv.style.opacity = '0';
-                        setTimeout(() => alertDiv.remove(), 300);
-                    }, 3000);
-
-                    // Don't scroll away from A-to-E — just show a toast so the user knows
-                    const newRiskNames = [...newRed, ...newAmber].join(', ');
-                    setTimeout(() => {
-                        showToast(`⚠️ New risk auto-flagged: ${newRiskNames}`, 3000);
-                    }, 500);
+                    // A new risk no longer ejects the clinician: it's flagged loudly, staged in
+                    // the issues list, and they decide whether the full form is needed. Folding
+                    // it into the baseline stops the same risk re-alerting on every keystroke.
+                    showNewRiskAlert(newRed, newAmber);
+                    initialQuickReviewRisks.red.push(...newRed);
+                    initialQuickReviewRisks.amber.push(...newAmber);
                 }
             }
         }
@@ -783,6 +839,7 @@ export function checkCompleteness(s, comorbCount) {
     if (!s.ptName) missing.push('Patient Name');
     if (!s.ptMrn) missing.push('URN');
     if (!s.ptWard) missing.push('Ward');
+    if (!s.reviewerInitials) missing.push('Reviewer');
     nudges.forEach(nudge => {
         if (missing.length > 0) {
             nudge.style.display = 'block';

@@ -53,6 +53,28 @@
   var STORAGE_KEY = "alertToolData_v7_7";
   var ACCORDION_KEY = "alertToolAccordions_v7_7";
   var UNDO_KEY = "alertToolUndo_v7_7";
+  var GATE_LINKED_BLOODS = ["cr_review", "wcc", "crp", "neut", "lymph", "k", "na", "mg", "phos", "lac_review"];
+  var BLOOD_LABELS = {
+    wcc: "WCC",
+    crp: "CRP",
+    neut: "Neut",
+    lymph: "Lymph",
+    hb: "Hb",
+    plts: "Plts",
+    k: "K+",
+    na: "Na",
+    cr_review: "Cr",
+    egfr: "eGFR",
+    mg: "Mg",
+    alb: "Alb",
+    lac_review: "Lactate",
+    phos: "PO4",
+    bili: "Bili",
+    alt: "ALT",
+    inr: "INR",
+    aptt: "APTT",
+    bsl: "BSL"
+  };
   var normalRanges = {
     wcc: { low: 4, high: 11 },
     crp: { low: 0, high: 5 },
@@ -88,6 +110,8 @@
   };
   var staticInputs = [
     "reviewTime",
+    "reviewerInitials",
+    "quickNotes",
     "ptName",
     "ptMrn",
     "ptAge",
@@ -108,6 +132,8 @@
     "nivPs",
     "override",
     "overrideNote",
+    "addsManual",
+    "addsOverrideNote",
     "trache_details_note",
     "mods_score",
     "mods_details",
@@ -195,6 +221,7 @@
     "frailty_note"
   ];
   var segmentedInputs = [
+    "bloods_status",
     "after_hours",
     "hist_o2",
     "intubated",
@@ -309,12 +336,33 @@
       if (pmhSubtitle) {
         pmhSubtitle.style.display = hasComorbidities || hasPmhNote ? "block" : "none";
       }
+      const riskEntries = [];
       const add = (list, txt, id, type, noteValue = null) => {
         let finalTxt = txt;
         if (noteValue && noteValue.trim()) finalTxt = `${txt} (${noteValue.trim()})`;
         list.push(finalTxt);
-        if (id) flagged[type].push(id);
+        if (id) {
+          flagged[type].push(id);
+          riskEntries.push({ text: finalTxt, id, type });
+          const { isNew } = addActiveIssue({ text: finalTxt, source: "auto", severity: type, key: id });
+          if (isNew) maybeToastNewRisk(id, finalTxt);
+        }
       };
+      const bloodIssueKeys = [];
+      if (!s.chk_bloods_nil_sig && s.bloods_status !== "nil_sig" && s.bloods_status !== "not_checked") {
+        GATE_LINKED_BLOODS.forEach((key) => {
+          const range = normalRanges[key];
+          if (!range) return;
+          const bid = `bl_${key}`;
+          const val = num(s[bid]);
+          if (val === null) return;
+          if (val < range.low || val > range.high) {
+            const label = BLOOD_LABELS[key] || key.replace(/_review$/, "").toUpperCase();
+            bloodIssueKeys.push(bid);
+            addActiveIssue({ text: `Abnormal ${label} ${val}`, source: "bloods", severity: "info", key: bid });
+          }
+        });
+      }
       const neut = num(s.bl_neut) || num(s.neut);
       const lymph = num(s.bl_lymph) || num(s.lymph);
       const nlrEl = $("nlrCalc");
@@ -414,10 +462,11 @@
         add(amber, details.join(". "), "seg_pressors", "amber", s.pressors_note);
       }
       const adds = num(s.adds);
+      const scoreName = s.chk_use_mods ? "MODS" : "ADDS";
       if (adds !== null) {
-        if (adds >= 6) add(red, `Elevated ADDS ${adds}`, "adds", "red");
-        else if (adds >= 4) add(red, `Elevated ADDS ${adds}`, "adds", "red");
-        else if (adds === 3 && isRecent) add(amber, `ADDS 3`, "adds", "amber");
+        if (adds >= 6) add(red, `Elevated ${scoreName} ${adds}`, "adds", "red");
+        else if (adds >= 4) add(red, `Elevated ${scoreName} ${adds}`, "adds", "red");
+        else if (adds === 3 && isRecent) add(amber, `${scoreName} 3`, "adds", "amber");
       }
       const hr = num(s.c_hr);
       if (hr) {
@@ -587,7 +636,11 @@
         add(isRed ? red : amber, sentenceCase(txt), "neuroConcern", isRed ? "red" : "amber", s.neuroType_note);
       }
       const k = num(s.bl_k);
-      if (s.electrolyte_gate === true || k && (k < 3 || k > 6)) {
+      const mg = num(s.bl_mg);
+      const phos = num(s.bl_phos);
+      const mgAbnormal = mg !== null && (mg < normalRanges.mg.low || mg > normalRanges.mg.high);
+      const phosAbnormal = phos !== null && (phos < normalRanges.phos.low || phos > normalRanges.phos.high);
+      if (s.electrolyte_gate === true || k && (k < 3 || k > 6) || mgAbnormal || phosAbnormal) {
         let msg = "Electrolyte concern", isRed = false;
         let parts = [];
         if (k) {
@@ -605,6 +658,8 @@
           else parts.push(`high Na ${na}`);
           isRed = true;
         }
+        if (mgAbnormal) parts.push(`${mg < normalRanges.mg.low ? "low" : "high"} Mg ${mg}`);
+        if (phosAbnormal) parts.push(`${phos < normalRanges.phos.low ? "low" : "high"} PO4 ${phos}`);
         const sev = s.electrolyteConcern;
         if (sev === "severe") {
           if (parts.length === 0) parts.push("severe derangement");
@@ -612,7 +667,7 @@
         } else if (sev === "mild" && parts.length === 0) {
           parts.push("mild/moderate derangement");
         }
-        if (parts.length > 0) msg += ` with ${joinGrammatically(parts)}`;
+        if (parts.length > 0) msg += ` with ${parts.join(", ")}`;
         add(isRed ? red : amber, msg, "electrolyteConcern", isRed ? "red" : "amber", s.electrolyteConcern_note);
       }
       const cr = num(s.bl_cr_review) || num(s.cr_review);
@@ -824,9 +879,20 @@
       const uniqueAmber = [...new Set(amber)];
       const redCount = uniqueRed.length;
       const amberCount = uniqueAmber.length;
-      let cat = { id: "green", text: "CAT 3" };
-      if (redCount > 0) cat = { id: "red", text: "CAT 1" };
-      else if (amberCount > 0) cat = { id: "amber", text: "CAT 2" };
+      let autoCat = { id: "green", text: "CAT 3" };
+      if (redCount > 0) autoCat = { id: "red", text: "CAT 1" };
+      else if (amberCount > 0) autoCat = { id: "amber", text: "CAT 2" };
+      let cat = autoCat;
+      const downgradeReason = (s.overrideNote || "").trim();
+      if (s.override === "green" && downgradeReason) {
+        cat = {
+          id: "green",
+          text: "CAT 3",
+          downgradedFrom: autoCat.text,
+          downgradeReason
+        };
+      }
+      refreshCategorySelect(autoCat, s.override, downgradeReason, redCount, amberCount);
       const catText = $("catText");
       if (catText) {
         catText.className = `status ${cat.id}`;
@@ -850,36 +916,25 @@
         stickyScore.textContent = cat.text;
       }
       updateSidebarRiskBadges(redCount, amberCount);
+      reconcileAutoIssues(/* @__PURE__ */ new Set([...riskEntries.map((e) => e.id), ...bloodIssueKeys]));
+      renderScrapedIssuesList();
+      renderCarriedForward();
+      maybeOfferQuickReview(timeData, s);
       if (isQuickReviewMode) {
         if (!quickReviewBaselineCaptured) {
           initialQuickReviewRisks.red = [...uniqueRed];
           initialQuickReviewRisks.amber = [...uniqueAmber];
           setQuickReviewBaselineCaptured(true);
         } else {
-          const newRed = uniqueRed.filter((r) => !initialQuickReviewRisks.red.includes(r));
-          const newAmber = uniqueAmber.filter((r) => !initialQuickReviewRisks.amber.includes(r));
+          const silentTexts = new Set(
+            riskEntries.filter((e) => e.id === "adds" || e.id.startsWith("bl_") || e.id.startsWith("override_")).map((e) => e.text)
+          );
+          const newRed = uniqueRed.filter((r) => !initialQuickReviewRisks.red.includes(r) && !silentTexts.has(r));
+          const newAmber = uniqueAmber.filter((r) => !initialQuickReviewRisks.amber.includes(r) && !silentTexts.has(r));
           if (newRed.length > 0 || newAmber.length > 0) {
-            const newRedCount = newRed.length;
-            const newAmberCount = newAmber.length;
-            exitQuickReviewMode();
-            const alertDiv = document.createElement("div");
-            alertDiv.style.cssText = "position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:var(--red); color:white; padding:24px 32px; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.3); font-size:1.1rem; font-weight:700; text-align:center; min-width:400px;";
-            alertDiv.innerHTML = `
-                        <div style="font-size:2rem; margin-bottom:12px;">\u26A0\uFE0F</div>
-                        <div style="margin-bottom:8px;">NEW RISK DETECTED</div>
-                        <div style="font-size:0.9rem; font-weight:500; opacity:0.95;">Quick Review Mode Exited</div>
-                        <div style="font-size:0.85rem; margin-top:12px; opacity:0.9;">${newRedCount > 0 ? newRedCount + " NEW RED" : newAmberCount + " NEW AMBER"} risk factor(s)</div>
-                    `;
-            document.body.appendChild(alertDiv);
-            setTimeout(() => {
-              alertDiv.style.transition = "opacity 0.3s";
-              alertDiv.style.opacity = "0";
-              setTimeout(() => alertDiv.remove(), 300);
-            }, 3e3);
-            const newRiskNames = [...newRed, ...newAmber].join(", ");
-            setTimeout(() => {
-              showToast(`\u26A0\uFE0F New risk auto-flagged: ${newRiskNames}`, 3e3);
-            }, 500);
+            showNewRiskAlert(newRed, newAmber);
+            initialQuickReviewRisks.red.push(...newRed);
+            initialQuickReviewRisks.amber.push(...newAmber);
           }
         }
       }
@@ -997,6 +1052,7 @@
     if (!s.ptName) missing.push("Patient Name");
     if (!s.ptMrn) missing.push("URN");
     if (!s.ptWard) missing.push("Ward");
+    if (!s.reviewerInitials) missing.push("Reviewer");
     nudges.forEach((nudge) => {
       if (missing.length > 0) {
         nudge.style.display = "block";
@@ -1169,18 +1225,16 @@
         }
       }
     }
-    let html = `<div style="display:flex; flex-direction:column; gap:4px; width:100%; box-sizing:border-box;">`;
-    html += `<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:8px; background:var(--input-bg); border:1px solid ${borderColor}; border-radius:6px; box-sizing:border-box;">`;
-    html += `<div style="flex-shrink:0; font-weight:600; font-size:0.85rem; min-width:80px;">${type}</div>`;
+    let html = `<div class="device-row" style="border-color:${borderColor};">`;
+    html += `<div class="device-type">${type}</div>`;
     if (hasDateField) {
-      html += `<input class="device-date" type="date" value="${insertionDate}" placeholder="Date" style="padding:4px 6px; border:1px solid var(--line); border-radius:4px; font-size:0.8rem; width:130px;"/>`;
+      html += `<input class="device-date" type="date" value="${insertionDate}" placeholder="Date"/>`;
     }
-    html += `<input class="device-textarea" type="text" placeholder="details..." value="${val}" style="flex:1; min-width:120px; padding:4px 8px; border:1px solid var(--line); border-radius:4px; font-size:0.85rem; box-sizing:border-box;"/>`;
-    html += `<div class="remove-entry" style="cursor:pointer; font-weight:bold; color:var(--accent); font-size:1rem; flex-shrink:0;">\u2715</div>`;
-    html += `</div>`;
+    html += `<input class="device-textarea" type="text" placeholder="details..." value="${val}"/>`;
     if (infoText && infoColor) {
-      html += `<div class="device-info-text" style="font-size:0.8rem; font-weight:600; color:${infoColor}; padding-left:8px;">${infoText}</div>`;
+      html += `<div class="device-info-text" style="color:${infoColor};">${infoText}</div>`;
     }
+    html += `<div class="remove-entry" title="Remove">\u2715</div>`;
     html += `</div>`;
     div.innerHTML = html;
     if (type === "Tracheostomy") {
@@ -1414,8 +1468,6 @@
     document.querySelectorAll(".panel").forEach((p2) => p2.style.display = "none");
     document.querySelectorAll(".accordion").forEach((btn) => {
       btn.setAttribute("aria-expanded", "false");
-      const icon = btn.querySelector(".icon");
-      if (icon) icon.textContent = "[+]";
     });
     sessionStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(UNDO_KEY);
@@ -1451,6 +1503,14 @@
     window.prevBloods = {};
     const pb = $("prevRisksBox");
     if (pb) pb.style.display = "none";
+    setQuickReviewDismissed(false);
+    setQuickReviewOffered(false);
+    const qrPrompt = $("quickReviewPrompt");
+    if (qrPrompt) qrPrompt.style.display = "none";
+    clearActiveIssues();
+    clearNewRiskAlert();
+    const bloodsGrid = document.querySelector(".bloods-grid");
+    if (bloodsGrid) bloodsGrid.style.display = "";
     const gatesToHide = [
       "#resp_gate_content",
       "#renal_gate_content",
@@ -1497,6 +1557,10 @@
       summaryEl.value = "";
       summaryEl.style.height = "";
     }
+    const handoverEl = $("handoverLine");
+    if (handoverEl) handoverEl.value = "";
+    const handoverActions = $("handover_actions");
+    if (handoverActions) handoverActions.style.display = "none";
     window.dismissedDischarge = false;
     const now = /* @__PURE__ */ new Date();
     const m = now.getMinutes();
@@ -1516,10 +1580,223 @@
     if (orReason) orReason.style.display = "none";
     $("override_amber")?.classList.remove("active");
     $("override_red")?.classList.remove("active");
+    $("override_green")?.classList.remove("active");
+    const orClear = $("override_clear");
+    if (orClear) orClear.style.display = "none";
     const resetEv = new CustomEvent("resetAddsCalc");
     document.dispatchEvent(resetEv);
     computeAll();
     showToast("Data cleared", 2e3);
+  }
+  function refreshCategorySelect(autoCat, override, reason, redCount, amberCount) {
+    const hint = $("override_auto_hint");
+    if (hint) hint.textContent = `Auto-calculated: ${autoCat.text}`;
+    const chosen = override && override !== "none" ? override : null;
+    ["red", "amber", "green"].forEach((c) => $(`override_${c}`)?.classList.toggle("active", c === chosen));
+    const clearBtn = $("override_clear");
+    if (clearBtn) clearBtn.style.display = chosen ? "" : "none";
+    const box = $("override_reason_box");
+    if (box) box.style.display = chosen ? "block" : "none";
+    const warn = $("override_downgrade_warn");
+    const label = $("override_reason_label");
+    const required = $("override_reason_required");
+    const isDowngrade = override === "green";
+    if (label) label.textContent = isDowngrade ? "Reason for CAT 3 downgrade (required)" : "Reason for override";
+    if (required) required.style.display = isDowngrade && !reason ? "block" : "none";
+    if (box) box.classList.toggle("reason-missing", isDowngrade && !reason);
+    if (warn) {
+      if (isDowngrade && (redCount > 0 || amberCount > 0)) {
+        const parts = [];
+        if (redCount) parts.push(`${redCount} red flag${redCount > 1 ? "s" : ""}`);
+        if (amberCount) parts.push(`${amberCount} amber flag${amberCount > 1 ? "s" : ""}`);
+        warn.textContent = `\u26A0 Downgrading to CAT 3 with ${parts.join(" and ")} present. The flags stay in the summary.`;
+        warn.style.display = "block";
+      } else {
+        warn.style.display = "none";
+      }
+    }
+  }
+  function refreshAddsOverrideUI() {
+    const manual = $("addsManual")?.value === "true";
+    const btn = $("btnAddsOverride");
+    const box = $("adds_override_box");
+    const hint = $("adds_calc_hint");
+    const addsInput = $("adds");
+    if (btn) {
+      btn.textContent = manual ? "MODS score - calculator not applied" : "Enter MODS";
+      btn.classList.toggle("active", manual);
+      btn.setAttribute("aria-pressed", String(manual));
+    }
+    if (box) box.style.display = manual ? "block" : "none";
+    const modsChk = $("chk_use_mods");
+    if (modsChk) {
+      modsChk.checked = manual;
+      const modsInputs = $("mods_inputs");
+      if (modsInputs) modsInputs.style.display = manual ? "block" : "none";
+    }
+    if (manual) {
+      const score = $("mods_score");
+      if (score) score.value = addsInput?.value || "";
+      const details = $("mods_details");
+      if (details) details.value = $("addsOverrideNote")?.value || "";
+    }
+    const calcTotal = $("calc_total_display")?.textContent?.trim();
+    const recorded = addsInput?.value?.trim();
+    if (hint) {
+      if (manual && calcTotal && recorded && calcTotal !== recorded) {
+        hint.textContent = `ADDS calculator ${calcTotal} \xB7 MODS recorded ${recorded}`;
+        hint.style.display = "inline";
+      } else {
+        hint.style.display = "none";
+      }
+    }
+  }
+  function toggleAddsOverride() {
+    const field = $("addsManual");
+    if (!field) return;
+    const manual = field.value !== "true";
+    field.value = String(manual);
+    if (manual) {
+      $("adds")?.focus();
+      $("adds")?.select();
+    } else {
+      const calcTotal = $("calc_total_display")?.textContent?.trim();
+      const addsInput = $("adds");
+      if (addsInput && calcTotal && calcTotal !== "0") {
+        addsInput.value = calcTotal;
+        addsInput.dispatchEvent(new Event("input"));
+      }
+      const note = $("addsOverrideNote");
+      if (note) note.value = "";
+      const score = $("mods_score");
+      if (score) score.value = "";
+      const details = $("mods_details");
+      if (details) details.value = "";
+    }
+    refreshAddsOverrideUI();
+  }
+  function renderCarriedForward() {
+    const card = $("carried_forward_card");
+    const list = $("carried_forward_list");
+    if (!card || !list) return;
+    const wrappers = [...document.querySelectorAll(".input-box.carried-forward")];
+    if (!wrappers.length) {
+      card.style.display = "none";
+      list.innerHTML = "";
+      return;
+    }
+    list.innerHTML = wrappers.map((w) => {
+      const labelEl = w.querySelector(".question-label")?.cloneNode(true);
+      labelEl?.querySelector(".prev-datum")?.remove();
+      const label = (labelEl?.textContent || "Concern").replace(/\?$/, "").trim();
+      const was = w.dataset.carriedFrom || "";
+      return `
+            <div class="cf-row" data-wrapper="${w.id}">
+                <div class="cf-row-text">
+                    <div class="cf-row-title">${label}</div>
+                    ${was ? `<div class="cf-row-was">was: ${was}</div>` : ""}
+                </div>
+                <div class="cf-row-actions">
+                    <button type="button" class="btn small cf-chip" data-action="resolved" data-wrapper="${w.id}">Resolved</button>
+                    <button type="button" class="btn small cf-chip" data-action="present" data-wrapper="${w.id}">Still present</button>
+                    <button type="button" class="btn small cf-chip" data-action="improving" data-wrapper="${w.id}">Improving</button>
+                </div>
+            </div>`;
+    }).join("");
+    list.querySelectorAll(".cf-chip").forEach((btn) => {
+      btn.addEventListener("click", () => answerCarriedForward(btn.dataset.wrapper, btn.dataset.action));
+    });
+    card.style.display = "block";
+  }
+  function answerCarriedForward(wrapperId, action) {
+    const wrapper = $(wrapperId);
+    if (!wrapper) return;
+    const group = wrapper.querySelector(".segmented-group");
+    if (action === "resolved") {
+      group?.querySelector('.seg-btn[data-value="false"]')?.click();
+    } else if (action === "improving") {
+      const noteEl = wrapper.dataset.carriedNote ? $(wrapper.dataset.carriedNote) : null;
+      if (noteEl && !/improving/i.test(noteEl.value)) {
+        noteEl.value = noteEl.value.trim() ? `${noteEl.value.trim()}, improving` : "improving";
+        noteEl.dispatchEvent(new Event("input"));
+      }
+    }
+    wrapper.classList.remove("carried-forward");
+    delete wrapper.dataset.carriedFrom;
+    delete wrapper.dataset.carriedNote;
+    renderCarriedForward();
+    computeAll();
+  }
+  var newRiskLog = [];
+  function showNewRiskAlert(newRed = [], newAmber = []) {
+    const box = $("qrNewRiskAlert");
+    if (!box) return;
+    const seen = new Set(newRiskLog.map((r) => r.text));
+    [...newRed.map((text) => ({ text, severity: "red" })), ...newAmber.map((text) => ({ text, severity: "amber" }))].forEach((entry) => {
+      if (seen.has(entry.text)) return;
+      seen.add(entry.text);
+      newRiskLog.push(entry);
+    });
+    newRiskLog = newRiskLog.filter((r) => !newRiskLog.some((other) => other !== r && other.text.startsWith(r.text)));
+    if (!newRiskLog.length) return;
+    const redCount = newRiskLog.filter((r) => r.severity === "red").length;
+    const amberCount = newRiskLog.length - redCount;
+    const counts = [
+      redCount ? `${redCount} red` : "",
+      amberCount ? `${amberCount} amber` : ""
+    ].filter(Boolean).join(" and ");
+    box.className = redCount ? "qr-new-risk red" : "qr-new-risk amber";
+    box.innerHTML = `
+        <div class="qr-new-risk-head">
+            <span>\u26A0\uFE0F New risk flagged since this review started (${counts})</span>
+            <button type="button" id="qrNewRiskDismiss" class="btn small">Dismiss</button>
+        </div>
+        <ul>${newRiskLog.map((r) => `<li class="${r.severity}">${r.text}</li>`).join("")}</ul>
+        <div class="qr-new-risk-foot">Staged in the issues list. Add detail there or in Quick Notes, or exit to
+            the full assessment if this needs a fuller work-up.</div>`;
+    box.hidden = false;
+    $("qrNewRiskDismiss")?.addEventListener("click", clearNewRiskAlert);
+    showToast(`\u26A0\uFE0F New risk flagged: ${[...newRed, ...newAmber].join(", ")}`, 4e3);
+  }
+  function clearNewRiskAlert() {
+    newRiskLog = [];
+    const box = $("qrNewRiskAlert");
+    if (box) {
+      box.hidden = true;
+      box.innerHTML = "";
+    }
+  }
+  function setBloodsOverlay(open) {
+    const section = $("section-bloods");
+    if (!section) return;
+    section.classList.toggle("qr-expanded", !!open && isQuickReviewMode);
+    syncQuickOverlayBackdrop();
+  }
+  function syncQuickOverlayBackdrop() {
+    const backdrop = $("qrBackdrop");
+    if (!backdrop) return;
+    const anyOpen = !!document.querySelector(".qr-expanded");
+    backdrop.hidden = !anyOpen;
+  }
+  var addsCalcObserver = null;
+  function watchAddsCalculator() {
+    const container = $("addsCalculatorContainer");
+    const wrapper = $("adds_wrapper");
+    if (!container || !wrapper || addsCalcObserver) return;
+    const sync = () => {
+      const open = container.style.display === "block";
+      wrapper.classList.toggle("qr-expanded", open && isQuickReviewMode);
+      syncQuickOverlayBackdrop();
+    };
+    addsCalcObserver = new MutationObserver(sync);
+    addsCalcObserver.observe(container, { attributes: true, attributeFilter: ["style"] });
+    sync();
+  }
+  function closeQuickOverlays() {
+    const wrapper = $("adds_wrapper");
+    if (wrapper?.classList.contains("qr-expanded")) $("btnToggleCalc")?.click();
+    if ($("section-bloods")?.classList.contains("qr-expanded")) $("btnBloodsDetailsToggle")?.click();
+    syncQuickOverlayBackdrop();
   }
   function openAccordion(panelId, btnSelector) {
     const panel = $(panelId);
@@ -1527,132 +1804,154 @@
     if (panel && btn) {
       panel.style.display = "block";
       btn.setAttribute("aria-expanded", "true");
-      const icon = btn.querySelector(".icon");
-      if (icon) icon.textContent = "[-]";
     }
+  }
+  function closeAccordion(panelId, btnSelector) {
+    const panel = $(panelId);
+    const btn = document.querySelector(btnSelector);
+    if (panel && btn) {
+      panel.style.display = "none";
+      btn.setAttribute("aria-expanded", "false");
+    }
+  }
+  var QUICK_REVIEW_SECTIONS_TO_HIDE = ["section-patient", "section-risk", "section-ae", "section-context"];
+  var QUICK_REVIEW_ONLY_SECTIONS = ["quick_notes_wrapper", "scraped_risks_wrapper"];
+  var QUICK_GRID_LAYOUT = {
+    qgLeft: ["adds_wrapper", "section-bloods", "override_card", "quick_notes_wrapper"],
+    qgRight: ["carried_forward_card", "scraped_risks_wrapper", "section-devices"],
+    qgBottom: ["section-category"]
+  };
+  function moveIntoQuickGrid() {
+    Object.entries(QUICK_GRID_LAYOUT).forEach(([cellId, ids]) => {
+      const cell = $(cellId);
+      if (!cell) return;
+      ids.forEach((id) => {
+        const el = $(id);
+        if (!el || el.dataset.qrMoved === "true" || !el.parentNode) return;
+        const anchor = document.createElement("span");
+        anchor.setAttribute("data-qr-anchor", id);
+        anchor.style.display = "none";
+        el.parentNode.insertBefore(anchor, el);
+        cell.appendChild(el);
+        el.dataset.qrMoved = "true";
+      });
+    });
+  }
+  function restoreFromQuickGrid() {
+    document.querySelectorAll('[data-qr-moved="true"]').forEach((el) => {
+      const anchor = document.querySelector(`[data-qr-anchor="${el.id}"]`);
+      if (anchor && anchor.parentNode) {
+        anchor.parentNode.insertBefore(el, anchor);
+        anchor.remove();
+      }
+      delete el.dataset.qrMoved;
+    });
   }
   function enableQuickReviewMode() {
     setQuickReviewMode(true);
-    const s = getState();
     setInitialQuickReviewRisks({ red: [], amber: [] });
     setQuickReviewBaselineCaptured(false);
+    clearNewRiskAlert();
     computeAll();
+    document.body.classList.add("quick-review-active");
     const banner = $("quickReviewBanner");
     if (banner) banner.style.display = "block";
     const prompt = $("quickReviewPrompt");
     if (prompt) prompt.style.display = "none";
-    const previousRisks = previousCategoryData?.previousRisks || [];
-    const riskSectionMap = {
-      "respiratory": "resp_wrapper",
-      "neuro": "neuro_wrapper",
-      "renal": "renal_wrapper",
-      "infection": "infection_wrapper",
-      "vasoactive": "pressor_wrapper",
-      "immobility": "immobility_wrapper",
-      "nutrition": "nutrition_wrapper",
-      "electrolyte": "elec_wrapper"
-    };
-    const allRiskSections = [...Object.values(riskSectionMap), "hac_wrapper", "ah_wrapper", "comorbs_wrapper", "after_hours_note_wrapper"];
-    const sectionsToShow = previousRisks.map((risk) => riskSectionMap[risk]).filter(Boolean);
-    const sectionsToHide = allRiskSections.filter((id) => !sectionsToShow.includes(id));
-    sectionsToHide.forEach((id) => {
+    QUICK_REVIEW_SECTIONS_TO_HIDE.forEach((id) => {
       const section = $(id);
       if (section) {
         section.style.display = "none";
         section.setAttribute("data-hidden-by-quick-review", "true");
       }
     });
-    sectionsToShow.forEach((id) => {
+    QUICK_REVIEW_ONLY_SECTIONS.forEach((id) => {
       const section = $(id);
-      if (section) {
-        const heading = section.querySelector(".bold-heading");
-        if (heading && !heading.querySelector(".review-badge")) {
-          const badge = document.createElement("span");
-          badge.className = "review-badge";
-          badge.style.cssText = "display:inline-block; margin-left:8px; padding:2px 8px; background:var(--amber); color:white; font-size:0.75rem; border-radius:4px; font-weight:600;";
-          badge.textContent = "\u21BB Re-assess";
-          heading.appendChild(badge);
-        }
-      }
+      if (section) section.style.display = "block";
     });
-    const otherSectionsToHide = ["section-psychosocial"];
-    otherSectionsToHide.forEach((id) => {
-      const section = $(id);
-      if (section) {
-        section.style.display = "none";
-        section.setAttribute("data-hidden-by-quick-review", "true");
-      }
-    });
-    const accordionsToClose = ["panel_devices", "panel_other"];
-    accordionsToClose.forEach((panelId) => {
-      if (panelId === "panel_devices") {
-        const hasDevices = Object.values(s.devices || {}).some((arr) => Array.isArray(arr) && arr.length > 0);
-        if (hasDevices) {
-          openAccordion("panel_devices", '[aria-controls="panel_devices"]');
-          return;
-        }
-      }
-      const btnSelector = `[aria-controls="${panelId}"]`;
-      const btn = document.querySelector(btnSelector);
-      const panel = $(panelId);
-      if (btn && panel) {
-        panel.style.display = "none";
-        btn.setAttribute("aria-expanded", "false");
-        const icon = btn.querySelector(".icon");
-        if (icon) icon.textContent = "[+]";
-      }
-    });
-    openAccordion("panel_ae", '[aria-controls="panel_ae"]');
-    openAccordion("panel_bloods", '[aria-controls="panel_bloods"]');
-    const riskSection = $("section-risk");
-    if (riskSection) {
-      riskSection.style.display = "";
-    }
+    moveIntoQuickGrid();
+    watchAddsCalculator();
+    closeAccordion("panel_bloods", '[aria-controls="panel_bloods"]');
+    openAccordion("panel_devices", '[aria-controls="panel_devices"]');
+    const bloodsQuick = $("bloods_quick_controls");
+    if (bloodsQuick) bloodsQuick.style.display = "block";
     document.querySelectorAll(".nav-item").forEach((item) => {
-      const href = item.getAttribute("href");
-      if (href && otherSectionsToHide.includes(href.substring(1))) {
+      const href = item.getAttribute("href")?.substring(1);
+      if (href && QUICK_REVIEW_SECTIONS_TO_HIDE.includes(href)) {
         item.style.opacity = "0.3";
         item.style.pointerEvents = "none";
       }
     });
+    const toggleBtn = $("btnManualQuickReview");
+    if (toggleBtn) toggleBtn.textContent = "Exit Quick Review";
+    renderScrapedIssuesList();
     setTimeout(() => {
-      const aeSection = $("section-ae");
-      if (aeSection) aeSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 300);
-    const riskNames = previousRisks.join(", ");
-    showToast(`\u26A1 Quick Review - Re-assessing: ${riskNames}`, 3e3);
+      const target = $("quickGrid");
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+    showToast("Quick Review mode", 2e3);
+  }
+  function maybeOfferQuickReview(timeData, s) {
+    if (!s.stepdownDate) return;
+    if (s.reviewType === "pre") return;
+    if (isQuickReviewMode) return;
+    if (quickReviewDismissedBySession) return;
+    if (timeData.hours > 24) {
+      showQuickReviewPrompt($("catText")?.textContent || "", timeData.hours);
+    }
   }
   function exitQuickReviewMode() {
     setQuickReviewMode(false);
     setInitialQuickReviewRisks({ red: [], amber: [] });
     setQuickReviewBaselineCaptured(false);
+    setQuickReviewDismissed(true);
+    document.body.classList.remove("quick-review-active");
     const banner = $("quickReviewBanner");
     if (banner) banner.style.display = "none";
+    clearNewRiskAlert();
+    $("adds_wrapper")?.classList.remove("qr-expanded");
+    setBloodsOverlay(false);
+    restoreFromQuickGrid();
+    document.querySelector(".device-add-group")?.classList.remove("show-all");
+    $("btnDeviceMore")?.setAttribute("aria-expanded", "false");
     document.querySelectorAll("[data-hidden-by-quick-review]").forEach((section) => {
       section.style.display = "";
       section.removeAttribute("data-hidden-by-quick-review");
     });
-    document.querySelectorAll(".review-badge").forEach((badge) => badge.remove());
+    QUICK_REVIEW_ONLY_SECTIONS.forEach((id) => {
+      const section = $(id);
+      if (section) section.style.display = "none";
+    });
+    const bloodsQuick = $("bloods_quick_controls");
+    if (bloodsQuick) bloodsQuick.style.display = "none";
     document.querySelectorAll(".nav-item").forEach((item) => {
       item.style.opacity = "";
       item.style.pointerEvents = "";
     });
+    const toggleBtn = $("btnManualQuickReview");
+    if (toggleBtn) toggleBtn.textContent = "Quick Review";
     showToast("Full review mode restored", 2e3);
   }
   function showQuickReviewPrompt(categoryText, hoursOnWard, previousRisks = []) {
     const prompt = $("quickReviewPrompt");
     if (!prompt) return;
+    if (quickReviewOffered) return;
+    setQuickReviewOffered(true);
     const prevCatText = $("prevCategoryText");
     const timeText = $("timeOnWardText");
-    if (prevCatText) {
-      const riskList = previousRisks.length > 0 ? ` (${previousRisks.join(", ")})` : "";
-      prevCatText.textContent = categoryText + riskList;
+    if (prevCatText) prevCatText.textContent = categoryText ? `Previous: ${categoryText}` : "";
+    if (timeText) timeText.textContent = `${Math.round(hoursOnWard)}h since stepdown`;
+    const risksBox = $("qrPromptRisks");
+    if (risksBox) {
+      if (previousRisks.length) {
+        risksBox.innerHTML = `<strong>Previously flagged</strong><ul>${previousRisks.map((r) => `<li>${r}</li>`).join("")}</ul>`;
+        risksBox.style.display = "block";
+      } else {
+        risksBox.style.display = "none";
+      }
     }
-    if (timeText) timeText.textContent = `${Math.round(hoursOnWard)}h`;
-    prompt.style.display = "block";
-    setTimeout(() => {
-      prompt.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 500);
+    prompt.style.display = "flex";
+    setTimeout(() => $("btnQuickReview")?.focus(), 100);
   }
   function updateSidebarRiskBadges(redCount, amberCount) {
     const badgeContainer = document.getElementById("sidebar-risk-badges");
@@ -1769,6 +2068,141 @@
   function setQuickReviewBaselineCaptured(v) {
     quickReviewBaselineCaptured = v;
   }
+  var quickReviewDismissedBySession = false;
+  function setQuickReviewDismissed(v) {
+    quickReviewDismissedBySession = v;
+  }
+  var quickReviewOffered = false;
+  function setQuickReviewOffered(v) {
+    quickReviewOffered = v;
+  }
+  var activeIssues = [];
+  var toastedRiskKeys = /* @__PURE__ */ new Set();
+  var _activeIssueCounter = 0;
+  function addActiveIssue({ text, source, severity, key }) {
+    const existing = activeIssues.find((i) => i.key === key && (!i.resolved || i.resolvedByUser));
+    if (existing) {
+      existing.text = text;
+      existing.severity = severity;
+      return { issue: existing, isNew: false };
+    }
+    const issue = { id: `ai_${++_activeIssueCounter}`, text, source, severity, key, resolved: false, createdAt: _activeIssueCounter };
+    activeIssues.push(issue);
+    return { issue, isNew: true };
+  }
+  function addManualIssue(text) {
+    return addActiveIssue({ text, source: "manual", severity: "amber", key: `manual_${_activeIssueCounter + 1}` });
+  }
+  function toggleActiveIssueResolved(id) {
+    const issue = activeIssues.find((i) => i.id === id);
+    if (!issue) return;
+    issue.resolved = !issue.resolved;
+    issue.resolvedByUser = issue.resolved;
+    renderScrapedIssuesList();
+  }
+  function deleteActiveIssue(id) {
+    activeIssues = activeIssues.filter((i) => i.id !== id);
+    renderScrapedIssuesList();
+  }
+  function editActiveIssueText(id, newText) {
+    const issue = activeIssues.find((i) => i.id === id);
+    if (issue) issue.text = newText;
+    renderScrapedIssuesList();
+  }
+  function getUnresolvedActiveIssues() {
+    return activeIssues.filter((i) => !i.resolved);
+  }
+  function getVisibleActiveIssues() {
+    return activeIssues.filter((i) => !i.resolved || i.resolvedByUser);
+  }
+  function clearActiveIssues() {
+    activeIssues = [];
+    toastedRiskKeys.clear();
+    renderScrapedIssuesList();
+  }
+  function reconcileAutoIssues(currentKeys) {
+    activeIssues.forEach((issue) => {
+      const isAutoSourced = issue.source === "auto" || issue.source === "bloods";
+      if (isAutoSourced && !issue.resolved && !currentKeys.has(issue.key)) {
+        issue.resolved = true;
+        toastedRiskKeys.delete(issue.key);
+      }
+    });
+  }
+  function maybeToastNewRisk(key, text) {
+    if (toastedRiskKeys.has(key)) return;
+    toastedRiskKeys.add(key);
+    showToast(`New risk flagged: ${text}`, 3e3);
+  }
+  function renderScrapedIssuesList() {
+    const list = $("scraped_issues_list");
+    if (!list) return;
+    if (list.querySelector(".scraped-issue-edit")) return;
+    const issues = getVisibleActiveIssues();
+    const count = $("issues_count");
+    const openCount = issues.filter((i) => !i.resolved).length;
+    if (count) count.textContent = openCount ? `(${openCount})` : "";
+    if (issues.length === 0) {
+      list.innerHTML = '<div style="color:var(--muted); font-size:0.9rem;">Nothing staged</div>';
+      return;
+    }
+    const BIN_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+    list.innerHTML = issues.map((issue) => `
+        <div class="scraped-issue-row${issue.resolved ? " resolved" : ""}" data-id="${issue.id}">
+            <input type="checkbox" class="scraped-issue-resolve" data-id="${issue.id}"${issue.resolved ? " checked" : ""} title="Mark as resolved">
+            <span class="scraped-issue-text" data-id="${issue.id}" title="Click to edit">${issue.text}</span>
+            ${issue.severity === "info" ? '<span class="scraped-issue-note-tag">note</span>' : ""}
+            <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}" title="Edit">&#9998;</button>
+            <button type="button" class="scraped-issue-delete" data-id="${issue.id}" title="Delete">${BIN_ICON}</button>
+        </div>
+    `).join("");
+    list.querySelectorAll(".scraped-issue-resolve").forEach((cb) => {
+      cb.addEventListener("change", (e) => toggleActiveIssueResolved(e.target.dataset.id));
+    });
+    list.querySelectorAll(".scraped-issue-delete").forEach((btn) => {
+      btn.addEventListener("click", (e) => deleteActiveIssue(e.currentTarget.dataset.id));
+    });
+    const startEdit = (span) => {
+      const id = span.dataset.id;
+      const issue = activeIssues.find((i) => i.id === id);
+      if (!issue) return;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "scraped-issue-edit";
+      input.value = issue.text;
+      span.replaceWith(input);
+      input.focus();
+      input.select();
+      let committed = false;
+      const finish = (save) => {
+        if (committed) return;
+        committed = true;
+        const newText = input.value.trim() || issue.text;
+        input.remove();
+        if (save) editActiveIssueText(id, newText);
+        else renderScrapedIssuesList();
+      };
+      input.addEventListener("blur", () => finish(true));
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          finish(true);
+          $("manualIssueInput")?.focus();
+        } else if (ev.key === "Escape") {
+          ev.preventDefault();
+          finish(false);
+        }
+      });
+    };
+    list.querySelectorAll(".scraped-issue-text").forEach((span) => {
+      span.addEventListener("click", () => startEdit(span));
+    });
+    list.querySelectorAll(".scraped-issue-edit-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const span = list.querySelector(`.scraped-issue-text[data-id="${e.currentTarget.dataset.id}"]`);
+        if (span) startEdit(span);
+      });
+    });
+  }
   function saveState(instantly = false) {
     const state = getState();
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -1831,6 +2265,8 @@
     });
     state["reviewType"] = document.querySelector('input[name="reviewType"]:checked')?.value || "post";
     state["clinicianRole"] = document.querySelector('input[name="clinicianRole"]:checked')?.value || "ALERT CNS";
+    state["reviewModeType"] = document.querySelector('input[name="reviewModeType"]:checked')?.value || "physical";
+    state.activeIssues = activeIssues;
     ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
       const el = $(id);
       if (el) state[id] = el.checked;
@@ -1910,8 +2346,8 @@
         group.querySelectorAll(".select-btn").forEach((b) => b.classList.remove("active"));
         if (state[id]) {
           group.querySelector(`.select-btn[data-value="${state[id]}"]`)?.classList.add("active");
+          if (id === "neuroType") $("neuro_gate_content").style.display = "block";
         }
-        if (id === "neuroType") $("neuro_gate_content").style.display = "block";
       }
     });
     if (state["reviewType"]) {
@@ -1923,6 +2359,15 @@
     if (state["clinicianRole"]) {
       const r = document.querySelector(`input[name="clinicianRole"][value="${state["clinicianRole"]}"]`);
       if (r) r.checked = true;
+    }
+    if (state["reviewModeType"]) {
+      const r = document.querySelector(`input[name="reviewModeType"][value="${state["reviewModeType"]}"]`);
+      if (r) r.checked = true;
+    }
+    if (Array.isArray(state.activeIssues)) {
+      activeIssues = state.activeIssues;
+      _activeIssueCounter = activeIssues.reduce((max, i) => Math.max(max, i.createdAt || 0), 0);
+      renderScrapedIssuesList();
     }
     ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
       const el = $(id);
@@ -1974,6 +2419,9 @@
     const addLine = (txt) => {
       if (txt) lines.push(txt);
     };
+    const pushBlank = () => {
+      if (lines.length && lines[lines.length - 1] !== "") lines.push("");
+    };
     const role = s.clinicianRole;
     const reviewName = s.reviewType === "pre" ? "Pre-Stepdown" : "post ICU review";
     if (s.reviewType === "pre") {
@@ -1992,30 +2440,33 @@
     } else if (s.stepdownDate) {
       lines.push(`ICU Discharge Date: ${formatDateDDMMYYYY(s.stepdownDate)}`);
     }
-    lines.push("");
+    pushBlank();
     if (wardTimeTxt && s.reviewType !== "pre") lines.push(`Time since stepdown: ${wardTimeTxt}`);
     if (s.icuLos) lines.push(`ICU LOS: ${s.icuLos} days`);
     lines.push(`Reason for ICU Admission: ${s.ptAdmissionReason || "--"}`);
     if (s.reviewType === "pre" && s.icuSummary) {
-      lines.push("");
+      pushBlank();
       lines.push(`ICU Course Summary: ${s.icuSummary}`);
     }
-    lines.push("");
+    pushBlank();
     if (s.stepdown_suitable === false) {
       lines.push(`ALERT Nursing Review Category - Not suitable for stepdown`);
-      lines.push("");
+      pushBlank();
       lines.push("Assessed as not presently suitable for ward stepdown.");
       lines.push(`Reason: ${s.unsuitable_note || "Clinical concerns (see notes)"}`);
       lines.push("Plan: ICU Senior Review requested. Please contact ALERT for re-review when appropriate.");
-      lines.push("");
+      pushBlank();
       lines.push("--- FULL ASSESSMENT BELOW ---");
-      lines.push("");
+      pushBlank();
     } else {
       lines.push(`ALERT Nursing Review Category - ${cat.text}`);
+      if (cat.downgradedFrom) {
+        lines.push(`Category manually set to ${cat.text} by clinician - ${cat.downgradeReason} (auto-calculated: ${cat.downgradedFrom})`);
+      }
       if (s.stepdown_suitable === true && s.reviewType === "pre") {
         lines.push("Patient is suitable for ward stepdown.");
       }
-      lines.push("");
+      pushBlank();
     }
     const pmhItems = [];
     const pmhSeen = /* @__PURE__ */ new Set();
@@ -2049,15 +2500,15 @@
     if (pmhItems.length > 0) {
       lines.push("PMH:");
       pmhItems.forEach((item) => lines.push(`-${item}`));
-      lines.push("");
+      pushBlank();
     }
     if (s.allergies_note) {
       lines.push(`Allergies: ${s.allergies_note}`);
-      lines.push("");
+      pushBlank();
     }
     if (s.goc_note) {
       lines.push(`GOC: ${s.goc_note}`);
-      lines.push("");
+      pushBlank();
     }
     lines.push("A-E ASSESSMENT:");
     if (s.chk_use_mods) addLine(`MODS: ${s.mods_score} ${s.mods_details ? `(${s.mods_details})` : ""}`);
@@ -2101,7 +2552,7 @@
     if (e.length) addLine(`E: ${e.join(", ")}`);
     else if (s.e_comment) addLine(`E:`);
     if (s.e_comment) addLine(`  - ${s.e_comment}`);
-    lines.push("");
+    pushBlank();
     if (s.ae_mobility) addLine(`Mobility: ${s.ae_mobility}`);
     let bowelTxt = "";
     if (s.bowel_mode === "btn_bo") bowelTxt = "BO";
@@ -2140,8 +2591,8 @@
         bowelTxt += `. ${s.ae_bowels}`;
       }
     }
-    if (bowelTxt) addLine(`Bowels: ${bowelTxt} `);
-    if (s.ae_diet) addLine(`Diet: ${s.ae_diet} `);
+    if (bowelTxt) addLine(`Bowels: ${bowelTxt}`);
+    if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ""}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
     if (s.pics) {
@@ -2155,10 +2606,14 @@
     if (s.anticoag_note) addLine(`Anticoagulation: ${s.anticoag_note}`);
     if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
     if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
-    lines.push("");
+    pushBlank();
     const blMap = { "lac_review": "Lac", "hb": "Hb", "wcc": "WCC", "cr_review": "Cr", "egfr": "eGFR", "k": "K", "na": "Na", "mg": "Mg", "phos": "PO4", "plts": "Plts", "alb": "Alb", "neut": "Neut", "lymph": "Lymph", "bili": "Bili", "alt": "ALT", "inr": "INR", "aptt": "APTT" };
-    if (s.chk_bloods_nil_sig) {
+    if (s.chk_bloods_nil_sig || s.bloods_status === "nil_sig") {
       addLine("Bloods: Checked, nil significant");
+    } else if (s.bloods_status === "improving") {
+      addLine("Bloods: Improving trend");
+    } else if (s.bloods_status === "not_checked") {
+      addLine("Bloods: Not checked this review");
     } else {
       const blLines = [];
       Object.keys(blMap).forEach((key) => {
@@ -2176,7 +2631,7 @@
     if (s.new_bloods_ordered === "requested") addLine("New bloods requested (not yet ordered)");
     if (s.new_bloods_ordered === "not_required") addLine("New bloods not required");
     if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
-    lines.push("");
+    pushBlank();
     const hasAnyDevices = Object.values(s.devices || {}).some((arr) => arr.length);
     if (hasAnyDevices) {
       lines.push("LINES, DRAINS, DEVICES & WOUNDS:");
@@ -2209,9 +2664,9 @@
         });
       });
     }
-    lines.push("");
+    pushBlank();
     if (s.context_other_note) lines.push(`Other: ${s.context_other_note}`);
-    lines.push("");
+    pushBlank();
     lines.push("IDENTIFIED ICU READMISSION RISK FACTORS:");
     const risks = [...red, ...amber];
     if (risks.length) {
@@ -2223,7 +2678,7 @@
     if (risks.length === 0 && suppressed.length === 0) {
       lines.push("- None identified");
     }
-    lines.push("");
+    pushBlank();
     lines.push("PLAN:");
     const hoursMap = { "red": "72h", "amber": "48h", "green": "24h" };
     const h = hoursMap[cat.id] || "24h";
@@ -2255,6 +2710,49 @@
       const badge = $("manual_edit_badge");
       if (badge) badge.style.display = "none";
     }
+  }
+  var HANDOVER_RISK_TRIMS = [
+    [/^Elevated (ADDS|MODS) /, "$1 "],
+    [/, increased risk of complications$/, ""],
+    [/ concern - /, " - "],
+    [/^Comorbidities - /, "PMH: "]
+  ];
+  function trimRiskForHandover(text) {
+    return HANDOVER_RISK_TRIMS.reduce((acc, [re, rep]) => acc.replace(re, rep), text).trim();
+  }
+  function generateHandoverLine(s, activeIssuesList = [], cat = null, red = [], amber = []) {
+    const now = /* @__PURE__ */ new Date();
+    const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
+    const initials = s.reviewerInitials || "--";
+    const time = s.reviewTime || nowTimeStr();
+    const parts = [`${dateStr} ${time} ${initials}.`];
+    parts.push(s.reviewModeType === "chart" ? "Chart r/v." : "Physical r/v.");
+    parts.push(s.chk_use_mods ? `MODS ${s.mods_score || "--"}.` : `ADDS ${s.adds || "--"}.`);
+    if (s.chk_bloods_nil_sig || s.bloods_status === "nil_sig") parts.push("Bloods nil sig.");
+    else if (s.bloods_status === "improving") parts.push("Bloods improving.");
+    else if (s.bloods_status === "not_checked") parts.push("Bloods not checked.");
+    else {
+      const abnormal = activeIssuesList.filter((i) => (i.key || "").startsWith("bl_")).map((i) => i.text.replace(/^Abnormal /, ""));
+      if (abnormal.length) parts.push(`Bloods: ${abnormal.join(", ")}.`);
+      else if (Object.keys(s).some((k) => k.startsWith("bl_") && s[k])) parts.push("Bloods reviewed.");
+    }
+    const risks = [...red, ...amber].filter((r) => !/^(Elevated )?(ADDS|MODS) \d/.test(r)).map(trimRiskForHandover);
+    const seen = new Set(risks.map((r) => r.toLowerCase()));
+    activeIssuesList.forEach((issue) => {
+      if (issue.severity === "info" || issue.source === "auto" || issue.source === "bloods") return;
+      const txt = trimRiskForHandover(issue.text);
+      if (seen.has(txt.toLowerCase())) return;
+      seen.add(txt.toLowerCase());
+      risks.push(txt);
+    });
+    const catText = cat?.text || $("catText")?.textContent || "";
+    if (catText) parts.push(risks.length ? `${catText} - ${risks.join("; ")}.` : `${catText} - nil risks.`);
+    if (s.stepdown_suitable === false) parts.push("Not suitable for stepdown.");
+    else if (s.chk_discharge_alert) parts.push("D/C from ALERT.");
+    else if (s.chk_discharge_pending_bloods) parts.push("D/C pending bloods.");
+    else if (s.chk_continue_alert) parts.push("Continue ALERT.");
+    if (s.chk_medical_rounding) parts.push("+ Medical rounding.");
+    return parts.join(" ").replace(/\s{2,}/g, " ");
   }
 
   // src/js/main.js
@@ -2291,6 +2789,9 @@
     window.compute = compute;
     window.showQuickReviewPrompt = showQuickReviewPrompt;
     window.previousCategoryData = previousCategoryData;
+    window.addActiveIssue = addActiveIssue;
+    window.renderScrapedIssuesList = renderScrapedIssuesList;
+    window.refreshAddsOverrideUI = refreshAddsOverrideUI;
     function triggerGenerate() {
       const summaryEl = $("summary");
       const actions = $("summary_actions");
@@ -2311,9 +2812,42 @@
       if (actions) actions.style.display = "block";
       const btn = $("btn_generate_summary");
       if (btn) btn.innerHTML = '\u{1F504} Click again to regenerate DMR summary <span style="font-size:0.9em; font-weight:normal; opacity:0.9;">(will overwrite any manual edits)</span>';
+      const handoverEl = $("handoverLine");
+      if (handoverEl) handoverEl.value = generateHandoverLine(
+        window._lastState || getState(),
+        getUnresolvedActiveIssues(),
+        window._lastCat,
+        window._lastRed || [],
+        window._lastAmber || []
+      );
+      const handoverActions = $("handover_actions");
+      if (handoverActions) handoverActions.style.display = "block";
       saveState(true);
     }
     $("btn_generate_summary")?.addEventListener("click", triggerGenerate);
+    $("btnCopyHandoverLine")?.addEventListener("click", () => {
+      const text = $("handoverLine")?.value;
+      if (!text) {
+        showToast("Nothing to copy", 1500);
+        return;
+      }
+      navigator.clipboard.writeText(text).then(() => showToast("Handover line copied", 1500));
+    });
+    const commitManualIssue = () => {
+      const input = $("manualIssueInput");
+      const val = input?.value.trim();
+      if (!val) return;
+      addManualIssue(val);
+      input.value = "";
+      renderScrapedIssuesList();
+      input.focus();
+    };
+    $("manualIssueInput")?.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      commitManualIssue();
+    });
+    $("btnAddIssue")?.addEventListener("click", commitManualIssue);
     const summaryInputEl = $("summary");
     if (summaryInputEl) {
       summaryInputEl.addEventListener("input", () => {
@@ -2448,6 +2982,14 @@
         });
       });
     }
+    document.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.(".seg-btn");
+      if (!btn) return;
+      const box = btn.closest(".input-box.carried-forward");
+      if (!box) return;
+      box.classList.remove("carried-forward");
+      delete box.dataset.carriedFrom;
+    });
     syncSegments("seg_renal_chronic", "seg_renal_chronic_bloods", "renal");
     syncSegments("seg_infection_downtrend", "seg_infection_downtrend_bloods", "infection");
     function setDetailToggleState(targetEl, show) {
@@ -2722,7 +3264,7 @@
             const panel = targetEl.querySelector(".panel");
             if (panel && panel.style.display !== "block") {
               panel.style.display = "block";
-              targetEl.querySelector(".icon").textContent = "[-]";
+              targetEl.querySelector(".accordion")?.setAttribute("aria-expanded", "true");
             }
           }
         }
@@ -3019,7 +3561,11 @@
       compute();
     });
     $("chk_aperients")?.addEventListener("change", compute);
-    $("chk_bloods_nil_sig")?.addEventListener("change", compute);
+    $("chk_bloods_nil_sig")?.addEventListener("change", (e) => {
+      const bloodsGrid = document.querySelector(".bloods-grid");
+      if (bloodsGrid) bloodsGrid.style.display = e.target.checked ? "none" : "";
+      compute();
+    });
     $("chk_unknown_blo_date")?.addEventListener("change", () => {
       handleUnknownBLODate();
       compute();
@@ -3134,10 +3680,30 @@
     });
     $("btnQuickReview")?.addEventListener("click", enableQuickReviewMode);
     $("btnFullReview")?.addEventListener("click", () => {
+      setQuickReviewDismissed(true);
       const prompt = $("quickReviewPrompt");
       if (prompt) prompt.style.display = "none";
     });
     $("btnExitQuickReview")?.addEventListener("click", exitQuickReviewMode);
+    $("btnManualQuickReview")?.addEventListener("click", () => {
+      if (isQuickReviewMode) exitQuickReviewMode();
+      else {
+        setQuickReviewDismissed(false);
+        enableQuickReviewMode();
+      }
+    });
+    const toggleBloodsDetails = () => {
+      const panel = $("panel_bloods");
+      const isOpen = panel && panel.style.display === "block";
+      if (isOpen) closeAccordion("panel_bloods", '[aria-controls="panel_bloods"]');
+      else openAccordion("panel_bloods", '[aria-controls="panel_bloods"]');
+      setBloodsOverlay(!isOpen);
+    };
+    $("btnBloodsDetailsToggle")?.addEventListener("click", toggleBloodsDetails);
+    $("qrBackdrop")?.addEventListener("click", closeQuickOverlays);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.querySelector(".qr-expanded")) closeQuickOverlays();
+    });
     $("floatingNavBtn")?.addEventListener("click", openMobileNav);
     $("closeMobileNav")?.addEventListener("click", closeMobileNav);
     $("mobileNavOverlay")?.addEventListener("click", (e) => {
@@ -3300,10 +3866,11 @@
         const panel = w.querySelector(".panel");
         const isOpen = panel.style.display === "block";
         panel.style.display = isOpen ? "none" : "block";
-        w.querySelector(".icon").textContent = isOpen ? "[+]" : "[-]";
+        w.querySelector(".accordion").setAttribute("aria-expanded", String(!isOpen));
         const map = JSON.parse(localStorage.getItem(ACCORDION_KEY) || "{}");
         map[w.dataset.accordionId] = !isOpen;
         localStorage.setItem(ACCORDION_KEY, JSON.stringify(map));
+        if (w.id === "section-bloods") setBloodsOverlay(!isOpen);
       });
     });
     document.querySelectorAll(".btn[data-device-type]").forEach((btn) => {
@@ -3313,35 +3880,44 @@
         computeAll();
       });
     });
-    ["red", "amber"].forEach((t) => {
-      const btn = $(`override_${t}`);
-      if (btn) btn.addEventListener("click", () => {
-        const isActive = btn.classList.contains("active");
-        if (isActive) {
-          $("override").value = "none";
-          $("override_reason_box").style.display = "none";
-          $("override_amber").classList.remove("active");
-          $("override_red").classList.remove("active");
-        } else {
-          $("override").value = t;
-          $("override_reason_box").style.display = "block";
-          $("override_amber").classList.toggle("active", t === "amber");
-          $("override_red").classList.toggle("active", t === "red");
-        }
-        compute();
+    const CATEGORY_CHOICES = ["red", "amber", "green"];
+    const setCategoryChoice = (choice) => {
+      $("override").value = choice;
+      compute();
+      if (choice !== "none") $("overrideNote")?.focus();
+    };
+    CATEGORY_CHOICES.forEach((t) => {
+      $(`override_${t}`)?.addEventListener("click", () => {
+        const isActive = $(`override_${t}`).classList.contains("active");
+        setCategoryChoice(isActive ? "none" : t);
       });
+    });
+    $("override_clear")?.addEventListener("click", () => setCategoryChoice("none"));
+    $("btnAddsOverride")?.addEventListener("click", () => {
+      toggleAddsOverride();
+      compute();
+    });
+    $("adds")?.addEventListener("input", refreshAddsOverrideUI);
+    $("addsOverrideNote")?.addEventListener("input", refreshAddsOverrideUI);
+    $("btnDeviceMore")?.addEventListener("click", (e) => {
+      const group = document.querySelector(".device-add-group");
+      if (!group) return;
+      const showAll = group.classList.toggle("show-all");
+      e.currentTarget.textContent = showAll ? "Fewer \u25B4" : "More \u25BE";
+      e.currentTarget.setAttribute("aria-expanded", String(showAll));
     });
     updateWardOptions();
     const saved = loadState();
     if (saved) restoreState(saved);
     updateAgeMitigationUI();
+    refreshAddsOverrideUI();
     refreshDetailToggleState();
     updateReviewTypeVisibility();
     const accMap = JSON.parse(sessionStorage.getItem(ACCORDION_KEY) || "{}");
     document.querySelectorAll(".accordion-wrapper").forEach((w) => {
       if (accMap[w.dataset.accordionId]) {
         w.querySelector(".panel").style.display = "block";
-        w.querySelector(".icon").textContent = "[-]";
+        w.querySelector(".accordion").setAttribute("aria-expanded", "true");
       }
     });
     compute();

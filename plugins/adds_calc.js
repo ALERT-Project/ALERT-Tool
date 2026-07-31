@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 .quick-chip-group { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
                 .quick-calc {
                     padding: 2px 6px !important;
-                    font-size: 0.72rem !important;
-                    font-weight: 600 !important;
+                    font-size: var(--fs-hint) !important;
+                    font-weight: var(--fw-semibold) !important;
                     border-radius: 4px !important;
                     background: var(--bg) !important;
                     border: 1px solid var(--line) !important;
@@ -56,17 +56,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 .adds-calc-label {
                     display: block !important;
-                    font-size: 0.78rem !important;
+                    font-size: var(--fs-hint) !important;
                     color: var(--muted) !important;
                     margin-bottom: 2px !important;
-                    font-weight: 700 !important;
+                    font-weight: var(--fw-semibold) !important;
                     text-transform: uppercase !important;
                     letter-spacing: 0.5px !important;
                 }
                 .adds-calc-input {
                     height: 28px !important;
                     padding: 2px 8px !important;
-                    font-size: 0.82rem !important;
+                    font-size: var(--fs-xs) !important;
                     margin: 0 !important;
                     border-radius: 6px !important;
                     border: 1px solid var(--line) !important;
@@ -90,16 +90,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     align-self: center;
                 }
                 .adds-calc-score-label {
-                    font-size: 0.6rem;
+                    font-size: var(--fs-hint);
                     color: var(--muted);
-                    font-weight: 700;
+                    font-weight: var(--fw-semibold);
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                     margin-bottom: 1px;
                 }
                 .adds-calc-score-value {
-                    font-weight: 800;
-                    font-size: 1.2rem;
+                    font-weight: var(--fw-bold);
+                    font-size: var(--fs-xl);
                     color: var(--accent);
                     line-height: 1;
                     min-height: 1.2rem;
@@ -111,8 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     display: inline-flex !important;
                     align-items: center !important;
                     gap: 4px !important;
-                    font-weight: 600 !important;
-                    font-size: 0.75rem !important;
+                    font-weight: var(--fw-semibold) !important;
+                    font-size: var(--fs-hint) !important;
                     color: var(--muted) !important;
                     cursor: pointer !important;
                     margin-bottom: 0 !important;
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     height: 26px !important;
                     outline: none !important;
                     box-shadow: none !important;
-                    font-size: 0.82rem !important;
+                    font-size: var(--fs-xs) !important;
                     padding: 2px 8px !important;
                     color: var(--ink) !important;
                 }
@@ -153,17 +153,46 @@ document.addEventListener('DOMContentLoaded', () => {
                     border-top: 1px solid var(--line);
                     width: 100%;
                 }
+                .adds-calc-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                    margin-bottom: 8px;
+                    font-size: var(--fs-sm);
+                    font-weight: var(--fw-semibold);
+                    color: var(--muted);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .adds-calc-close {
+                    background: var(--input-bg);
+                    border: 1px solid var(--line);
+                    color: var(--muted);
+                    border-radius: 8px;
+                    padding: 6px 12px;
+                    font-size: var(--fs-xs);
+                    font-weight: var(--fw-semibold);
+                    text-transform: none;
+                    letter-spacing: 0;
+                    cursor: pointer;
+                }
+                .adds-calc-close:hover { background: var(--line); color: var(--ink); }
+                .adds-calc-close-bottom { display: block; width: 100%; margin-top: 4px; padding: 10px; }
                 #calc_avpu .select-btn {
                     padding: 3px 6px !important;
-                    font-size: 0.72rem !important;
+                    font-size: var(--fs-hint) !important;
                     height: 24px !important;
                     line-height: 1 !important;
-                    font-weight: 600 !important;
+                    font-weight: var(--fw-semibold) !important;
                     border-radius: 4px !important;
                 }
             </style>
 
-            <div style="font-size:0.85rem; margin-bottom:8px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">ADDS Calculator</div>
+            <div class="adds-calc-header">
+                <span>ADDS Calculator</span>
+                <button type="button" id="btnHideCalcTop" class="adds-calc-close" title="Close calculator">✕ Close</button>
+            </div>
             
             <div class="calc-box">
                 <div class="adds-calc-row">
@@ -297,11 +326,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             
             <div style="margin-top:8px; margin-bottom:28px; padding-top:8px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:0.5px;">Total Score</div>
-                <div id="calc_total_display" style="font-size:1.3rem; font-weight:800; color:var(--ink);">0</div>
+                <div style="font-size: var(--fs-xs); font-weight: var(--fw-semibold); text-transform:uppercase; color:var(--muted); letter-spacing:0.5px;">Total Score</div>
+                <div id="calc_total_display" style="font-size: var(--fs-2xl); font-weight: var(--fw-bold); color:var(--ink);">0</div>
             </div>
             
-            <button id="btnHideCalc" class="quick-calc" style="position:absolute; bottom:6px; right:6px; background:var(--muted) !important; color:white !important; border:none !important; height:24px !important; padding:0 8px !important; font-size:0.75rem !important;">Hide Calc</button>
+            <button type="button" id="btnHideCalc" class="adds-calc-close adds-calc-close-bottom">✕ Close calculator</button>
         `;
     }
 
@@ -321,15 +350,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Hide Calc button
-    const btnHideCalc = document.getElementById('btnHideCalc');
-    if (btnHideCalc) {
-        btnHideCalc.addEventListener('click', () => {
+    // Close is offered top and bottom: the panel is taller than the viewport on a laptop,
+    // so needing to scroll back up to shut it (or after an accidental press) is a nuisance.
+    ['btnHideCalc', 'btnHideCalcTop'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('click', () => {
             const c = document.getElementById('addsCalculatorContainer');
             const btnToggle = document.getElementById('btnToggleCalc');
             if (c) c.style.display = 'none';
             if (btnToggle) btnToggle.textContent = 'Calc';
         });
-    }
+    });
 
     // Inputs
     const inputs = ['calc_rr', 'calc_spo2', 'calc_o2_val', 'calc_sbp', 'calc_dbp', 'calc_hr', 'calc_temp'];
@@ -514,11 +546,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('calc_total_display').innerText = total + (isM ? ' (M)' : '');
 
+        // Don't touch the recorded score when the clinician has taken manual control of it
+        // (e.g. the consultant modified the observation parameters).
+        const manualAdds = document.getElementById('addsManual')?.value === 'true';
         const mainAdds = document.getElementById('adds');
-        if (mainAdds) {
+        if (mainAdds && !manualAdds) {
             mainAdds.value = total;
             mainAdds.dispatchEvent(new Event('input'));
         }
+        if (typeof window.refreshAddsOverrideUI === 'function') window.refreshAddsOverrideUI();
 
         const mAlert = document.getElementById('mScoreAlert');
         if (mAlert) {

@@ -5,35 +5,79 @@
    MIT License - https://opensource.org/licenses/MIT
    ========================================= */
 
+/* Inter v4 (latin subset, variable) - SIL Open Font License 1.1.
+   Self-hosted deliberately: the tool has no other external runtime dependency, so it
+   must render identically offline and on locked-down hospital networks. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../../assets/fonts/inter-variable.woff2') format('woff2');
+}
+
 :root {
-  --bg: #f8fafc; 
-  --card: #ffffff; 
-  --ink: #0f172a; 
-  --muted: #5a6675; 
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --ink: #0f172a;
+  --muted: #5a6675;
+  --text: #334155; /* body copy - was referenced in 4 rules but never defined */
   --accent: #0f766e; /* Updated to Teal for consistency */
-  --red: #ef4444; 
-  --amber: #f59e0b; 
-  --green: #10b981; 
-  --line: #e1e8ed; 
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --green: #10b981;
+  --line: #e1e8ed;
   --input-bg: #ffffff;
   --blue-hint: #2563eb;
-  --toast-bg: rgba(0,0,0,0.8); 
+  --toast-bg: rgba(0,0,0,0.8);
   --toast-color: #fff;
   --sidebar-w: 85px; /* Width of the sidebar */
+
+  /* --- Typography ---------------------------------------------------------
+     One scale, 7 steps. Replaces the 25 ad-hoc sizes this file accumulated.
+     Smallest step is 12px: 10px hint text is too small to read clinical data. */
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --fs-hint: 0.75rem;   /* 12px - range hints, sub-hints */
+  --fs-xs: 0.8125rem;   /* 13px - sub-labels, dense chips */
+  --fs-sm: 0.875rem;    /* 14px - labels, secondary text */
+  --fs-base: 1rem;      /* 16px - body, inputs */
+  --fs-lg: 1.125rem;    /* 18px - card and section headings */
+  --fs-xl: 1.375rem;    /* 22px - ADDS value, category badge */
+  --fs-2xl: 1.75rem;    /* 28px - calculator total, page title */
+  --fs-3xl: 2.25rem;    /* 36px - category badge only; the headline clinical output */
+
+  --fw-normal: 400;
+  --fw-medium: 500;     /* labels */
+  --fw-semibold: 600;   /* headings, emphasis */
+  --fw-bold: 700;       /* reserved: category badge, ADDS value */
+
+  --lh-tight: 1.25;     /* headings, buttons, single-line controls */
+  --lh-body: 1.5;       /* prose, textareas */
 }
 
 html { height: auto; }
 body { height: auto; }
 
-body { 
-  font-family: 'Inter', system-ui, sans-serif; 
-  background: var(--bg); 
-  color: var(--ink); 
-  margin: 0; 
-  padding-bottom: 70px; 
-  line-height: 1.4; 
-  -webkit-font-smoothing: antialiased; 
+body {
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  background: var(--bg);
+  color: var(--ink);
+  margin: 0;
+  padding-bottom: 70px;
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
   padding-left: var(--sidebar-w); /* Push body for sidebar */
+}
+
+/* Clinical values: tabular figures stop digits shifting width as they're typed and
+   keep the bloods grid aligned; slashed zero separates 0 from O in entered results. */
+#adds, #calc_total_display, .blood-item input, .prev-datum, #handoverLine,
+#b_rr, #b_spo2, #c_hr, #c_nibp, #e_temp, #e_bsl, #e_uop,
+#icuLos, #ptAge, #ptWeight, #ptMrn, #ptBed {
+  font-variant-numeric: tabular-nums slashed-zero;
 }
 
 /* --- Sidebar --- */
@@ -53,15 +97,15 @@ body {
 }
 
 .sidebar-logo {
-    font-size: 1.5rem;
-    font-weight: 800;
+    font-size: var(--fs-xl);
+    font-weight: var(--fw-bold);
     color: var(--red);
     margin-bottom: 24px;
 }
 
 .sidebar-label {
-    font-size: 0.65rem;
-    font-weight: 700;
+    font-size: var(--fs-hint);
+    font-weight: var(--fw-semibold);
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -86,15 +130,15 @@ body {
 }
 
 .nav-item .nav-icon {
-    font-size: 1.3rem;
+    font-size: 1.3rem; /* emoji icon, not text - deliberately off the type scale */
     margin-bottom: 3px;
     display: block;
     line-height: 1;
 }
 
 .nav-item .nav-label {
-    font-size: 0.68rem;
-    font-weight: 600;
+    font-size: var(--fs-hint);
+    font-weight: var(--fw-semibold);
     line-height: 1.2;
 }
 
@@ -114,9 +158,9 @@ body {
 
 #sidebar-risk-badges {
     display: inline-block;
-    font-size: 0.65rem;
+    font-size: var(--fs-hint);
     margin-left: 2px;
-    font-weight: 800;
+    font-weight: var(--fw-bold);
 }
 
 #sidebar-risk-badges .badge {
@@ -138,8 +182,8 @@ header {
 }
 
 header h1 { 
-  font-size: 2rem; 
-  font-weight: 800; 
+  font-size: var(--fs-2xl); 
+  font-weight: var(--fw-bold); 
   color: var(--accent); 
   letter-spacing: -0.4px; 
   margin: 0; 
@@ -149,7 +193,7 @@ header h1 {
 header h1 .logo-em { 
   color: var(--red); 
   margin: 0 4px; 
-  font-weight: 800; 
+  font-weight: var(--fw-bold); 
 }
 
 .header-controls { 
@@ -158,13 +202,352 @@ header h1 .logo-em {
   gap: 8px; 
 }
 
-.top-meta { font-size: 0.9rem; color: var(--muted); white-space: nowrap; }
-.last-saved { font-size: 0.85rem; color: var(--muted); }
+.top-meta { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
+.last-saved { font-size: var(--fs-sm); color: var(--muted); }
 
 /* --- Layout & Grid --- */
 .container { max-width: 980px; margin: 12px auto; padding: 12px 12px 320px; }
 .grid { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 12px; row-gap: 18px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04); scroll-margin-top: 100px; transition: box-shadow 0.2s; }
+
+/* Canonical card heading. Replaces four copy-pasted inline h2 treatments that had
+   drifted to 1.1 / 1.15 / 1.2 / 1.4rem. */
+.card-title {
+  margin: 0 0 12px 0;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  color: var(--ink);
+}
+/* --- Quick Review mode ---------------------------------------------------- */
+
+/* Offer modal: shown after a DMR scrape or once >24h past stepdown. JS sets display:flex. */
+.qr-modal { max-width: 520px; text-align: center; gap: 10px; border-top: 5px solid var(--amber); }
+.qr-modal-icon { font-size: 2.5rem; line-height: 1; }
+.qr-modal-title { margin: 0; font-size: var(--fs-xl); color: var(--ink); }
+.qr-modal-detail { font-size: var(--fs-base); color: var(--muted); }
+.qr-modal-detail span + span:not(:empty)::before { content: '\00a0\00b7\00a0'; }
+.qr-modal-risks {
+  display: none;
+  text-align: left;
+  font-size: var(--fs-sm);
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.qr-modal-risks ul { margin: 4px 0 0 0; padding-left: 18px; }
+.qr-modal-help { margin: 0; font-size: var(--fs-sm); color: var(--muted); line-height: var(--lh-body); }
+.qr-modal-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+.qr-modal-actions .btn { flex: 1 1 180px; padding: 14px 18px; font-size: var(--fs-base); font-weight: var(--fw-semibold); }
+#btnQuickReview { background: var(--amber); border-color: var(--amber); color: #fff; }
+#btnFullReview { background: var(--input-bg); color: var(--ink); }
+
+/* Quick Review toggle button */
+#btnManualQuickReview {
+  margin-top: 8px;
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-weight: var(--fw-medium);
+}
+body.quick-review-active #btnManualQuickReview {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Minimised bloods controls shown in place of the full grid */
+#bloods_quick_controls { padding: 12px 0 4px 0; }
+#bloods_quick_controls .segmented-group { margin-bottom: 8px; }
+#btnBloodsDetailsToggle { width: 100%; }
+
+/* --- Quick Review one-page workspace -------------------------------------
+   enableQuickReviewMode() moves the live nodes into #quickGrid; these rules only
+   describe the layout they land in. Left rail = the things you touch (ADDS, bloods,
+   lines, category); right = what you write (issues, notes); bottom spans both and
+   carries the computed category + ALERT actions, which Quick Review never skips. */
+#quickGrid { display: none; }
+/* The 980px reading column is too narrow for a two-column workspace. */
+body.quick-review-active .container { max-width: 1100px; padding-bottom: 160px; }
+/* Banner's inline -20px side margins overhang once the container fills the window. */
+body.quick-review-active #quickReviewBanner { margin-left: -12px !important; margin-right: -12px !important; }
+body.quick-review-active #quickGrid {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) 2fr;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 16px;
+  /* Clear the sticky Quick Review banner when scrollIntoView lands here. */
+  scroll-margin-top: 90px;
+}
+#qgLeft, #qgRight { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+#qgBottom, #qrNewRiskAlert { grid-column: 1 / -1; }
+
+/* New risk flagged mid-review: loud, but it doesn't take the page away from you. */
+#qrNewRiskAlert[hidden] { display: none; }
+.qr-new-risk {
+  border: 2px solid var(--red);
+  border-radius: 12px;
+  background: #fef2f2;
+  padding: 12px 14px;
+  animation: qrRiskIn 0.25s ease;
+}
+@keyframes qrRiskIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.qr-new-risk.amber { border-color: var(--amber); background: #fffbeb; }
+.qr-new-risk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+}
+.qr-new-risk ul { margin: 8px 0 0 0; padding-left: 20px; font-size: var(--fs-sm); }
+.qr-new-risk li.red { color: var(--red); font-weight: var(--fw-semibold); }
+.qr-new-risk li.amber { color: #b45309; font-weight: var(--fw-semibold); }
+.qr-new-risk-foot { margin-top: 8px; font-size: var(--fs-xs); color: var(--muted); }
+/* Cards inside the grid supply their own gap; kill the stacked-flow margins. */
+#quickGrid > div > .card,
+#quickGrid > div > .accordion-wrapper,
+#quickGrid > div > .input-box { margin-top: 0 !important; margin-bottom: 0 !important; }
+#quickGrid .card { padding: 12px 14px; }
+#quickGrid .card-title { font-size: var(--fs-base); margin-bottom: 8px; }
+
+/* ADDS tile: the moved #adds_wrapper, out of the risk grid and into the rail. */
+#quickGrid #adds_wrapper {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+#quickGrid #adds_wrapper .quick-select-container { margin-bottom: 0 !important; }
+#quickGrid #addsCalculatorContainer { margin-top: 10px; padding-bottom: 12px !important; }
+
+/* Bloods square: the three status buttons stacked over an inline Details drawer. */
+body.quick-review-active #bloods_quick_controls { padding: 0; }
+body.quick-review-active #bloods_quick_controls .segmented-group { flex-wrap: wrap; }
+#quickGrid #section-bloods, #quickGrid #section-devices {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+#quickGrid .accordion { font-size: var(--fs-base); padding: 0 0 8px 0; background: none; border: none; }
+#quickGrid .panel { padding: 8px 0 0 0; border: none; }
+#quickGrid .bloods-grid { gap: 8px; }
+
+/* The full bloods grid is unreadable squeezed into the rail, so in Quick Review the
+   Details drawer opens as a centred overlay instead of inline. */
+#qrBackdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); z-index: 290; }
+#qrBackdrop[hidden] { display: none; }
+body.quick-review-active #section-bloods.qr-expanded {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(1040px, 94vw);
+  max-height: 86vh;
+  overflow-y: auto;
+  z-index: 300;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.3);
+}
+body.quick-review-active #section-bloods.qr-expanded #btnBloodsDetailsToggle::after { content: ' (close)'; }
+/* Same treatment for the ADDS calculator, which is also too wide for the rail. */
+body.quick-review-active #adds_wrapper.qr-expanded {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(760px, 94vw);
+  max-height: 86vh;
+  overflow-y: auto;
+  z-index: 300;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.3);
+}
+
+/* Lines: only the five common add-buttons until "More" is expanded. */
+body.quick-review-active .device-add-group .btn[data-device-type]:not([data-common]) { display: none; }
+body.quick-review-active .device-add-group.show-all .btn[data-device-type] { display: inline-flex; }
+/* Full review shows every add-button, so the More toggle is Quick Review only.
+   Class doubled to outrank the .btn display rule that follows later in this file. */
+.btn.device-more-toggle { display: none; }
+body.quick-review-active .btn.device-more-toggle { display: inline-flex; color: var(--accent); }
+body.quick-review-active .device-add-group { gap: 6px; margin-bottom: 0; }
+body.quick-review-active .device-add-group .btn { padding: 5px 9px; font-size: var(--fs-xs); border-radius: 8px; }
+
+/* Risks carried forward from the previous DMR note: answered as Yes on import so they count
+   toward the category, but visibly provisional until the clinician confirms or clears them. */
+.input-box.carried-forward {
+  border-color: var(--amber);
+  box-shadow: inset 0 0 0 1px var(--amber);
+}
+.input-box.carried-forward::before {
+  content: '↻ Carried forward - confirm or clear';
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--fs-hint);
+  font-weight: var(--fw-semibold);
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid var(--amber);
+  border-radius: 999px;
+  padding: 2px 10px;
+  width: fit-content;
+}
+
+/* "From the last review" card. Deliberately quiet - a question, not a demand. */
+.cf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cf-row:last-child { border-bottom: none; }
+.cf-row-text { min-width: 0; }
+.cf-row-title { font-weight: var(--fw-semibold); color: var(--ink); font-size: var(--fs-sm); }
+.cf-row-was { font-size: var(--fs-xs); color: var(--muted); margin-top: 2px; }
+.cf-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn.cf-chip { padding: 7px 12px; font-size: var(--fs-xs); background: var(--input-bg); color: var(--ink); }
+.btn.cf-chip:hover { background: var(--bg); border-color: var(--accent); color: var(--accent); }
+
+/* ADDS manual-override control */
+.adds-lock-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.adds-lock-btn {
+  flex: 1 1 auto;
+  font-size: var(--fs-xs);
+  padding: 6px 10px;
+  background: var(--input-bg);
+  color: var(--muted);
+  text-align: left;
+}
+.adds-lock-btn.active { background: #fffbeb; border-color: var(--amber); color: #92400e; font-weight: var(--fw-semibold); }
+.adds-calc-hint { display: none; font-size: var(--fs-xs); color: #92400e; font-weight: var(--fw-semibold); }
+#adds_override_box label { font-size: var(--fs-xs); margin-bottom: 4px; }
+#adds_override_box input { font-size: var(--fs-sm); }
+
+/* Select Category */
+.override-auto-hint { font-size: var(--fs-xs); color: var(--muted); margin-bottom: 10px; }
+.override-btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.override-btn-row { flex-wrap: nowrap; }
+.override-btn-row .override-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 8px 6px;
+  font-size: var(--fs-sm);
+  text-align: center;
+  justify-content: center;
+}
+.override-btn.green.active { background-color: var(--green); color: #fff; border-color: var(--green); }
+.override-btn.clear { flex: 0 1 auto; color: var(--muted); }
+#override_downgrade_warn {
+  font-size: var(--fs-xs);
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid var(--amber);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+}
+#override_reason_required { font-size: var(--fs-xs); color: var(--red); margin-top: 4px; }
+#override_reason_box.reason-missing input { border-color: var(--red); }
+
+/* Issues: dense enough that a dozen fit without scrolling. */
+.issues-count { font-size: var(--fs-xs); font-weight: var(--fw-normal); color: var(--muted); }
+.issue-add-row { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
+.issue-add-row input { flex: 1; min-width: 0; margin: 0; }
+.issue-add-row .btn { flex: 0 0 auto; padding: 8px 14px; font-weight: var(--fw-semibold); }
+body.quick-review-active .scraped-issue-row { padding: 5px 0; gap: 10px; }
+body.quick-review-active #scraped_issues_list { max-height: 46vh; overflow-y: auto; }
+body.quick-review-active #quickNotes { min-height: 150px; }
+
+/* Bottom row: category KPIs and ALERT actions side by side rather than stacked. */
+body.quick-review-active #qgBottom .kpi { margin-bottom: 12px; }
+body.quick-review-active #alert_actions_section { margin-top: 12px; padding-top: 12px; }
+
+@media (max-width: 900px) {
+  body.quick-review-active #quickGrid { grid-template-columns: 1fr; }
+  body.quick-review-active #scraped_issues_list { max-height: none; }
+}
+
+/* Scraped Risks staging list */
+.scraped-issue-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.scraped-issue-row:last-child { border-bottom: none; }
+.scraped-issue-resolve { flex: 0 0 auto; margin: 0; }
+.scraped-issue-text {
+  flex: 1;
+  cursor: text;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--text);
+}
+.scraped-issue-text:hover { text-decoration: underline dotted; }
+/* Informational entries carried over for context - never counted as risks. */
+.scraped-issue-note-tag {
+  flex: 0 0 auto;
+  font-size: var(--fs-hint);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.scraped-issue-edit {
+  flex: 1;
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text);
+}
+/* Real buttons, not faint glyphs: these are used at speed, sometimes by people who
+   don't want to hunt for a 12px x. 36px square, visible border, colour-coded. */
+.scraped-issue-edit-btn, .scraped-issue-delete {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: var(--fs-base);
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.scraped-issue-edit-btn { color: var(--accent); }
+.scraped-issue-edit-btn:hover, .scraped-issue-edit-btn:focus-visible {
+  background: #ecfdf5;
+  border-color: var(--accent);
+}
+.scraped-issue-delete { color: var(--red); }
+.scraped-issue-delete svg { display: block; }
+/* Ticking an entry means "dealt with", not "gone" - it stays readable and reversible. */
+.scraped-issue-row.resolved .scraped-issue-text { text-decoration: line-through; color: var(--muted); }
+.scraped-issue-row.resolved .scraped-issue-note-tag { opacity: 0.6; }
+.scraped-issue-delete:hover, .scraped-issue-delete:focus-visible {
+  background: #fef2f2;
+  border-color: var(--red);
+}
+.scraped-issue-resolve { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent); }
 
 /* Grid Spans */
 .col-2 { grid-column: span 2; } 
@@ -175,14 +558,14 @@ header h1 .logo-em {
 .col-12 { grid-column: span 12; }
 
 /* --- Inputs & Typography --- */
-label { display: block; font-size: .9rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+label { display: block; font-size: var(--fs-sm); line-height: var(--lh-tight); color: var(--muted); margin-bottom: 6px; font-weight: var(--fw-medium); }
 
 /* A-E Assessment section labels should use teal accent color for consistency */
-#panel_ae label { color: var(--accent); font-weight: 600; }
+#panel_ae label { color: var(--accent); font-weight: var(--fw-semibold); }
 
 .sub-label { 
     display: block; 
-    font-size: 0.8rem; 
+    font-size: var(--fs-xs); 
     color: var(--muted); 
     margin-top: -4px; 
     margin-bottom: 10px; 
@@ -190,8 +573,10 @@ label { display: block; font-size: .9rem; color: var(--muted); margin-bottom: 6p
 }
 
 input[type="text"], input[type="number"], input[type="date"], input[type="time"], textarea, select {
+  font-family: inherit;
+  line-height: var(--lh-tight);
   width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); box-sizing: border-box;
-  background: var(--input-bg); color: var(--ink); outline: none; font-size: 1rem;
+  background: var(--input-bg); color: var(--ink); outline: none; font-size: var(--fs-base);
   transition: all 0.2s ease;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
@@ -211,9 +596,9 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 
 /* Clinical Summary Styling */
 #summary {
-    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-body);
     white-space: pre-wrap;
     min-height: 240px;
 }
@@ -221,14 +606,14 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 /* --- THE SCRAPED DATA CLASS (BLUE TEXT) --- */
 .scraped-data {
     color: #2563eb !important;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     background: rgba(37, 99, 235, 0.07) !important;
     border-color: #93c5fd !important;
     border-radius: 12px;
 }
 
 .concern-note { margin-top: 8px; }
-.concern-note textarea { min-height: 40px; font-size: 0.95rem; }
+.concern-note textarea { min-height: 40px; font-size: var(--fs-base); }
 
 /* --- THE INPUT BOX (Teal Box) --- */
 .input-box {
@@ -254,13 +639,15 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 
 /* --- Buttons --- */
 .btn, .override-btn, .select-btn, .seg-btn { 
+  font-family: inherit;
+  line-height: var(--lh-tight);
   background-color: var(--card); 
   color: var(--muted); 
   border: 1px solid var(--line); 
   padding: 9px 14px; 
   border-radius: 12px; 
   cursor: pointer; 
-  font-weight: 600; 
+  font-weight: var(--fw-semibold); 
   transition: all 0.2s ease; 
   min-height: 44px; 
   display: inline-flex; 
@@ -349,7 +736,7 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 
 .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 1px 3px rgba(0, 122, 122, 0.2); }
 .btn.danger { background: transparent; color: var(--red); border-color: rgba(239,68,68,0.2); }
-.btn.small { padding: 7px 12px; font-size: 0.9rem; min-height: 40px; }
+.btn.small { padding: 7px 12px; font-size: var(--fs-sm); min-height: 40px; }
 
 .override-btn:hover, .select-btn:hover, .seg-btn:hover { 
   background-color: var(--bg); 
@@ -446,8 +833,8 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
   margin-bottom: 0 !important;
   text-align: center;
   padding: 10px 14px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
   color: var(--muted);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -497,11 +884,11 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 /* --- Chips (Fixed Layout) --- */
 .comorbidity-group-label {
     width: 100%;
-    font-size: 0.75rem;
+    font-size: var(--fs-hint);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--accent);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     margin-top: 12px;
     margin-bottom: 6px;
     border-bottom: 1px solid var(--line);
@@ -514,7 +901,7 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
   background-color: var(--card); 
   padding: 9px 14px; border-radius: 10px; 
   border: 1px solid var(--line); cursor: pointer; transition: all 0.2s ease; 
-  margin-bottom: 0; font-weight: 500; color: var(--muted); font-size: 0.9rem;
+  margin-bottom: 0; font-weight: var(--fw-medium); color: var(--muted); font-size: var(--fs-sm);
   box-sizing: border-box;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
@@ -526,7 +913,7 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
     outline-offset: 2px;
 }
 .toggle-label.active { background-color: var(--accent); color: white; border-color: var(--accent); }
-.toggle-label .state { font-weight: 700; font-size: 0.8rem; color: var(--muted); }
+.toggle-label .state { font-weight: var(--fw-semibold); font-size: var(--fs-xs); color: var(--muted); }
 .toggle-label.active .state { color: #fff; }
 .toggle-label .state::after { content: "+"; }
 .toggle-label.active .state::after { content: "✓"; }
@@ -545,21 +932,21 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 .kpi .box { background: linear-gradient(to bottom, #ffffff, #fafbfc); border: 1px solid var(--line); padding: 14px; border-radius: 12px; text-align: center; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06); }
 
 #categoryBox { padding: 18px 14px; border-width: 2px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1); }
-#categoryBox h3 { font-size: 2.25rem; margin-top: 4px; font-weight: 800; }
+#categoryBox h3 { font-size: var(--fs-3xl); margin-top: 4px; font-weight: var(--fw-bold); }
 
-.kpi .box h3 { margin: 0; font-size: 1.75rem; }
-.kpi .box small { color: var(--muted); font-size: 0.9rem; }
+.kpi .box h3 { margin: 0; font-size: var(--fs-2xl); }
+.kpi .box small { color: var(--muted); font-size: var(--fs-sm); }
 
 #completeness_nudge {
-    font-size: 1.1rem;
-    font-weight: 800;
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-bold);
     color: var(--blue-hint);
     text-align: left;
     margin-top: 12px;
     margin-bottom: 12px;
 }
 
-.status { font-weight: 700; }
+.status { font-weight: var(--fw-semibold); }
 .status.red { color: var(--red); } 
 .status.amber { color: var(--amber); } 
 .status.green { color: var(--green); }
@@ -567,8 +954,8 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 /* --- Unified Headings --- */
 .section-title, .question-label, .bold-heading { 
     margin-bottom: 10px; 
-    font-size: 1.1rem; 
-    font-weight: 700; 
+    font-size: var(--fs-lg); 
+    font-weight: var(--fw-semibold); 
     color: var(--accent); 
     display: block;
     letter-spacing: -0.01em;
@@ -577,12 +964,12 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 /* --- Bloods Grid (Specific) --- */
 .bloods-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;}
 .blood-item { position: relative; } 
-.blood-item label { margin-bottom: 4px; font-weight: 700; color: var(--accent); }
-.blood-item input { font-size: 1rem; padding: 8px; width: 100%; }
+.blood-item label { margin-bottom: 4px; font-weight: var(--fw-semibold); color: var(--accent); }
+.blood-item input { font-size: var(--fs-base); padding: 8px; width: 100%; }
 
 .trend-buttons { display: flex; justify-self: end; margin-top:4px;}
 .trend-btn { 
-  font-size: 0.8rem; border: 1px solid var(--line); background: transparent; 
+  font-size: var(--fs-xs); border: 1px solid var(--line); background: transparent; 
   border-radius: 6px; width: 24px; height: 24px; display: flex; 
   align-items: center; justify-content: center; cursor: pointer; 
   color: var(--muted); padding: 0; margin-left: 2px;
@@ -608,11 +995,11 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 .blood-abnormal input {
     border-color: var(--red);
     color: var(--red);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 .range-subtext {
-    font-size: 0.75rem;
+    font-size: var(--fs-hint);
     color: var(--muted);
     margin-top: 4px;
     display: block;
@@ -636,8 +1023,8 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 /* --- Importer Styles --- */
 .prev-datum { 
     color: var(--blue-hint); 
-    font-size: 0.8rem; 
-    font-weight: 600; 
+    font-size: var(--fs-xs); 
+    font-weight: var(--fw-semibold); 
     margin-left: 8px; 
     display: inline-block; 
     font-style: italic;
@@ -647,7 +1034,10 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center; }
 .modal-content { background: var(--card); padding: 24px; border-radius: 12px; width: 90%; max-width: 600px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 16px; }
-.modal-textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font-family: monospace; font-size: 0.85rem; resize: vertical; }
+.modal-textarea { width: 100%; height: 200px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: var(--lh-body); resize: vertical; }
+
+/* Delimited line destined for Excel - fixed width makes it scannable before pasting. */
+#handoverLine { font-family: var(--font-mono); font-size: var(--fs-sm); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
 
 #prevRisksBox {
@@ -658,9 +1048,9 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
     border: 1px solid #c7d2fe;
     border-radius: 6px;
     color: #3730a3;
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
 }
-#prevRisksBox h4 { margin: 0 0 6px 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+#prevRisksBox h4 { margin: 0 0 6px 0; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
 #prevRisksList { margin: 0; padding-left: 16px; }
 
 
@@ -673,14 +1063,14 @@ footer {
   padding-left: calc(var(--sidebar-w) + 16px); /* Adjust for sidebar */
 }
 
-.footer-item { color: var(--muted); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+.footer-item { color: var(--muted); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
 .footer-item.reason { flex: 1 1 auto; min-width: 120px; }
-.footer-score { padding: 6px 12px; border-radius: 8px; font-weight: 700; text-align: center; flex-shrink: 0;}
+.footer-score { padding: 6px 12px; border-radius: 8px; font-weight: var(--fw-semibold); text-align: center; flex-shrink: 0;}
 .footer-buttons { display: flex; gap: 8px; flex: 1; justify-content: flex-end;}
 
 .mobile-text { display: none; }
 
-.tag { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: .85rem; margin: 2px; border: 1px solid; font-weight: 600; }
+.tag { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: var(--fs-sm); margin: 2px; border: 1px solid; font-weight: var(--fw-semibold); }
 .tag.red { background: rgba(239,68,68,.08); color: var(--red); border-color: rgba(239,68,68,.2); }
 .tag.amber { background: rgba(245,158,11,.08); color: var(--amber); border-color: rgba(245,158,11,.18); }
 .tag.green { background: rgba(16,185,129,.07); color: var(--green); border-color: rgba(16,185,129,.12); }
@@ -696,7 +1086,7 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 .accordion { 
   background-color: transparent; color: var(--ink); cursor: pointer; padding: 14px; 
   width: 100%; border: none; border-bottom: 1px solid var(--line); text-align: left; 
-  outline: none; font-size: 1.1rem; font-weight: 700; display: flex; 
+  outline: none; font-size: var(--fs-lg); font-weight: var(--fw-semibold); display: flex; 
   align-items: center; justify-content: space-between; 
   transition: background-color 0.15s;
 }
@@ -705,39 +1095,101 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
     outline: none !important;
     background-color: rgba(15, 118, 110, 0.05) !important;
 }
-.accordion .icon { color: var(--muted); font-size: 1.1rem; margin-left: 8px; }
+/* Chevron drawn from aria-expanded, so the open/closed marker can never drift out of
+   step with the panel the way the old hand-written [+] / [-] strings did. */
+.accordion .icon { color: var(--muted); font-size: var(--fs-lg); margin-left: 8px; }
+.accordion .icon::before {
+  content: '\203A'; /* › */
+  display: inline-block;
+  font-size: 1.4em;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+.accordion[aria-expanded="true"] .icon::before { transform: rotate(90deg); }
 .panel { padding: 14px; background-color: transparent; display: none; overflow: hidden; }
 
 /* --- Dynamic Lists --- */
-.device-entry { 
-  background: var(--card); border: 1px solid var(--line); border-radius: 12px; 
-  padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; 
+.device-entry { margin-bottom: 8px; }
+.device-entry textarea { width: 100%; min-height: 44px; font-size: var(--fs-base); background: var(--input-bg); }
+
+/* One device per row; wraps only when there genuinely isn't width for it. */
+.device-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-sizing: border-box;
 }
-.device-entry textarea { width: 100%; min-height: 44px; font-size: 1rem; background: var(--input-bg); }
-.remove-entry { 
-  background: transparent; border: 1px solid rgba(239,68,68,0.12); color: var(--red); 
-  border-radius: 8px; padding: 8px; cursor: pointer; text-align: center; font-weight: 700; 
+.device-row .device-type {
+  flex: 0 0 auto;
+  min-width: 78px;
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-xs);
+  color: var(--ink);
 }
+.device-row .device-date {
+  flex: 0 0 auto;
+  width: 128px;
+  padding: 4px 6px;
+  font-size: var(--fs-xs);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: 0;
+}
+.device-row .device-textarea {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 5px 8px;
+  font-size: var(--fs-xs);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: 0;
+}
+.device-row .device-info-text {
+  flex: 0 0 auto;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+.remove-entry {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--red);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: var(--fw-semibold);
+}
+.remove-entry:hover { background: #fef2f2; border-color: var(--red); }
 
 /* --- Toasts --- */
 .toast { 
   position: fixed; left: 50%; transform: translateX(-50%); bottom: 110px; 
   background: var(--toast-bg); color: var(--toast-color); padding: 10px 14px; 
-  border-radius: 8px; z-index: 60; display: none; font-weight: 600; text-align: center; 
+  border-radius: 8px; z-index: 60; display: none; font-weight: var(--fw-semibold); text-align: center; 
 }
 .toast.show { display: block; animation: fadeIn .18s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(6px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
 /* --- Quick Selects --- */
 .quick-select-group { margin-bottom: 6px; }
-.btn.quick-select { padding: 4px 8px; font-size: 0.8rem; min-height: 28px; background: var(--bg); border-color: var(--line); color: var(--muted); font-weight: 500; }
+.btn.quick-select { padding: 4px 8px; font-size: var(--fs-xs); min-height: 28px; background: var(--bg); border-color: var(--line); color: var(--muted); font-weight: var(--fw-medium); }
 .btn.quick-select:hover { background: var(--line); }
-.btn.quick-select.active { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+.btn.quick-select.active { background: var(--accent); border-color: var(--accent); color: white; font-weight: var(--fw-semibold); }
 .input-with-trend { display: grid; grid-template-columns: 1fr 80px; gap: 6px; align-items: center; }
 .input-with-trend .trend-buttons { justify-self: end; }
 .quick-select-container { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;}
 
-.devices-subtitle { font-weight: 700; color: var(--accent); margin-top: 10px; margin-bottom: 4px; font-size: 0.95rem; }
+.devices-subtitle { font-weight: var(--fw-semibold); color: var(--accent); margin-top: 10px; margin-bottom: 4px; font-size: var(--fs-base); }
 .devices-input-group { margin-bottom: 12px; }
 
 /* --- Override Buttons --- */
@@ -746,8 +1198,8 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
   border: 1px solid var(--line);
   background: var(--bg);
   color: var(--muted);
-  font-weight: 700;
-  font-size: 1.05rem;
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-lg);
   border-radius: 8px;
   cursor: pointer;
   flex: 1;
@@ -778,8 +1230,8 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 @media (max-width: 900px) {
   .col-2, .col-3, .col-4, .col-6, .col-8 { grid-column: span 12; }
   .grid { column-gap: 10px; row-gap: 12px; }
-  input, textarea { font-size: 1.05rem; padding: 12px; }
-  .btn, .select-btn, .seg-btn { padding: 10px 12px; font-size: 1rem; min-height: 48px; }
+  input, textarea { font-size: var(--fs-lg); padding: 12px; }
+  .btn, .select-btn, .seg-btn { padding: 10px 12px; font-size: var(--fs-base); min-height: 48px; }
   .segmented-group { max-width: 100%; }
 }
 
@@ -798,7 +1250,7 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
     .nav-item { 
         margin-bottom: 0; 
         width: auto; 
-        font-size: 0.9rem;
+        font-size: var(--fs-sm);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -823,7 +1275,7 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
     
     .footer-buttons .btn {
         padding: 8px 10px;
-        font-size: 0.8rem;
+        font-size: var(--fs-xs);
     }
 }
 
@@ -844,7 +1296,7 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
     display: none;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -914,13 +1366,13 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 }
 
 .mobile-nav-link .nav-icon {
-    font-size: 1.5rem;
+    font-size: 1.5rem; /* emoji icon, not text - deliberately off the type scale */
     flex-shrink: 0;
 }
 
 .mobile-nav-link .nav-label {
-    font-size: 0.85rem;
-    font-weight: 500;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
     flex: 1;
 }
 
@@ -936,8 +1388,8 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 }
 
 #mobile-risk-badges {
-    font-size: 0.8rem;
-    font-weight: 800;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
 }
 
 #mobile-risk-badges .badge {
@@ -970,18 +1422,18 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 }
 .ae-section-heading {
     display: block;
-    font-weight: 700;
-    font-size: 0.9rem;
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-sm);
     margin-bottom: 10px;
 }
 .ae-comment-label {
-    font-size: 0.8rem !important;
-    font-weight: 500 !important;
+    font-size: var(--fs-xs) !important;
+    font-weight: var(--fw-medium) !important;
     color: var(--muted) !important;
     margin-bottom: 4px !important;
 }
 .ae-section-card textarea {
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
 }
 
 /* --- Unified Risk Gates Grid --- */
@@ -1017,7 +1469,7 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 .risk-gates-grid .question-label,
 .risk-gates-grid .section-title,
 .risk-gates-grid .bold-heading {
-    font-size: 0.95rem !important; /* Slightly smaller premium typography to fit text on a single line */
+    font-size: var(--fs-base) !important; /* Slightly smaller premium typography to fit text on a single line */
     margin-bottom: 4px !important;
 }
 
@@ -1065,8 +1517,8 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
   color: var(--accent);
   background: var(--card);
   text-align: center;
-  font-weight: 700;
-  font-size: 0.72rem;
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-hint);
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
@@ -1084,7 +1536,7 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
   border-color: var(--line);
   color: var(--muted);
   background: var(--input-bg);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   box-shadow: none;
   cursor: default;
 }
@@ -1110,7 +1562,7 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 }
 
 #section-patient h2 {
-    font-size: 1.2rem !important;
+    font-size: var(--fs-lg) !important;
     margin-bottom: 0 !important;
 }
 
@@ -1120,9 +1572,9 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 }
 
 #section-patient label {
-    font-size: 0.8rem;
+    font-size: var(--fs-xs);
     margin-bottom: 3px;
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
 }
 
 #section-patient input[type="text"],
@@ -1132,7 +1584,7 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 #section-patient textarea,
 #section-patient select {
     padding: 7px 10px;
-    font-size: 0.88rem;
+    font-size: var(--fs-sm);
     border-radius: 8px;
     min-height: 34px;
 }
@@ -1143,7 +1595,7 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 
 #section-patient .radio-segmented-group label {
     min-height: 34px;
-    font-size: 0.82rem;
+    font-size: var(--fs-xs);
     padding: 5px 10px;
 }
 
@@ -1152,14 +1604,14 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 }
 
 #section-patient .btn.small.quick-select {
-    font-size: 0.72rem;
+    font-size: var(--fs-hint);
     padding: 4px 8px;
     min-height: 28px;
 }
 
 #section-patient .sub-label {
     margin-top: 2px;
-    font-size: 0.75rem;
+    font-size: var(--fs-hint);
 }
 
 

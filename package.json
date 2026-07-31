@@ -1,8 +1,10 @@
 {
   "name": "alert-tool",
   "version": "1.0.4",
-  "main": "script.js",
+  "main": "dist/bundle.js",
   "scripts": {
+    "build": "esbuild src/js/main.js --bundle --sourcemap --outfile=dist/bundle.js",
+    "watch": "esbuild src/js/main.js --bundle --sourcemap --outfile=dist/bundle.js --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

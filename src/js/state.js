@@ -1,5 +1,5 @@
 import { STORAGE_KEY, UNDO_KEY, ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs, selectInputs, deviceTypes } from './config.js';
-import { $ } from './utils.js';
+import { $, showToast } from './utils.js';
 import { handleSegmentClick, updateWardOptions, updateReviewTypeVisibility, updateWardOtherVisibility, createDeviceEntry, updateDevicesSectionVisibility, toggleOxyFields, toggleInfusionsBox, toggleBowelDate } from './ui.js';
 
 window.prevBloods = {};
@@ -15,6 +15,159 @@ export function setInitialQuickReviewRisks(v) { initialQuickReviewRisks = v; }
 
 export let quickReviewBaselineCaptured = false;
 export function setQuickReviewBaselineCaptured(v) { quickReviewBaselineCaptured = v; }
+
+export let quickReviewDismissedBySession = false;
+export function setQuickReviewDismissed(v) { quickReviewDismissedBySession = v; }
+
+// Set once the offer banner has been shown, so computeAll doesn't re-show/re-scroll it.
+export let quickReviewOffered = false;
+export function setQuickReviewOffered(v) { quickReviewOffered = v; }
+
+// --- Active Issues model: backs the Scraped Risks staging list + Excel handover line ---
+export let activeIssues = [];
+const toastedRiskKeys = new Set();
+let _activeIssueCounter = 0;
+
+export function addActiveIssue({ text, source, severity, key }) {
+    // A tick the clinician made still counts as a match, so a risk that is still firing
+    // updates that entry instead of reappearing as a second, unticked copy. Entries retired
+    // by reconcileAutoIssues() are not matched, so a genuine recurrence still arrives as new.
+    const existing = activeIssues.find(i => i.key === key && (!i.resolved || i.resolvedByUser));
+    if (existing) {
+        existing.text = text;
+        existing.severity = severity;
+        return { issue: existing, isNew: false };
+    }
+    const issue = { id: `ai_${++_activeIssueCounter}`, text, source, severity, key, resolved: false, createdAt: _activeIssueCounter };
+    activeIssues.push(issue);
+    return { issue, isNew: true };
+}
+
+export function addManualIssue(text) {
+    return addActiveIssue({ text, source: 'manual', severity: 'amber', key: `manual_${_activeIssueCounter + 1}` });
+}
+
+// Ticking an entry marks it resolved without removing it: it stays visible (struck through)
+// and can be un-ticked. Only the delete button takes anything off the list.
+export function toggleActiveIssueResolved(id) {
+    const issue = activeIssues.find(i => i.id === id);
+    if (!issue) return;
+    issue.resolved = !issue.resolved;
+    // Distinguishes a clinician's tick from reconcileAutoIssues() retiring a stale auto risk,
+    // which should still disappear silently.
+    issue.resolvedByUser = issue.resolved;
+    renderScrapedIssuesList();
+}
+
+export function deleteActiveIssue(id) {
+    activeIssues = activeIssues.filter(i => i.id !== id);
+    renderScrapedIssuesList();
+}
+
+export function editActiveIssueText(id, newText) {
+    const issue = activeIssues.find(i => i.id === id);
+    if (issue) issue.text = newText;
+    renderScrapedIssuesList();
+}
+
+export function getUnresolvedActiveIssues() { return activeIssues.filter(i => !i.resolved); }
+
+// What the list shows: everything live, plus anything the clinician ticked off themselves.
+function getVisibleActiveIssues() { return activeIssues.filter(i => !i.resolved || i.resolvedByUser); }
+
+export function clearActiveIssues() {
+    activeIssues = [];
+    toastedRiskKeys.clear();
+    renderScrapedIssuesList();
+}
+
+// Resolve auto-sourced issues whose risk no longer fires, so a recurrence toasts again as new.
+export function reconcileAutoIssues(currentKeys) {
+    activeIssues.forEach(issue => {
+        const isAutoSourced = issue.source === 'auto' || issue.source === 'bloods';
+        if (isAutoSourced && !issue.resolved && !currentKeys.has(issue.key)) {
+            issue.resolved = true;
+            toastedRiskKeys.delete(issue.key);
+        }
+    });
+}
+
+export function maybeToastNewRisk(key, text) {
+    if (toastedRiskKeys.has(key)) return;
+    toastedRiskKeys.add(key);
+    showToast(`New risk flagged: ${text}`, 3000);
+}
+
+export function renderScrapedIssuesList() {
+    const list = $('scraped_issues_list');
+    if (!list) return;
+    // computeAll re-renders this list constantly; don't destroy an in-progress inline edit.
+    if (list.querySelector('.scraped-issue-edit')) return;
+    const issues = getVisibleActiveIssues();
+    const count = $('issues_count');
+    const openCount = issues.filter(i => !i.resolved).length;
+    if (count) count.textContent = openCount ? `(${openCount})` : '';
+    if (issues.length === 0) {
+        list.innerHTML = '<div style="color:var(--muted); font-size:0.9rem;">Nothing staged</div>';
+        return;
+    }
+    const BIN_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+    list.innerHTML = issues.map(issue => `
+        <div class="scraped-issue-row${issue.resolved ? ' resolved' : ''}" data-id="${issue.id}">
+            <input type="checkbox" class="scraped-issue-resolve" data-id="${issue.id}"${issue.resolved ? ' checked' : ''} title="Mark as resolved">
+            <span class="scraped-issue-text" data-id="${issue.id}" title="Click to edit">${issue.text}</span>
+            ${issue.severity === 'info' ? '<span class="scraped-issue-note-tag">note</span>' : ''}
+            <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}" title="Edit">&#9998;</button>
+            <button type="button" class="scraped-issue-delete" data-id="${issue.id}" title="Delete">${BIN_ICON}</button>
+        </div>
+    `).join('');
+
+    list.querySelectorAll('.scraped-issue-resolve').forEach(cb => {
+        cb.addEventListener('change', e => toggleActiveIssueResolved(e.target.dataset.id));
+    });
+    list.querySelectorAll('.scraped-issue-delete').forEach(btn => {
+        btn.addEventListener('click', e => deleteActiveIssue(e.currentTarget.dataset.id));
+    });
+    const startEdit = (span) => {
+        const id = span.dataset.id;
+        const issue = activeIssues.find(i => i.id === id);
+        if (!issue) return;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'scraped-issue-edit';
+        input.value = issue.text;
+        span.replaceWith(input);
+        input.focus();
+        input.select();
+        let committed = false;
+        const finish = (save) => {
+            if (committed) return;
+            committed = true;
+            const newText = input.value.trim() || issue.text;
+            // Drop the input first: renderScrapedIssuesList() bails out while an edit field is
+            // still in the list, which would otherwise leave the row stuck in edit state.
+            input.remove();
+            // Re-render either way - cancelling has to put the span back too.
+            if (save) editActiveIssueText(id, newText);
+            else renderScrapedIssuesList();
+        };
+        input.addEventListener('blur', () => finish(true));
+        input.addEventListener('keydown', ev => {
+            if (ev.key === 'Enter') { finish(true); $('manualIssueInput')?.focus(); }
+            else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+        });
+    };
+
+    list.querySelectorAll('.scraped-issue-text').forEach(span => {
+        span.addEventListener('click', () => startEdit(span));
+    });
+    list.querySelectorAll('.scraped-issue-edit-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            const span = list.querySelector(`.scraped-issue-text[data-id="${e.currentTarget.dataset.id}"]`);
+            if (span) startEdit(span);
+        });
+    });
+}
 
 export function saveState(instantly = false) {
     const state = getState();
@@ -69,6 +222,8 @@ export function getState() {
 
     state['reviewType'] = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
     state['clinicianRole'] = document.querySelector('input[name="clinicianRole"]:checked')?.value || 'ALERT CNS';
+    state['reviewModeType'] = document.querySelector('input[name="reviewModeType"]:checked')?.value || 'physical';
+    state.activeIssues = activeIssues;
 
     ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods'].forEach(id => {
         const el = $(id);
@@ -153,8 +308,10 @@ export function restoreState(state) {
             group.querySelectorAll('.select-btn').forEach(b => b.classList.remove('active'));
             if (state[id]) {
                 group.querySelector(`.select-btn[data-value="${state[id]}"]`)?.classList.add('active');
+                // Only reveal the neuro drawer when a type was actually recorded. Unguarded,
+                // this re-opened the gate on every restore, undoing handleSegmentClick above.
+                if (id === 'neuroType') $('neuro_gate_content').style.display = 'block';
             }
-            if (id === 'neuroType') $('neuro_gate_content').style.display = 'block';
         }
     });
 
@@ -167,6 +324,15 @@ export function restoreState(state) {
     if (state['clinicianRole']) {
         const r = document.querySelector(`input[name="clinicianRole"][value="${state['clinicianRole']}"]`);
         if (r) r.checked = true;
+    }
+    if (state['reviewModeType']) {
+        const r = document.querySelector(`input[name="reviewModeType"][value="${state['reviewModeType']}"]`);
+        if (r) r.checked = true;
+    }
+    if (Array.isArray(state.activeIssues)) {
+        activeIssues = state.activeIssues;
+        _activeIssueCounter = activeIssues.reduce((max, i) => Math.max(max, i.createdAt || 0), 0);
+        renderScrapedIssuesList();
     }
 
     ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods'].forEach(id => {

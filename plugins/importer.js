@@ -60,6 +60,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Risk wording in the previous note -> the gate it belongs to. After-hours and prolonged
+    // ICU stay are deliberately absent: the tool derives both from the dates it already
+    // scraped, so setting them here would fight its own logic.
+    const RISK_GATE_MAP = [
+        { test: /oxygen|wean|tachypnea|tachypnoea|respiratory|dyspnoea|dyspnea/, gate: 'seg_resp_concern' },
+        { test: /neuro|gcs|delirium|confusion|agitat/, gate: 'seg_neuro_gate' },
+        { test: /renal|aki|creatinine|\bcr\b|oliguria|anuria|dialysis/, gate: 'seg_renal', note: 'renal_note' },
+        { test: /infection|sepsis|\bwcc\b|\bcrp\b|febrile|antibiotic/, gate: 'seg_infection', note: 'infection_note' },
+        { test: /electrolyte|potassium|sodium|magnesium|phosphate/, gate: 'seg_electrolyte_gate', note: 'electrolyteConcern_note' },
+        { test: /vaso|pressor|noradrenaline|metaraminol/, gate: 'seg_pressors', note: 'pressors_note' },
+        { test: /immobility|deconditio/, gate: 'seg_immobility', note: 'immobility_note' }
+    ];
+
+    // Risks the tool re-derives from data it has already scraped. Staging the previous note's
+    // wording as well would show the same risk twice.
+    const SELF_DERIVED_RISK = /prolonged icu stay|after-hours|^age \d/;
+
+    // Returns true when the line was folded into a gate, so the caller can skip staging it as
+    // a separate issue - the gate produces its own issue with the tool's own wording.
+    function carryRiskToGate(lowerTxt, rawTxt) {
+        let carried = false;
+        RISK_GATE_MAP.forEach(({ test, gate, note }) => {
+            if (!test.test(lowerTxt)) return;
+            const group = document.getElementById(gate);
+            if (!group) return;
+            // Never overwrite an answer the clinician has already given.
+            if (group.querySelector('.seg-btn.active')) return;
+            const yes = group.querySelector('.seg-btn[data-value="true"]');
+            if (!yes) return;
+            // Click rather than set classes: the app's own handler opens the drawer and recomputes.
+            yes.click();
+
+            carried = true;
+
+            // Yesterday's numbers are not today's findings, so the detail never touches the
+            // gate's note field - it is kept only where it stays labelled as previous: the
+            // (Prev: ...) hint and the re-assessment card. The concern carries, the value doesn't.
+            const wrapper = group.closest('.input-box');
+            if (wrapper) {
+                wrapper.classList.add('carried-forward');
+                wrapper.dataset.carriedFrom = rawTxt.replace(/^[^-]*-\s*/, '').trim() || rawTxt;
+                if (note) wrapper.dataset.carriedNote = note;
+            }
+        });
+        return carried;
+    }
+
     function clickToggle(id) {
         const el = document.getElementById(id);
         if (el && el.dataset.value === 'false') {
@@ -80,10 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.querySelector(iconBtnSelector);
         if (panel) {
             panel.style.display = 'block';
-            if (btn) {
-                const icon = btn.querySelector('.icon');
-                if (icon) icon.textContent = '[-]';
-            }
+            if (btn) btn.setAttribute('aria-expanded', 'true');
         }
     }
 
@@ -222,10 +266,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (carryForward) {
             const mobMatch = text.match(/Mobility:\s*(.*)/i);
-            if (mobMatch) setVal('ae_mobility', mobMatch[1]);
+            if (mobMatch) {
+                setVal('ae_mobility', mobMatch[1]);
+                // Context worth carrying into the note, but not a risk: 'Mobility: Independent'
+                // is good news, and as an amber issue it used to read as a concern.
+                if (mobMatch[1].trim() && window.addActiveIssue) {
+                    window.addActiveIssue({ text: `Mobility: ${mobMatch[1].trim()}`, source: 'scraped', severity: 'info', key: 'ae_mobility' });
+                }
+            }
 
             const dietMatch = text.match(/Diet:\s*(.*)/i);
-            if (dietMatch) setVal('ae_diet', dietMatch[1]);
+            if (dietMatch) {
+                setVal('ae_diet', dietMatch[1]);
+                if (dietMatch[1].trim() && window.addActiveIssue) {
+                    window.addActiveIssue({ text: `Diet: ${dietMatch[1].trim()}`, source: 'scraped', severity: 'info', key: 'ae_diet' });
+                }
+            }
 
             const bowelMatch = text.match(/Bowels:\s*(.*)/i);
             if (bowelMatch) setPrev('prev_bowels', bowelMatch[1]);
@@ -298,8 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- 5. RISKS ---
         const risksSection = text.match(/(?:IDENTIFIED ICU READMISSION RISK FACTORS|IDENTIFIED RISK FACTORS):([\s\S]*?)PLAN:/i);
-        const risksBox = document.getElementById('prevRisksBox');
-        const risksList = document.getElementById('prevRisksList');
 
         ['resp', 'neuro', 'renal', 'elec', 'ah', 'pressors', 'immob', 'inf'].forEach(k => {
             const el = document.getElementById(`prev_risk_${k}`);
@@ -309,14 +363,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (risksSection && risksSection[1]) {
             const riskLines = risksSection[1].split('\n').map(l => l.trim()).filter(l => l.startsWith('-'));
             if (riskLines.length > 0 && !riskLines[0].toLowerCase().includes('none identified')) {
-                risksBox.style.display = 'block';
-                risksList.innerHTML = '';
-                riskLines.forEach(line => {
+                riskLines.forEach((line, idx) => {
                     const rawTxt = line.substring(1).trim();
-                    const li = document.createElement('li');
-                    li.textContent = rawTxt;
-                    risksList.appendChild(li);
-
                     const lower = rawTxt.toLowerCase();
 
                     // --- PREV TEXT UPDATES ---
@@ -329,12 +377,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (lower.includes('vaso') || lower.includes('pressor')) setRiskText('prev_risk_pressors', rawTxt);
                     if (lower.includes('immobility')) setRiskText('prev_risk_immob', rawTxt);
 
-                    // Note: Scraped risks are shown as FYI only, not auto-highlighted
-                    // Clinicians should review and manually select concerns
+                    // --- CARRY THE RISK INTO TODAY'S ASSESSMENT ---
+                    // Staging the text alone left the gates unanswered, so a note full of risks
+                    // still computed CAT 3. The gate is set to Yes and marked carried-forward:
+                    // it counts from the outset, and the clinician clears what has resolved.
+                    const carried = carryRiskToGate(lower, rawTxt);
 
+                    // Anything that didn't land on a gate still needs to be seen, so it stays
+                    // in the issues list under the previous note's own wording.
+                    if (!carried && !SELF_DERIVED_RISK.test(lower) && window.addActiveIssue) {
+                        window.addActiveIssue({ text: rawTxt, source: 'scraped', severity: 'amber', key: `scraped_risk_${idx}_${rawTxt.slice(0, 20)}` });
+                    }
                 });
-            } else { risksBox.style.display = 'none'; }
-        } else { risksBox.style.display = 'none'; }
+                if (window.renderScrapedIssuesList) window.renderScrapedIssuesList();
+            }
+        }
 
         // --- 6. DEVICES ---
         if (carryForward) {
