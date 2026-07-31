@@ -79,11 +79,9 @@
                     style="-webkit-text-fill-color: var(--red-text); color: var(--red-text);">!</span> Nursing Risk
                 Assessment Tool
             </h1>
-            <div class="top-meta last-saved" id="lastSaved" style="margin-top: 4px;">Last saved: --:--</div>
         </div>
         <div class="header-controls" style="display: flex; gap: 0.75rem; align-items: center;">
-            <button class="btn small" id="clearDataBtnTop" style="background:var(--accent); color:white;">Clear Data /
-                Next Patient</button>
+            <button class="btn small btn-neutral" id="clearDataBtnTop">↻ Clear Data / Next Patient</button>
         </div>
     </header>
 
@@ -98,7 +96,7 @@
     <main class="container" role="main">
 
         <div id="quickReviewBanner"
-            style="display:none; position:sticky; top:0; z-index:90; background:var(--amber); color:white; padding:12px 20px; margin:-20px -20px 20px -20px; font-weight:var(--fw-semibold); text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+            style="display:none; position:sticky; top:0; z-index:90; background:var(--quick); color:white; padding:12px 20px; margin:-20px -20px 20px -20px; font-weight:var(--fw-semibold); text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
             <span style="font-size:var(--fs-lg);">⚡ QUICK REVIEW MODE</span>
             <button id="btnExitQuickReview"
                 style="margin-left:16px; background:rgba(255,255,255,0.2); border:1px solid white; color:white; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:var(--fs-sm); font-weight:var(--fw-semibold);">Exit
@@ -164,7 +162,7 @@
 
         <div id="clearDataModal" class="modal-overlay">
             <div class="modal-content">
-                <h3 style="margin:0; color:var(--red);">⚠️ Start Next Patient Review?</h3>
+                <h3 style="margin:0; color:var(--ink);">⚠️ Start Next Patient Review?</h3>
                 <p style="margin:18px 0; color:var(--ink); font-size:var(--fs-base); line-height:1.5;">This will clear all
                     current data and start a new patient review.<br><strong>This cannot be undone.</strong></p>
                 <div
@@ -183,76 +181,91 @@
         </div>
 
         <div id="section-patient" class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+            <div class="patient-header">
                 <h2 class="card-title" style="margin:0;">👤 Patient Details</h2>
-                <button id="btnOpenImport" class="btn small"
-                    style="border:2px dashed var(--accent); color:var(--accent); background:transparent; font-weight:var(--fw-semibold); padding:10px 20px; border-radius:12px; cursor:pointer; margin:0; font-size:var(--fs-sm);">⬇
-                    Import data from last DMR note</button>
-            </div>
-            <div class="grid">
-                <div class="col-3">
-                    <label>Clinician Role</label>
-                    <div class="radio-segmented-group">
-                        <label><input type="radio" name="clinicianRole" value="ALERT CNS" checked> CNS</label>
-                        <label><input type="radio" name="clinicianRole" value="ALERT CN"> CN</label>
+                <div class="patient-header-actions">
+                    <div class="depth-field">
+                        <label for="reviewDepthToggle">Review Depth</label>
+                        <div class="radio-segmented-group" id="reviewDepthToggle">
+                            <label><input type="radio" name="reviewDepth" value="full" checked> Full Review</label>
+                            <label><input type="radio" name="reviewDepth" value="quick"> Quick Review</label>
+                        </div>
                     </div>
-                    <div id="prevRisksBox" style="display:none;"></div>
+                    <button id="btnOpenImport" class="btn small btn-import">⬇ Import data from last DMR note</button>
                 </div>
+            </div>
 
-                <div class="col-3">
-                    <label>Review Type</label>
+            <!-- About the review, not the patient: kept in its own strip so the patient fields
+                 below read as one short block rather than a wall of mixed inputs. -->
+            <div class="review-strip">
+                <div class="rs-field">
+                    <label>Review Stage</label>
                     <div class="radio-segmented-group">
                         <label><input type="radio" name="reviewType" value="pre"> Pre-Stepdown</label>
                         <label><input type="radio" name="reviewType" value="post" checked> Post-Stepdown</label>
                     </div>
-
-                    <button type="button" id="btnManualQuickReview" class="btn small">Quick Review</button>
                 </div>
 
-                <div class="col-3" id="reviewModeTypeWrapper">
-                    <label>Review Mode Type</label>
+                <div class="rs-field" id="reviewModeTypeWrapper">
+                    <label>Review Method</label>
                     <div class="radio-segmented-group">
                         <label><input type="radio" name="reviewModeType" value="physical" checked> Physical r/v</label>
                         <label><input type="radio" name="reviewModeType" value="chart"> Chart review</label>
                     </div>
                 </div>
 
-                <div class="col-3">
-                    <label for="reviewerInitials">Reviewer Initials</label>
+                <div class="rs-field">
+                    <label>Clinician Role</label>
+                    <div class="radio-segmented-group">
+                        <label><input type="radio" name="clinicianRole" value="ALERT CNS" checked> CNS</label>
+                        <label><input type="radio" name="clinicianRole" value="ALERT CN"> CN</label>
+                    </div>
+                </div>
+
+                <div class="rs-field rs-narrow rs-grow">
+                    <label for="reviewerInitials">Reviewer</label>
                     <input id="reviewerInitials" type="text" maxlength="6" autocomplete="off" />
                 </div>
 
-                <!-- Grouped Patient Identifiers -->
-                <div class="col-3">
+                <div class="rs-field rs-narrow rs-grow" id="reviewTimeWrapper">
+                    <label for="reviewTime">Time of Review</label>
+                    <input id="reviewTime" type="time" />
+                </div>
+            </div>
+
+            <div id="prevRisksBox" style="display:none;"></div>
+
+            <div class="grid">
+                <div class="col-2">
                     <label for="ptName">Initials</label>
                     <input id="ptName" type="text" autocomplete="off" maxlength="3" pattern="[A-Z]{3}" style="text-transform:uppercase" />
                 </div>
-                <div class="col-3">
+                <div class="col-2">
                     <label for="ptMrn">URN (Last 3)</label>
                     <input id="ptMrn" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" />
                 </div>
-                <div class="col-3 age-column-wrapper" id="wrapper_ptAge">
+                <div class="col-2 age-column-wrapper" id="wrapper_ptAge">
                     <label for="ptAge" id="lbl_ptAge">Age</label>
                     <input id="ptAge" type="number" min="0" />
-                    
+
                     <!-- Compact Age risk mitigator — shown by JS when age >= 75 -->
                     <div id="age_risk_wrapper" style="display:none; margin-top: 6px;">
                         <div id="btn_age_mitigated" class="age-mitigate-btn">
                             Click here to mitigate age risk for good baseline
                         </div>
-                        
+
                         <div id="age_mitigate_reason_wrapper" style="display:none; margin-top: 6px;">
                             <input type="text" id="age_mitigate_reason" placeholder="Reason (e.g. runner)" style="font-size:var(--fs-hint); padding:6px 10px; width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:4px; background:var(--input-bg); color:var(--text);" />
                         </div>
                     </div>
-                    
+
                     <!-- Hidden seg group for state persistence of age_mitigated -->
                     <div class="segmented-group" id="seg_age_mitigated" style="display:none;">
                         <button type="button" class="seg-btn" data-value="true">Yes</button>
                         <button type="button" class="seg-btn" data-value="false">No</button>
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-2">
                     <label for="ptWeight">Weight (kg)</label>
                     <input id="ptWeight" type="number" min="0" />
                 </div>
@@ -264,17 +277,9 @@
                         <option value="" selected disabled>Select Ward...</option>
                     </select>
                 </div>
-                <div class="col-3">
+                <div class="col-1">
                     <label for="ptBed">Bed</label>
                     <input id="ptBed" type="number" min="1" />
-                </div>
-                <div class="col-3" id="reviewTimeWrapper">
-                    <label for="reviewTime">Time of Review</label>
-                    <input id="reviewTime" type="time" />
-                </div>
-                <div class="col-3">
-                    <label for="icuLos">ICU LOS (days)</label>
-                    <input id="icuLos" type="number" min="0" />
                 </div>
 
                 <div class="col-6" id="ptWardOtherWrapper" style="display:none;">
@@ -292,8 +297,12 @@
                     <textarea id="icuSummary" style="min-height:80px;"></textarea>
                 </div>
 
+                <div class="col-2">
+                    <label for="icuLos">ICU LOS (days)</label>
+                    <input id="icuLos" type="number" min="0" />
+                </div>
                 <div id="stepdown_date_wrapper" style="display:contents;">
-                    <div class="col-6">
+                    <div class="col-5">
                         <label>Stepdown Date</label>
                         <input type="date" id="stepdownDate">
                         <div class="quick-select-container">
@@ -302,7 +311,7 @@
                                 id="btn_stepdown_yesterday">Yesterday</button>
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-5">
                         <label>Stepdown Time</label>
                         <input type="time" id="stepdownTime" placeholder="16:00">
                         <div class="sub-label" style="color:var(--muted); font-size:var(--fs-xs);">Defaults to 16:00 if not
@@ -318,7 +327,7 @@
                 <!-- ADDS Score Trigger & Drawer -->
                 <div class="input-box" id="adds_wrapper">
                     <div class="gate-trigger-area">
-                        <div class="question-label">ADDS Score <span id="prev_adds" class="prev-datum"></span></div>
+                        <div class="question-label">📊 ADDS Score <span id="prev_adds" class="prev-datum"></span></div>
                         <div>
                             <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
                                 <input id="adds" type="number" min="0" max="20"
@@ -368,7 +377,7 @@
                 <!-- Respiratory Concern Trigger & Drawer -->
                 <div class="input-box" id="resp_wrapper">
                     <div class="gate-trigger-area">
-                        <div class="question-label bold-heading">Respiratory Concern? <span id="prev_risk_resp"
+                        <div class="question-label bold-heading">🫁 Respiratory Concern? <span id="prev_risk_resp"
                                 class="prev-datum"></span></div>
                         <div class="segmented-group" id="seg_resp_concern">
                             <button type="button" class="seg-btn" data-value="true">Yes</button>
@@ -533,7 +542,7 @@
                 <!-- Neurological Concern Trigger & Drawer -->
                 <div class="input-box" id="neuro_wrapper">
                     <div class="gate-trigger-area">
-                        <div class="question-label bold-heading">Neurological Concern? <span id="prev_risk_neuro"
+                        <div class="question-label bold-heading">🧠 Neurological Concern? <span id="prev_risk_neuro"
                                 class="prev-datum"></span></div>
                         <div class="segmented-group" id="seg_neuro_gate">
                             <button type="button" class="seg-btn" data-value="true">Yes</button>
@@ -580,7 +589,7 @@
                 <!-- Renal / Fluid Concern Trigger & Drawer -->
                 <div class="input-box" id="renal_wrapper">
                     <div class="gate-trigger-area">
-                        <div class="question-label bold-heading">Renal / Fluid Concern? <span id="prev_risk_renal"
+                        <div class="question-label bold-heading">💧 Renal / Fluid Concern? <span id="prev_risk_renal"
                                 class="prev-datum"></span></div>
                         <div class="segmented-group" id="seg_renal">
                             <button type="button" class="seg-btn" data-value="true">Yes</button>
@@ -649,7 +658,7 @@
                 <!-- Electrolyte Concern Trigger & Drawer -->
                 <div class="input-box" id="elec_wrapper">
                     <div class="gate-trigger-area">
-                        <div class="question-label bold-heading">Electrolyte Concern? <span id="prev_risk_elec"
+                        <div class="question-label bold-heading">⚡ Electrolyte Concern? <span id="prev_risk_elec"
                                 class="prev-datum"></span></div>
                         <div class="segmented-group" id="seg_electrolyte_gate">
                             <button type="button" class="seg-btn" data-value="true">Yes</button>
@@ -677,7 +686,7 @@
                 <div class="input-box" id="hac_wrapper">
                     <div class="gate-trigger-area">
                         <div>
-                            <div class="question-label bold-heading">Hospital Acquired Complication?</div>
+                            <div class="question-label bold-heading">🏥 Hospital Acquired Complication?</div>
                             <div class="sub-label" style="font-size:var(--fs-hint); margin-top:2px; margin-bottom:0;">e.g. HAI, Sepsis, New Arrythmia, AKI</div>
                         </div>
                         <div class="segmented-group" id="seg_hac">
@@ -700,7 +709,7 @@
                 <div class="input-box" id="ah_wrapper">
                     <div class="gate-trigger-area">
                         <div>
-                            <div class="question-label bold-heading">Discharged after-hours? <span id="prev_risk_ah"
+                            <div class="question-label bold-heading">🌙 Discharged after-hours? <span id="prev_risk_ah"
                                     class="prev-datum"></span></div>
                             <div class="sub-label" style="font-size:var(--fs-hint); color:var(--muted); margin-top:2px; margin-bottom:0;">After 16:00 weekdays or weekends only.</div>
                         </div>
@@ -724,7 +733,7 @@
                 <div class="input-box" id="immobility_wrapper">
                     <div class="gate-trigger-area">
                         <div>
-                            <div class="question-label bold-heading">Immobility Concern? <span id="prev_risk_immob"
+                            <div class="question-label bold-heading">🚶 Immobility Concern? <span id="prev_risk_immob"
                                     class="prev-datum"></span></div>
                             <div class="sub-label" style="font-size:var(--fs-hint); margin-top:2px; margin-bottom:0;">Cannot sit out in chair</div>
                         </div>
@@ -747,7 +756,7 @@
                 <!-- Infection Trigger & Drawer -->
                 <div class="input-box" id="infection_wrapper">
                     <div class="gate-trigger-area">
-                        <div class="question-label bold-heading">Infection Concern? <span id="prev_risk_inf"
+                        <div class="question-label bold-heading">🦠 Infection Concern? <span id="prev_risk_inf"
                                 class="prev-datum"></span></div>
                         <div class="segmented-group" id="seg_infection">
                             <button type="button" class="seg-btn" data-value="true">Yes</button>
@@ -801,7 +810,7 @@
                 <div class="input-box" id="frailty_wrapper">
                     <div class="gate-trigger-area">
                         <div>
-                            <div class="question-label bold-heading">Known Frailty at Baseline?</div>
+                            <div class="question-label bold-heading">🧓 Known Frailty at Baseline?</div>
                             <div class="sub-label" style="font-size:var(--fs-hint); margin-top:2px; margin-bottom:0;">Reduced reserve prior to admission</div>
                         </div>
                         <div class="segmented-group" id="seg_frailty_known">
@@ -822,7 +831,7 @@
                 <!-- Vasoactive Support Trigger & Drawer -->
                 <div class="input-box" id="pressor_wrapper">
                     <div class="gate-trigger-area">
-                        <div class="question-label bold-heading">Vasoactive Support? <span id="prev_risk_pressors"
+                        <div class="question-label bold-heading">💉 Vasoactive Support? <span id="prev_risk_pressors"
                                 class="prev-datum"></span></div>
                         <div class="segmented-group" id="seg_pressors">
                             <button type="button" class="seg-btn" data-value="true">Yes</button>
@@ -905,7 +914,7 @@
                 <!-- Comorbidities Trigger & Drawer -->
                 <div class="input-box" id="comorbs_wrapper">
                     <div class="gate-trigger-area">
-                        <div class="section-title">Comorbidities?</div>
+                        <div class="section-title">📋 Comorbidities?</div>
                         <div class="segmented-group" id="seg_comorbs_gate">
                             <button type="button" class="seg-btn" data-value="true">Yes</button>
                             <button type="button" class="seg-btn" data-value="false">No</button>
@@ -1723,7 +1732,7 @@
         <div class="accordion-wrapper" id="section-devices" data-accordion-id="devices" style="margin-top:20px;">
             <button type="button" class="accordion" aria-expanded="false" aria-controls="panel_devices">🔧 Lines, Drains & Wounds
                 <span class="icon" aria-hidden="true"></span></button>
-            <div class="panel" id="panel_devices" style="display:flex; flex-direction:column; gap: 12px;">
+            <div class="panel" id="panel_devices">
                 <div id="devices-container" style="width:100%; box-sizing:border-box;"></div>
 
                 <!-- data-common marks the five lines seen on nearly every review; Quick Review
@@ -1792,13 +1801,17 @@
                     <small>Category</small>
                     <h3 id="catText" class="status green">CAT 3</h3>
                 </div>
-                <div class="box">
-                    <small>Red Flags</small>
+                <!-- The flags themselves live in their own box, so what drove the category is
+                     read in the same glance as the count. -->
+                <div class="box flag-box red">
+                    <small>CAT 1 Red Flags</small>
                     <h3 id="redCount">0</h3>
+                    <ul id="redFlagList" class="flag-box-list"></ul>
                 </div>
-                <div class="box">
-                    <small>Amber Flags</small>
+                <div class="box flag-box amber">
+                    <small>CAT 2 Amber Flags</small>
                     <h3 id="amberCount">0</h3>
+                    <ul id="amberFlagList" class="flag-box-list"></ul>
                 </div>
             </div>
 
@@ -1856,9 +1869,6 @@
                     <input type="checkbox" id="chk_discharge_pending_bloods" class="hidden-action-cb">
                     <label for="chk_discharge_pending_bloods" class="action-btn-label">Discharge from ALERT post ICU rounding list - pending next blood results?</label>
                     
-                    <input type="checkbox" id="chk_handover_discharge" class="hidden-action-cb">
-                    <label for="chk_handover_discharge" class="action-btn-label">Issues stable overnight - recommend discharge pending daytime bloods and latest DMR notes check</label>
-                    
                     <div id="discharge_pending_bloods_note_wrapper" style="display:none; margin-top: 4px; margin-bottom: 8px;">
                         <input type="text" id="discharge_pending_bloods_note" placeholder="Please enter any specific bloods being followed here" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 4px; font-size:var(--fs-sm);" />
                     </div>
@@ -1894,9 +1904,9 @@
             </div>
             </div>
 
-            <div id="flagList"
-                style="margin-bottom:20px; font-size:var(--fs-sm); background:var(--input-bg); padding:10px; border-radius:8px; border:1px solid var(--line); margin-top:16px; border-top:1px solid var(--line); padding-top:16px;">
-            </div>
+            <!-- Only risks the rules deliberately did NOT count remain here; the counted ones
+                 are now shown inside the flag boxes above. -->
+            <div id="flagList" class="suppressed-list"></div>
         </div>
 
         <div id="section-summary" class="card"
@@ -1959,18 +1969,16 @@
         <div class="footer-item reason"><strong>Reason:</strong> <span id="footerAdmission">--</span></div>
         <div id="footerScore" class="footer-score tag green">CAT 3</div>
         <div class="footer-buttons">
-            <button class="btn" id="footerCopy">
-                <span class="desktop-text">Copy to Clipboard</span>
-                <span class="mobile-text">Copy</span>
+            <button class="btn btn-primary" id="footerCopy">
+                <span class="desktop-text">📋 Copy to Clipboard</span>
+                <span class="mobile-text">📋 Copy</span>
             </button>
-            <button class="btn" id="footerClear"
-                style="background:var(--input-bg); color:var(--text); border:1px solid var(--line);">
-                <span class="desktop-text">Clear Data / Next Patient</span>
-                <span class="mobile-text">Clear</span>
+            <button class="btn btn-neutral" id="footerClear">
+                <span class="desktop-text">↻ Clear Data / Next Patient</span>
+                <span class="mobile-text">↻ Clear</span>
             </button>
-            <button id="btnRedcap" class="btn"
-                style="background-color:#d9534f; color:white; border:none; margin-left:8px;">
-                <span class="desktop-text">Copy to REDCap</span>
+            <button id="btnRedcap" class="btn btn-redcap">
+                <span class="desktop-text">⇪ Copy to REDCap</span>
                 <span class="mobile-text">REDCap</span>
             </button>
         </div>

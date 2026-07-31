@@ -29,6 +29,11 @@
   --line: #e1e8ed;
   --input-bg: #ffffff;
   --blue-hint: #2563eb;
+  /* Red / amber / green mean CAT 1 / 2 / 3 and nothing else, so the modes and destinations
+     that used to borrow them have their own hues. */
+  --quick: #6d28d9;      /* Quick Review mode */
+  --quick-soft: #f5f3ff;
+  --maroon: #7f1d3a;     /* REDCap export */
   --toast-bg: rgba(0,0,0,0.8);
   --toast-color: #fff;
   --sidebar-w: 85px; /* Width of the sidebar */
@@ -219,10 +224,85 @@ header h1 .logo-em {
   line-height: var(--lh-tight);
   color: var(--ink);
 }
+/* --- Patient details ------------------------------------------------------ */
+.patient-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.patient-header-actions { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.depth-field label, .review-strip label {
+  display: block;
+  font-size: var(--fs-hint);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+.btn-import {
+  border: 2px dashed var(--accent);
+  color: var(--accent);
+  background: transparent;
+  font-weight: var(--fw-semibold);
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+/* Everything about the review itself, separated from the patient's own details. */
+.review-strip {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.rs-field { flex: 0 1 auto; min-width: 0; }
+.rs-field.rs-grow { flex: 1 1 140px; }
+/* The group clips its own overflow to keep the rounded ends, so it has to be wide enough
+   for its labels rather than relying on them to shrink. */
+.review-strip .radio-segmented-group,
+.depth-field .radio-segmented-group { width: max-content; max-width: 100%; }
+/* Labels must never be cut in half by the group's overflow, so they keep their natural width. */
+.review-strip .radio-segmented-group label,
+.depth-field .radio-segmented-group label {
+  flex: 1 1 auto;
+  min-width: max-content;
+  padding: 9px 12px;
+  font-size: var(--fs-xs);
+  min-height: 40px;
+}
+.rs-field.rs-narrow { flex: 0 1 130px; }
+.rs-field input { margin: 0; }
+.review-strip .radio-segmented-group { max-width: none; }
+
+/* Field labels: kept for verification, but quieter so they stop competing with the data.
+   Scoped to the field's own label - the labels *inside* a segmented group are the options
+   themselves and must keep their selected-state colour. */
+#section-patient .grid > div > label,
+#section-patient .rs-field > label,
+#section-patient .depth-field > label {
+  font-size: var(--fs-hint);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
 /* --- Quick Review mode ---------------------------------------------------- */
 
 /* Offer modal: shown after a DMR scrape or once >24h past stepdown. JS sets display:flex. */
-.qr-modal { max-width: 520px; text-align: center; gap: 10px; border-top: 5px solid var(--amber); }
+.qr-modal { max-width: 520px; text-align: center; gap: 10px; border-top: 5px solid var(--quick); }
 .qr-modal-icon { font-size: 2.5rem; line-height: 1; }
 .qr-modal-title { margin: 0; font-size: var(--fs-xl); color: var(--ink); }
 .qr-modal-detail { font-size: var(--fs-base); color: var(--muted); }
@@ -241,23 +321,17 @@ header h1 .logo-em {
 .qr-modal-help { margin: 0; font-size: var(--fs-sm); color: var(--muted); line-height: var(--lh-body); }
 .qr-modal-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
 .qr-modal-actions .btn { flex: 1 1 180px; padding: 14px 18px; font-size: var(--fs-base); font-weight: var(--fw-semibold); }
-#btnQuickReview { background: var(--amber); border-color: var(--amber); color: #fff; }
+#btnQuickReview { background: var(--quick); border-color: var(--quick); color: #fff; }
 #btnFullReview { background: var(--input-bg); color: var(--ink); }
 
 /* Quick Review toggle button */
-#btnManualQuickReview {
-  margin-top: 8px;
-  width: 100%;
-  background: var(--input-bg);
-  border: 1px solid var(--line);
-  color: var(--ink);
-  font-weight: var(--fw-medium);
-}
-body.quick-review-active #btnManualQuickReview {
-  background: var(--accent);
-  border-color: var(--accent);
+/* Review Depth toggle: violet marks Quick Review everywhere, never a category colour. */
+#reviewDepthToggle input:checked + span,
+#reviewDepthToggle label:has(input[value="quick"]:checked) {
+  background: var(--quick);
   color: #fff;
 }
+
 
 /* Minimised bloods controls shown in place of the full grid */
 #bloods_quick_controls { padding: 12px 0 4px 0; }
@@ -339,6 +413,7 @@ body.quick-review-active #bloods_quick_controls .segmented-group { flex-wrap: wr
 }
 #quickGrid .accordion { font-size: var(--fs-base); padding: 0 0 8px 0; background: none; border: none; }
 #quickGrid .panel { padding: 8px 0 0 0; border: none; }
+#quickGrid #panel_devices.open { gap: 8px; }
 #quickGrid .bloods-grid { gap: 8px; }
 
 /* The full bloods grid is unreadable squeezed into the rail, so in Quick Review the
@@ -383,8 +458,8 @@ body.quick-review-active .device-add-group .btn { padding: 5px 9px; font-size: v
 /* Risks carried forward from the previous DMR note: answered as Yes on import so they count
    toward the category, but visibly provisional until the clinician confirms or clears them. */
 .input-box.carried-forward {
-  border-color: var(--amber);
-  box-shadow: inset 0 0 0 1px var(--amber);
+  border-color: var(--quick);
+  box-shadow: inset 0 0 0 1px var(--quick);
 }
 .input-box.carried-forward::before {
   content: '↻ Carried forward - confirm or clear';
@@ -392,9 +467,9 @@ body.quick-review-active .device-add-group .btn { padding: 5px 9px; font-size: v
   margin-bottom: 6px;
   font-size: var(--fs-hint);
   font-weight: var(--fw-semibold);
-  color: #92400e;
-  background: #fffbeb;
-  border: 1px solid var(--amber);
+  color: var(--quick);
+  background: var(--quick-soft);
+  border: 1px solid var(--quick);
   border-radius: 999px;
   padding: 2px 10px;
   width: fit-content;
@@ -550,9 +625,12 @@ body.quick-review-active #alert_actions_section { margin-top: 12px; padding-top:
 .scraped-issue-resolve { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent); }
 
 /* Grid Spans */
+.col-1 { grid-column: span 1; }
 .col-2 { grid-column: span 2; } 
 .col-3 { grid-column: span 3; } 
-.col-4 { grid-column: span 4; } 
+.col-4 { grid-column: span 4; }
+.col-5 { grid-column: span 5; }
+
 .col-6 { grid-column: span 6; } 
 .col-8 { grid-column: span 8; } 
 .col-12 { grid-column: span 12; }
@@ -832,7 +910,8 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
   flex: 1;
   margin-bottom: 0 !important;
   text-align: center;
-  padding: 10px 14px;
+  padding: 10px 10px;
+  white-space: nowrap;   /* "Post-Stepdown" was wrapping to a second line */
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
   color: var(--muted);
@@ -928,7 +1007,7 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 }
 
 /* --- KPI / Dashboard --- */
-.kpi { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 12px; }
+.kpi { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: start; }
 .kpi .box { background: linear-gradient(to bottom, #ffffff, #fafbfc); border: 1px solid var(--line); padding: 14px; border-radius: 12px; text-align: center; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06); }
 
 #categoryBox { padding: 18px 14px; border-width: 2px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1); }
@@ -936,6 +1015,38 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 
 .kpi .box h3 { margin: 0; font-size: var(--fs-2xl); }
 .kpi .box small { color: var(--muted); font-size: var(--fs-sm); }
+
+/* Flags listed under their own count. */
+.kpi .box.flag-box { text-align: left; }
+.kpi .box.flag-box small { display: block; text-align: center; }
+.kpi .box.flag-box h3 { text-align: center; }
+.kpi .box.flag-box.red h3 { color: var(--red); }
+.kpi .box.flag-box.amber h3 { color: var(--amber); }
+.flag-box-list { margin: 8px 0 0 0; padding: 0; list-style: none; }
+.flag-box-list:empty { display: none; }
+.flag-box-list li {
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  padding: 4px 0;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+}
+.flag-box.red .flag-box-list li { color: #b91c1c; }
+.flag-box.amber .flag-box-list li { color: #92400e; }
+
+/* Risks the rules deliberately discounted. */
+.suppressed-list {
+  margin-top: 12px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.suppressed-list:empty { display: none; }
+.suppressed-list .suppressed-title {
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
 
 #completeness_nudge {
     font-size: var(--fs-lg);
@@ -1066,7 +1177,16 @@ footer {
 .footer-item { color: var(--muted); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
 .footer-item.reason { flex: 1 1 auto; min-width: 120px; }
 .footer-score { padding: 6px 12px; border-radius: 8px; font-weight: var(--fw-semibold); text-align: center; flex-shrink: 0;}
-.footer-buttons { display: flex; gap: 8px; flex: 1; justify-content: flex-end;}
+.footer-buttons { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
+.footer-buttons .btn { white-space: nowrap; }
+
+/* One button system rather than three ad-hoc inline treatments. */
+.btn.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: var(--fw-semibold); }
+.btn.btn-primary:hover { background: #0b5d57; border-color: #0b5d57; color: #fff; }
+.btn.btn-neutral { background: var(--input-bg); border: 1px solid var(--line); color: var(--text); font-weight: var(--fw-medium); }
+.btn.btn-neutral:hover { background: var(--bg); color: var(--ink); }
+.btn.btn-redcap { background: var(--maroon); border-color: var(--maroon); color: #fff; font-weight: var(--fw-semibold); }
+.btn.btn-redcap:hover { background: #651630; border-color: #651630; color: #fff; }
 
 .mobile-text { display: none; }
 
@@ -1106,7 +1226,12 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
   transition: transform 0.2s ease;
 }
 .accordion[aria-expanded="true"] .icon::before { transform: rotate(90deg); }
+/* Open/closed is a class, not an inline style: #panel_devices used to carry an inline
+   display:flex that outranked this rule, so it was open on every load whatever the chevron
+   said, and Clear Data only appeared to fix it until the next reload. */
 .panel { padding: 14px; background-color: transparent; display: none; overflow: hidden; }
+.panel.open { display: block; }
+#panel_devices.open { display: flex; flex-direction: column; gap: 12px; }
 
 /* --- Dynamic Lists --- */
 .device-entry { margin-bottom: 8px; }
@@ -1228,7 +1353,7 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 
 /* --- Media Queries --- */
 @media (max-width: 900px) {
-  .col-2, .col-3, .col-4, .col-6, .col-8 { grid-column: span 12; }
+  .col-1, .col-2, .col-3, .col-4, .col-5, .col-6, .col-8 { grid-column: span 12; }
   .grid { column-gap: 10px; row-gap: 12px; }
   input, textarea { font-size: var(--fs-lg); padding: 12px; }
   .btn, .select-btn, .seg-btn { padding: 10px 12px; font-size: var(--fs-base); min-height: 48px; }

@@ -938,15 +938,13 @@
           }
         }
       }
+      const redListEl = $("redFlagList");
+      if (redListEl) redListEl.innerHTML = uniqueRed.map((t) => `<li>${t}</li>`).join("");
+      const amberListEl = $("amberFlagList");
+      if (amberListEl) amberListEl.innerHTML = uniqueAmber.map((t) => `<li>${t}</li>`).join("");
       const listEl = $("flagList");
       if (listEl) {
-        let html = [
-          ...uniqueRed.map((t) => `<div style="color:var(--red); font-weight:700;">${t}</div>`),
-          ...uniqueAmber.map((t) => `<div style="color:var(--amber); font-weight:700;">${t}</div>`),
-          ...suppressedRisks.map((t) => `<div style="color:var(--muted); font-style:italic; border-left:2px solid var(--muted); padding-left:6px;">${t}</div>`)
-        ];
-        if (html.length === 0) listEl.innerHTML = '<div style="color:var(--muted)">No risk factors identified</div>';
-        else listEl.innerHTML = html.join("");
+        listEl.innerHTML = suppressedRisks.length ? `<div class="suppressed-title">Not counted toward category</div>` + suppressedRisks.map((t) => `<div>${t}</div>`).join("") : "";
       }
       document.querySelectorAll(".flag-red, .flag-amber").forEach((e) => e.classList.remove("flag-red", "flag-amber"));
       flagged.red.forEach((id) => {
@@ -999,9 +997,6 @@
           disMsg.innerHTML = `
                     <div style="font-size: 1.4rem; font-weight: 800; color: ${catColorStr}; margin-bottom: 12px; text-transform: uppercase;">
                         ${mainTitle}
-                    </div>
-                    <div style="font-size: 1.1rem; font-style: italic; color: var(--text); margin-bottom: 12px;">
-                        Are bloods and ADDS trends acceptable for this patient?
                     </div>
                     <div style="font-size: 1.3rem; font-weight: 700; color: var(--ink); margin-bottom: 16px;">
                         Can the patient be discharged?
@@ -1465,7 +1460,7 @@
       exitQuickReviewMode();
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
-    document.querySelectorAll(".panel").forEach((p2) => p2.style.display = "none");
+    document.querySelectorAll(".panel").forEach((p2) => p2.classList.remove("open"));
     document.querySelectorAll(".accordion").forEach((btn) => {
       btn.setAttribute("aria-expanded", "false");
     });
@@ -1798,21 +1793,15 @@
     if ($("section-bloods")?.classList.contains("qr-expanded")) $("btnBloodsDetailsToggle")?.click();
     syncQuickOverlayBackdrop();
   }
+  function setPanelOpen(panel, btn, open) {
+    if (panel) panel.classList.toggle("open", open);
+    if (btn) btn.setAttribute("aria-expanded", String(open));
+  }
   function openAccordion(panelId, btnSelector) {
-    const panel = $(panelId);
-    const btn = document.querySelector(btnSelector);
-    if (panel && btn) {
-      panel.style.display = "block";
-      btn.setAttribute("aria-expanded", "true");
-    }
+    setPanelOpen($(panelId), document.querySelector(btnSelector), true);
   }
   function closeAccordion(panelId, btnSelector) {
-    const panel = $(panelId);
-    const btn = document.querySelector(btnSelector);
-    if (panel && btn) {
-      panel.style.display = "none";
-      btn.setAttribute("aria-expanded", "false");
-    }
+    setPanelOpen($(panelId), document.querySelector(btnSelector), false);
   }
   var QUICK_REVIEW_SECTIONS_TO_HIDE = ["section-patient", "section-risk", "section-ae", "section-context"];
   var QUICK_REVIEW_ONLY_SECTIONS = ["quick_notes_wrapper", "scraped_risks_wrapper"];
@@ -1882,8 +1871,8 @@
         item.style.pointerEvents = "none";
       }
     });
-    const toggleBtn = $("btnManualQuickReview");
-    if (toggleBtn) toggleBtn.textContent = "Exit Quick Review";
+    const depthQuick = document.querySelector('input[name="reviewDepth"][value="quick"]');
+    if (depthQuick) depthQuick.checked = true;
     renderScrapedIssuesList();
     setTimeout(() => {
       const target = $("quickGrid");
@@ -1928,8 +1917,8 @@
       item.style.opacity = "";
       item.style.pointerEvents = "";
     });
-    const toggleBtn = $("btnManualQuickReview");
-    if (toggleBtn) toggleBtn.textContent = "Quick Review";
+    const depthFull = document.querySelector('input[name="reviewDepth"][value="full"]');
+    if (depthFull) depthFull.checked = true;
     showToast("Full review mode restored", 2e3);
   }
   function showQuickReviewPrompt(categoryText, hoursOnWard, previousRisks = []) {
@@ -3262,9 +3251,8 @@
           const targetEl = document.getElementById(targetId);
           if (targetEl && targetEl.classList.contains("accordion-wrapper")) {
             const panel = targetEl.querySelector(".panel");
-            if (panel && panel.style.display !== "block") {
-              panel.style.display = "block";
-              targetEl.querySelector(".accordion")?.setAttribute("aria-expanded", "true");
+            if (panel && !panel.classList.contains("open")) {
+              setPanelOpen(panel, targetEl.querySelector(".accordion"), true);
             }
           }
         }
@@ -3685,16 +3673,17 @@
       if (prompt) prompt.style.display = "none";
     });
     $("btnExitQuickReview")?.addEventListener("click", exitQuickReviewMode);
-    $("btnManualQuickReview")?.addEventListener("click", () => {
-      if (isQuickReviewMode) exitQuickReviewMode();
-      else {
-        setQuickReviewDismissed(false);
-        enableQuickReviewMode();
-      }
+    document.querySelectorAll('input[name="reviewDepth"]').forEach((radio) => {
+      radio.addEventListener("change", () => {
+        if (radio.value === "quick" && !isQuickReviewMode) {
+          setQuickReviewDismissed(false);
+          enableQuickReviewMode();
+        } else if (radio.value === "full" && isQuickReviewMode) exitQuickReviewMode();
+      });
     });
     const toggleBloodsDetails = () => {
       const panel = $("panel_bloods");
-      const isOpen = panel && panel.style.display === "block";
+      const isOpen = panel?.classList.contains("open");
       if (isOpen) closeAccordion("panel_bloods", '[aria-controls="panel_bloods"]');
       else openAccordion("panel_bloods", '[aria-controls="panel_bloods"]');
       setBloodsOverlay(!isOpen);
@@ -3864,12 +3853,11 @@
     document.querySelectorAll(".accordion-wrapper").forEach((w) => {
       w.querySelector(".accordion").addEventListener("click", () => {
         const panel = w.querySelector(".panel");
-        const isOpen = panel.style.display === "block";
-        panel.style.display = isOpen ? "none" : "block";
-        w.querySelector(".accordion").setAttribute("aria-expanded", String(!isOpen));
-        const map = JSON.parse(localStorage.getItem(ACCORDION_KEY) || "{}");
+        const isOpen = panel.classList.contains("open");
+        setPanelOpen(panel, w.querySelector(".accordion"), !isOpen);
+        const map = JSON.parse(sessionStorage.getItem(ACCORDION_KEY) || "{}");
         map[w.dataset.accordionId] = !isOpen;
-        localStorage.setItem(ACCORDION_KEY, JSON.stringify(map));
+        sessionStorage.setItem(ACCORDION_KEY, JSON.stringify(map));
         if (w.id === "section-bloods") setBloodsOverlay(!isOpen);
       });
     });
@@ -3915,10 +3903,7 @@
     updateReviewTypeVisibility();
     const accMap = JSON.parse(sessionStorage.getItem(ACCORDION_KEY) || "{}");
     document.querySelectorAll(".accordion-wrapper").forEach((w) => {
-      if (accMap[w.dataset.accordionId]) {
-        w.querySelector(".panel").style.display = "block";
-        w.querySelector(".accordion").setAttribute("aria-expanded", "true");
-      }
+      if (accMap[w.dataset.accordionId]) setPanelOpen(w.querySelector(".panel"), w.querySelector(".accordion"), true);
     });
     compute();
     checkBloodRanges();

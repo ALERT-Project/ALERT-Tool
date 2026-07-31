@@ -707,16 +707,19 @@ export function computeAll() {
             }
         }
 
+        // Counted flags sit inside their own category box; only the discounted ones are
+        // listed separately, so nothing that shaped the category is out of sight.
+        const redListEl = $('redFlagList');
+        if (redListEl) redListEl.innerHTML = uniqueRed.map(t => `<li>${t}</li>`).join('');
+        const amberListEl = $('amberFlagList');
+        if (amberListEl) amberListEl.innerHTML = uniqueAmber.map(t => `<li>${t}</li>`).join('');
+
         const listEl = $('flagList');
         if (listEl) {
-            let html = [
-                ...uniqueRed.map(t => `<div style="color:var(--red); font-weight:700;">${t}</div>`),
-                ...uniqueAmber.map(t => `<div style="color:var(--amber); font-weight:700;">${t}</div>`),
-                ...suppressedRisks.map(t => `<div style="color:var(--muted); font-style:italic; border-left:2px solid var(--muted); padding-left:6px;">${t}</div>`)
-            ];
-
-            if (html.length === 0) listEl.innerHTML = '<div style="color:var(--muted)">No risk factors identified</div>';
-            else listEl.innerHTML = html.join('');
+            listEl.innerHTML = suppressedRisks.length
+                ? `<div class="suppressed-title">Not counted toward category</div>` +
+                  suppressedRisks.map(t => `<div>${t}</div>`).join('')
+                : '';
         }
 
         document.querySelectorAll('.flag-red, .flag-amber').forEach(e => e.classList.remove('flag-red', 'flag-amber'));
@@ -781,9 +784,6 @@ export function computeAll() {
                 disMsg.innerHTML = `
                     <div style="font-size: 1.4rem; font-weight: 800; color: ${catColorStr}; margin-bottom: 12px; text-transform: uppercase;">
                         ${mainTitle}
-                    </div>
-                    <div style="font-size: 1.1rem; font-style: italic; color: var(--text); margin-bottom: 12px;">
-                        Are bloods and ADDS trends acceptable for this patient?
                     </div>
                     <div style="font-size: 1.3rem; font-weight: 700; color: var(--ink); margin-bottom: 16px;">
                         Can the patient be discharged?

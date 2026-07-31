@@ -403,7 +403,7 @@ export function clearData() {
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('open'));
     document.querySelectorAll('.accordion').forEach(btn => {
         btn.setAttribute('aria-expanded', 'false');
 
@@ -767,22 +767,19 @@ export function closeQuickOverlays() {
     syncQuickOverlayBackdrop();
 }
 
+// Single source of truth for accordion state: the panel's .open class and the button's
+// aria-expanded, which the chevron is drawn from.
+export function setPanelOpen(panel, btn, open) {
+    if (panel) panel.classList.toggle('open', open);
+    if (btn) btn.setAttribute('aria-expanded', String(open));
+}
+
 export function openAccordion(panelId, btnSelector) {
-    const panel = $(panelId);
-    const btn = document.querySelector(btnSelector);
-    if (panel && btn) {
-        panel.style.display = 'block';
-        btn.setAttribute('aria-expanded', 'true');
-    }
+    setPanelOpen($(panelId), document.querySelector(btnSelector), true);
 }
 
 export function closeAccordion(panelId, btnSelector) {
-    const panel = $(panelId);
-    const btn = document.querySelector(btnSelector);
-    if (panel && btn) {
-        panel.style.display = 'none';
-        btn.setAttribute('aria-expanded', 'false');
-    }
+    setPanelOpen($(panelId), document.querySelector(btnSelector), false);
 }
 
 // Quick Review keeps only what a Day 2+ follow-up needs: ADDS (+calculator), Bloods,
@@ -879,8 +876,10 @@ export function enableQuickReviewMode() {
         }
     });
 
-    const toggleBtn = $('btnManualQuickReview');
-    if (toggleBtn) toggleBtn.textContent = 'Exit Quick Review';
+    // Keep the Review Depth toggle in step however Quick Review was entered (modal, >24h
+    // offer, or the toggle itself).
+    const depthQuick = document.querySelector('input[name="reviewDepth"][value="quick"]');
+    if (depthQuick) depthQuick.checked = true;
 
     renderScrapedIssuesList();
 
@@ -941,8 +940,8 @@ export function exitQuickReviewMode() {
         item.style.pointerEvents = '';
     });
 
-    const toggleBtn = $('btnManualQuickReview');
-    if (toggleBtn) toggleBtn.textContent = 'Quick Review';
+    const depthFull = document.querySelector('input[name="reviewDepth"][value="full"]');
+    if (depthFull) depthFull.checked = true;
 
     showToast("Full review mode restored", 2000);
 }

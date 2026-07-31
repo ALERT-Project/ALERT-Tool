@@ -13,7 +13,7 @@ import {
     handleUnknownBLODate, showClearDataModal, hideClearDataModal, syncComorbsToPMH, clearData,
     enableQuickReviewMode, exitQuickReviewMode, showQuickReviewPrompt, openMobileNav, closeMobileNav,
     handleSegmentClick, toggleBowelDate, updateAgeMitigationUI, openAccordion, closeAccordion,
-    setBloodsOverlay, closeQuickOverlays, toggleAddsOverride, refreshAddsOverrideUI
+    setBloodsOverlay, closeQuickOverlays, toggleAddsOverride, refreshAddsOverrideUI, setPanelOpen
 } from './ui.js';
 
 function initialize() {
@@ -573,9 +573,8 @@ function initialize() {
                 const targetEl = document.getElementById(targetId);
                 if (targetEl && targetEl.classList.contains('accordion-wrapper')) {
                     const panel = targetEl.querySelector('.panel');
-                    if (panel && panel.style.display !== 'block') {
-                        panel.style.display = 'block';
-                        targetEl.querySelector('.accordion')?.setAttribute('aria-expanded', 'true');
+                    if (panel && !panel.classList.contains('open')) {
+                        setPanelOpen(panel, targetEl.querySelector('.accordion'), true);
                     }
                 }
             }
@@ -1015,16 +1014,18 @@ function initialize() {
     });
     $('btnExitQuickReview')?.addEventListener('click', exitQuickReviewMode);
 
-    $('btnManualQuickReview')?.addEventListener('click', () => {
-        if (isQuickReviewMode) exitQuickReviewMode();
-        else { setQuickReviewDismissed(false); enableQuickReviewMode(); }
+    document.querySelectorAll('input[name="reviewDepth"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (radio.value === 'quick' && !isQuickReviewMode) { setQuickReviewDismissed(false); enableQuickReviewMode(); }
+            else if (radio.value === 'full' && isQuickReviewMode) exitQuickReviewMode();
+        });
     });
 
     // "Details" reveals the full bloods grid without leaving Quick Review. In Quick Review
     // the card floats over the page, since the grid needs more room than the left rail has.
     const toggleBloodsDetails = () => {
         const panel = $('panel_bloods');
-        const isOpen = panel && panel.style.display === 'block';
+        const isOpen = panel?.classList.contains('open');
         if (isOpen) closeAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
         else openAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
         setBloodsOverlay(!isOpen);
@@ -1158,12 +1159,13 @@ function initialize() {
     document.querySelectorAll('.accordion-wrapper').forEach(w => {
         w.querySelector('.accordion').addEventListener('click', () => {
             const panel = w.querySelector('.panel');
-            const isOpen = panel.style.display === 'block';
-            panel.style.display = isOpen ? 'none' : 'block';
-            w.querySelector('.accordion').setAttribute('aria-expanded', String(!isOpen));
-            const map = JSON.parse(localStorage.getItem(ACCORDION_KEY) || '{}');
+            const isOpen = panel.classList.contains('open');
+            setPanelOpen(panel, w.querySelector('.accordion'), !isOpen);
+            // sessionStorage, matching where it is read back below - the map used to be
+            // written to localStorage and read from sessionStorage, so it never restored.
+            const map = JSON.parse(sessionStorage.getItem(ACCORDION_KEY) || '{}');
             map[w.dataset.accordionId] = !isOpen;
-            localStorage.setItem(ACCORDION_KEY, JSON.stringify(map));
+            sessionStorage.setItem(ACCORDION_KEY, JSON.stringify(map));
             // Bloods opened from its own header still gets the Quick Review overlay treatment.
             if (w.id === 'section-bloods') setBloodsOverlay(!isOpen);
         });
@@ -1214,7 +1216,7 @@ function initialize() {
 
     const accMap = JSON.parse(sessionStorage.getItem(ACCORDION_KEY) || '{}');
     document.querySelectorAll('.accordion-wrapper').forEach(w => {
-        if (accMap[w.dataset.accordionId]) { w.querySelector('.panel').style.display = 'block'; w.querySelector('.accordion').setAttribute('aria-expanded', 'true'); }
+        if (accMap[w.dataset.accordionId]) setPanelOpen(w.querySelector('.panel'), w.querySelector('.accordion'), true);
     });
 
     compute();

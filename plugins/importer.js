@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const panel = document.getElementById(panelId);
         const btn = document.querySelector(iconBtnSelector);
         if (panel) {
-            panel.style.display = 'block';
+            panel.classList.add('open');
             if (btn) btn.setAttribute('aria-expanded', 'true');
         }
     }
@@ -559,15 +559,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.showQuickReviewPrompt(categoryText, currentHoursOnWard, previousRisks);
                 }
             }, 1000);
-        }
-
-        // --- 7. HANDOVER DETECTION ---
-        const handoverMatch = text.match(/Recommend discharge.*pending.*bloods.*DMR/i)
-            || text.match(/stable overnight.*discharge.*bloods.*DMR/i);
-        const handoverChk = document.getElementById('chk_handover_discharge');
-        if (handoverChk) {
-            handoverChk.checked = !!handoverMatch;
-            handoverChk.dispatchEvent(new Event('change'));
         }
 
         const t = document.getElementById('toast');
