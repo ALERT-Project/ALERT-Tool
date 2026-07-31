@@ -184,20 +184,21 @@
             <div class="patient-header">
                 <h2 class="card-title" style="margin:0;">👤 Patient Details</h2>
                 <div class="patient-header-actions">
-                    <div class="depth-field">
-                        <label for="reviewDepthToggle">Review Depth</label>
-                        <div class="radio-segmented-group" id="reviewDepthToggle">
-                            <label><input type="radio" name="reviewDepth" value="full" checked> Full Review</label>
-                            <label><input type="radio" name="reviewDepth" value="quick"> Quick Review</label>
-                        </div>
-                    </div>
-                    <button id="btnOpenImport" class="btn small btn-import">⬇ Import data from last DMR note</button>
+                    <button id="btnOpenImport" class="btn btn-import">⬇ Import data from last DMR note</button>
                 </div>
             </div>
 
             <!-- About the review, not the patient: kept in its own strip so the patient fields
                  below read as one short block rather than a wall of mixed inputs. -->
             <div class="review-strip">
+                <div class="rs-field">
+                    <label for="reviewDepthToggle">Review Depth</label>
+                    <div class="radio-segmented-group" id="reviewDepthToggle">
+                        <label><input type="radio" name="reviewDepth" value="full" checked> Full Review</label>
+                        <label><input type="radio" name="reviewDepth" value="quick"> Quick Review</label>
+                    </div>
+                </div>
+
                 <div class="rs-field">
                     <label>Review Stage</label>
                     <div class="radio-segmented-group">
@@ -222,12 +223,12 @@
                     </div>
                 </div>
 
-                <div class="rs-field rs-narrow rs-grow">
+                <div class="rs-field">
                     <label for="reviewerInitials">Reviewer</label>
                     <input id="reviewerInitials" type="text" maxlength="6" autocomplete="off" />
                 </div>
 
-                <div class="rs-field rs-narrow rs-grow" id="reviewTimeWrapper">
+                <div class="rs-field" id="reviewTimeWrapper">
                     <label for="reviewTime">Time of Review</label>
                     <input id="reviewTime" type="time" />
                 </div>

@@ -234,7 +234,7 @@ header h1 .logo-em {
   margin-bottom: 14px;
 }
 .patient-header-actions { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-.depth-field label, .review-strip label {
+.review-strip label {
   display: block;
   font-size: var(--fs-hint);
   font-weight: var(--fw-semibold);
@@ -243,54 +243,49 @@ header h1 .logo-em {
   letter-spacing: 0.4px;
   margin-bottom: 4px;
 }
-.btn-import {
-  border: 2px dashed var(--accent);
-  color: var(--accent);
-  background: transparent;
+/* Primary action for the whole card, so it reads as a filled button rather than the
+   dashed outline it used to have - that looked like a drop zone, not something to click.
+   Doubled class beats plain .btn; the HTML must not add .small or padding is lost again. */
+.btn.btn-import {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
   font-weight: var(--fw-semibold);
-  padding: 10px 18px;
-  border-radius: 12px;
+  padding: 12px 20px;
+  min-height: 44px;
+  border-radius: 10px;
   font-size: var(--fs-sm);
   margin: 0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
+.btn.btn-import:hover { background: #0b5c56; border-color: #0b5c56; color: #fff; }
+.btn.btn-import:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.28); }
 
-/* Everything about the review itself, separated from the patient's own details. */
+/* Everything about the review itself, separated from the patient's own details.
+   Grid rather than flex-wrap so every field gets an identical column - that is what
+   keeps the four toggles the same width despite their labels being different lengths. */
 .review-strip {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 14px;
+  align-items: end;
   padding: 12px 14px;
   margin-bottom: 16px;
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 12px;
 }
-.rs-field { flex: 0 1 auto; min-width: 0; }
-.rs-field.rs-grow { flex: 1 1 140px; }
-/* The group clips its own overflow to keep the rounded ends, so it has to be wide enough
-   for its labels rather than relying on them to shrink. */
-.review-strip .radio-segmented-group,
-.depth-field .radio-segmented-group { width: max-content; max-width: 100%; }
-/* Labels must never be cut in half by the group's overflow, so they keep their natural width. */
-.review-strip .radio-segmented-group label,
-.depth-field .radio-segmented-group label {
-  flex: 1 1 auto;
-  min-width: max-content;
-  padding: 9px 12px;
-  font-size: var(--fs-xs);
-  min-height: 40px;
-}
-.rs-field.rs-narrow { flex: 0 1 130px; }
+.rs-field { min-width: 0; }
 .rs-field input { margin: 0; }
-.review-strip .radio-segmented-group { max-width: none; }
+/* Each group fills its grid cell, and its two options split that cell evenly. */
+.review-strip .radio-segmented-group { width: 100%; max-width: none; }
+.review-strip .radio-segmented-group label { flex: 1 1 0; min-width: 0; }
 
 /* Field labels: kept for verification, but quieter so they stop competing with the data.
    Scoped to the field's own label - the labels *inside* a segmented group are the options
    themselves and must keep their selected-state colour. */
 #section-patient .grid > div > label,
-#section-patient .rs-field > label,
-#section-patient .depth-field > label {
+#section-patient .rs-field > label {
   font-size: var(--fs-hint);
   font-weight: var(--fw-semibold);
   color: var(--muted);
@@ -1358,9 +1353,14 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
   input, textarea { font-size: var(--fs-lg); padding: 12px; }
   .btn, .select-btn, .seg-btn { padding: 10px 12px; font-size: var(--fs-base); min-height: 48px; }
   .segmented-group { max-width: 100%; }
+  .review-strip { grid-template-columns: repeat(2, 1fr); }
+  .btn.btn-import { min-height: 48px; width: 100%; }
+  .patient-header-actions { width: 100%; }
 }
 
 @media (max-width: 600px) {
+    .review-strip { grid-template-columns: 1fr; }
+
     body { padding-left: 0; padding-top: 60px; } /* Push down for top nav */
     .sidebar {
         width: 100%;
@@ -1724,6 +1724,23 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
     padding: 5px 10px;
 }
 
+/* One height and one radius for every control in the review strip. These have to live
+   here, after the #section-patient block above, or they lose to it on source order -
+   the earlier .review-strip sizing rules were dead for exactly that reason. */
+#section-patient .review-strip .radio-segmented-group,
+#section-patient .review-strip input {
+    border-radius: 10px;
+}
+/* 34px + the group's own 1px borders = the 36px the inputs get from box-sizing,
+   so toggles and inputs finish exactly the same height. */
+#section-patient .review-strip .radio-segmented-group label { min-height: 34px; }
+#section-patient .review-strip input { min-height: 36px; }
+#section-patient .review-strip .radio-segmented-group label,
+#section-patient .review-strip input {
+    padding: 6px 10px;
+    font-size: var(--fs-xs);
+}
+
 #section-patient .quick-select-container {
     margin-top: 4px;
 }
@@ -1737,6 +1754,15 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 #section-patient .sub-label {
     margin-top: 2px;
     font-size: var(--fs-hint);
+}
+
+/* Touch targets for the review strip. Must come after the #section-patient sizing block
+   above - same specificity, so source order is the only thing that decides it. */
+@media (max-width: 600px) {
+    #section-patient .review-strip .radio-segmented-group label { min-height: 42px; }
+    #section-patient .review-strip input { min-height: 44px; }
+    #section-patient .review-strip .radio-segmented-group label,
+    #section-patient .review-strip input { font-size: var(--fs-sm); }
 }
 
 
