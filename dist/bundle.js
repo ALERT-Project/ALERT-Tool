@@ -40,6 +40,66 @@
     });
     return [first, ...procRest].join(", ");
   }
+  function disableAutofill(root = document) {
+    applyAutofillOff(root);
+    if (root === document && !document.__autofillObserver) {
+      const observer = new MutationObserver((records) => {
+        records.forEach((r) => r.addedNodes.forEach((node) => {
+          if (node.nodeType !== 1) return;
+          if (node.matches?.("input, textarea")) applyAutofillOff({ querySelectorAll: () => [node] });
+          applyAutofillOff(node);
+        }));
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      document.__autofillObserver = observer;
+    }
+  }
+  function applyAutofillOff(root) {
+    root.querySelectorAll("input, textarea").forEach((el) => {
+      el.setAttribute("autocomplete", "off");
+      el.setAttribute("autocorrect", "off");
+      el.setAttribute("spellcheck", "false");
+    });
+  }
+  var DMR_SUBSTITUTIONS = [
+    [/→/g, " to "],
+    // →
+    [/←/g, " from "],
+    // ←
+    [/↑/g, " up"],
+    // ↑
+    [/↓/g, " down"],
+    // ↓
+    [/[–—]/g, "-"],
+    // – —
+    [/[‘’]/g, "'"],
+    // ' '
+    [/[“”]/g, '"'],
+    // " "
+    [/…/g, "..."],
+    // …
+    [/≥/g, ">="],
+    // ≥
+    [/≤/g, "<="],
+    // ≤
+    [/°/g, " deg"],
+    // °
+    [/µ/g, "u"],
+    // µ
+    [/×/g, "x"],
+    // ×
+    [/[₂²]/g, "2"],
+    // SpO₂ / m² - the tool writes plain digits, but pasted text may not
+    [/ /g, " "]
+    // non-breaking space
+  ];
+  function toDmrSafeText(text) {
+    let out = String(text ?? "");
+    DMR_SUBSTITUTIONS.forEach(([re, rep]) => {
+      out = out.replace(re, rep);
+    });
+    return out.replace(/[ \t]{2,}/g, " ");
+  }
   function showToast(msg, timeout = 2500) {
     const t = $("toast");
     if (t) {
@@ -49,11 +109,58 @@
     }
   }
 
+  // src/js/notices.js
+  var notices = /* @__PURE__ */ new Map();
+  var TONE_CLASS = { red: "notice-red", amber: "notice-amber", info: "notice-info" };
+  var NOTICE_PRIORITY = {
+    NEW_RISK: 10,
+    HANDOVER: 20,
+    DISCHARGE: 30,
+    COMPLETENESS: 90
+  };
+  function setNotice(id, { priority = 50, tone = "info", html = "", actions = [] }) {
+    const existing = notices.get(id);
+    if (existing && existing.html === html && existing.tone === tone && existing.actions.length === actions.length) {
+      existing.actions = actions;
+      return;
+    }
+    notices.set(id, { id, priority, tone, html, actions });
+    renderNotices();
+  }
+  function clearNotice(id) {
+    if (notices.delete(id)) renderNotices();
+  }
+  function renderNotices() {
+    const region = $("noticeRegion");
+    if (!region) return;
+    const ordered = [...notices.values()].sort((a, b) => a.priority - b.priority);
+    const active = ordered[0];
+    if (!active) {
+      region.hidden = true;
+      region.innerHTML = "";
+      region.className = "notice";
+      return;
+    }
+    const waiting = ordered.length - 1;
+    region.className = `notice ${TONE_CLASS[active.tone] || TONE_CLASS.info}`;
+    region.innerHTML = `
+        <div class="notice-body">${active.html}</div>
+        ${active.actions.length ? `<div class="notice-actions">${active.actions.map((a) => `<button type="button" class="btn small" data-notice-action="${a.id}">${a.label}</button>`).join("")}</div>` : ""}
+        ${waiting > 0 ? `<div class="notice-more" title="${ordered.slice(1).map((n) => n.id).join(", ")}">+${waiting} more</div>` : ""}`;
+    region.hidden = false;
+    active.actions.forEach((a) => {
+      region.querySelector(`[data-notice-action="${a.id}"]`)?.addEventListener("click", (e) => {
+        e.preventDefault();
+        a.onClick();
+      });
+    });
+  }
+
   // src/js/config.js
   var STORAGE_KEY = "alertToolData_v7_7";
   var ACCORDION_KEY = "alertToolAccordions_v7_7";
   var UNDO_KEY = "alertToolUndo_v7_7";
-  var GATE_LINKED_BLOODS = ["cr_review", "wcc", "crp", "neut", "lymph", "k", "na", "mg", "phos", "lac_review"];
+  var GATE_LINKED_BLOODS = ["cr_review", "wcc", "crp", "neut", "lymph", "k", "na", "mg", "phos", "lac_review", "aptt"];
   var BLOOD_LABELS = {
     wcc: "WCC",
     crp: "CRP",
@@ -107,6 +214,86 @@
     "comorb_malignancy": "Active malignancy",
     "comorb_immuno": "Immunosuppression",
     "comorb_other": "Other"
+  };
+  var PICS_ITEMS = [
+    { id: "pics_p01", code: "P-01", points: 3, tier: "High-yield", label: "Mechanical ventilation >48h", short: "mechanical ventilation >48h" },
+    {
+      id: "pics_p02",
+      code: "P-02",
+      points: 3,
+      tier: "High-yield",
+      label: "Positive delirium screen (CAM-ICU+) at any point",
+      short: "CAM-ICU positive",
+      derive: (s) => s.neuro_gate === true && s.neuroType === "Delirium",
+      derivedFrom: "neuro type Delirium"
+    },
+    {
+      id: "pics_p03",
+      code: "P-03",
+      points: 3,
+      tier: "High-yield",
+      label: "Pre-existing baseline impairment (cognitive decline, frailty, PTSD/depression)",
+      short: "pre-existing baseline impairment",
+      derive: (s) => s.frailty_known === true,
+      derivedFrom: "known frailty at baseline",
+      suggest: (s) => s.neuro_psych === true && s.frailty_known !== true,
+      suggestReason: "Psychological concern recorded - pre-existing diagnosis?"
+    },
+    { id: "pics_p04", code: "P-04", points: 2, tier: "Moderate", label: "Severe sepsis, septic shock or ARDS", short: "severe sepsis/ARDS" },
+    { id: "pics_p05", code: "P-05", points: 2, tier: "Moderate", label: "Neuromuscular blockade or high dose corticosteroids", short: "paralytics/high dose steroids" },
+    {
+      id: "pics_p06",
+      code: "P-06",
+      points: 2,
+      tier: "Moderate",
+      label: "Severe hypoxia or high dose vasopressors",
+      short: "severe hypoxia/high dose vasopressors",
+      suggest: (s) => s.pressor_recent_norad === true,
+      suggestReason: "Noradrenaline recorded in ICU - was the dose high?"
+    },
+    {
+      id: "pics_p07",
+      code: "P-07",
+      points: 2,
+      tier: "Moderate",
+      label: "Strict bed rest or complete immobility >48h",
+      short: "immobile >48h",
+      derive: (s) => s.immobility === true && (parseFloat(s.icuLos) || 0) >= 2,
+      derivedFrom: "immobility gate"
+    },
+    {
+      id: "pics_p08",
+      code: "P-08",
+      points: 1,
+      tier: "Additive",
+      label: "ICU length of stay >3 days",
+      short: "ICU LOS >3 days",
+      derive: (s) => (parseFloat(s.icuLos) || 0) > 3,
+      derivedFrom: "ICU LOS"
+    },
+    { id: "pics_p09", code: "P-09", points: 1, tier: "Additive", label: "Use of physical restraints", short: "physical restraints" },
+    {
+      id: "pics_p10",
+      code: "P-10",
+      points: 1,
+      tier: "Additive",
+      label: "Severe sleep disruption or altered sleep architecture",
+      short: "severe sleep disruption",
+      derive: (s) => s.sleep_quality === true,
+      derivedFrom: "poor sleep"
+    },
+    { id: "pics_p11", code: "P-11", points: 1, tier: "Additive", label: "Extreme family or caregiver distress or conflict", short: "family/caregiver distress" }
+  ];
+  var PICS_BANDS = {
+    low: { label: "Low risk", action: null },
+    moderate: {
+      label: "Moderate risk",
+      action: "PICS moderate risk: patient & family education bundle delivered. Monitor for emerging symptoms at next review."
+    },
+    high: {
+      label: "High risk",
+      action: "PICS high risk: formal PICS alert given at handover, priority 72-hour ICU Outreach review, referrals to Physiotherapy and Social Work."
+    }
   };
   var staticInputs = [
     "reviewTime",
@@ -182,6 +369,10 @@
     "bl_inr",
     "bl_aptt",
     "bl_egfr",
+    "inr_target",
+    "aptt_target",
+    "bloods_date",
+    "bloods_time",
     "anticoag_note",
     "vte_prophylaxis_note",
     "elec_replace_note",
@@ -218,6 +409,7 @@
     "hac_note",
     "discharge_pending_bloods_note",
     "age_mitigate_reason",
+    "los_mitigate_reason",
     "frailty_note"
   ];
   var segmentedInputs = [
@@ -241,7 +433,6 @@
     "renal_chronic_bloods",
     "infection_downtrend",
     "infection_downtrend_bloods",
-    "dialysis_type",
     "sleep_quality",
     "pain_control",
     "neuro_psych",
@@ -252,6 +443,7 @@
     "resp_poor_cough",
     "resp_poor_swallow",
     "age_mitigated",
+    "los_mitigated",
     "frailty_known"
   ];
   var toggleInputs = [
@@ -282,7 +474,8 @@
     "pressor_recent_mid",
     "pressor_recent_other",
     "pressor_current_mid",
-    "pressor_current_other"
+    "pressor_current_other",
+    ...PICS_ITEMS.map((i) => i.id)
   ];
   var selectInputs = [
     "oxMod",
@@ -292,12 +485,70 @@
     "electrolyteConcern",
     "tracheType",
     "tracheStatus",
-    "intubatedReason"
+    "intubatedReason",
+    "dialysis_type"
   ];
   var deviceTypes = ["CVC", "PICC", "Other CVAD", "PIVC", "Arterial Line", "Enteral Tube", "IDC", "Pacing Wire", "Drain", "Wound", "Vascath", "Tracheostomy", "Other Device"];
 
-  // src/js/logic.js
-  function calculateWardTime(dateStr, timeStr, isPre) {
+  // src/js/trends.js
+  var TREND_RULES = {
+    cr_review: { minAbs: 15, minPct: 15, floor: 40 },
+    crp: { minAbs: 20, minPct: 25, floor: 20 },
+    hb: { minAbs: 10, minPct: 8, floor: 0 },
+    wcc: { minAbs: 2, minPct: 20, floor: 0 },
+    neut: { minAbs: 1, minPct: 20, floor: 0 },
+    lymph: { minAbs: 1, minPct: 20, floor: 0 },
+    plts: { minAbs: 30, minPct: 20, floor: 0 },
+    k: { minAbs: 0.4, minPct: 8, floor: 0 },
+    na: { minAbs: 3, minPct: 2, floor: 0 },
+    mg: { minAbs: 0.2, minPct: 15, floor: 0 },
+    phos: { minAbs: 0.2, minPct: 15, floor: 0 },
+    inr: { minAbs: 0.3, minPct: 15, floor: 0 },
+    aptt: { minAbs: 5, minPct: 15, floor: 0 },
+    alb: { minAbs: 5, minPct: 12, floor: 0 },
+    alt: { minAbs: 0, minPct: 50, floor: 0 },
+    bili: { minAbs: 0, minPct: 50, floor: 0 },
+    lac_review: { minAbs: 0.5, minPct: 25, floor: 0 }
+    // egfr is deliberately absent: it is calculated from creatinine, so its arrow would only
+    // ever repeat the creatinine one.
+  };
+  function computeTrend(key, current, previous) {
+    const rule = TREND_RULES[key];
+    const cur = num(current);
+    const prev = num(previous);
+    if (!rule || cur === null || prev === null || cur === prev) return null;
+    if (Math.max(Math.abs(cur), Math.abs(prev)) < rule.floor) return null;
+    const absDelta = Math.abs(cur - prev);
+    const pctDelta = prev === 0 ? Infinity : absDelta / Math.abs(prev) * 100;
+    if (pctDelta < rule.minPct) return null;
+    const range = normalRanges[key];
+    const inRange = (v) => !range || v >= range.low && v <= range.high;
+    if (inRange(cur) && inRange(prev) && absDelta < rule.minAbs) return null;
+    return {
+      key,
+      current: cur,
+      previous: prev,
+      delta: cur - prev,
+      absDelta,
+      pctDelta,
+      rising: cur > prev,
+      direction: cur > prev ? "\u2191" : "\u2193"
+    };
+  }
+  function applyTrendArrows(state, prevBloods) {
+    if (!prevBloods) return;
+    Object.keys(TREND_RULES).forEach((key) => {
+      const group = document.getElementById(`bl_${key}_trend`);
+      if (!group || group.dataset.manual === "true") return;
+      const trend = computeTrend(key, state[`bl_${key}`], prevBloods[key]);
+      group.querySelectorAll(".trend-btn").forEach((b) => b.classList.remove("active"));
+      if (!trend) return;
+      group.querySelector(`.trend-btn[data-value="${trend.direction}"]`)?.classList.add("active");
+    });
+  }
+
+  // src/js/rules.js
+  function calculateWardTime(dateStr, timeStr, isPre, now = /* @__PURE__ */ new Date()) {
     if (isPre) return { hours: 0, text: "(Pre-Stepdown)" };
     if (!dateStr) return { hours: 0, text: "" };
     let h = 16;
@@ -311,587 +562,575 @@
     }
     const [y, m, d] = dateStr.split("-");
     const stepObj = new Date(y, m - 1, d, h, min);
-    const diffHours = (/* @__PURE__ */ new Date() - stepObj) / 36e5;
+    const diffHours = (now - stepObj) / 36e5;
     if (diffHours < 0) return { hours: diffHours, text: "(Planned Stepdown)" };
-    if (diffHours < 12) {
-      return { hours: diffHours, text: `${Math.round(diffHours)} hours` };
-    } else if (diffHours <= 48) {
+    if (diffHours < 12) return { hours: diffHours, text: `${Math.round(diffHours)} hours` };
+    if (diffHours <= 48) {
       const halfDays = Math.round(diffHours / 24 * 2) / 2;
       return { hours: diffHours, text: `${halfDays} days` };
-    } else {
-      const days = Math.round(diffHours / 24);
-      return { hours: diffHours, text: `${days} days` };
     }
+    return { hours: diffHours, text: `${Math.round(diffHours / 24)} days` };
   }
+  function evaluatePicsScore(s) {
+    const overridden = new Set(Array.isArray(s.pics_manual) ? s.pics_manual : []);
+    const items = PICS_ITEMS.map((item) => {
+      const derived = item.derive ? !!item.derive(s) : false;
+      const isOverridden = overridden.has(item.id);
+      const ticked2 = isOverridden || !item.derive ? s[item.id] === true : derived;
+      return {
+        ...item,
+        ticked: ticked2,
+        // Only claim an item was auto-ticked when the derivation is what put it there.
+        auto: ticked2 && derived && !isOverridden
+      };
+    });
+    const suggestions = PICS_ITEMS.filter((item) => item.suggest && item.suggest(s) && !overridden.has(item.id) && s[item.id] !== true).map((item) => ({ id: item.id, reason: item.suggestReason }));
+    const ticked = items.filter((i) => i.ticked);
+    const score = ticked.reduce((sum, i) => sum + i.points, 0);
+    const band = score >= 6 ? "high" : score >= 3 ? "moderate" : "low";
+    return {
+      score,
+      band,
+      bandLabel: PICS_BANDS[band].label,
+      action: PICS_BANDS[band].action,
+      items,
+      tickedItems: ticked,
+      suggestions,
+      // The binary the tool asked before this score existed, now derived from it. Anything
+      // downstream that only wants positive/negative - the summary's previous-review datum,
+      // the importer - keeps working without knowing the score exists.
+      status: score >= 3 ? "positive" : "negative"
+    };
+  }
+  function deriveAfterHours(s, timeData, isPre) {
+    if (isPre || !s.stepdownDate) return null;
+    const [y, m, d] = s.stepdownDate.split("-");
+    let stepH = 16;
+    if (s.stepdownTime && s.stepdownTime.includes(":")) stepH = parseInt(s.stepdownTime.split(":")[0], 10);
+    const stepObj = new Date(y, m - 1, d, stepH, 0);
+    const stepDay = stepObj.getDay();
+    const isWeekend = stepDay === 0 || stepDay === 6;
+    const isAfterHoursStepdown = stepH >= 16 || stepH < 9;
+    if (timeData.hours > 24) return false;
+    return isAfterHoursStepdown || isWeekend;
+  }
+  var MOD_PATTERNS = {
+    rr: /\brr\b|respiratory rate/,
+    hr: /\bhr\b|heart rate|\bpulse\b/,
+    spo2: /\bspo2\b|\bsats?\b|saturation/,
+    bp: /\bs?bp\b|blood pressure/,
+    temp: /\btemp\b|temperature/
+  };
+  var parseTarget = (t) => {
+    const m = (t || "").match(/(\d+(?:\.\d+)?)\s*(?:-|–|to)\s*(\d+(?:\.\d+)?)/);
+    return m ? { low: parseFloat(m[1]), high: parseFloat(m[2]) } : null;
+  };
+  function evaluateRisks(s, ctx = {}) {
+    const prevBloods = ctx.prevBloods || {};
+    const now = ctx.now || /* @__PURE__ */ new Date();
+    const red = [], amber = [], suppressedRisks = [];
+    const flagged = { red: [], amber: [] };
+    const riskEntries = [];
+    const issues = [];
+    const add = (list, txt, id, type, noteValue = null) => {
+      let finalTxt = txt;
+      if (noteValue && noteValue.trim()) finalTxt = `${txt} (${noteValue.trim()})`;
+      list.push(finalTxt);
+      if (id) {
+        flagged[type].push(id);
+        riskEntries.push({ text: finalTxt, id, type });
+        issues.push({ text: finalTxt, source: "auto", severity: type, key: id });
+      }
+    };
+    const checkKeys = [];
+    const addCheck = (txt, key) => {
+      checkKeys.push(key);
+      issues.push({ text: txt, source: "bloods", severity: "info", key });
+    };
+    const modsText = s.chk_use_mods && s.mods_details ? s.mods_details.toLowerCase() : "";
+    const isModified = (param) => modsText !== "" && MOD_PATTERNS[param].test(modsText);
+    const addVital = (list, txt, id, type, param) => {
+      if (isModified(param)) addCheck(`${txt} - MODS in use (${s.mods_details.trim()}); confirm within modification`, `mod_${id}`);
+      else add(list, txt, id, type);
+    };
+    const bloodsReviewed = !s.chk_bloods_nil_sig && s.bloods_status !== "nil_sig" && s.bloods_status !== "not_checked";
+    const crTrend = computeTrend("cr_review", s.bl_cr_review, prevBloods.cr_review);
+    const crpTrend = computeTrend("crp", s.bl_crp, prevBloods.crp);
+    const wccTrend = computeTrend("wcc", s.bl_wcc, prevBloods.wcc);
+    const bloodIssueKeys = [];
+    if (bloodsReviewed) {
+      GATE_LINKED_BLOODS.forEach((key) => {
+        const range = normalRanges[key];
+        if (!range) return;
+        const bid = `bl_${key}`;
+        const val = num(s[bid]);
+        if (val === null) return;
+        if (val < range.low || val > range.high) {
+          const label = BLOOD_LABELS[key] || key.replace(/_review$/, "").toUpperCase();
+          bloodIssueKeys.push(bid);
+          issues.push({ text: `Abnormal ${label} ${val}`, source: "bloods", severity: "info", key: bid });
+        }
+      });
+    }
+    const neut = num(s.bl_neut) ?? num(s.neut);
+    const lymph = num(s.bl_lymph) ?? num(s.lymph);
+    const nlrVal = neut > 0 && lymph > 0 ? neut / lymph : 0;
+    const isPre = s.reviewType === "pre";
+    const timeData = calculateWardTime(s.stepdownDate, s.stepdownTime, isPre, now);
+    const isRecent = isPre || timeData.hours < 24;
+    const afterHoursDerived = ctx.afterHoursManual ? null : deriveAfterHours(s, timeData, isPre);
+    const afterHours = afterHoursDerived === null ? s.after_hours === true : afterHoursDerived;
+    const recentKeys = ["pressor_recent_norad", "pressor_recent_met", "pressor_recent_gtn", "pressor_recent_dob", "pressor_recent_mid", "pressor_recent_other"];
+    const currentKeys = ["pressor_current_mid", "pressor_current_other"];
+    const hasRecent = recentKeys.some((k2) => s[k2]);
+    const hasCurrent = currentKeys.some((k2) => s[k2]);
+    if (hasCurrent || hasRecent) {
+      const details = [];
+      const currentList = [];
+      currentKeys.forEach((k2) => {
+        if (!s[k2]) return;
+        let label = k2.replace("pressor_current_", "").replace("mid", "Midodrine");
+        if (k2 === "pressor_current_other") label = `Other (${s.pressor_current_other_note || ""})`;
+        currentList.push(label);
+      });
+      if (currentList.length) details.push(`Current vasoactive support - ${joinGrammatically(currentList)}`);
+      if (hasRecent) {
+        const recentsList = [];
+        recentKeys.forEach((k2) => {
+          if (!s[k2]) return;
+          let label = k2.replace("pressor_recent_", "").replace("norad", "Noradrenaline").replace("met", "Metaraminol").replace("gtn", "GTN").replace("dob", "Dobutamine").replace("mid", "Midodrine");
+          if (k2 === "pressor_recent_other") label = `Other (${s.pressor_recent_other_note || ""})`;
+          recentsList.push(label);
+        });
+        let recentPart = `Recent vasoactive support, ${joinGrammatically(recentsList)}`;
+        if (s.pressor_ceased_time) recentPart += ` - ceased at approximately ${s.pressor_ceased_time}`;
+        details.push(recentPart);
+      }
+      add(amber, details.join(". "), "seg_pressors", "amber", s.pressors_note);
+    }
+    const adds = num(s.adds);
+    const scoreName = s.chk_use_mods ? "MODS" : "ADDS";
+    if (adds !== null) {
+      if (adds >= 4) add(red, `Elevated ${scoreName} ${adds}`, "adds", "red");
+      else if (adds === 3 && isRecent) add(amber, `${scoreName} 3, not baseline, monitor trend`, "adds", "amber");
+    }
+    const hbNow = num(s.bl_hb);
+    const hbPrev = num(prevBloods.hb);
+    const hbFalling = hbNow !== null && hbPrev !== null && hbPrev > hbNow && hbPrev - hbNow >= 10 && (hbPrev - hbNow) / hbPrev >= 0.08;
+    const hbContext = hbFalling ? ` with falling Hb ${hbPrev} to ${hbNow}` : "";
+    const rhythm = (s.c_hr_rhythm || "").trim();
+    const rhythmTxt = rhythm ? ` (${rhythm})` : "";
+    const hr = num(s.c_hr);
+    if (hr) {
+      if (hr > 130) addVital(red, `Tachycardia HR ${hr}${rhythmTxt}${hbContext}`, "c_hr", "red", "hr");
+      else if (hr > 110) addVital(amber, `Tachycardia HR ${hr}${rhythmTxt}${hbContext}`, "c_hr", "amber", "hr");
+      else if (hr < 40) addVital(red, `Bradycardia HR ${hr}${rhythmTxt}`, "c_hr", "red", "hr");
+      else if (hr < 50) addVital(amber, `Bradycardia HR ${hr}${rhythmTxt}`, "c_hr", "amber", "hr");
+    }
+    if (s.c_nibp) {
+      const sbp = parseFloat(String(s.c_nibp).split("/")[0]);
+      if (!isNaN(sbp) && sbp < 90) addVital(red, `Hypotension SBP ${sbp}${hbContext}`, "c_nibp", "red", "bp");
+    }
+    const rr = num(s.b_rr);
+    if (rr) {
+      if (rr > 25) addVital(red, `Tachypnea RR ${rr}`, "b_rr", "red", "rr");
+      else if (rr > 20) addVital(amber, `Mild tachypnea RR ${rr}`, "b_rr", "amber", "rr");
+      else if (rr < 8) addVital(red, `Bradypnea RR ${rr}`, "b_rr", "red", "rr");
+    }
+    const spo2 = num(s.b_spo2 ? String(s.b_spo2).replace("%", "") : "");
+    if (spo2 && spo2 < 88) addVital(red, `Hypoxia SpO2 ${spo2}%`, "b_spo2", "red", "spo2");
+    const temp = num(s.e_temp);
+    if (temp) {
+      if (temp > 38.5) addVital(red, `Febrile ${temp}`, "e_temp", "red", "temp");
+      else if (temp < 35.5) addVital(red, `Temp low ${temp}`, "e_temp", "red", "temp");
+    }
+    if (s.resp_concern === true) {
+      const parts = [];
+      let hasRed = false;
+      if (s.oxMod === "NP") {
+        const flow = num(s.npFlow);
+        if (flow >= 4) {
+          parts.push(`Oxygen requirement - ${flow}LNP`);
+          flagged.red.push("npFlow");
+          hasRed = true;
+        } else if (flow >= 3) {
+          parts.push(`Oxygen requirement - ${flow}LNP`);
+          flagged.amber.push("npFlow");
+        }
+      } else if (s.oxMod === "HFNP") {
+        const fio2Val = num(s.hfnpFio2);
+        parts.push(fio2Val >= 60 ? `HFNP - high FiO2 ${s.hfnpFio2 || ""}%` : `HFNP - FiO2 ${s.hfnpFio2 || ""}%`);
+        flagged.red.push("oxMod");
+        hasRed = true;
+      } else if (s.oxMod === "NIV") {
+        const fio2Val = num(s.nivFio2);
+        parts.push(fio2Val >= 60 ? `NIV - high FiO2 ${s.nivFio2 || ""}%` : `NIV - FiO2 ${s.nivFio2 || ""}%`);
+        flagged.red.push("oxMod");
+        hasRed = true;
+      }
+      if (s.resp_dyspnea === true) {
+        const dysp = s.dyspneaConcern;
+        if (dysp === "severe" || dysp === "moderate") {
+          parts.push(`Dyspnea ${dysp}`);
+          flagged.red.push("dyspneaConcern");
+          hasRed = true;
+        } else if (dysp === "mild") {
+          parts.push("Dyspnea mild");
+          flagged.amber.push("dyspneaConcern");
+        } else if (!dysp) {
+          parts.push("Dyspnea");
+          flagged.amber.push("seg_resp_dyspnea");
+        }
+      }
+      if (s.resp_tachypnea === true) {
+        parts.push("tachypnea >20bpm");
+        flagged.amber.push("seg_resp_tachypnea");
+      }
+      if (s.resp_rapid_wean === true) {
+        parts.push("rapid O2 wean within last 12h");
+        flagged.red.push("seg_resp_rapid_wean");
+        hasRed = true;
+      }
+      if (s.resp_poor_cough === true) {
+        parts.push("poor cough effort");
+        flagged.amber.push("seg_resp_poor_cough");
+      }
+      if (s.resp_poor_swallow === true) {
+        parts.push("poor swallow");
+        flagged.amber.push("seg_resp_poor_swallow");
+      }
+      if (s.hist_o2 === true) {
+        parts.push("recent high O2/NIV requirement <12hrs");
+        flagged.red.push("seg_hist_o2");
+        hasRed = true;
+      }
+      if (s.intubated === true) {
+        if (s.intubatedReason === "concern") {
+          parts.push("intubated <24hrs ago");
+          flagged.red.push("seg_intubated");
+          hasRed = true;
+        } else {
+          parts.push("intubated <24hrs ago (elective)");
+          flagged.amber.push("seg_intubated");
+        }
+      }
+      if (s.dyspneaConcern_note && parts.length > 0) {
+        parts[parts.length - 1] += `. Note: ${s.dyspneaConcern_note}`;
+      }
+      if (parts.length > 0) {
+        add(hasRed ? red : amber, `Respiratory concern - ${joinGrammatically(parts)}`, "seg_resp_concern", hasRed ? "red" : "amber");
+      } else {
+        const isLowFlowNP = s.oxMod === "NP" && (num(s.npFlow) || 0) < 3;
+        if (!isLowFlowNP) add(amber, "Respiratory concern", "seg_resp_concern", "amber", s.dyspneaConcern_note);
+      }
+    }
+    if (s.oxMod === "Trache") {
+      const isLary = s.tracheType === "Laryngectomy";
+      const label = isLary ? "Laryngectomy patient" : "Tracheostomy patient";
+      if (s.tracheStatus === "New") add(red, `New ${label.toLowerCase()}`, "tracheStatus", "red");
+      else add(amber, label, "oxMod", "amber");
+    }
+    if (afterHours === true) add(amber, "Discharged after-hours", "seg_after_hours", "amber", s.after_hours_note);
+    if (s.hac === true) add(amber, "Hospital acquired complication", "seg_hac", "amber", s.hac_note);
+    if (s.neuro_gate === true) {
+      let txt = "Neurological concern";
+      const details = [];
+      if (s.d_alert && s.d_alert.toLowerCase().includes("gcs")) details.push(s.d_alert);
+      if (s.neuroType) details.push(s.neuroType.toLowerCase());
+      if (details.length) txt += ` - ${joinGrammatically(details)}`;
+      const isRed = s.neuroConcern === "severe";
+      add(isRed ? red : amber, sentenceCase(txt), "neuroConcern", isRed ? "red" : "amber", s.neuroType_note);
+    }
+    const k = num(s.bl_k);
+    const na = num(s.bl_na);
+    const mg = num(s.bl_mg);
+    const phos = num(s.bl_phos);
+    const mgAbnormal = mg !== null && mg < normalRanges.mg.low;
+    const phosAbnormal = phos !== null && phos < 0.32;
+    const naAbnormal = na !== null && (na < 125 || na > 155);
+    if (bloodsReviewed) {
+      if (mg !== null && mg >= normalRanges.mg.low && mg < 1) addCheck(`Mg ${mg} - consider replacement`, "chk_mg");
+      if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - replacement indicated`, "chk_phos");
+    }
+    if (s.electrolyte_gate === true || k && (k < 3 || k > 6) || naAbnormal || mgAbnormal || phosAbnormal) {
+      let msg = "Electrolyte concern";
+      let isRed = false;
+      const parts = [];
+      if (k) {
+        if (k > 6) {
+          parts.push(`high K+ ${k}`);
+          isRed = true;
+        } else if (k < 3) {
+          parts.push(`low K+ ${k}`);
+          isRed = true;
+        }
+      }
+      if (naAbnormal) {
+        parts.push(na < 125 ? `low Na ${na}` : `high Na ${na}`);
+        isRed = true;
+      }
+      if (mgAbnormal) parts.push(`low Mg ${mg}`);
+      if (phosAbnormal) parts.push(`low PO4 ${phos}`);
+      const sev = s.electrolyteConcern;
+      if (sev === "severe") {
+        if (parts.length === 0) parts.push("severe derangement");
+        isRed = true;
+      } else if (sev === "mild" && parts.length === 0) {
+        parts.push("mild/moderate derangement");
+      }
+      if (parts.length) msg += ` - ${parts.join(", ")}`;
+      add(isRed ? red : amber, msg, "electrolyteConcern", isRed ? "red" : "amber", s.electrolyteConcern_note);
+    }
+    const cr = num(s.bl_cr_review);
+    if (bloodsReviewed && cr !== null && cr > 150 && s.renal !== true) {
+      addCheck(`Cr ${cr} - confirm against baseline`, "chk_cr");
+    }
+    const isMitigated = s.renal_chronic === true;
+    if (s.renal === true) {
+      const fluidFlags = [];
+      const renalFlags = [];
+      if (s.renal_fluid) fluidFlags.push("fluid overload");
+      if (s.renal_oedema) fluidFlags.push("oedema");
+      if (s.renal_dehydrated) fluidFlags.push("dehydrated");
+      if (s.renal_oliguria) renalFlags.push("oliguria <0.5ml/kg/hr");
+      if (s.renal_anuria) renalFlags.push("anuria");
+      if (s.renal_dysfunction) renalFlags.push("AKI");
+      if (cr > 150 && !isMitigated) renalFlags.push(`Cr ${cr}`);
+      if (s.renal_dialysis) {
+        if (s.dialysis_type === "new") renalFlags.push("acute dialysis");
+        else if (!isMitigated) renalFlags.push("chronic dialysis");
+      }
+      const hasFluid = fluidFlags.length > 0;
+      const hasRenal = renalFlags.length > 0;
+      let label = "Renal concern";
+      if (hasFluid && hasRenal) label = "Renal and fluid concern";
+      else if (hasFluid && !hasRenal) label = "Fluid concern";
+      const allFlags = [...renalFlags, ...fluidFlags];
+      if (allFlags.length) label += ` - ${joinGrammatically(allFlags)}`;
+      const overrideChips = [
+        // When CKD is known, oliguria and anuria are expected and don't override.
+        ...isMitigated ? [] : [s.renal_oliguria, s.renal_anuria],
+        s.renal_dysfunction,
+        s.renal_fluid,
+        s.renal_oedema,
+        s.renal_dehydrated
+      ];
+      if (s.renal_dialysis && s.dialysis_type === "new") overrideChips.push(true);
+      const isForceAmber = overrideChips.some((x) => x === true);
+      if (isMitigated && !isForceAmber) {
+        suppressedRisks.push(`${label} (mitigated: known CKD and Cr/urine output around baseline)`);
+      } else {
+        const critical = isMitigated ? hasFluid && hasRenal && s.renal_dysfunction : s.renal_anuria || cr > 200 || hasFluid && hasRenal && s.renal_dysfunction;
+        if (critical) add(red, label, "seg_renal", "red", s.renal_note);
+        else add(amber, label, "seg_renal", "amber", s.renal_note);
+      }
+    }
+    const wcc = num(s.bl_wcc) ?? num(s.wcc);
+    const crp = num(s.bl_crp) ?? num(s.crp);
+    const autoTrigger = bloodsReviewed && (wcc && (wcc > 15 || wcc < 2) || crp && crp > 100 || nlrVal > 10) || temp && temp > 38;
+    let downtrendSuggestion = null;
+    if (autoTrigger || s.infection === true) {
+      const markers = [];
+      if (wcc !== null && (wcc < 2 || wcc > 15)) markers.push(`WCC ${wcc}`);
+      else if (wcc !== null && wcc > 11) markers.push(`WCC ${wcc}`);
+      if (crp > 100) markers.push(`CRP ${crp}`);
+      else if (crp > 50) markers.push(`CRP ${crp}`);
+      if (nlrVal > 10) markers.push(`NLR ${nlrVal.toFixed(1)}`);
+      let msg = "Infection risk";
+      if (markers.length) msg += ` - ${joinGrammatically(markers)}`;
+      const addsVerified = adds !== null && adds < 4;
+      const claimsDowntrend = s.infection_downtrend === true;
+      if (claimsDowntrend && addsVerified) {
+        suppressedRisks.push(`Infection risk (mitigated: infection markers downtrending, ${scoreName} ${adds})`);
+      } else {
+        if (claimsDowntrend) {
+          addCheck(adds === null ? "Infection marked downtrending but no score recorded - not discounted" : `Infection marked downtrending but ${scoreName} is ${adds} - not discounted`, "chk_downtrend_unverified");
+        }
+        add(amber, msg, "seg_infection", "amber", s.infection_note);
+      }
+      const falling = [];
+      if (crpTrend && !crpTrend.rising) falling.push(`CRP ${crpTrend.previous} to ${crpTrend.current}`);
+      if (wccTrend && wcc !== null && wcc > 11 && !wccTrend.rising) falling.push(`WCC ${wccTrend.previous} to ${wccTrend.current}`);
+      if (falling.length && !claimsDowntrend && addsVerified) downtrendSuggestion = falling.join(", ");
+    }
+    const plts = num(s.bl_plts);
+    if (bloodsReviewed && plts !== null && plts < 20) add(amber, `Low platelets Plts ${plts}`, "bl_plts", "amber");
+    const checkAgainstTarget = (val, targetTxt, label, key, range) => {
+      if (val === null) return;
+      const t = parseTarget(targetTxt);
+      if (t) {
+        if (val < t.low) addCheck(`${label} ${val}, below target ${targetTxt.trim()}`, key);
+        else if (val > t.high) addCheck(`${label} ${val}, above target ${targetTxt.trim()}`, key);
+      } else if (val < range.low || val > range.high) {
+        addCheck(`${label} ${val} - target not documented`, key);
+      }
+    };
+    if (bloodsReviewed) {
+      checkAgainstTarget(num(s.bl_inr), s.inr_target, "INR", "chk_inr", normalRanges.inr);
+      checkAgainstTarget(num(s.bl_aptt), s.aptt_target, "APTT", "chk_aptt", normalRanges.aptt);
+    }
+    const bsl = num(s.e_bsl);
+    if (bsl) {
+      if (bsl < 4) add(red, `Low BSL ${bsl}`, "e_bsl", "red");
+      else if (bsl > 20) add(red, `High BSL ${bsl}`, "e_bsl", "red");
+    }
+    if (bloodsReviewed && crTrend && crTrend.rising && !isMitigated && (crTrend.pctDelta > 30 || crTrend.absDelta > 30)) {
+      add(amber, `Worsening Cr ${crTrend.previous} to ${crTrend.current}`, "bl_cr_review", "amber");
+    }
+    if (bloodsReviewed && crpTrend && crpTrend.rising && (crpTrend.pctDelta > 50 || crpTrend.absDelta > 50)) {
+      add(amber, `Rising CRP ${crpTrend.previous} to ${crpTrend.current}`, "bl_crp", "amber");
+    }
+    if (s.neuro_psych) add(amber, "Psychological concern", "neuro_section", "amber", s.neuro_psych_note);
+    const pics = evaluatePicsScore(s);
+    const picsSummary = pics.tickedItems.map((i) => i.short).join(", ");
+    if (pics.band === "high") {
+      add(amber, `PICS high risk - score ${pics.score}${picsSummary ? ` (${picsSummary})` : ""}`, "seg_pics", "amber", s.pics_note);
+    } else if (pics.band === "moderate") {
+      addCheck(`PICS moderate risk - score ${pics.score}${picsSummary ? ` (${picsSummary})` : ""}`, "pics_score");
+    } else if (s.pics === "positive") {
+      add(amber, "Post ICU Syndrome Positive", "seg_pics", "amber", s.pics_note);
+    }
+    const activeComorbsKeys = toggleInputs.filter((key) => key.startsWith("comorb_") && s[key]);
+    const countComorbs = activeComorbsKeys.length;
+    if (countComorbs >= 3) {
+      add(red, sentenceCase("Multiple comorbidities"), null, "red", null);
+      flagged.red.push("comorbs_wrapper");
+    } else if (countComorbs > 0) {
+      const cList = [];
+      activeComorbsKeys.forEach((key) => {
+        if (key === "comorb_other" && s.comorb_other_note) {
+          s.comorb_other_note.split(/[\n,]+/).forEach((v) => {
+            const trimmed = v.trim();
+            if (trimmed) cList.push(trimmed);
+          });
+        } else if (key !== "comorb_other") {
+          cList.push(comorbMap[key]);
+        }
+      });
+      add(amber, sentenceCase(`Comorbidities - ${joinGrammatically(cList)}`), null, "amber", null);
+      flagged.amber.push("comorbs_wrapper");
+    }
+    const lact = num(s.bl_lac_review);
+    if (lact > 4) add(red, `Lactate ${lact}`, "bl_lac_review", "red");
+    else if (lact >= 2) add(amber, `Lactate ${lact}`, "bl_lac_review", "amber");
+    if (s.override === "red") add(red, s.overrideNote || "Clinician override: CAT 1", "override_red", "red");
+    if (s.override === "amber") add(amber, s.overrideNote || "Clinician override: CAT 2", "override_amber", "amber");
+    const age = num(s.ptAge);
+    if (age >= 75) {
+      if (s.age_mitigated === true) {
+        suppressedRisks.push(`Age ${age}, frailty risk (mitigated: ${s.age_mitigate_reason || "baseline function active"})`);
+      } else {
+        add(amber, `Age ${age}, increased risk of complications`, "ptAge", "amber");
+      }
+    }
+    if (s.frailty_known === true) add(amber, "Known frailty at baseline", "seg_frailty_known", "amber", s.frailty_note);
+    const icuLos = num(s.icuLos) || 0;
+    const isProlongedStay = icuLos > 4;
+    const isImmobile = s.immobility === true;
+    if (isProlongedStay || isImmobile) {
+      const AGE_FLAG = /^Age \d/;
+      const hasOtherRisk = [.../* @__PURE__ */ new Set([...red, ...amber])].filter((t) => !AGE_FLAG.test(t)).length > 0;
+      const parts = [];
+      if (isProlongedStay) parts.push(`${icuLos}-day ICU stay`);
+      if (isImmobile) parts.push("immobile");
+      const label = `Deconditioning risk - ${joinGrammatically(parts)}`;
+      const flagId = isImmobile ? "seg_immobility" : "icuLos";
+      const losMitigated = s.los_mitigated === true && !isImmobile;
+      const losReason = (s.los_mitigate_reason || "").trim();
+      if (isProlongedStay && hasOtherRisk && !losMitigated) {
+        add(red, label, flagId, "red", s.immobility_note);
+      } else if (isImmobile || isProlongedStay && age >= 75 && !losMitigated) {
+        add(amber, label, flagId, "amber", s.immobility_note);
+      } else if (losMitigated) {
+        suppressedRisks.push(`${label} (mitigated: recovering appropriately, trajectory to recovery established${losReason ? ` - ${losReason}` : ""})`);
+      } else {
+        suppressedRisks.push(`${label} (mitigated: no other risk factors identified)`);
+      }
+    }
+    const uniqueRed = [...new Set(red)];
+    const uniqueAmber = [...new Set(amber)];
+    const redCount = uniqueRed.length;
+    const amberCount = uniqueAmber.length;
+    let autoCat = { id: "green", text: "CAT 3" };
+    if (redCount > 0) autoCat = { id: "red", text: "CAT 1" };
+    else if (amberCount > 0) autoCat = { id: "amber", text: "CAT 2" };
+    let cat = autoCat;
+    const downgradeReason = (s.overrideNote || "").trim();
+    if (s.override === "green" && downgradeReason) {
+      cat = { id: "green", text: "CAT 3", downgradedFrom: autoCat.text, downgradeReason };
+    }
+    return {
+      red: uniqueRed,
+      amber: uniqueAmber,
+      suppressed: suppressedRisks,
+      redCount,
+      amberCount,
+      cat,
+      autoCat,
+      downgradeReason,
+      flagged,
+      riskEntries,
+      issues,
+      issueKeys: [...riskEntries.map((e) => e.id), ...bloodIssueKeys, ...checkKeys],
+      timeData,
+      isPre,
+      isRecent,
+      afterHoursDerived,
+      nlrVal,
+      activeComorbsKeys,
+      countComorbs,
+      downtrendSuggestion,
+      bloodsReviewed,
+      pics
+    };
+  }
+
+  // src/js/logic.js
   function computeAll() {
     try {
       const s = getState();
-      console.log("computeAll called, state keys:", Object.keys(s).length);
-      const red = [], amber = [];
-      const suppressedRisks = [];
-      const flagged = { red: [], amber: [] };
-      const pmhSubtitle = $("pmh_subtitle");
-      const hasComorbidities = Object.keys(comorbMap).some((key) => s[key]);
-      const hasPmhNote = s.pmh_note && s.pmh_note.trim().length > 0;
-      if (pmhSubtitle) {
-        pmhSubtitle.style.display = hasComorbidities || hasPmhNote ? "block" : "none";
-      }
-      const riskEntries = [];
-      const add = (list, txt, id, type, noteValue = null) => {
-        let finalTxt = txt;
-        if (noteValue && noteValue.trim()) finalTxt = `${txt} (${noteValue.trim()})`;
-        list.push(finalTxt);
-        if (id) {
-          flagged[type].push(id);
-          riskEntries.push({ text: finalTxt, id, type });
-          const { isNew } = addActiveIssue({ text: finalTxt, source: "auto", severity: type, key: id });
-          if (isNew) maybeToastNewRisk(id, finalTxt);
-        }
-      };
-      const bloodIssueKeys = [];
-      if (!s.chk_bloods_nil_sig && s.bloods_status !== "nil_sig" && s.bloods_status !== "not_checked") {
-        GATE_LINKED_BLOODS.forEach((key) => {
-          const range = normalRanges[key];
-          if (!range) return;
-          const bid = `bl_${key}`;
-          const val = num(s[bid]);
-          if (val === null) return;
-          if (val < range.low || val > range.high) {
-            const label = BLOOD_LABELS[key] || key.replace(/_review$/, "").toUpperCase();
-            bloodIssueKeys.push(bid);
-            addActiveIssue({ text: `Abnormal ${label} ${val}`, source: "bloods", severity: "info", key: bid });
-          }
-        });
-      }
-      const neut = num(s.bl_neut) || num(s.neut);
-      const lymph = num(s.bl_lymph) || num(s.lymph);
-      const nlrEl = $("nlrCalc");
-      if (nlrEl) {
-        if (neut > 0 && lymph > 0) {
-          const nlr = (neut / lymph).toFixed(2);
-          nlrEl.textContent = `NLR: ${nlr}`;
-          nlrEl.style.borderColor = nlr > 10 ? "var(--red)" : "var(--line)";
+      autofillDerivedFields(s);
+      const ahGroup = document.querySelector("#seg_after_hours");
+      const result = evaluateRisks(s, {
+        prevBloods: window.prevBloods || {},
+        afterHoursManual: ahGroup ? ahGroup.dataset.manual === "true" : false
+      });
+      if (result.afterHoursDerived !== null) {
+        s.after_hours = result.afterHoursDerived;
+        const yes = document.querySelector('#seg_after_hours .seg-btn[data-value="true"]');
+        const no = document.querySelector('#seg_after_hours .seg-btn[data-value="false"]');
+        if (result.afterHoursDerived) {
+          yes?.classList.add("active");
+          no?.classList.remove("active");
         } else {
-          nlrEl.textContent = `NLR: --`;
+          no?.classList.add("active");
+          yes?.classList.remove("active");
         }
       }
-      const fn = $("footerName");
-      if (fn) fn.textContent = s.ptName || "--";
-      const fl = $("footerLocation");
-      if (fl) fl.textContent = `${s.ptWard || "--"} ${s.ptBed || ""}`;
-      const fa = $("footerAdmission");
-      if (fa) fa.textContent = s.ptAdmissionReason || "--";
-      const isPre = s.reviewType === "pre";
-      const timeData = calculateWardTime(s.stepdownDate, s.stepdownTime, isPre);
-      const isRecent = isPre || timeData.hours < 24;
-      if (!isPre && s.stepdownDate) {
-        const ahGroup = document.querySelector("#seg_after_hours");
-        if (!ahGroup || ahGroup.dataset.manual !== "true") {
-          const [y, m, d] = s.stepdownDate.split("-");
-          let stepH = 16;
-          if (s.stepdownTime && s.stepdownTime.includes(":")) {
-            stepH = parseInt(s.stepdownTime.split(":")[0], 10);
-          }
-          const stepObj = new Date(y, m - 1, d, stepH, 0);
-          const stepDay = stepObj.getDay();
-          const isWeekend = stepDay === 0 || stepDay === 6;
-          const isAfterHoursStepdown = stepH >= 16 || stepH < 9;
-          let autoAh = false;
-          if (timeData.hours <= 24) {
-            if (isAfterHoursStepdown || isWeekend) {
-              autoAh = true;
-            }
-          }
-          s.after_hours = autoAh;
-          const toggleAhYes = document.querySelector('#seg_after_hours .seg-btn[data-value="true"]');
-          const toggleAhNo = document.querySelector('#seg_after_hours .seg-btn[data-value="false"]');
-          if (autoAh && toggleAhYes) {
-            toggleAhYes.classList.add("active");
-            toggleAhNo?.classList.remove("active");
-          } else if (!autoAh && toggleAhNo) {
-            toggleAhNo.classList.add("active");
-            toggleAhYes?.classList.remove("active");
-          }
-        }
+      result.issues.forEach((issue) => {
+        const { isNew } = addActiveIssue(issue);
+        if (isNew && issue.source === "auto") maybeToastNewRisk(issue.key, issue.text);
+      });
+      if (s.bloods_status !== "nil_sig" && s.bloods_status !== "not_checked" && !s.chk_bloods_nil_sig) {
+        applyTrendArrows(s, window.prevBloods);
       }
-      const timeOffEl = $("pressor_time_off_display");
-      const recentKeys = ["pressor_recent_norad", "pressor_recent_met", "pressor_recent_gtn", "pressor_recent_dob", "pressor_recent_mid", "pressor_recent_other"];
-      const currentKeys = ["pressor_current_mid", "pressor_current_other"];
-      let hasRecent = recentKeys.some((k2) => s[k2]);
-      let hasCurrent = currentKeys.some((k2) => s[k2]);
-      if (timeOffEl) {
-        if (hasRecent && s.pressor_ceased_time) {
-          const now = /* @__PURE__ */ new Date();
-          const [cH, cM] = s.pressor_ceased_time.split(":");
-          const ceasedDate = /* @__PURE__ */ new Date();
-          ceasedDate.setHours(cH, cM);
-          if (ceasedDate > now) ceasedDate.setDate(ceasedDate.getDate() - 1);
-          const diffMs = now - ceasedDate;
-          const diffHrs = Math.floor(diffMs / 36e5);
-          timeOffEl.textContent = `~${diffHrs} hrs ago`;
-        } else {
-          timeOffEl.textContent = "";
-        }
-      }
-      if (hasCurrent || hasRecent) {
-        let details = [];
-        let currentList = [];
-        currentKeys.forEach((k2) => {
-          if (s[k2]) {
-            let label = k2.replace("pressor_current_", "").replace("mid", "Midodrine");
-            if (k2 === "pressor_current_other") label = `Other (${s.pressor_current_other_note || ""})`;
-            currentList.push(label);
-          }
-        });
-        if (currentList.length > 0) {
-          details.push(`Current vasoactive support - ${joinGrammatically(currentList)}`);
-        }
-        if (hasRecent) {
-          let recentsList = [];
-          recentKeys.forEach((k2) => {
-            if (s[k2]) {
-              let label = k2.replace("pressor_recent_", "").replace("norad", "Noradrenaline").replace("met", "Metaraminol").replace("gtn", "GTN").replace("dob", "Dobutamine").replace("mid", "Midodrine");
-              if (k2 === "pressor_recent_other") label = `Other (${s.pressor_recent_other_note || ""})`;
-              recentsList.push(label);
-            }
-          });
-          let recentPart = `Recent vasoactive support, ${joinGrammatically(recentsList)}`;
-          if (s.pressor_ceased_time) recentPart += ` - ceased at approximately ${s.pressor_ceased_time}`;
-          details.push(recentPart);
-        }
-        add(amber, details.join(". "), "seg_pressors", "amber", s.pressors_note);
-      }
-      const adds = num(s.adds);
-      const scoreName = s.chk_use_mods ? "MODS" : "ADDS";
-      if (adds !== null) {
-        if (adds >= 6) add(red, `Elevated ${scoreName} ${adds}`, "adds", "red");
-        else if (adds >= 4) add(red, `Elevated ${scoreName} ${adds}`, "adds", "red");
-        else if (adds === 3 && isRecent) add(amber, `${scoreName} 3`, "adds", "amber");
-      }
-      const hr = num(s.c_hr);
-      if (hr) {
-        if (hr > 130) add(red, `Tachycardia HR ${hr}`, "c_hr", "red");
-        else if (hr > 110) add(amber, `Tachycardia HR ${hr}`, "c_hr", "amber");
-        else if (hr < 40) add(red, `Bradycardia HR ${hr}`, "c_hr", "red");
-        else if (hr < 50) add(amber, `Bradycardia HR ${hr}`, "c_hr", "amber");
-      }
-      const bpStr = s.c_nibp;
-      if (bpStr) {
-        const sbp = parseFloat(bpStr.split("/")[0]);
-        if (!isNaN(sbp)) {
-          if (sbp < 90) add(red, `Hypotension SBP ${sbp}`, "c_nibp", "red");
-        }
-      }
-      const rr = num(s.b_rr);
-      if (rr) {
-        if (rr > 25) add(red, `Tachypnea RR ${rr}`, "b_rr", "red");
-        else if (rr > 20) add(amber, `Mild tachypnea RR ${rr}`, "b_rr", "amber");
-        else if (rr < 8) add(red, `Bradypnea RR ${rr}`, "b_rr", "red");
-      }
-      const spo2Str = s.b_spo2 ? s.b_spo2.replace("%", "") : "";
-      const spo2 = num(spo2Str);
-      if (spo2 && spo2 < 88) add(red, `Hypoxia SpO2 ${spo2}%`, "b_spo2", "red");
-      const temp = num(s.e_temp);
-      if (temp) {
-        if (temp > 38.5) add(red, `Febrile ${temp}`, "e_temp", "red");
-        else if (temp < 35.5) add(red, `Temp low ${temp}`, "e_temp", "red");
-      }
-      const oxDevInput = $("b_device");
-      if (oxDevInput && oxDevInput.dataset.manual !== "true") {
-        let devStr = "";
-        const mode = s.oxMod;
-        if (mode === "RA") devStr = "RA";
-        else if (mode === "NP") devStr = `NP ${s.npFlow || ""}L`;
-        else if (mode === "HFNP") devStr = `HFNP ${s.hfnpFio2 || ""}%/${s.hfnpFlow || ""}L`;
-        else if (mode === "NIV") devStr = `NIV ${s.nivFio2 || ""}%`;
-        oxDevInput.value = devStr;
-      }
-      const airwayInput = $("airway_a");
-      if (airwayInput && airwayInput.dataset.manual !== "true") {
-        if (s.oxMod === "Trache") {
-          airwayInput.value = `${s.tracheType || "Tracheostomy"}${s.tracheStatus === "New" ? " (New)" : ""}`;
-        } else if (airwayInput.value.startsWith("Tracheostomy") || airwayInput.value.startsWith("Laryngectomy")) {
-          airwayInput.value = "";
-        }
-      }
-      if (s.resp_concern === true) {
-        let parts = [], hasRed = false;
-        if (s.oxMod === "NP") {
-          const flow = num(s.npFlow);
-          if (flow >= 3) {
-            parts.push(`high flow NP ${flow}L`);
-            flagged.red.push("npFlow");
-            hasRed = true;
-          } else if (flow > 2) {
-            parts.push(`Oxygen requirement - ${flow}LNP`);
-            flagged.amber.push("npFlow");
-          }
-        } else if (s.oxMod === "HFNP") {
-          const fio2Val = num(s.hfnpFio2);
-          if (fio2Val >= 60) {
-            parts.push(`HFNP - high FiO2 ${s.hfnpFio2 || ""}%`);
-            flagged.red.push("oxMod");
-            hasRed = true;
-          } else {
-            parts.push(`HFNP - FiO2 ${s.hfnpFio2 || ""}%`);
-            flagged.red.push("oxMod");
-            hasRed = true;
-          }
-        } else if (s.oxMod === "NIV") {
-          const fio2Val = num(s.nivFio2);
-          if (fio2Val >= 60) {
-            parts.push(`NIV - high FiO2 ${s.nivFio2 || ""}%`);
-            flagged.red.push("oxMod");
-            hasRed = true;
-          } else {
-            parts.push(`NIV - FiO2 ${s.nivFio2 || ""}%`);
-            flagged.red.push("oxMod");
-            hasRed = true;
-          }
-        } else if (s.oxMod === "RA") {
-        }
-        if (s.resp_dyspnea === true) {
-          const dysp = s.dyspneaConcern;
-          if (dysp === "severe" || dysp === "moderate") {
-            parts.push(`Dyspnea ${dysp}`);
-            flagged.red.push("dyspneaConcern");
-            hasRed = true;
-          } else if (dysp === "mild") {
-            parts.push(`Dyspnea mild`);
-            flagged.amber.push("dyspneaConcern");
-          } else if (!dysp) {
-            parts.push(`Dyspnea`);
-            flagged.amber.push("seg_resp_dyspnea");
-          }
-        }
-        if (s.resp_tachypnea === true) {
-          parts.push("tachypnea >20bpm");
-          flagged.amber.push("seg_resp_tachypnea");
-        }
-        if (s.resp_rapid_wean === true) {
-          parts.push("rapid O2 wean within last 12h");
-          flagged.red.push("seg_resp_rapid_wean");
-          hasRed = true;
-        }
-        if (s.resp_poor_cough === true) {
-          parts.push("poor cough effort");
-          flagged.amber.push("seg_resp_poor_cough");
-        }
-        if (s.resp_poor_swallow === true) {
-          parts.push("poor swallow");
-          flagged.amber.push("seg_resp_poor_swallow");
-        }
-        if (s.hist_o2 === true) {
-          parts.push("recent high O2/NIV requirement <12hrs");
-          flagged.red.push("seg_hist_o2");
-          hasRed = true;
-        }
-        if (s.intubated === true) {
-          const reason = $("intubatedReason")?.querySelector(".active")?.dataset.value;
-          if (reason === "concern") {
-            parts.push("intubated <24hrs ago");
-            flagged.red.push("seg_intubated");
-            hasRed = true;
-          } else {
-            parts.push("intubated <24hrs ago (elective)");
-            flagged.amber.push("seg_intubated");
-          }
-        }
-        if (s.dyspneaConcern_note && parts.length > 0) {
-          parts[parts.length - 1] += `. Note: ${s.dyspneaConcern_note}`;
-        }
-        if (parts.length > 0) {
-          const joined = joinGrammatically(parts);
-          const finalTxt = `Respiratory concern - ${joined}`;
-          if (hasRed) red.push(finalTxt);
-          else amber.push(finalTxt);
-        } else {
-          const isLowFlowNP = s.oxMod === "NP" && (num(s.npFlow) || 0) <= 2;
-          if (!isLowFlowNP) {
-            add(amber, "Respiratory concern", "seg_resp_concern", "amber", s.dyspneaConcern_note);
-          }
-        }
-      }
-      if (s.oxMod === "Trache") {
-        const isLary = s.tracheType === "Laryngectomy";
-        const label = isLary ? "Laryngectomy patient" : "Tracheostomy patient";
-        if (s.tracheStatus === "New") {
-          add(red, `New ${label.toLowerCase()}`, "tracheStatus", "red");
-        } else {
-          add(amber, label, "oxMod", "amber");
-        }
-      }
-      if (s.after_hours === true) add(amber, "Discharged after-hours", "seg_after_hours", "amber", s.after_hours_note);
-      if (s.hac === true) add(amber, "Hospital acquired complication", "seg_hac", "amber", s.hac_note);
-      if (s.neuro_gate === true) {
-        let txt = "Neurological concern";
-        const gcsInput = s.d_alert;
-        const type = s.neuroType;
-        const severity = s.neuroConcern;
-        let details = [];
-        if (gcsInput && gcsInput.toLowerCase().includes("gcs")) details.push(gcsInput);
-        if (type) details.push(type.toLowerCase());
-        if (details.length > 0) txt += ` with ${joinGrammatically(details)}`;
-        const isRed = severity === "severe";
-        add(isRed ? red : amber, sentenceCase(txt), "neuroConcern", isRed ? "red" : "amber", s.neuroType_note);
-      }
-      const k = num(s.bl_k);
-      const mg = num(s.bl_mg);
-      const phos = num(s.bl_phos);
-      const mgAbnormal = mg !== null && (mg < normalRanges.mg.low || mg > normalRanges.mg.high);
-      const phosAbnormal = phos !== null && (phos < normalRanges.phos.low || phos > normalRanges.phos.high);
-      if (s.electrolyte_gate === true || k && (k < 3 || k > 6) || mgAbnormal || phosAbnormal) {
-        let msg = "Electrolyte concern", isRed = false;
-        let parts = [];
-        if (k) {
-          if (k > 6) {
-            parts.push(`high K+ ${k}`);
-            isRed = true;
-          } else if (k < 3) {
-            parts.push(`low K+ ${k}`);
-            isRed = true;
-          }
-        }
-        const na = num(s.bl_na);
-        if (na && (na < 125 || na > 155)) {
-          if (na < 125) parts.push(`low Na ${na}`);
-          else parts.push(`high Na ${na}`);
-          isRed = true;
-        }
-        if (mgAbnormal) parts.push(`${mg < normalRanges.mg.low ? "low" : "high"} Mg ${mg}`);
-        if (phosAbnormal) parts.push(`${phos < normalRanges.phos.low ? "low" : "high"} PO4 ${phos}`);
-        const sev = s.electrolyteConcern;
-        if (sev === "severe") {
-          if (parts.length === 0) parts.push("severe derangement");
-          isRed = true;
-        } else if (sev === "mild" && parts.length === 0) {
-          parts.push("mild/moderate derangement");
-        }
-        if (parts.length > 0) msg += ` with ${parts.join(", ")}`;
-        add(isRed ? red : amber, msg, "electrolyteConcern", isRed ? "red" : "amber", s.electrolyteConcern_note);
-      }
-      const cr = num(s.bl_cr_review) || num(s.cr_review);
-      const renalOpen = s.renal === true || cr && cr > 150;
-      if (renalOpen) {
-        const fluidFlags = [];
-        const renalFlags = [];
-        if (s.renal_fluid) fluidFlags.push("fluid overload");
-        if (s.renal_oedema) fluidFlags.push("oedema");
-        if (s.renal_dehydrated) fluidFlags.push("dehydrated");
-        const isMitigated = s.renal_chronic === true;
-        if (s.renal_oliguria) renalFlags.push("oliguria <0.5ml/kg/hr");
-        if (s.renal_anuria) renalFlags.push("anuria");
-        if (s.renal_dysfunction) renalFlags.push("AKI");
-        if (cr > 150 && !isMitigated) renalFlags.push(`Cr ${cr}`);
-        if (s.renal_dialysis) {
-          const dType2 = $("dialysis_type")?.querySelector(".active")?.dataset.value;
-          if (dType2 === "new") renalFlags.push("acute dialysis");
-          else if (!isMitigated) renalFlags.push("chronic dialysis");
-        }
-        const hasFluid = fluidFlags.length > 0;
-        const hasRenal = renalFlags.length > 0;
-        let label = "Renal concern";
-        if (hasFluid && hasRenal) label = "Renal and fluid concern";
-        else if (hasFluid && !hasRenal) label = "Fluid concern";
-        const allFlags = [...renalFlags, ...fluidFlags];
-        if (allFlags.length > 0) label += ` with ${joinGrammatically(allFlags)}`;
-        const overrideChips = [
-          // When mitigated (known CKD), oliguria/anuria are expected and don't override
-          ...isMitigated ? [] : [s.renal_oliguria, s.renal_anuria],
-          s.renal_dysfunction,
-          s.renal_fluid,
-          s.renal_oedema,
-          s.renal_dehydrated
-        ];
-        const dType = $("dialysis_type")?.querySelector(".active")?.dataset.value;
-        if (s.renal_dialysis && dType === "new") overrideChips.push(true);
-        const isForceAmber = overrideChips.some((x) => x === true);
-        if (isMitigated && !isForceAmber) {
-          suppressedRisks.push(`${label} (mitigated: known CKD and Cr/urine output around baseline)`);
-        } else {
-          const critical = isMitigated ? hasFluid && hasRenal && s.renal_dysfunction : s.renal_anuria || cr > 200 || hasFluid && hasRenal && s.renal_dysfunction;
-          if (critical) add(red, label, "seg_renal", "red", s.renal_note);
-          else add(amber, label, "seg_renal", "amber", s.renal_note);
-        }
-      }
-      const wcc = num(s.bl_wcc) || num(s.wcc);
-      const crp = num(s.crp) || num(s.bl_crp);
-      const nlrVal = neut > 0 && lymph > 0 ? neut / lymph : 0;
-      const autoTrigger = wcc && (wcc > 15 || wcc < 2) || temp && temp > 38 || crp && crp > 100 || nlrVal > 10;
-      const manualConcern = s.infection === true;
-      if (autoTrigger || manualConcern) {
-        let markers = [], isRed = false;
-        if (crp > 100) isRed = true;
-        if (temp > 38.5) isRed = true;
-        if (nlrVal > 10) isRed = true;
-        if (wcc !== null && (wcc < 3 || wcc > 15)) markers.push(`WCC ${wcc}`);
-        else if (wcc !== null && wcc > 11) markers.push(`WCC ${wcc}`);
-        if (crp > 100) markers.push(`CRP ${crp}`);
-        else if (crp > 50) markers.push(`CRP ${crp}`);
-        if (temp > 38.5) markers.push(`Temp ${temp}`);
-        else if (temp > 37.8) markers.push(`Temp ${temp}`);
-        if (nlrVal > 10) markers.push(`NLR ${nlrVal.toFixed(1)}`);
-        let msg = isRed ? "Infection risk" : "Infection risk";
-        if (markers.length) msg += ` with ${joinGrammatically(markers)}`;
-        const shouldSuppress = s.infection_downtrend === true;
-        if (shouldSuppress) {
-          suppressedRisks.push("Infection risk (however, infection markers downtrending, ADDS low and the patient is on appropriate antibiotics)");
-        } else {
-          add(isRed ? red : amber, msg, "seg_infection", isRed ? "red" : "amber", s.infection_note);
-        }
-      }
-      if (s.immobility === true) {
-        const icuLos2 = num(s.icuLos) || 0;
-        const ptAge = num(s.ptAge) || 0;
-        const uniqueRedPreLos = [...new Set(red)];
-        const uniqueAmberPreLos = [...new Set(amber)];
-        const hasOtherRisks = uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0;
-        if (icuLos2 > 4) {
-          if (hasOtherRisks) {
-            const hasNonImmobilityAndNonAgeRisk = uniqueRedPreLos.some((r) => !r.toLowerCase().includes("immobility") && !r.toLowerCase().includes("age")) || uniqueAmberPreLos.some((a) => !a.toLowerCase().includes("immobility") && !a.toLowerCase().includes("age"));
-            if (hasNonImmobilityAndNonAgeRisk) {
-              add(red, `Immobility concern - prolonged ICU stay`, "seg_immobility", "red", s.immobility_note);
-            } else if (ptAge >= 75) {
-              add(amber, `Immobility concern - prolonged ICU stay`, "seg_immobility", "amber", s.immobility_note);
-            } else {
-              add(amber, "Immobility concern", "seg_immobility", "amber", s.immobility_note);
-            }
-          } else if (ptAge >= 75) {
-            add(amber, `Immobility concern - prolonged ICU stay`, "seg_immobility", "amber", s.immobility_note);
-          } else {
-            add(amber, "Immobility concern", "seg_immobility", "amber", s.immobility_note);
-          }
-        } else {
-          add(amber, "Immobility concern", "seg_immobility", "amber", s.immobility_note);
-        }
-      }
-      const hb = num(s.hb) || num(s.bl_hb);
-      const isHbDropping = s.hb_dropping || s.bl_hb_trend === "\u2193";
-      if (hb && hb <= 70) add(red, `Low Hb ${hb}`, "hb", "red");
-      else if (hb && hb <= 90 && isHbDropping) add(amber, `Low Hb ${hb} and dropping`, "hb", "amber");
-      const alb = num(s.bl_alb);
-      if (alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, "bl_alb", "amber");
-      const plts = num(s.bl_plts);
-      if (plts && plts < 100) add(amber, `Low platelets Plts ${plts}`, "bl_plts", "amber");
-      const inr = num(s.bl_inr);
-      if (inr && inr > 3.5) add(red, `High INR ${inr}`, "bl_inr", "red");
-      else if (inr && inr > 2.5) add(amber, `Elevated INR ${inr}`, "bl_inr", "amber");
-      const bsl = num(s.e_bsl);
-      if (bsl) {
-        if (bsl < 4) add(red, `Low BSL ${bsl}`, "e_bsl", "red");
-        else if (bsl > 20) add(red, `High BSL ${bsl}`, "e_bsl", "red");
-        else if (bsl >= 15) add(amber, `High BSL ${bsl}`, "e_bsl", "amber");
-      }
-      const painScore = num(s.d_pain);
-      if (painScore >= 7) {
-        add(amber, `Pain not well controlled with score of ${painScore} out of 10`, "neuro_section", "amber", null);
-      }
-      if (window.prevBloods && window.prevBloods.cr_review && !s.renal_worsening_cr) {
-        const prevCr = num(window.prevBloods.cr_review);
-        const currCr = cr;
-        if (currCr && prevCr && currCr > prevCr) {
-          const percentChange = (currCr - prevCr) / prevCr * 100;
-          if (percentChange > 30 || currCr - prevCr > 30) {
-            const chipEl = $("toggle_renal_worsening_cr");
-            if (chipEl && chipEl.dataset.value === "false") {
-              chipEl.click();
-            }
-          }
-        }
-      }
-      if (s.renal_worsening_cr && window.prevBloods && window.prevBloods.cr_review) {
-        const prevCr = num(window.prevBloods.cr_review);
-        const currCr = cr;
-        if (currCr && prevCr && currCr > prevCr) {
-          const percentChange = (currCr - prevCr) / prevCr * 100;
-          if (percentChange > 30 || currCr - prevCr > 30) {
-            add(amber, `Worsening Cr ${prevCr}\u2192${currCr}`, "bl_cr_review", "amber");
-          }
-        }
-      }
-      if (s.neuro_psych) {
-        add(amber, `Psychological concern`, "neuro_section", "amber", s.neuro_psych_note);
-      }
-      if (s.pics === "positive") {
-        add(amber, `Post ICU Syndrome Positive`, "seg_pics", "amber", s.pics_note);
-      }
-      const activeComorbsKeys = toggleInputs.filter((k2) => k2.startsWith("comorb_") && s[k2]);
-      const countComorbs = activeComorbsKeys.length;
-      if (countComorbs >= 3) {
-        add(red, sentenceCase("Multiple comorbidities"), null, "red", null);
-        flagged.red.push("comorbs_wrapper");
-      } else if (countComorbs > 0) {
-        let cList = [];
-        activeComorbsKeys.forEach((k2) => {
-          if (k2 === "comorb_other" && s.comorb_other_note) {
-            s.comorb_other_note.split(/[\n,]+/).forEach((v) => {
-              const trimmed = v.trim();
-              if (trimmed) cList.push(trimmed);
-            });
-          } else if (k2 !== "comorb_other") {
-            cList.push(comorbMap[k2]);
-          }
-        });
-        add(amber, sentenceCase(`Comorbidities - ${joinGrammatically(cList)}`), null, "amber", null);
-        flagged.amber.push("comorbs_wrapper");
-      }
-      const lact = num(s.lactate) || num(s.bl_lac_review);
-      if (lact > 4) add(red, `Lactate ${lact}`, "lactate", "red");
-      else if (lact >= 2) add(amber, `Lactate ${lact}`, "lactate", "amber");
-      if (s.override === "red") {
-        const reason = s.overrideNote || "Clinician override: CAT 1";
-        add(red, reason, "override_red", "red");
-      }
-      if (s.override === "amber") {
-        const reason = s.overrideNote || "Clinician override: CAT 2";
-        add(amber, reason, "override_amber", "amber");
-      }
-      const age = num(s.ptAge);
-      if (age >= 75) {
-        if (s.age_mitigated === true) {
-          suppressedRisks.push(`Age ${age} (frailty risk - mitigated: ${s.age_mitigate_reason || "baseline function active"})`);
-        } else {
-          add(amber, `Age ${age}, increased risk of complications`, "ptAge", "amber");
-        }
-      }
-      if (s.frailty_known === true) {
-        add(amber, "Known frailty at baseline", "seg_frailty_known", "amber", s.frailty_note);
-      }
-      const icuLos = num(s.icuLos) || 0;
-      if (icuLos > 4) {
-        const uniqueRedPreLos = [...new Set(red)];
-        const uniqueAmberPreLos = [...new Set(amber)];
-        const hasOtherRisks = uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0;
-        if (hasOtherRisks) {
-          const hasNonImmobilityAndNonAgeRisk = uniqueRedPreLos.some((r) => !r.toLowerCase().includes("immobility") && !r.toLowerCase().includes("age")) || uniqueAmberPreLos.some((a) => !a.toLowerCase().includes("immobility") && !a.toLowerCase().includes("age"));
-          if (hasNonImmobilityAndNonAgeRisk) {
-            add(red, `Prolonged ICU stay >4 days`, "icuLos", "red");
-          } else if (age >= 75) {
-            add(amber, `Prolonged ICU stay >4 days`, "icuLos", "amber");
-          } else {
-            suppressedRisks.push(`Prolonged ICU stay >4 days`);
-          }
-        } else {
-          suppressedRisks.push(`Prolonged ICU stay >4 days`);
-        }
-      }
-      const uniqueRed = [...new Set(red)];
-      const uniqueAmber = [...new Set(amber)];
-      const redCount = uniqueRed.length;
-      const amberCount = uniqueAmber.length;
-      let autoCat = { id: "green", text: "CAT 3" };
-      if (redCount > 0) autoCat = { id: "red", text: "CAT 1" };
-      else if (amberCount > 0) autoCat = { id: "amber", text: "CAT 2" };
-      let cat = autoCat;
-      const downgradeReason = (s.overrideNote || "").trim();
-      if (s.override === "green" && downgradeReason) {
-        cat = {
-          id: "green",
-          text: "CAT 3",
-          downgradedFrom: autoCat.text,
-          downgradeReason
-        };
-      }
+      updatePrevBloodsHint();
+      renderDerivedDisplays(s, result);
+      const {
+        red: uniqueRed,
+        amber: uniqueAmber,
+        suppressed: suppressedRisks,
+        redCount,
+        amberCount,
+        cat,
+        autoCat,
+        downgradeReason,
+        flagged,
+        riskEntries,
+        timeData,
+        countComorbs,
+        activeComorbsKeys
+      } = result;
       refreshCategorySelect(autoCat, s.override, downgradeReason, redCount, amberCount);
       const catText = $("catText");
       if (catText) {
@@ -916,7 +1155,7 @@
         stickyScore.textContent = cat.text;
       }
       updateSidebarRiskBadges(redCount, amberCount);
-      reconcileAutoIssues(/* @__PURE__ */ new Set([...riskEntries.map((e) => e.id), ...bloodIssueKeys]));
+      reconcileAutoIssues(new Set(result.issueKeys));
       renderScrapedIssuesList();
       renderCarriedForward();
       maybeOfferQuickReview(timeData, s);
@@ -979,9 +1218,8 @@
         const isPost = s.reviewType === "post";
         let showPrompt = false;
         if (isPost && !alreadyChecked && !dismissed) {
-          if (cat.id === "green" && hoursSinceStep >= 12) {
-            showPrompt = true;
-          } else if (cat.id === "amber" && hoursSinceStep >= 48) showPrompt = true;
+          if (cat.id === "green" && hoursSinceStep >= 24) showPrompt = true;
+          else if (cat.id === "amber" && hoursSinceStep >= 48) showPrompt = true;
           else if (cat.id === "red" && hoursSinceStep >= 72) showPrompt = true;
         }
         if (showPrompt) {
@@ -992,20 +1230,12 @@
           if (cat.id === "amber") colorName = "Amber";
           if (cat.id === "red") colorName = "Red";
           let hoursTxt = Math.round(hoursSinceStep) + " hours";
-          const catColorStr = cat.id === "green" ? "var(--green)" : `var(--${cat.id})`;
-          const mainTitle = `${cat.text} ${colorName} - ${hoursTxt} on list`;
           disMsg.innerHTML = `
-                    <div style="font-size: 1.4rem; font-weight: 800; color: ${catColorStr}; margin-bottom: 12px; text-transform: uppercase;">
-                        ${mainTitle}
-                    </div>
-                    <div style="font-size: 1.3rem; font-weight: 700; color: var(--ink); margin-bottom: 16px;">
-                        Can the patient be discharged?
-                    </div>
+                    <div class="discharge-prompt-title status ${cat.id}">${cat.text} ${colorName} - ${hoursTxt} on list</div>
+                    <div class="discharge-prompt-question">Can the patient be discharged?</div>
                 `;
-          if (disWrap) disWrap.classList.add("pulse-highlight");
         } else {
           disPrompt.style.display = "none";
-          if (disWrap) disWrap.classList.remove("pulse-highlight");
           const continueChk = $("chk_continue_alert");
           if (continueChk && !s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.reviewType === "post") {
             continueChk.checked = true;
@@ -1040,23 +1270,100 @@
       console.error("Compute Error:", err);
     }
   }
+  function autofillDerivedFields(s) {
+    const oxDevInput = $("b_device");
+    if (oxDevInput && oxDevInput.dataset.manual !== "true") {
+      const mode = s.oxMod;
+      let devStr = "";
+      if (mode === "RA") devStr = "RA";
+      else if (mode === "NP") devStr = `NP ${s.npFlow || ""}L`;
+      else if (mode === "HFNP") devStr = `HFNP ${s.hfnpFio2 || ""}%/${s.hfnpFlow || ""}L`;
+      else if (mode === "NIV") devStr = `NIV ${s.nivFio2 || ""}%`;
+      oxDevInput.value = devStr;
+    }
+    const airwayInput = $("airway_a");
+    if (airwayInput && airwayInput.dataset.manual !== "true") {
+      if (s.oxMod === "Trache") {
+        airwayInput.value = `${s.tracheType || "Tracheostomy"}${s.tracheStatus === "New" ? " (New)" : ""}`;
+      } else if (airwayInput.value.startsWith("Tracheostomy") || airwayInput.value.startsWith("Laryngectomy")) {
+        airwayInput.value = "";
+      }
+    }
+  }
+  function renderDerivedDisplays(s, result) {
+    updateAgeMitigationUI();
+    updateLosMitigationUI();
+    const pmhSubtitle = $("pmh_subtitle");
+    if (pmhSubtitle) {
+      const hasComorbidities = result.countComorbs > 0;
+      const hasPmhNote = s.pmh_note && s.pmh_note.trim().length > 0;
+      pmhSubtitle.style.display = hasComorbidities || hasPmhNote ? "block" : "none";
+    }
+    const nlrEl = $("nlrCalc");
+    if (nlrEl) {
+      if (result.nlrVal > 0) {
+        nlrEl.textContent = `NLR: ${result.nlrVal.toFixed(2)}`;
+        nlrEl.style.borderColor = result.nlrVal > 10 ? "var(--red)" : "var(--line)";
+      } else {
+        nlrEl.textContent = "NLR: --";
+        nlrEl.style.borderColor = "var(--line)";
+      }
+    }
+    const fn = $("footerName");
+    if (fn) fn.textContent = s.ptName || "--";
+    const fl = $("footerLocation");
+    if (fl) fl.textContent = `${s.ptWard || "--"} ${s.ptBed || ""}`;
+    const fa = $("footerAdmission");
+    if (fa) fa.textContent = s.ptAdmissionReason || "--";
+    const timeOffEl = $("pressor_time_off_display");
+    if (timeOffEl) {
+      const recentKeys = ["pressor_recent_norad", "pressor_recent_met", "pressor_recent_gtn", "pressor_recent_dob", "pressor_recent_mid", "pressor_recent_other"];
+      if (recentKeys.some((k) => s[k]) && s.pressor_ceased_time) {
+        const now = /* @__PURE__ */ new Date();
+        const [cH, cM] = s.pressor_ceased_time.split(":");
+        const ceasedDate = /* @__PURE__ */ new Date();
+        ceasedDate.setHours(cH, cM);
+        if (ceasedDate > now) ceasedDate.setDate(ceasedDate.getDate() - 1);
+        timeOffEl.textContent = `~${Math.floor((now - ceasedDate) / 36e5)} hrs ago`;
+      } else {
+        timeOffEl.textContent = "";
+      }
+    }
+    renderPicsPanel(result.pics);
+    const suggestion = $("infection_downtrend_suggestion");
+    if (suggestion) {
+      if (result.downtrendSuggestion) {
+        suggestion.innerHTML = `<span>${result.downtrendSuggestion} - mark markers as downtrending?</span>
+                <button type="button" id="btnAcceptDowntrend" class="btn small">Yes, downtrending</button>`;
+        suggestion.hidden = false;
+      } else {
+        suggestion.hidden = true;
+        suggestion.innerHTML = "";
+      }
+    }
+  }
+  function updatePrevBloodsHint() {
+    const hint = $("prev_bloods_hint");
+    if (!hint) return;
+    const hasPrev = window.prevBloods && Object.keys(window.prevBloods).length > 0;
+    const hasCurrent = Object.keys(normalRanges).some((k) => num($(`bl_${k}`)?.value) !== null);
+    hint.hidden = hasPrev || !hasCurrent;
+  }
   function checkCompleteness(s, comorbCount) {
-    const nudges = document.querySelectorAll("#completeness_nudge");
-    if (!nudges.length) return;
-    let missing = [];
-    if (!s.ptName) missing.push("Patient Name");
+    const missing = [];
+    if (!s.ptName) missing.push("Patient initials");
     if (!s.ptMrn) missing.push("URN");
     if (!s.ptWard) missing.push("Ward");
     if (!s.reviewerInitials) missing.push("Reviewer");
-    nudges.forEach((nudge) => {
-      if (missing.length > 0) {
-        nudge.style.display = "block";
-        nudge.textContent = "Missing: " + missing.join(", ");
-        nudge.style.color = "#7c3aed";
-      } else {
-        nudge.style.display = "none";
-      }
-    });
+    if (missing.length) {
+      setNotice("completeness", {
+        priority: NOTICE_PRIORITY.COMPLETENESS,
+        tone: "info",
+        html: `<div class="notice-title">Not yet recorded: ${missing.join(", ")}</div>`
+      });
+    } else {
+      clearNotice("completeness");
+    }
   }
 
   // src/js/ui.js
@@ -1072,6 +1379,66 @@
         } else {
           parent?.classList.remove("blood-abnormal");
         }
+      }
+    }
+  }
+  function buildPicsPanel() {
+    const host = $("pics_items");
+    if (!host || host.dataset.built === "true") return;
+    let lastTier = null;
+    const parts = [];
+    PICS_ITEMS.forEach((item) => {
+      if (item.tier !== lastTier) {
+        const pts = item.points;
+        parts.push(`<div class="pics-tier">${item.tier} - ${pts} point${pts === 1 ? "" : "s"} each</div>`);
+        lastTier = item.tier;
+      }
+      parts.push(`<div class="pics-row">
+            <div class="toggle-label" id="toggle_${item.id}" data-value="false" role="button" tabindex="0"
+                 title="${item.code}, ${item.points} point${item.points === 1 ? "" : "s"}">
+                <span>${item.label}<span class="pics-auto" data-auto-for="${item.id}" hidden></span></span>
+                <span class="pics-points">+${item.points}</span>
+                <span class="state"></span>
+            </div>
+        </div>`);
+    });
+    host.innerHTML = parts.join("");
+    host.dataset.built = "true";
+  }
+  function renderPicsPanel(pics) {
+    if (!pics || $("pics_items")?.dataset.built !== "true") return;
+    pics.items.forEach((item) => {
+      const el = $(`toggle_${item.id}`);
+      if (!el) return;
+      el.dataset.value = item.ticked ? "true" : "false";
+      el.classList.toggle("active", item.ticked);
+      const autoTag = el.querySelector(`[data-auto-for="${item.id}"]`);
+      if (autoTag) {
+        autoTag.hidden = !item.auto;
+        autoTag.textContent = item.auto ? ` (auto: ${item.derivedFrom})` : "";
+      }
+    });
+    const scoreEl = $("pics_score_value");
+    if (scoreEl) scoreEl.textContent = String(pics.score);
+    const chip = $("pics_band_chip");
+    if (chip) {
+      chip.className = `pics-band ${pics.band}`;
+      chip.textContent = `${pics.bandLabel} (${pics.band === "high" ? "6+" : pics.band === "moderate" ? "3-5" : "0-2"})`;
+    }
+    const sugHost = $("pics_suggestions");
+    if (sugHost) {
+      sugHost.innerHTML = pics.suggestions.map(
+        (sug) => `<button type="button" class="pics-suggestion" data-pics-suggest="${sug.id}">${sug.reason}</button>`
+      ).join("");
+    }
+    const actionWrapper = $("pics_action_wrapper");
+    const actionText = $("pics_action_text");
+    if (actionWrapper && actionText) {
+      if (pics.action) {
+        actionText.textContent = `Add to plan: ${pics.action}`;
+        actionWrapper.style.display = "block";
+      } else {
+        actionWrapper.style.display = "none";
       }
     }
   }
@@ -1232,6 +1599,7 @@
     html += `<div class="remove-entry" title="Remove">\u2715</div>`;
     html += `</div>`;
     div.innerHTML = html;
+    disableAutofill(div);
     if (type === "Tracheostomy") {
       const tracheBtn = document.querySelector('#oxMod .select-btn[data-value="Trache"]');
       if (tracheBtn && !tracheBtn.classList.contains("active")) {
@@ -1485,7 +1853,10 @@
     if (impTxt) impTxt.value = "";
     document.querySelectorAll(".active").forEach((e) => e.classList.remove("active"));
     document.querySelectorAll('input[type="checkbox"]').forEach((e) => e.checked = false);
-    document.querySelectorAll(".toggle-label").forEach((e) => e.dataset.value = "false");
+    document.querySelectorAll(".toggle-label").forEach((e) => {
+      e.dataset.value = "false";
+      delete e.dataset.manual;
+    });
     document.querySelectorAll(".blood-abnormal").forEach((e) => e.classList.remove("blood-abnormal"));
     const dc = $("devices-container");
     if (dc) dc.innerHTML = "";
@@ -1495,6 +1866,7 @@
       sc.style.display = "none";
     }
     document.querySelectorAll(".prev-datum").forEach((el) => el.textContent = "");
+    document.querySelectorAll(".trend-buttons").forEach((g) => delete g.dataset.manual);
     window.prevBloods = {};
     const pb = $("prevRisksBox");
     if (pb) pb.style.display = "none";
@@ -1580,6 +1952,8 @@
     if (orClear) orClear.style.display = "none";
     const resetEv = new CustomEvent("resetAddsCalc");
     document.dispatchEvent(resetEv);
+    updateAgeMitigationUI();
+    updateLosMitigationUI();
     computeAll();
     showToast("Data cleared", 2e3);
   }
@@ -1724,8 +2098,6 @@
   }
   var newRiskLog = [];
   function showNewRiskAlert(newRed = [], newAmber = []) {
-    const box = $("qrNewRiskAlert");
-    if (!box) return;
     const seen = new Set(newRiskLog.map((r) => r.text));
     [...newRed.map((text) => ({ text, severity: "red" })), ...newAmber.map((text) => ({ text, severity: "amber" }))].forEach((entry) => {
       if (seen.has(entry.text)) return;
@@ -1740,26 +2112,19 @@
       redCount ? `${redCount} red` : "",
       amberCount ? `${amberCount} amber` : ""
     ].filter(Boolean).join(" and ");
-    box.className = redCount ? "qr-new-risk red" : "qr-new-risk amber";
-    box.innerHTML = `
-        <div class="qr-new-risk-head">
-            <span>\u26A0\uFE0F New risk flagged since this review started (${counts})</span>
-            <button type="button" id="qrNewRiskDismiss" class="btn small">Dismiss</button>
-        </div>
-        <ul>${newRiskLog.map((r) => `<li class="${r.severity}">${r.text}</li>`).join("")}</ul>
-        <div class="qr-new-risk-foot">Staged in the issues list. Add detail there or in Quick Notes, or exit to
-            the full assessment if this needs a fuller work-up.</div>`;
-    box.hidden = false;
-    $("qrNewRiskDismiss")?.addEventListener("click", clearNewRiskAlert);
-    showToast(`\u26A0\uFE0F New risk flagged: ${[...newRed, ...newAmber].join(", ")}`, 4e3);
+    setNotice("new-risk", {
+      priority: NOTICE_PRIORITY.NEW_RISK,
+      tone: redCount ? "red" : "amber",
+      html: `<div class="notice-title">\u26A0\uFE0F New risk flagged since this review started (${counts})</div>
+               <ul class="notice-list">${newRiskLog.map((r) => `<li class="${r.severity}">${r.text}</li>`).join("")}</ul>
+               <div class="notice-foot">Staged in the Review List. Add detail there or in Quick Notes, or exit to
+                   the full assessment if this needs a fuller work-up.</div>`,
+      actions: [{ id: "dismiss-new-risk", label: "Dismiss", onClick: clearNewRiskAlert }]
+    });
   }
   function clearNewRiskAlert() {
     newRiskLog = [];
-    const box = $("qrNewRiskAlert");
-    if (box) {
-      box.hidden = true;
-      box.innerHTML = "";
-    }
+    clearNotice("new-risk");
   }
   function setBloodsOverlay(open) {
     const section = $("section-bloods");
@@ -1803,9 +2168,10 @@
   function closeAccordion(panelId, btnSelector) {
     setPanelOpen($(panelId), document.querySelector(btnSelector), false);
   }
-  var QUICK_REVIEW_SECTIONS_TO_HIDE = ["section-patient", "section-risk", "section-ae", "section-context"];
+  var QUICK_REVIEW_SECTIONS_TO_HIDE = ["section-risk", "section-ae", "section-context"];
   var QUICK_REVIEW_ONLY_SECTIONS = ["quick_notes_wrapper", "scraped_risks_wrapper"];
   var QUICK_GRID_LAYOUT = {
+    qgTop: ["section-patient"],
     qgLeft: ["adds_wrapper", "section-bloods", "override_card", "quick_notes_wrapper"],
     qgRight: ["carried_forward_card", "scraped_risks_wrapper", "section-devices"],
     qgBottom: ["section-category"]
@@ -1958,6 +2324,33 @@
   function closeMobileNav() {
     const overlay = $("mobileNavOverlay");
     if (overlay) overlay.classList.remove("active");
+  }
+  function updateLosMitigationUI() {
+    const losInput = $("icuLos");
+    const wrapper = $("los_risk_wrapper");
+    const reasonWrapper = $("los_mitigate_reason_wrapper");
+    const reasonInput = $("los_mitigate_reason");
+    const seg = $("seg_los_mitigated");
+    const clickBox = $("btn_los_mitigated");
+    if (!losInput || !wrapper) return;
+    const immobileBtn = $("seg_immobility")?.querySelector(".seg-btn.active");
+    const isImmobile = immobileBtn?.dataset.value === "true";
+    const los = parseFloat(losInput.value);
+    if (isNaN(los) || los <= 4 || isImmobile) {
+      wrapper.style.display = "none";
+      if (reasonWrapper) reasonWrapper.style.display = "none";
+      if (reasonInput) reasonInput.value = "";
+      seg?.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.value === "false"));
+      return;
+    }
+    wrapper.style.display = "block";
+    const activeBtn = seg?.querySelector(".seg-btn.active");
+    const isMitigated = activeBtn ? activeBtn.dataset.value === "true" : false;
+    if (reasonWrapper) reasonWrapper.style.display = isMitigated ? "block" : "none";
+    if (clickBox) {
+      clickBox.className = isMitigated ? "age-mitigate-btn mitigated" : "age-mitigate-btn";
+      clickBox.innerHTML = isMitigated ? "\u2713 Recovering appropriately" : "Long stay but recovering well?";
+    }
   }
   function updateAgeMitigationUI() {
     const ageInput = $("ptAge");
@@ -2119,9 +2512,7 @@
     });
   }
   function maybeToastNewRisk(key, text) {
-    if (toastedRiskKeys.has(key)) return;
     toastedRiskKeys.add(key);
-    showToast(`New risk flagged: ${text}`, 3e3);
   }
   function renderScrapedIssuesList() {
     const list = $("scraped_issues_list");
@@ -2132,7 +2523,7 @@
     const openCount = issues.filter((i) => !i.resolved).length;
     if (count) count.textContent = openCount ? `(${openCount})` : "";
     if (issues.length === 0) {
-      list.innerHTML = '<div style="color:var(--muted); font-size:0.9rem;">Nothing staged</div>';
+      list.innerHTML = "";
       return;
     }
     const BIN_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
@@ -2252,11 +2643,12 @@
       const group = $(id);
       state[id] = group?.querySelector(".select-btn.active")?.dataset.value || "";
     });
+    state.pics_manual = PICS_ITEMS.filter((item) => $(`toggle_${item.id}`)?.dataset.manual === "true").map((item) => item.id);
     state["reviewType"] = document.querySelector('input[name="reviewType"]:checked')?.value || "post";
     state["clinicianRole"] = document.querySelector('input[name="clinicianRole"]:checked')?.value || "ALERT CNS";
     state["reviewModeType"] = document.querySelector('input[name="reviewModeType"]:checked')?.value || "physical";
     state.activeIssues = activeIssues;
-    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
+    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods", "chk_pics_action"].forEach((id) => {
       const el = $(id);
       if (el) state[id] = el.checked;
     });
@@ -2274,6 +2666,7 @@
     });
     document.querySelectorAll(".trend-buttons").forEach((group) => {
       state[group.id] = group.querySelector(".trend-btn.active")?.dataset.value || "";
+      if (group.dataset.manual === "true") state[`${group.id}__manual`] = true;
     });
     return state;
   }
@@ -2319,6 +2712,12 @@
         if (id === "renal_dialysis") $("dialysis_type_wrapper").style.display = state[id] ? "block" : "none";
       }
     });
+    if (Array.isArray(state.pics_manual)) {
+      state.pics_manual.forEach((id) => {
+        const el = $(`toggle_${id}`);
+        if (el) el.dataset.manual = "true";
+      });
+    }
     if (state["comorbs_gate"] === void 0) {
       const anyComorb = toggleInputs.filter((k) => k.startsWith("comorb_") && state[k]).length > 0;
       if (anyComorb) {
@@ -2358,7 +2757,7 @@
       _activeIssueCounter = activeIssues.reduce((max, i) => Math.max(max, i.createdAt || 0), 0);
       renderScrapedIssuesList();
     }
-    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
+    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods", "chk_pics_action"].forEach((id) => {
       const el = $(id);
       if (el && state[id] !== void 0) el.checked = state[id];
     });
@@ -2394,6 +2793,7 @@
     }
     updateDevicesSectionVisibility();
     document.querySelectorAll(".trend-buttons").forEach((group) => {
+      if (state[`${group.id}__manual`]) group.dataset.manual = "true";
       if (state[group.id]) group.querySelector(`.trend-btn[data-value="${state[group.id]}"]`)?.classList.add("active");
     });
     toggleOxyFields();
@@ -2413,10 +2813,11 @@
     };
     const role = s.clinicianRole;
     const reviewName = s.reviewType === "pre" ? "Pre-Stepdown" : "post ICU review";
+    const methodName = s.reviewModeType === "chart" ? "Chart review" : "Physical review";
     if (s.reviewType === "pre") {
-      lines.push(`${role} Pre-Stepdown Review`);
+      lines.push(`${role} Pre-Stepdown Review - ${methodName}`);
     } else {
-      lines.push(`${role} ${reviewName}`);
+      lines.push(`${role} ${reviewName} - ${methodName}`);
     }
     lines.push(`Patient: ${s.ptName || "--"} | URN: ...${s.ptMrn || ""} | Location: ${s.ptWard || "--"}, Room: ${s.ptBed || "--"}`);
     let demo = [];
@@ -2584,9 +2985,16 @@
     if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ""}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
-    if (s.pics) {
-      const picsStatus = s.pics === "positive" ? "Positive" : "Negative";
-      addLine(`Post ICU Syndrome: ${picsStatus}${s.pics_note ? ` - ${s.pics_note}` : ""}`);
+    const pics = evaluatePicsScore(s);
+    if (pics.score > 0 || s.pics) {
+      const contributors = pics.tickedItems.map((i) => i.short).join(", ");
+      let picsLine = `Post ICU Syndrome: ${pics.bandLabel} - PICS score ${pics.score} (Dhanju 2026, local score)`;
+      if (contributors) picsLine += `: ${contributors}`;
+      if (s.pics && s.pics !== pics.status) {
+        picsLine += `. Clinician assessment: ${s.pics === "positive" ? "Positive" : "Negative"}`;
+      }
+      if (s.pics_note) picsLine += ` - ${s.pics_note}`;
+      addLine(picsLine);
     }
     if (s.sleep_quality === true) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ""}`);
     else if (s.sleep_quality === false) addLine(`Sleep: No sleep issues identified`);
@@ -2611,10 +3019,19 @@
         if (currentVal) {
           let str = `${blMap[key]} ${currentVal}`;
           if (prevVal && prevVal !== currentVal) str += ` (${prevVal})`;
+          const target = (key === "inr" ? s.inr_target : key === "aptt" ? s.aptt_target : "") || "";
+          if (target.trim()) str += ` target ${target.trim()}`;
           blLines.push(str);
         }
       });
-      if (blLines.length) addLine(`Bloods: ${blLines.join(", ")}`);
+      if (blLines.length) {
+        let taken = "";
+        if (s.bloods_date) {
+          taken = formatDateDDMMYYYY(s.bloods_date);
+          if (s.bloods_time) taken += ` ${s.bloods_time}`;
+        }
+        addLine(`Bloods${taken ? ` (taken ${taken})` : ""}: ${blLines.join(", ")}`);
+      }
     }
     if (s.new_bloods_ordered === "ordered") addLine("New bloods ordered for next round");
     if (s.new_bloods_ordered === "requested") addLine("New bloods requested (not yet ordered)");
@@ -2657,20 +3074,14 @@
     if (s.context_other_note) lines.push(`Other: ${s.context_other_note}`);
     pushBlank();
     lines.push("IDENTIFIED ICU READMISSION RISK FACTORS:");
-    const risks = [...red, ...amber];
+    const risks = [...red, ...amber, ...suppressed];
     if (risks.length) {
       risks.forEach((r) => lines.push(`- ${r}`));
-    }
-    if (suppressed.length) {
-      suppressed.forEach((r) => lines.push(`- ${r}`));
-    }
-    if (risks.length === 0 && suppressed.length === 0) {
+    } else {
       lines.push("- None identified");
     }
     pushBlank();
     lines.push("PLAN:");
-    const hoursMap = { "red": "72h", "amber": "48h", "green": "24h" };
-    const h = hoursMap[cat.id] || "24h";
     if (s.stepdown_suitable === false) {
       lines.push(`- ICU Senior Review requested due to unsuitability for ward stepdown.`);
       lines.push(`- Please re-contact ALERT for re-review when appropriate.`);
@@ -2684,17 +3095,20 @@
       }
       lines.push(text);
     } else {
-      lines.push(`- At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.`);
+      lines.push("- ALERT nursing post ICU reviews continue.");
     }
     if (s.chk_medical_rounding) {
       lines.push("- Patient added to ALERT medical rounding list for further review.");
+    }
+    if (pics.action && s.chk_pics_action !== false) {
+      lines.push(`- ${pics.action}`);
     }
     if (!s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.stepdown_suitable !== false) {
       lines.push("- Please contact ALERT if further support required between reviews.");
     }
     if (sum) {
       sum.classList.add("script-updating");
-      sum.value = lines.join("\n").replace(/\\bnlr\\b/gi, "NLR");
+      sum.value = toDmrSafeText(lines.join("\n")).replace(/\bnlr\b/g, "NLR");
       sum.classList.remove("script-updating");
       const badge = $("manual_edit_badge");
       if (badge) badge.style.display = "none";
@@ -2715,7 +3129,7 @@
     const initials = s.reviewerInitials || "--";
     const time = s.reviewTime || nowTimeStr();
     const parts = [`${dateStr} ${time} ${initials}.`];
-    parts.push(s.reviewModeType === "chart" ? "Chart r/v." : "Physical r/v.");
+    parts.push(s.reviewModeType === "chart" ? "CHART R/V." : "PHYSICAL R/V.");
     parts.push(s.chk_use_mods ? `MODS ${s.mods_score || "--"}.` : `ADDS ${s.adds || "--"}.`);
     if (s.chk_bloods_nil_sig || s.bloods_status === "nil_sig") parts.push("Bloods nil sig.");
     else if (s.bloods_status === "improving") parts.push("Bloods improving.");
@@ -2741,12 +3155,40 @@
     else if (s.chk_discharge_pending_bloods) parts.push("D/C pending bloods.");
     else if (s.chk_continue_alert) parts.push("Continue ALERT.");
     if (s.chk_medical_rounding) parts.push("+ Medical rounding.");
-    return parts.join(" ").replace(/\s{2,}/g, " ");
+    return toDmrSafeText(parts.join(" ")).replace(/\s{2,}/g, " ");
   }
 
   // src/js/main.js
+  var PRIVACY_IDLE_MS = 10 * 60 * 1e3;
+  function setupPrivacyScreen() {
+    const screen = $("privacyScreen");
+    if (!screen) return;
+    let timer;
+    const hide = () => {
+      screen.hidden = true;
+      arm();
+    };
+    const show = () => {
+      screen.hidden = false;
+    };
+    function arm() {
+      clearTimeout(timer);
+      timer = setTimeout(show, PRIVACY_IDLE_MS);
+    }
+    ["pointerdown", "keydown", "input", "change"].forEach((evt) => {
+      document.addEventListener(evt, () => {
+        if (screen.hidden) arm();
+      }, true);
+    });
+    $("btnResumeFromPrivacy")?.addEventListener("click", hide);
+    screen.addEventListener("click", hide);
+    arm();
+  }
   function initialize() {
     updateLastSaved();
+    disableAutofill();
+    setupPrivacyScreen();
+    buildPicsPanel();
     document.querySelectorAll(".quick-select, .select-btn, .detail-toggle, .accordion, .trend-btn").forEach((btn) => {
       btn.setAttribute("tabindex", "-1");
     });
@@ -2769,6 +3211,7 @@
       computeAll();
       checkBloodRanges();
       updateAgeMitigationUI();
+      updateLosMitigationUI();
       saveState(true);
     }, 350);
     window.addDevice = (type, val, insertionDate = "") => {
@@ -2780,6 +3223,15 @@
     window.previousCategoryData = previousCategoryData;
     window.addActiveIssue = addActiveIssue;
     window.renderScrapedIssuesList = renderScrapedIssuesList;
+    window.flagPreviousRecommendation = (detail) => {
+      setNotice("handover", {
+        priority: NOTICE_PRIORITY.HANDOVER,
+        tone: "info",
+        html: `<div class="notice-title">\u{1F4CB} Previous review recommended discharge pending next bloods</div>
+                   ${detail ? `<div class="notice-foot">Bloods being followed: ${detail}</div>` : ""}`,
+        actions: [{ id: "dismiss-handover", label: "Dismiss", onClick: () => clearNotice("handover") }]
+      });
+    };
     window.refreshAddsOverrideUI = refreshAddsOverrideUI;
     function triggerGenerate() {
       const summaryEl = $("summary");
@@ -2846,82 +3298,48 @@
         }
       });
     }
-    const btnYes = $("btn_discharge_yes");
-    if (btnYes) {
-      btnYes.addEventListener("click", (e) => {
-        e.preventDefault();
-        const catScoreText = $("catText")?.textContent || "";
-        if (catScoreText.includes("CAT 3") || catScoreText.includes("Green")) {
-          window.dischargeIntent = "full";
-          const modal = $("greenDischargeConfirmModal");
-          if (modal) modal.style.display = "flex";
-          return;
-        }
-        const chk = $("chk_discharge_alert");
-        if (chk) {
-          chk.checked = true;
-          chk.dispatchEvent(new Event("change"));
-          compute();
-          showToast("Patient marked for discharge", 1500);
-        }
-      });
-    }
-    const btnPending = $("btn_discharge_pending");
-    if (btnPending) {
-      btnPending.addEventListener("click", (e) => {
-        e.preventDefault();
-        const catScoreText = $("catText")?.textContent || "";
-        if (catScoreText.includes("CAT 3") || catScoreText.includes("Green")) {
-          window.dischargeIntent = "pending";
-          const modal = $("greenDischargeConfirmModal");
-          if (modal) modal.style.display = "flex";
-          return;
-        }
-        const chk = $("chk_discharge_pending_bloods");
-        if (chk) {
-          chk.checked = true;
-          chk.dispatchEvent(new Event("change"));
-          compute();
-          showToast("Patient marked for discharge pending bloods", 1500);
-        }
-      });
-    }
-    const btnConfirmGreenYes = $("btn_green_confirm_yes");
-    if (btnConfirmGreenYes) {
-      btnConfirmGreenYes.addEventListener("click", (e) => {
-        e.preventDefault();
-        const modal = $("greenDischargeConfirmModal");
-        if (modal) modal.style.display = "none";
-        window.dischargeConfirmed = true;
-        if (window.dischargeIntent === "pending") {
-          const chk = $("chk_discharge_pending_bloods");
-          if (chk) {
-            chk.checked = true;
-            chk.dispatchEvent(new Event("change"));
-            compute();
-            showToast("Patient marked for discharge pending bloods (criteria confirmed)", 1500);
-          }
-        } else {
-          const chk = $("chk_discharge_alert");
-          if (chk) {
-            chk.checked = true;
-            chk.dispatchEvent(new Event("change"));
-            compute();
-            showToast("Patient marked for discharge (criteria confirmed)", 1500);
-          }
-        }
-        window.dischargeIntent = null;
-        window.dischargeConfirmed = false;
-      });
-    }
-    const btnConfirmGreenNo = $("btn_green_confirm_no");
-    if (btnConfirmGreenNo) {
-      btnConfirmGreenNo.addEventListener("click", (e) => {
-        e.preventDefault();
-        const modal = $("greenDischargeConfirmModal");
-        if (modal) modal.style.display = "none";
-      });
-    }
+    window.openDischargeConfirm = (intent) => {
+      window.dischargeIntent = intent;
+      const body = $("discharge_confirm_body");
+      if (body) {
+        const isChartReview = document.querySelector('input[name="reviewModeType"]:checked')?.value === "chart";
+        body.innerHTML = isChartReview ? "Has this patient had at least <strong>2 completed ALERT reviews</strong>, including at least <strong>one physical review</strong>?" : "Has this patient had at least <strong>2 completed ALERT reviews</strong>?";
+      }
+      const modal = $("dischargeConfirmModal");
+      if (modal) modal.style.display = "flex";
+    };
+    const applyDischarge = (intent, msg) => {
+      const chk = $(intent === "pending" ? "chk_discharge_pending_bloods" : "chk_discharge_alert");
+      if (!chk) return;
+      chk.checked = true;
+      chk.dispatchEvent(new Event("change"));
+      compute();
+      showToast(msg, 1500);
+    };
+    $("btn_discharge_yes")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.openDischargeConfirm("full");
+    });
+    $("btn_discharge_pending")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.openDischargeConfirm("pending");
+    });
+    $("btn_discharge_confirm_yes")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      const modal = $("dischargeConfirmModal");
+      if (modal) modal.style.display = "none";
+      window.dischargeConfirmed = true;
+      const intent = window.dischargeIntent;
+      applyDischarge(intent, intent === "pending" ? "Marked for discharge pending bloods (criteria confirmed)" : "Marked for discharge (criteria confirmed)");
+      window.dischargeIntent = null;
+      window.dischargeConfirmed = false;
+    });
+    $("btn_discharge_confirm_no")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      const modal = $("dischargeConfirmModal");
+      if (modal) modal.style.display = "none";
+      window.dischargeIntent = null;
+    });
     const btnNo = $("btn_discharge_no");
     if (btnNo) {
       btnNo.addEventListener("click", (e) => {
@@ -2929,23 +3347,6 @@
         window.dismissedDischarge = true;
         const continueChk = $("chk_continue_alert");
         if (continueChk) continueChk.checked = true;
-        compute();
-      });
-    }
-    const btnRevPlus = $("btn_review_plus");
-    const btnRevMinus = $("btn_review_minus");
-    const revCountEl = $("wardReviewCount");
-    if (btnRevPlus && revCountEl) {
-      btnRevPlus.addEventListener("click", () => {
-        const cur = parseInt(revCountEl.value) || 0;
-        revCountEl.value = cur + 1;
-        compute();
-      });
-    }
-    if (btnRevMinus && revCountEl) {
-      btnRevMinus.addEventListener("click", () => {
-        const cur = parseInt(revCountEl.value) || 1;
-        revCountEl.value = Math.max(1, cur - 1);
         compute();
       });
     }
@@ -3128,7 +3529,7 @@
             }
           }
         }
-        const isLowFlowNP = selectedMode === "NP" && selectedFlow && parseFloat(selectedFlow) <= 2;
+        const isLowFlowNP = selectedMode === "NP" && selectedFlow && parseFloat(selectedFlow) < 3;
         if (selectedMode && selectedMode !== "RA" && !isLowFlowNP) {
           const respSeg = $("seg_resp_concern");
           const respYes = respSeg?.querySelector('.seg-btn[data-value="true"]');
@@ -3450,6 +3851,9 @@
         if (el.id.startsWith("toggle_comorb_")) {
           syncComorbsToPMH();
         }
+        if (el.id.startsWith("toggle_pics_p")) {
+          el.dataset.manual = "true";
+        }
         saveState(true);
         computeAll();
         checkBloodRanges();
@@ -3544,6 +3948,33 @@
       compute();
     });
     $("age_mitigate_reason")?.addEventListener("input", compute);
+    $("btn_los_mitigated")?.addEventListener("click", () => {
+      const seg = $("seg_los_mitigated");
+      if (seg) {
+        const activeBtn = seg.querySelector(".seg-btn.active");
+        const isMitigated = activeBtn ? activeBtn.dataset.value === "true" : false;
+        const newValStr = !isMitigated ? "true" : "false";
+        seg.querySelectorAll(".seg-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.value === newValStr);
+        });
+        handleSegmentClick("los_mitigated", newValStr);
+      }
+      compute();
+    });
+    $("los_mitigate_reason")?.addEventListener("input", compute);
+    document.addEventListener("click", (e) => {
+      if (e.target?.id !== "btnAcceptDowntrend") return;
+      e.preventDefault();
+      const yes = document.querySelector('#seg_infection_downtrend .seg-btn[data-value="true"]');
+      if (yes && !yes.classList.contains("active")) yes.click();
+    });
+    document.addEventListener("click", (e) => {
+      const sug = e.target?.closest?.("[data-pics-suggest]");
+      if (!sug) return;
+      e.preventDefault();
+      $(`toggle_${sug.dataset.picsSuggest}`)?.click();
+    });
+    $("chk_pics_action")?.addEventListener("change", compute);
     $("chk_use_mods")?.addEventListener("change", () => {
       $("mods_inputs").style.display = $("chk_use_mods").checked ? "block" : "none";
       compute();
@@ -3569,15 +4000,10 @@
       const pendingChk = $("chk_discharge_pending_bloods");
       const wrapper = $("discharge_pending_bloods_note_wrapper");
       if (dischargeChk && dischargeChk.checked) {
-        const catScoreText = $("catText")?.textContent || "";
-        if (catScoreText.includes("CAT 3") || catScoreText.includes("Green")) {
-          if (!window.dischargeConfirmed) {
-            dischargeChk.checked = false;
-            window.dischargeIntent = "full";
-            const modal = $("greenDischargeConfirmModal");
-            if (modal) modal.style.display = "flex";
-            return;
-          }
+        if (!window.dischargeConfirmed) {
+          dischargeChk.checked = false;
+          window.openDischargeConfirm("full");
+          return;
         }
         if (continueChk) {
           continueChk.checked = false;
@@ -3597,15 +4023,10 @@
       const continueChk = $("chk_continue_alert");
       const wrapper = $("discharge_pending_bloods_note_wrapper");
       if (pendingChk && pendingChk.checked) {
-        const catScoreText = $("catText")?.textContent || "";
-        if (catScoreText.includes("CAT 3") || catScoreText.includes("Green")) {
-          if (!window.dischargeConfirmed) {
-            pendingChk.checked = false;
-            window.dischargeIntent = "pending";
-            const modal = $("greenDischargeConfirmModal");
-            if (modal) modal.style.display = "flex";
-            return;
-          }
+        if (!window.dischargeConfirmed) {
+          pendingChk.checked = false;
+          window.openDischargeConfirm("pending");
+          return;
         }
         if (dischargeChk) dischargeChk.checked = false;
         if (continueChk) continueChk.checked = false;
@@ -3641,6 +4062,8 @@
       if (mainCheckbox) mainCheckbox.checked = $("chk_medical_rounding_pre").checked;
       compute();
     });
+    document.querySelectorAll('input[name="reviewModeType"]').forEach((r) => r.addEventListener("change", compute));
+    document.querySelectorAll('input[name="clinicianRole"]').forEach((r) => r.addEventListener("change", compute));
     document.querySelectorAll('input[name="reviewType"]').forEach((r) => r.addEventListener("change", () => {
       updateWardOptions();
       toggleInfusionsBox();
@@ -3845,6 +4268,7 @@
           const was = btn.classList.contains("active");
           group.querySelectorAll(".trend-btn").forEach((b) => b.classList.remove("active"));
           if (!was) btn.classList.add("active");
+          group.dataset.manual = "true";
           compute();
         });
         group.appendChild(btn);
@@ -3898,6 +4322,7 @@
     const saved = loadState();
     if (saved) restoreState(saved);
     updateAgeMitigationUI();
+    updateLosMitigationUI();
     refreshAddsOverrideUI();
     refreshDetailToggleState();
     updateReviewTypeVisibility();

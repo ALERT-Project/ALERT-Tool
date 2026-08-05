@@ -1,5 +1,6 @@
-import { $, nowTimeStr, todayDateStr, formatDateDDMMYYYY, num } from './utils.js';
+import { $, nowTimeStr, todayDateStr, formatDateDDMMYYYY, num, toDmrSafeText } from './utils.js';
 import { comorbMap } from './config.js';
+import { evaluatePicsScore } from './rules.js';
 
 export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys) {
 
@@ -15,10 +16,14 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     const role = s.clinicianRole;
     const reviewName = (s.reviewType === 'pre') ? 'Pre-Stepdown' : 'post ICU review';
 
+    // Whether the patient was seen or only their chart was read changes how the note should
+    // be read, so it sits in the heading rather than buried further down.
+    const methodName = (s.reviewModeType === 'chart') ? 'Chart review' : 'Physical review';
+
     if (s.reviewType === 'pre') {
-        lines.push(`${role} Pre-Stepdown Review`);
+        lines.push(`${role} Pre-Stepdown Review - ${methodName}`);
     } else {
-        lines.push(`${role} ${reviewName}`);
+        lines.push(`${role} ${reviewName} - ${methodName}`);
     }
 
     lines.push(`Patient: ${s.ptName || '--'} | URN: ...${s.ptMrn || ''} | Location: ${s.ptWard || '--'}, Room: ${s.ptBed || '--'}`);
@@ -214,9 +219,23 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
 
-    if (s.pics) {
-        const picsStatus = s.pics === 'positive' ? 'Positive' : 'Negative';
-        addLine(`Post ICU Syndrome: ${picsStatus}${s.pics_note ? ` - ${s.pics_note}` : ''}`);
+    // The band, the score and the items behind it - the note has to carry the working, or the
+    // ward receives a number it has no way to check. Recomputed rather than passed in: the
+    // function is pure, so this is the same answer the rules reached.
+    const pics = evaluatePicsScore(s);
+    if (pics.score > 0 || s.pics) {
+        const contributors = pics.tickedItems.map(i => i.short).join(', ');
+        // Attributed, because it is a local instrument rather than a published score, and
+        // anyone reading the note in six months should be able to tell which is which.
+        let picsLine = `Post ICU Syndrome: ${pics.bandLabel} - PICS score ${pics.score} (Dhanju 2026, local score)`;
+        if (contributors) picsLine += `: ${contributors}`;
+        if (s.pics && s.pics !== pics.status) {
+            // Clinician overruling the score. Both are printed - the disagreement is the
+            // clinical judgement, not an error to be hidden.
+            picsLine += `. Clinician assessment: ${s.pics === 'positive' ? 'Positive' : 'Negative'}`;
+        }
+        if (s.pics_note) picsLine += ` - ${s.pics_note}`;
+        addLine(picsLine);
     }
     if (s.sleep_quality === true) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ''}`);
     else if (s.sleep_quality === false) addLine(`Sleep: No sleep issues identified`);
@@ -244,10 +263,24 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
             if (currentVal) {
                 let str = `${blMap[key]} ${currentVal}`;
                 if (prevVal && prevVal !== currentVal) str += ` (${prevVal})`;
+                // A clotting result is uninterpretable without knowing what it was aimed at,
+                // so the target travels with the value into the note.
+                const target = (key === 'inr' ? s.inr_target : key === 'aptt' ? s.aptt_target : '') || '';
+                if (target.trim()) str += ` target ${target.trim()}`;
                 blLines.push(str);
             }
         });
-        if (blLines.length) addLine(`Bloods: ${blLines.join(', ')}`);
+        if (blLines.length) {
+            // The collection time travels with the values. Without it, the next reviewer
+            // comparing against these numbers cannot tell whether a change happened overnight
+            // or over four days.
+            let taken = '';
+            if (s.bloods_date) {
+                taken = formatDateDDMMYYYY(s.bloods_date);
+                if (s.bloods_time) taken += ` ${s.bloods_time}`;
+            }
+            addLine(`Bloods${taken ? ` (taken ${taken})` : ''}: ${blLines.join(', ')}`);
+        }
     }
     if (s.new_bloods_ordered === 'ordered') addLine('New bloods ordered for next round');
     if (s.new_bloods_ordered === 'requested') addLine('New bloods requested (not yet ordered)');
@@ -297,17 +330,15 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     pushBlank();
 
     lines.push('IDENTIFIED ICU READMISSION RISK FACTORS:');
-    const risks = [...red, ...amber];
+    // One list, not two. Risks that were considered and discounted stay in it and carry their
+    // reason inline - "(mitigated: ...)" - so the note says what didn't count and why without
+    // splitting the reader's attention across two sections.
+    const risks = [...red, ...amber, ...suppressed];
     if (risks.length) { risks.forEach(r => lines.push(`- ${r}`)); }
-    if (suppressed.length) { suppressed.forEach(r => lines.push(`- ${r}`)); }
-
-    if (risks.length === 0 && suppressed.length === 0) { lines.push('- None identified'); }
+    else { lines.push('- None identified'); }
     pushBlank();
 
     lines.push('PLAN:');
-
-    const hoursMap = { 'red': '72h', 'amber': '48h', 'green': '24h' };
-    const h = hoursMap[cat.id] || '24h';
 
     if (s.stepdown_suitable === false) {
         lines.push(`- ICU Senior Review requested due to unsuitability for ward stepdown.`);
@@ -321,11 +352,22 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         }
         lines.push(text);
     } else {
-        lines.push(`- At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.`);
+        // No hours in the record. The 24/48/72h ladder is ALERT's internal scheduling and
+        // depends on staffing, so stating it in the DMR reads as a commitment the service may
+        // not be able to keep - and it can say 48h on a patient the next review will discharge.
+        // The ladder stays on screen for the clinician's own planning.
+        lines.push('- ALERT nursing post ICU reviews continue.');
     }
 
     if (s.chk_medical_rounding) {
         lines.push('- Patient added to ALERT medical rounding list for further review.');
+    }
+
+    // The band's recommended action, which is the only part of the score the ward can act on.
+    // Pre-ticked on the panel rather than unconditional: this states what was done, so the
+    // clinician who didn't do it needs to be able to take it out.
+    if (pics.action && s.chk_pics_action !== false) {
+        lines.push(`- ${pics.action}`);
     }
 
     if (!s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.stepdown_suitable !== false) {
@@ -334,7 +376,10 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
     if (sum) {
         sum.classList.add('script-updating');
-        sum.value = lines.join('\n').replace(/\\bnlr\\b/gi, 'NLR');
+        // Flattened to ASCII on the way out - see toDmrSafeText. The \b escapes in the NLR
+        // replacement used to be doubled, so the pattern looked for a literal backslash-b and
+        // never matched anything.
+        sum.value = toDmrSafeText(lines.join('\n')).replace(/\bnlr\b/g, 'NLR');
         sum.classList.remove('script-updating');
         const badge = $('manual_edit_badge');
         if (badge) badge.style.display = 'none';
@@ -367,7 +412,10 @@ export function generateHandoverLine(s, activeIssuesList = [], cat = null, red =
     const time = s.reviewTime || nowTimeStr();
     const parts = [`${dateStr} ${time} ${initials}.`];
 
-    parts.push(s.reviewModeType === 'chart' ? 'Chart r/v.' : 'Physical r/v.');
+    // Upper case because this is the column people scan when deciding whether a patient has
+    // actually been laid eyes on - a CAT 3 discharge shouldn't rest on chart reviews alone,
+    // and the spreadsheet is where that history lives.
+    parts.push(s.reviewModeType === 'chart' ? 'CHART R/V.' : 'PHYSICAL R/V.');
     parts.push(s.chk_use_mods ? `MODS ${s.mods_score || '--'}.` : `ADDS ${s.adds || '--'}.`);
 
     if (s.chk_bloods_nil_sig || s.bloods_status === 'nil_sig') parts.push('Bloods nil sig.');
@@ -406,5 +454,7 @@ export function generateHandoverLine(s, activeIssuesList = [], cat = null, red =
     else if (s.chk_continue_alert) parts.push('Continue ALERT.');
     if (s.chk_medical_rounding) parts.push('+ Medical rounding.');
 
-    return parts.join(' ').replace(/\s{2,}/g, ' ');
+    // Same ASCII flattening as the note: this line is pasted into the handover spreadsheet and
+    // inherits its wording from the same risk text.
+    return toDmrSafeText(parts.join(' ')).replace(/\s{2,}/g, ' ');
 }

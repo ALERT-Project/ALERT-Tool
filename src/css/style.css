@@ -280,6 +280,8 @@ header h1 .logo-em {
 /* Each group fills its grid cell, and its two options split that cell evenly. */
 .review-strip .radio-segmented-group { width: 100%; max-width: none; }
 .review-strip .radio-segmented-group label { flex: 1 1 0; min-width: 0; }
+.review-strip .segmented-group { width: 100%; max-width: none; margin: 0; }
+.review-strip .segmented-group .seg-btn { flex: 1 1 0; min-width: 0; }
 
 /* Field labels: kept for verification, but quieter so they stop competing with the data.
    Scoped to the field's own label - the labels *inside* a segmented group are the options
@@ -353,31 +355,51 @@ body.quick-review-active #quickGrid {
   scroll-margin-top: 90px;
 }
 #qgLeft, #qgRight { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-#qgBottom, #qrNewRiskAlert { grid-column: 1 / -1; }
+#qgTop, #qgBottom { grid-column: 1 / -1; }
 
-/* New risk flagged mid-review: loud, but it doesn't take the page away from you. */
-#qrNewRiskAlert[hidden] { display: none; }
-.qr-new-risk {
-  border: 2px solid var(--red);
-  border-radius: 12px;
-  background: #fef2f2;
-  padding: 12px 14px;
-  animation: qrRiskIn 0.25s ease;
-}
-@keyframes qrRiskIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-.qr-new-risk.amber { border-color: var(--amber); background: #fffbeb; }
-.qr-new-risk-head {
+/* Patient Details spans the top of the workspace: it's a form to fill in, not a rail tile,
+   and the identifiers have to stay editable in Quick Review. */
+#quickGrid #section-patient .grid { gap: 8px 10px; }
+#quickGrid #section-patient textarea { min-height: 44px; }
+#quickGrid #section-patient .review-strip { margin-bottom: 10px; }
+
+/* --- Notice region -------------------------------------------------------------------
+   One banner at a time, shared by every source that used to have a strip of its own. Loud
+   enough to read, never loud enough to take the page away from you. */
+.notice[hidden] { display: none; }
+.notice {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
-  font-weight: var(--fw-semibold);
-  color: var(--ink);
+  flex-wrap: wrap;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  background: var(--card);
+  animation: noticeIn 0.25s ease;
 }
-.qr-new-risk ul { margin: 8px 0 0 0; padding-left: 20px; font-size: var(--fs-sm); }
-.qr-new-risk li.red { color: var(--red); font-weight: var(--fw-semibold); }
-.qr-new-risk li.amber { color: #b45309; font-weight: var(--fw-semibold); }
-.qr-new-risk-foot { margin-top: 8px; font-size: var(--fs-xs); color: var(--muted); }
+@keyframes noticeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+.notice-red { border-color: var(--red); background: #fef2f2; }
+.notice-amber { border-color: var(--amber); background: #fffbeb; }
+.notice-info { border-color: var(--line); background: var(--bg); }
+
+.notice-body { flex: 1 1 320px; min-width: 0; }
+.notice-title { font-weight: var(--fw-semibold); color: var(--ink); }
+.notice-list { margin: 8px 0 0 0; padding-left: 20px; font-size: var(--fs-sm); }
+.notice-list li.red { color: var(--red); font-weight: var(--fw-semibold); }
+.notice-list li.amber { color: #b45309; font-weight: var(--fw-semibold); }
+.notice-foot { margin-top: 8px; font-size: var(--fs-xs); color: var(--muted); }
+.notice-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* Nothing is hidden, it is just queued - this says how much is waiting behind the one shown. */
+.notice-more {
+  align-self: center;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  white-space: nowrap;
+}
 /* Cards inside the grid supply their own gap; kill the stacked-flow margins. */
 #quickGrid > div > .card,
 #quickGrid > div > .accordion-wrapper,
@@ -1043,14 +1065,7 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
   margin-bottom: 4px;
 }
 
-#completeness_nudge {
-    font-size: var(--fs-lg);
-    font-weight: var(--fw-bold);
-    color: var(--blue-hint);
-    text-align: left;
-    margin-top: 12px;
-    margin-bottom: 12px;
-}
+/* #completeness_nudge removed - it is a notice now, styled by .notice-info. */
 
 .status { font-weight: var(--fw-semibold); }
 .status.red { color: var(--red); } 
@@ -1113,6 +1128,25 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
     width: 100%;
 }
 
+/* Therapeutic target for INR and APTT. Deliberately quiet - it sits under the value and only
+   earns attention when it is empty on a patient whose clotting is deranged. */
+.target-input {
+    font-size: var(--fs-hint);
+    margin-top: 4px;
+    padding: 3px 6px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text);
+}
+
+.target-input:focus {
+    border-style: solid;
+    border-color: var(--accent);
+}
+
 /* --- Animations --- */
 @keyframes pulse-border {
   0% { box-shadow: 0 0 0 0 rgba(0, 122, 122, 0.4); }
@@ -1120,10 +1154,122 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
   100% { box-shadow: 0 0 0 0 rgba(0, 122, 122, 0); }
 }
 
-.pulse-highlight {
-  animation: pulse-border 2s infinite;
-  border-radius: 10px;
-  border: 1px solid var(--accent);
+.follow-up-plan {
+    margin: 16px 0;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+}
+
+.follow-up-plan .section-title { margin-bottom: 6px; }
+
+/* Discharge prompt. Was a block of inline styles built in logic.js, and pulsed - which meant
+   it was animating for attention at the same time as several other banners. */
+.discharge-prompt-title {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.discharge-prompt-question {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+
+/* --- Privacy screen ------------------------------------------------------------------
+   Opaque, not translucent: the point is that nothing behind it is readable from across a
+   nurses' station. */
+#privacyScreen[hidden] { display: none; }
+#privacyScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.privacy-screen-panel {
+    text-align: center;
+    padding: 32px;
+    max-width: 360px;
+}
+
+.privacy-screen-icon { font-size: var(--fs-3xl); margin-bottom: 12px; }
+.privacy-screen-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--accent); }
+.privacy-screen-note {
+    font-size: var(--fs-sm);
+    color: var(--muted);
+    margin: 8px 0 20px 0;
+    line-height: var(--lh-body);
+}
+
+/* Offered suppression. Quiet by design - it is proposing that a risk be discounted, which
+   should never look like an alert. */
+.downtrend-suggestion[hidden] { display: none; }
+.downtrend-suggestion {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    border: 1px dashed var(--accent);
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+}
+
+/* Shared by the age and LOS mitigators - both were inline styles on the input. */
+.mitigate-reason-input {
+    font-size: var(--fs-hint);
+    padding: 6px 10px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--input-bg);
+    color: var(--text);
+}
+
+.bloods-date-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.bloods-date-row label {
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    font-weight: var(--fw-medium);
+}
+
+.bloods-date-row input { width: auto; flex: 0 1 auto; }
+
+.bloods-panel-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    align-items: stretch;
+}
+
+.prev-bloods-hint[hidden] { display: none; }
+.prev-bloods-hint {
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
 }
 
 /* --- Importer Styles --- */
@@ -1145,6 +1291,17 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
 /* Delimited line destined for Excel - fixed width makes it scannable before pasting. */
 #handoverLine { font-family: var(--font-mono); font-size: var(--fs-sm); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+
+/* Small centred confirmation dialog. Previously each of these was a block of inline styles
+   repeating the overlay geometry; they now share .modal-overlay / .modal-content. */
+.modal-confirm { max-width: 460px; text-align: center; padding: 28px; gap: 0; }
+.modal-confirm-icon { font-size: var(--fs-2xl); margin-bottom: 12px; }
+.modal-confirm-title { margin: 0 0 12px 0; color: var(--accent); font-size: var(--fs-lg); }
+.modal-confirm-body { margin: 0 0 20px 0; color: var(--text); font-size: var(--fs-base); line-height: var(--lh-body); }
+.modal-confirm-note { display: block; margin-top: 8px; font-size: var(--fs-sm); color: var(--muted); }
+.modal-confirm-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.modal-confirm-actions .btn { padding: 10px 24px; }
+.btn-confirm-yes { background: var(--green); color: #fff; border-color: var(--green); }
 
 #prevRisksBox {
     display: none;
@@ -1335,9 +1492,20 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
   color: var(--amber);
   border-color: rgba(245, 158, 11, 0.3);
 }
+/* CAT 3 was the one option left grey: it now carries its category colour like the other
+   two, so the row reads as red / amber / green at a glance. */
+.override-btn.green {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--green);
+  border-color: rgba(16, 185, 129, 0.3);
+}
 .override-btn.red:hover {
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.4);
+}
+.override-btn.green:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
 }
 .override-btn.amber:hover {
   background: rgba(245, 158, 11, 0.15);
@@ -1766,3 +1934,69 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 }
 
 
+
+/* --- PICS risk score panel ----------------------------------------------
+   Eleven scored items in one card. Reuses .toggle-label for the item rows so the
+   chips behave, save and restore exactly like the comorbidity chips - the only
+   additions here are the running total, the band chip, and the marks that say
+   which items the tool ticked on the clinician's behalf. */
+.pics-card {
+    padding: 14px 16px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+.pics-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.pics-title { font-size: var(--fs-base); color: var(--accent); margin: 0; }
+.pics-total { display: flex; align-items: center; gap: 8px; }
+.pics-score {
+    font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: var(--fw-semibold);
+    color: var(--ink); min-width: 1.5em; text-align: right;
+}
+/* Band colours are deliberately not the CAT red/amber/green: the score does not set a
+   category, and borrowing those hues would say it does. */
+.pics-band {
+    display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
+    font-size: var(--fs-xs); font-weight: var(--fw-semibold); border: 1px solid;
+}
+.pics-band.low { background: rgba(90,102,117,.08); color: var(--muted); border-color: rgba(90,102,117,.18); }
+.pics-band.moderate { background: rgba(37,99,235,.08); color: var(--blue-hint); border-color: rgba(37,99,235,.2); }
+.pics-band.high { background: rgba(127,29,58,.08); color: var(--maroon); border-color: rgba(127,29,58,.2); }
+
+.pics-tier {
+    font-size: var(--fs-hint); text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--accent); font-weight: var(--fw-semibold);
+    margin-top: 12px; margin-bottom: 6px;
+    border-bottom: 1px solid var(--line); padding-bottom: 2px;
+}
+.pics-tier:first-child { margin-top: 0; }
+.pics-row { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 6px; }
+.pics-points { font-family: var(--font-mono); font-size: var(--fs-xs); opacity: 0.75; }
+/* Says the tool ticked this, not the clinician - and stays visible after it is ticked,
+   which is the whole point of showing it. */
+.pics-auto {
+    font-size: var(--fs-xs); font-weight: var(--fw-medium); font-style: italic;
+    opacity: 0.8; margin-left: 6px;
+}
+.pics-suggestions:empty { display: none; }
+.pics-suggestion {
+    display: block; width: 100%; text-align: left; margin-top: 8px;
+    padding: 8px 12px; border-radius: 8px; cursor: pointer;
+    background: rgba(37,99,235,.06); border: 1px dashed rgba(37,99,235,.35);
+    color: var(--blue-hint); font-size: var(--fs-sm); font-weight: var(--fw-medium);
+}
+.pics-suggestion:hover { background: rgba(37,99,235,.12); }
+.pics-action {
+    margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+    background: var(--card); border: 1px solid var(--line);
+}
+.pics-action label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: var(--fs-sm); }
+.pics-action input { width: auto; margin-top: 2px; flex: none; }
+.pics-override { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.pics-override-label {
+    display: block; margin-bottom: 6px;
+    font-size: var(--fs-hint); color: var(--muted); font-weight: var(--fw-semibold);
+}

@@ -126,25 +126,21 @@
         <!-- Quick Review one-page workspace. Empty in full-review mode: enableQuickReviewMode()
              moves the live ADDS / bloods / lines / category / issues / notes nodes in here and
              puts them back on exit, so there is only ever one copy of each element in the DOM. -->
+        <!-- Single notice region. Sources register through notices.js; whichever is most
+             important is shown and the rest are counted. See notices.js for why. -->
+        <div id="noticeRegion" class="notice" hidden></div>
+
         <div id="qrBackdrop" hidden></div>
         <div id="quickGrid">
-            <div id="qrNewRiskAlert" hidden></div>
+            <div id="qgTop"></div>
             <div id="qgLeft"></div>
             <div id="qgRight"></div>
             <div id="qgBottom"></div>
         </div>
 
-        <div id="handoverBanner"
-            style="display:none; background:#e0f2fe; border:1px solid #0284c7; color:#0369a1; padding:14px 20px; border-radius:8px; margin-bottom:20px; font-weight:var(--fw-semibold); box-shadow:0 2px 8px rgba(0,0,0,0.05); align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:1.2rem;">📋</span>
-                <span style="font-size:var(--fs-base);"><strong>Shift Handover:</strong> Overnight team recommended discharge pending bloods & DMR review.</span>
-            </div>
-            <button id="btnApproveHandoverDischarge" class="btn small"
-                style="background:#0284c7; color:white; border:none; padding:8px 16px; font-weight:var(--fw-semibold); border-radius:6px; cursor:pointer;">
-                ⚡ Discharge Patient
-            </button>
-        </div>
+        <!-- The old #handoverBanner lived here. Its JS was removed in May 2026, leaving markup
+             that could never display. The overnight recommendation is now raised by the
+             importer as a notice - a prompt, not a one-click discharge. -->
 
         <div id="importModal" class="modal-overlay">
             <div class="modal-content">
@@ -301,6 +297,26 @@
                 <div class="col-2">
                     <label for="icuLos">ICU LOS (days)</label>
                     <input id="icuLos" type="number" min="0" />
+
+                    <!-- Shown by JS when LOS > 4. A long stay only escalates to red when
+                         something else is also wrong; this lets the clinician say the
+                         trajectory is good and stop that escalation, without pretending the
+                         long stay didn't happen - it still prints, marked as mitigated. -->
+                    <div id="los_risk_wrapper" style="display:none; margin-top: 6px;">
+                        <div id="btn_los_mitigated" class="age-mitigate-btn">
+                            Long stay but recovering well?
+                        </div>
+                        <div id="los_mitigate_reason_wrapper" style="display:none; margin-top:6px;">
+                            <input type="text" id="los_mitigate_reason"
+                                placeholder="Optional detail (e.g. mobilising, eating)" class="mitigate-reason-input" />
+                        </div>
+                    </div>
+
+                    <!-- Hidden seg group for state persistence of los_mitigated -->
+                    <div class="segmented-group" id="seg_los_mitigated" style="display:none;">
+                        <button type="button" class="seg-btn" data-value="true">Yes</button>
+                        <button type="button" class="seg-btn" data-value="false">No</button>
+                    </div>
                 </div>
                 <div id="stepdown_date_wrapper" style="display:contents;">
                     <div class="col-5">
@@ -769,11 +785,14 @@
                     <div id="infection_gate_content" class="risk-nested-panel" style="display:none;">
                         <div style="padding:10px; background:var(--bg); border-radius:8px; border:1px solid var(--line); margin-bottom:12px;">
                             <label class="question-label" style="font-size:var(--fs-sm); margin-bottom:8px; display:block;">Are
-                                infection markers downtrending, ADDS low and patient on appropriate antibiotics?</label>
+                                infection markers downtrending?</label>
                             <div class="segmented-group" id="seg_infection_downtrend" style="margin-bottom:8px;">
                                 <button class="seg-btn" data-value="true">Yes</button>
                                 <button class="seg-btn" data-value="false">No</button>
                             </div>
+                            <!-- Filled by computeAll when the scraped results support it. A
+                                 suggestion with a button, never an automatic setting. -->
+                            <div id="infection_downtrend_suggestion" class="downtrend-suggestion" hidden></div>
                         </div>
                         <div id="infectionMarkers"
                             style="margin-bottom:12px; padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--line);">
@@ -1518,18 +1537,38 @@
                             Recovery</div>
 
                         <div class="grid" style="row-gap:12px;">
-                            <div class="col-6">
-                                <div
-                                    style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
-                                    <label class="question-label"
-                                        style="font-size:var(--fs-base); margin-bottom:4px; display:block; color:var(--accent);">PICS? <span id="prev_pics_status" class="prev-datum"></span></label>
-                                    <div class="segmented-group" id="seg_pics">
-                                        <button type="button" class="seg-btn" data-value="positive">Positive</button>
-                                        <button type="button" class="seg-btn" data-value="negative">Negative</button>
+                            <div class="col-12">
+                                <div class="pics-card" id="pics_panel">
+                                    <div class="pics-head">
+                                        <label class="question-label pics-title">PICS Risk Score <span
+                                                id="prev_pics_status" class="prev-datum"></span></label>
+                                        <div class="pics-total">
+                                            <span class="pics-score" id="pics_score_value">0</span>
+                                            <span class="pics-band low" id="pics_band_chip">Low risk</span>
+                                        </div>
                                     </div>
-                                    <div id="pics_wrapper" style="display:none; margin-top:8px;">
-                                        <textarea id="pics_note" placeholder="additional context..."
-                                            style="min-height:50px;"></textarea>
+                                    <!-- Item rows are built from PICS_ITEMS in config.js so the panel and the
+                                         rules can never disagree about what the score contains. -->
+                                    <div id="pics_items"></div>
+                                    <div id="pics_suggestions" class="pics-suggestions"></div>
+                                    <div id="pics_action_wrapper" class="pics-action" style="display:none;">
+                                        <label>
+                                            <input type="checkbox" id="chk_pics_action" checked>
+                                            <span id="pics_action_text"></span>
+                                        </label>
+                                    </div>
+                                    <div class="pics-override">
+                                        <span class="pics-override-label">Overall assessment</span>
+                                        <div class="segmented-group" id="seg_pics">
+                                            <button type="button" class="seg-btn"
+                                                data-value="positive">Positive</button>
+                                            <button type="button" class="seg-btn"
+                                                data-value="negative">Negative</button>
+                                        </div>
+                                        <div id="pics_wrapper" style="display:none; margin-top:8px;">
+                                            <textarea id="pics_note" placeholder="additional context..."
+                                                style="min-height:50px;"></textarea>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1587,7 +1626,23 @@
             </div>
             <div class="panel" id="panel_bloods">
 
-                <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:stretch;">
+                <!-- Shown when nothing was scraped from a previous note. There is almost always
+                     a previous result somewhere; if the tool doesn't have it, the trends and
+                     the trend-based flags are silently unavailable, so this says where to look
+                     rather than leaving an absence to be inferred. -->
+                <div id="prev_bloods_hint" class="prev-bloods-hint" hidden>
+                    No previous results found — check iCM
+                </div>
+
+                <!-- Without this, "risen since last time" could mean twelve hours or four days,
+                     and every trend rule is reading a gap it cannot see. -->
+                <div class="bloods-date-row">
+                    <label for="bloods_date">Results taken</label>
+                    <input id="bloods_date" type="date" />
+                    <input id="bloods_time" type="time" />
+                </div>
+
+                <div class="bloods-panel-actions">
                     <button id="btnUseSameBloods" class="btn small"
                         style="flex:2; min-width:200px; border:1px dashed var(--accent); color:var(--accent); background:transparent;">
                         ⟲ Use same results as last review (no new bloods)
@@ -1675,10 +1730,12 @@
                     <div class="input-box blood-item"><label for="bl_inr">INR <span id="prev_bl_inr"
                                 class="prev-datum"></span></label><input id="bl_inr" type="number" step="0.1" />
                         <div class="trend-buttons" id="bl_inr_trend"></div><span class="range-subtext">(0.9-1.2)</span>
+                        <input id="inr_target" type="text" class="target-input" placeholder="target e.g. 2-3" />
                     </div>
                     <div class="input-box blood-item"><label for="bl_aptt">APTT <span id="prev_bl_aptt"
                                 class="prev-datum"></span></label><input id="bl_aptt" type="number" />
                         <div class="trend-buttons" id="bl_aptt_trend"></div><span class="range-subtext">(25-38)</span>
+                        <input id="aptt_target" type="text" class="target-input" placeholder="target e.g. 60-90" />
                     </div>
                 </div>
 
@@ -1710,7 +1767,7 @@
                     <div class="col-6"
                         style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
                         <label class="question-label" style="font-size:var(--fs-sm); margin-bottom:4px;">Are infection markers
-                            downtrending, ADDS low, and appropriate antibiotics prescribed?</label>
+                            downtrending?</label>
                         <div class="segmented-group" id="seg_infection_downtrend_bloods">
                             <button class="seg-btn" data-value="true">Yes</button>
                             <button class="seg-btn" data-value="false">No</button>
@@ -1814,6 +1871,17 @@
                     <h3 id="amberCount">0</h3>
                     <ul id="amberFlagList" class="flag-box-list"></ul>
                 </div>
+            </div>
+
+            <!-- The follow-up plan, including the 24/48/72h review ladder. computeAll() has
+                 been writing this HTML on every keystroke since February 2026, when the
+                 element it targets was deleted in a rewrite and the code that fills it was
+                 kept - so the plan has been computed and discarded ever since. It matters
+                 more now: the hours were deliberately taken out of the DMR note on the
+                 grounds that they stay on screen for the clinician, and this is the screen. -->
+            <div class="follow-up-plan">
+                <div class="section-title">Follow-up plan</div>
+                <div id="followUpInstructions"></div>
             </div>
 
             <div id="discharge_prompt"
@@ -1946,9 +2014,8 @@
                 </div>
             </div>
 
-            <div id="completeness_nudge"
-                style="margin-top:8px; margin-bottom:8px; font-size:var(--fs-sm); color:var(--muted); font-weight:var(--fw-semibold); text-align:left;">
-            </div>
+            <!-- The completeness nudge moved to the notice region: it was a fifth thing
+                 competing for attention, and it is the least urgent of them. -->
         </div>
 
         <div
@@ -1985,25 +2052,32 @@
         </div>
     </footer>
 
+    <!-- Privacy screen. Obscures the page on a shared workstation after a period of inactivity.
+         Deliberately does NOT clear anything: a clinician starts a review, walks to the patient
+         and comes back to finish it, and losing that work would be worse than the exposure. -->
+    <div id="privacyScreen" hidden>
+        <div class="privacy-screen-panel">
+            <div class="privacy-screen-icon">🔒</div>
+            <div class="privacy-screen-title">ALERT tool</div>
+            <div class="privacy-screen-note">Screen hidden after inactivity. Your review is unchanged.</div>
+            <button type="button" id="btnResumeFromPrivacy" class="btn btn-primary">Resume review</button>
+        </div>
+    </div>
+
     <div id="toast" class="toast"></div>
 
-    <!-- Green Discharge Confirmation Modal -->
-    <div id="greenDischargeConfirmModal"
-        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-        <div
-            style="background:white; padding:28px; border-radius:12px; max-width:460px; width:90%; box-shadow:0 4px 20px rgba(0,0,0,0.2); text-align:center;">
-            <div style="font-size:2rem; margin-bottom:12px;">⚠️</div>
-            <h3 style="margin:0 0 12px 0; color:var(--accent); font-size:var(--fs-lg);">Confirm Discharge Criteria</h3>
-            <p style="margin:0 0 20px 0; color:var(--text); font-size:var(--fs-base); line-height:1.5;">
-                Please confirm: Has this patient completed at least <strong>2 ward reviews</strong> AND has <strong
-                    style="white-space:nowrap;">24 hours</strong> <strong>passed</strong> since ICU stepdown?
-            </p>
-            <div style="display:flex; gap:12px; justify-content:center;">
-                <button id="btn_green_confirm_yes" class="btn small"
-                    style="background:var(--green); color:white; border-color:var(--green); padding:10px 24px;">Yes,
-                    criteria met</button>
-                <button id="btn_green_confirm_no" class="btn small" style="padding:10px 24px;">No, continue
-                    reviews</button>
+    <!-- Discharge Confirmation Modal. Shown for every category, not just CAT 3: the time
+         requirement is already enforced before the prompt can appear, so what is left to
+         confirm is the review history, which applies equally to a CAT 1 at 72 hours. The
+         question is built in JS because it changes with the current review mode. -->
+    <div id="dischargeConfirmModal" class="modal-overlay">
+        <div class="modal-content modal-confirm">
+            <div class="modal-confirm-icon">⚠️</div>
+            <h3 class="modal-confirm-title">Confirm Discharge Criteria</h3>
+            <p id="discharge_confirm_body" class="modal-confirm-body"></p>
+            <div class="modal-confirm-actions">
+                <button id="btn_discharge_confirm_yes" class="btn small btn-confirm-yes">Yes, criteria met</button>
+                <button id="btn_discharge_confirm_no" class="btn small">No, continue reviews</button>
             </div>
         </div>
     </div>

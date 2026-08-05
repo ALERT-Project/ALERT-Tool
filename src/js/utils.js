@@ -41,6 +41,71 @@ export function joinGrammatically(parts) {
     return [first, ...procRest].join(', ');
 }
 
+// Shared ward workstations are the exposure this closes. The browser remembers what the last
+// clinician typed and offers it back as a dropdown to whoever uses the machine next, and that
+// survives the tab closing because it is stored by the browser rather than by the tool.
+// spellcheck is off for the same reason: some browsers ship an "enhanced" spellchecker that
+// sends the contents of text fields to a remote service, which would break the tool's
+// no-transmission guarantee without a single line of our own code being involved.
+// Applied in JS rather than as markup so fields created after load are covered too - and there
+// are more of those than is obvious. The ADDS calculator injects its own vitals inputs from a
+// plugin that runs after initialize(), so a one-off pass at startup missed RR, SpO2, SBP, HR
+// and temperature entirely. An observer is used rather than a longer list of call sites,
+// because the next thing to inject a field will not remember to ask.
+export function disableAutofill(root = document) {
+    applyAutofillOff(root);
+    if (root === document && !document.__autofillObserver) {
+        const observer = new MutationObserver(records => {
+            records.forEach(r => r.addedNodes.forEach(node => {
+                if (node.nodeType !== 1) return;
+                if (node.matches?.('input, textarea')) applyAutofillOff({ querySelectorAll: () => [node] });
+                applyAutofillOff(node);
+            }));
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        document.__autofillObserver = observer;
+    }
+}
+
+function applyAutofillOff(root) {
+    root.querySelectorAll('input, textarea').forEach(el => {
+        el.setAttribute('autocomplete', 'off');
+        el.setAttribute('autocorrect', 'off');
+        el.setAttribute('spellcheck', 'false');
+    });
+}
+
+// The DMR does not render characters outside plain ASCII - they arrive as boxes or vanish. So
+// anything the tool generates for pasting into it gets normalised on the way out. The screen
+// keeps its arrows and symbols; only the text that leaves the tool is flattened.
+//
+// Mapped rather than stripped: silently deleting a character a future rule introduces would
+// turn "Temp 38.5°" into "Temp 38.5" and nobody would notice.
+const DMR_SUBSTITUTIONS = [
+    [/→/g, ' to '],       // →
+    [/←/g, ' from '],     // ←
+    [/↑/g, ' up'],        // ↑
+    [/↓/g, ' down'],      // ↓
+    [/[–—]/g, '-'],  // – —
+    [/[‘’]/g, "'"],  // ' '
+    [/[“”]/g, '"'],  // " "
+    [/…/g, '...'],        // …
+    [/≥/g, '>='],         // ≥
+    [/≤/g, '<='],         // ≤
+    [/°/g, ' deg'],       // °
+    [/µ/g, 'u'],          // µ
+    [/×/g, 'x'],          // ×
+    [/[₂²]/g, '2'],  // SpO₂ / m² - the tool writes plain digits, but pasted text may not
+    [/ /g, ' ']           // non-breaking space
+];
+
+export function toDmrSafeText(text) {
+    let out = String(text ?? '');
+    DMR_SUBSTITUTIONS.forEach(([re, rep]) => { out = out.replace(re, rep); });
+    // Collapse any double spacing the substitutions introduced, but not newlines.
+    return out.replace(/[ \t]{2,}/g, ' ');
+}
+
 export function showToast(msg, timeout = 2500) {
     const t = $('toast');
     if (t) {

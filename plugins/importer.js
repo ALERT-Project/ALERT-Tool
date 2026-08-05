@@ -70,12 +70,19 @@ document.addEventListener('DOMContentLoaded', () => {
         { test: /infection|sepsis|\bwcc\b|\bcrp\b|febrile|antibiotic/, gate: 'seg_infection', note: 'infection_note' },
         { test: /electrolyte|potassium|sodium|magnesium|phosphate/, gate: 'seg_electrolyte_gate', note: 'electrolyteConcern_note' },
         { test: /vaso|pressor|noradrenaline|metaraminol/, gate: 'seg_pressors', note: 'pressors_note' },
-        { test: /immobility|deconditio/, gate: 'seg_immobility', note: 'immobility_note' }
+        // Matches "immobility" and "immobile", so both the old wording and the immobile half of
+        // the combined deconditioning line carry. Deliberately does NOT match "deconditioning"
+        // on its own: that line is also produced for a long stay in a fully mobile patient, and
+        // setting the immobility gate from it would assert something the previous note didn't.
+        { test: /immobil/, gate: 'seg_immobility', note: 'immobility_note' }
     ];
 
     // Risks the tool re-derives from data it has already scraped. Staging the previous note's
     // wording as well would show the same risk twice.
-    const SELF_DERIVED_RISK = /prolonged icu stay|after-hours|^age \d/;
+    // "deconditioning risk" covers the combined line's long-stay half, which the tool recomputes
+    // from the ICU LOS it has already scraped. When that line also names immobility it is folded
+    // into the gate above and never reaches this test.
+    const SELF_DERIVED_RISK = /prolonged icu stay|deconditioning risk|after-hours|^age \d/;
 
     // Returns true when the line was folded into a gate, so the caller can skip staging it as
     // a separate issue - the gate produces its own issue with the tool's own wording.
@@ -131,10 +138,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // The previous shift's plan, when it was "discharge pending next bloods". Raised as a
+    // prompt for whoever picks the patient up, never as an action: the recommendation was made
+    // on yesterday's results by someone who cannot see today's, so the discharge decision still
+    // goes through the normal path and its criteria check.
+    //
+    // Matches the tool's own plan wording first, then looser phrasing for notes typed by hand.
+    const PENDING_BLOODS_PLAN = /pending discharge from alert|discharge[^.\n]{0,40}pending[^.\n]{0,20}blood/i;
+    const FOLLOWED_BLOODS = /specific bloods being followed:\s*([^\n]+)/i;
+
+    function flagPreviousPlan(text) {
+        if (!PENDING_BLOODS_PLAN.test(text)) return;
+        const detail = text.match(FOLLOWED_BLOODS);
+        if (window.flagPreviousRecommendation) {
+            window.flagPreviousRecommendation(detail ? detail[1].trim().replace(/[.\s]+$/, '') : '');
+        }
+    }
+
     function processDMR(text) {
         // --- 0. RESET ---
         window.prevBloods = {};
         const carryForward = true; // Always carry forward stable sections
+
+        flagPreviousPlan(text);
 
         // --- 1. DEMOGRAPHICS ---
         const ptMatch = text.match(/Patient:\s*([A-Za-z\s]+?)\s*\|/i);
@@ -300,8 +326,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const nutritionMatch = text.match(/Nutrition:\s*(.*)/i);
             if (nutritionMatch) setPrev('prev_nutrition', nutritionMatch[1]);
 
+            // Two formats reach this: the scored line this tool now writes, and the bare
+            // Positive/Negative that every note before it carries. The band and the score are
+            // the useful part of the first - the contributing items belong to that review, not
+            // this one - so it is trimmed rather than shown whole.
             const picsStatusMatch = text.match(/Post ICU Syndrome:\s*(.*)/i);
-            if (picsStatusMatch) setPrev('prev_pics_status', picsStatusMatch[1]);
+            if (picsStatusMatch) {
+                const scored = picsStatusMatch[1].match(/^(.*?risk)\s*-\s*PICS score\s*(\d+)/i);
+                setPrev('prev_pics_status', scored ? `${scored[1]} (score ${scored[2]})` : picsStatusMatch[1]);
+            }
 
             const sleepMatch = text.match(/Sleep:\s*(.*)/i);
             if (sleepMatch) setPrev('prev_sleep', sleepMatch[1]);
@@ -342,6 +375,14 @@ document.addEventListener('DOMContentLoaded', () => {
             getB(/ALT\s*(\d+)/i, 'prev_bl_alt', 'alt');
             getB(/INR\s*([\d\.]+)/i, 'prev_bl_inr', 'inr');
             getB(/APTT\s*(\d+)/i, 'prev_bl_aptt', 'aptt');
+
+            // When the previous note recorded when its results were taken, keep it: the gap
+            // between two results is what makes a trend mean anything, and the clinician
+            // otherwise has to remember it. Stored on prevBloods rather than filled into the
+            // date field, which describes today's results, not yesterday's.
+            const takenMatch = bText.match(/taken\s+(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/i) ||
+                text.match(/Bloods taken:\s*([^\n]+)/i);
+            if (takenMatch && window.prevBloods) window.prevBloods._takenAt = takenMatch[1].trim();
 
             // --- Auto-detect worsening Cr ---
             const crMatch = text.match(/Cr\s*(\d+)/i);

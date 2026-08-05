@@ -1,4 +1,4 @@
-import { STORAGE_KEY, UNDO_KEY, ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs, selectInputs, deviceTypes } from './config.js';
+import { STORAGE_KEY, UNDO_KEY, ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs, selectInputs, deviceTypes, PICS_ITEMS } from './config.js';
 import { $, showToast } from './utils.js';
 import { handleSegmentClick, updateWardOptions, updateReviewTypeVisibility, updateWardOtherVisibility, createDeviceEntry, updateDevicesSectionVisibility, toggleOxyFields, toggleInfusionsBox, toggleBowelDate } from './ui.js';
 
@@ -92,10 +92,12 @@ export function reconcileAutoIssues(currentKeys) {
     });
 }
 
+// Per-risk toasts are retired. A busy patient could fire half a dozen of them in a row while
+// the clinician was still typing, each one covering the footer for three seconds. The Review
+// List already holds every risk, and genuinely new ones raise a notice. Kept as a no-op that
+// still records the key, because that set is what stops a risk being treated as new twice.
 export function maybeToastNewRisk(key, text) {
-    if (toastedRiskKeys.has(key)) return;
     toastedRiskKeys.add(key);
-    showToast(`New risk flagged: ${text}`, 3000);
 }
 
 export function renderScrapedIssuesList() {
@@ -107,8 +109,9 @@ export function renderScrapedIssuesList() {
     const count = $('issues_count');
     const openCount = issues.filter(i => !i.resolved).length;
     if (count) count.textContent = openCount ? `(${openCount})` : '';
+    // An empty list stays empty - the add row underneath already says what it's for.
     if (issues.length === 0) {
-        list.innerHTML = '<div style="color:var(--muted); font-size:0.9rem;">Nothing staged</div>';
+        list.innerHTML = '';
         return;
     }
     const BIN_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
@@ -220,12 +223,19 @@ export function getState() {
         state[id] = group?.querySelector('.select-btn.active')?.dataset.value || '';
     });
 
+    // Which PICS items the clinician has answered themselves. Without this the tool would
+    // re-derive an item on the next render and quietly undo the correction - the same reason
+    // the trend arrows carry dataset.manual.
+    state.pics_manual = PICS_ITEMS
+        .filter(item => $(`toggle_${item.id}`)?.dataset.manual === 'true')
+        .map(item => item.id);
+
     state['reviewType'] = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
     state['clinicianRole'] = document.querySelector('input[name="clinicianRole"]:checked')?.value || 'ALERT CNS';
     state['reviewModeType'] = document.querySelector('input[name="reviewModeType"]:checked')?.value || 'physical';
     state.activeIssues = activeIssues;
 
-    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods'].forEach(id => {
+    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods', 'chk_pics_action'].forEach(id => {
         const el = $(id);
         if (el) state[id] = el.checked;
     });
@@ -246,6 +256,9 @@ export function getState() {
 
     document.querySelectorAll('.trend-buttons').forEach(group => {
         state[group.id] = group.querySelector('.trend-btn.active')?.dataset.value || '';
+        // Whether the clinician set this arrow themselves has to survive a refresh, or the
+        // auto-calculation would overwrite their choice the moment the page reloaded.
+        if (group.dataset.manual === 'true') state[`${group.id}__manual`] = true;
     });
 
     return state;
@@ -291,6 +304,13 @@ export function restoreState(state) {
         }
     });
 
+    if (Array.isArray(state.pics_manual)) {
+        state.pics_manual.forEach(id => {
+            const el = $(`toggle_${id}`);
+            if (el) el.dataset.manual = 'true';
+        });
+    }
+
     if (state['comorbs_gate'] === undefined) {
         const anyComorb = toggleInputs.filter(k => k.startsWith('comorb_') && state[k]).length > 0;
         if (anyComorb) {
@@ -335,7 +355,7 @@ export function restoreState(state) {
         renderScrapedIssuesList();
     }
 
-    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods'].forEach(id => {
+    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods', 'chk_pics_action'].forEach(id => {
         const el = $(id);
         if (el && state[id] !== undefined) el.checked = state[id];
     });
@@ -377,6 +397,7 @@ export function restoreState(state) {
     updateDevicesSectionVisibility();
 
     document.querySelectorAll('.trend-buttons').forEach(group => {
+        if (state[`${group.id}__manual`]) group.dataset.manual = 'true';
         if (state[group.id]) group.querySelector(`.trend-btn[data-value="${state[group.id]}"]`)?.classList.add('active');
     });
 

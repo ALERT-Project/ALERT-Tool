@@ -1,5 +1,6 @@
-import { $, debounce, showToast } from './utils.js';
-import { normalRanges, comorbMap, toggleInputs, staticInputs, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY } from './config.js';
+import { $, debounce, showToast, disableAutofill } from './utils.js';
+import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
+import { normalRanges, comorbMap, toggleInputs, staticInputs, PICS_ITEMS, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY } from './config.js';
 import {
     getState, saveState, pushUndo, isQuickReviewMode, setQuickReviewMode, initialQuickReviewRisks,
     setInitialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured,
@@ -21,6 +22,86 @@ export function checkBloodRanges() {
             } else {
                 parent?.classList.remove('blood-abnormal');
             }
+        }
+    }
+}
+
+// --- PICS risk score panel ---------------------------------------------------------------
+// The rows are generated from PICS_ITEMS rather than written into index.html, so adding or
+// reweighting an item is one edit in config.js and the panel, the rules and the summary all
+// move together. Rows carry .toggle-label, which means the existing chip handler in main.js
+// and the generic toggleInputs save/restore in state.js already cover them.
+export function buildPicsPanel() {
+    const host = $('pics_items');
+    if (!host || host.dataset.built === 'true') return;
+
+    let lastTier = null;
+    const parts = [];
+    PICS_ITEMS.forEach(item => {
+        if (item.tier !== lastTier) {
+            const pts = item.points;
+            parts.push(`<div class="pics-tier">${item.tier} - ${pts} point${pts === 1 ? '' : 's'} each</div>`);
+            lastTier = item.tier;
+        }
+        parts.push(`<div class="pics-row">
+            <div class="toggle-label" id="toggle_${item.id}" data-value="false" role="button" tabindex="0"
+                 title="${item.code}, ${item.points} point${item.points === 1 ? '' : 's'}">
+                <span>${item.label}<span class="pics-auto" data-auto-for="${item.id}" hidden></span></span>
+                <span class="pics-points">+${item.points}</span>
+                <span class="state"></span>
+            </div>
+        </div>`);
+    });
+
+    host.innerHTML = parts.join('');
+    host.dataset.built = 'true';
+}
+
+// Paints the computed score back onto the panel. Everything shown here is decided by
+// evaluatePicsScore() - including which items are ticked - so an auto-tick the clinician has
+// since overruled arrives already resolved and this function never has to know the difference.
+export function renderPicsPanel(pics) {
+    if (!pics || $('pics_items')?.dataset.built !== 'true') return;
+
+    pics.items.forEach(item => {
+        const el = $(`toggle_${item.id}`);
+        if (!el) return;
+        el.dataset.value = item.ticked ? 'true' : 'false';
+        el.classList.toggle('active', item.ticked);
+        const autoTag = el.querySelector(`[data-auto-for="${item.id}"]`);
+        if (autoTag) {
+            autoTag.hidden = !item.auto;
+            autoTag.textContent = item.auto ? ` (auto: ${item.derivedFrom})` : '';
+        }
+    });
+
+    const scoreEl = $('pics_score_value');
+    if (scoreEl) scoreEl.textContent = String(pics.score);
+    const chip = $('pics_band_chip');
+    if (chip) {
+        chip.className = `pics-band ${pics.band}`;
+        chip.textContent = `${pics.bandLabel} (${pics.band === 'high' ? '6+' : pics.band === 'moderate' ? '3-5' : '0-2'})`;
+    }
+
+    // Suggestions offer, never set - the same contract the infection downtrend prompt follows.
+    // These are the items where a field is close enough to be worth asking about but not close
+    // enough for the tool to answer: "psychological concern" is not "pre-existing diagnosis",
+    // and the pressor toggles never recorded a dose.
+    const sugHost = $('pics_suggestions');
+    if (sugHost) {
+        sugHost.innerHTML = pics.suggestions.map(sug =>
+            `<button type="button" class="pics-suggestion" data-pics-suggest="${sug.id}">${sug.reason}</button>`
+        ).join('');
+    }
+
+    const actionWrapper = $('pics_action_wrapper');
+    const actionText = $('pics_action_text');
+    if (actionWrapper && actionText) {
+        if (pics.action) {
+            actionText.textContent = `Add to plan: ${pics.action}`;
+            actionWrapper.style.display = 'block';
+        } else {
+            actionWrapper.style.display = 'none';
         }
     }
 }
@@ -178,7 +259,9 @@ export function createDeviceEntry(type, val = '', insertionDate = '') {
     html += `</div>`;
 
     div.innerHTML = html;
-    
+    // Device rows are built after load, so they miss the pass initialize() makes.
+    disableAutofill(div);
+
     if (type === 'Tracheostomy') {
         const tracheBtn = document.querySelector('#oxMod .select-btn[data-value="Trache"]');
         if (tracheBtn && !tracheBtn.classList.contains('active')) {
@@ -431,13 +514,20 @@ export function clearData() {
 
     document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
     document.querySelectorAll('input[type="checkbox"]').forEach(e => e.checked = false);
-    document.querySelectorAll('.toggle-label').forEach(e => e.dataset.value = 'false');
+    document.querySelectorAll('.toggle-label').forEach(e => {
+        e.dataset.value = 'false';
+        // A new patient inherits none of the last one's overrides, or their PICS items would
+        // stay pinned to answers given about somebody else.
+        delete e.dataset.manual;
+    });
     document.querySelectorAll('.blood-abnormal').forEach(e => e.classList.remove('blood-abnormal'));
 
     const dc = $('devices-container'); if (dc) dc.innerHTML = '';
     const sc = $('selected_comorbs_display');
     if (sc) { sc.innerHTML = ''; sc.style.display = 'none'; }
     document.querySelectorAll('.prev-datum').forEach(el => el.textContent = '');
+    // New patient, so any arrow the last clinician set by hand is no longer theirs to keep.
+    document.querySelectorAll('.trend-buttons').forEach(g => delete g.dataset.manual);
     window.prevBloods = {};
     const pb = $('prevRisksBox'); if (pb) pb.style.display = 'none';
 
@@ -501,6 +591,12 @@ export function clearData() {
 
     const resetEv = new CustomEvent('resetAddsCalc');
     document.dispatchEvent(resetEv);
+
+    // These are driven by the debounced compute() in main.js, not by computeAll, so clearing
+    // the form left both mitigator boxes open on the next patient with the previous patient's
+    // reason still in them.
+    updateAgeMitigationUI();
+    updateLosMitigationUI();
 
     computeAll();
     showToast("Data cleared", 2000);
@@ -680,9 +776,6 @@ function answerCarriedForward(wrapperId, action) {
 let newRiskLog = [];
 
 export function showNewRiskAlert(newRed = [], newAmber = []) {
-    const box = $('qrNewRiskAlert');
-    if (!box) return;
-
     // The same wording can arrive from two sources (e.g. a gate and its detail field);
     // list it once so the count matches what's on screen.
     const seen = new Set(newRiskLog.map(r => r.text));
@@ -706,25 +799,23 @@ export function showNewRiskAlert(newRed = [], newAmber = []) {
         amberCount ? `${amberCount} amber` : ''
     ].filter(Boolean).join(' and ');
 
-    box.className = redCount ? 'qr-new-risk red' : 'qr-new-risk amber';
-    box.innerHTML = `
-        <div class="qr-new-risk-head">
-            <span>⚠️ New risk flagged since this review started (${counts})</span>
-            <button type="button" id="qrNewRiskDismiss" class="btn small">Dismiss</button>
-        </div>
-        <ul>${newRiskLog.map(r => `<li class="${r.severity}">${r.text}</li>`).join('')}</ul>
-        <div class="qr-new-risk-foot">Staged in the issues list. Add detail there or in Quick Notes, or exit to
-            the full assessment if this needs a fuller work-up.</div>`;
-    box.hidden = false;
-    $('qrNewRiskDismiss')?.addEventListener('click', clearNewRiskAlert);
-
-    showToast(`⚠️ New risk flagged: ${[...newRed, ...newAmber].join(', ')}`, 4000);
+    // No toast alongside this. The notice says it, the Review List holds the detail, and a
+    // toast for every risk on top of a banner about the same risks was the loudest part of the
+    // interface for the least information.
+    setNotice('new-risk', {
+        priority: NOTICE_PRIORITY.NEW_RISK,
+        tone: redCount ? 'red' : 'amber',
+        html: `<div class="notice-title">⚠️ New risk flagged since this review started (${counts})</div>
+               <ul class="notice-list">${newRiskLog.map(r => `<li class="${r.severity}">${r.text}</li>`).join('')}</ul>
+               <div class="notice-foot">Staged in the Review List. Add detail there or in Quick Notes, or exit to
+                   the full assessment if this needs a fuller work-up.</div>`,
+        actions: [{ id: 'dismiss-new-risk', label: 'Dismiss', onClick: clearNewRiskAlert }]
+    });
 }
 
 export function clearNewRiskAlert() {
     newRiskLog = [];
-    const box = $('qrNewRiskAlert');
-    if (box) { box.hidden = true; box.innerHTML = ''; }
+    clearNotice('new-risk');
 }
 
 // Quick Review only: float the bloods card over the page while its details are open.
@@ -782,10 +873,12 @@ export function closeAccordion(panelId, btnSelector) {
     setPanelOpen($(panelId), document.querySelector(btnSelector), false);
 }
 
-// Quick Review keeps only what a Day 2+ follow-up needs: ADDS (+calculator), Bloods,
-// Lines, category selection, Issues and Quick Notes - laid out as one page so the review
-// can be done in ~5 minutes. Everything else is hidden.
-const QUICK_REVIEW_SECTIONS_TO_HIDE = ['section-patient', 'section-risk', 'section-ae', 'section-context'];
+// Quick Review keeps only what a Day 2+ follow-up needs: Patient Details, ADDS
+// (+calculator), Bloods, Lines, category selection, Issues and Quick Notes - laid out as one
+// page so the review can be done in ~5 minutes. Everything else is hidden. Patient Details
+// stays because the note's identifiers and the stepdown clock come from it, and a Quick
+// Review is often the first time they're typed.
+const QUICK_REVIEW_SECTIONS_TO_HIDE = ['section-risk', 'section-ae', 'section-context'];
 const QUICK_REVIEW_ONLY_SECTIONS = ['quick_notes_wrapper', 'scraped_risks_wrapper'];
 
 // Which live nodes get moved into which cell of #quickGrid, in the order they should appear.
@@ -794,6 +887,7 @@ const QUICK_REVIEW_ONLY_SECTIONS = ['quick_notes_wrapper', 'scraped_risks_wrappe
 // Lines live in the wide column: at 2/3 width each device fits on one row instead of
 // wrapping to three in the rail, and they fill the space the notes card leaves over.
 const QUICK_GRID_LAYOUT = {
+    qgTop: ['section-patient'],
     qgLeft: ['adds_wrapper', 'section-bloods', 'override_card', 'quick_notes_wrapper'],
     qgRight: ['carried_forward_card', 'scraped_risks_wrapper', 'section-devices'],
     qgBottom: ['section-category']
@@ -1026,6 +1120,45 @@ export function openMobileNav() {
 export function closeMobileNav() {
     const overlay = $('mobileNavOverlay');
     if (overlay) overlay.classList.remove('active');
+}
+
+// Prolonged-stay mitigator. Deliberately plainer than the age one: a long ICU stay is a fact
+// rather than a warning, so the control appears without turning the field amber first.
+export function updateLosMitigationUI() {
+    const losInput = $('icuLos');
+    const wrapper = $('los_risk_wrapper');
+    const reasonWrapper = $('los_mitigate_reason_wrapper');
+    const reasonInput = $('los_mitigate_reason');
+    const seg = $('seg_los_mitigated');
+    const clickBox = $('btn_los_mitigated');
+    if (!losInput || !wrapper) return;
+
+    // Not offered for an immobile patient. Saying the trajectory to recovery is established
+    // sits badly with a patient who isn't mobile, and the rules ignore the mitigation in that
+    // case anyway - so the control would be asking a question its answer wouldn't be used for.
+    const immobileBtn = $('seg_immobility')?.querySelector('.seg-btn.active');
+    const isImmobile = immobileBtn?.dataset.value === 'true';
+
+    const los = parseFloat(losInput.value);
+    if (isNaN(los) || los <= 4 || isImmobile) {
+        wrapper.style.display = 'none';
+        if (reasonWrapper) reasonWrapper.style.display = 'none';
+        if (reasonInput) reasonInput.value = '';
+        seg?.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.value === 'false'));
+        return;
+    }
+
+    wrapper.style.display = 'block';
+    const activeBtn = seg?.querySelector('.seg-btn.active');
+    const isMitigated = activeBtn ? (activeBtn.dataset.value === 'true') : false;
+
+    if (reasonWrapper) reasonWrapper.style.display = isMitigated ? 'block' : 'none';
+    if (clickBox) {
+        clickBox.className = isMitigated ? 'age-mitigate-btn mitigated' : 'age-mitigate-btn';
+        clickBox.innerHTML = isMitigated
+            ? '✓ Recovering appropriately'
+            : 'Long stay but recovering well?';
+    }
 }
 
 export function updateAgeMitigationUI() {

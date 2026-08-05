@@ -1,668 +1,69 @@
-import { $, num, sentenceCase, joinGrammatically, showToast } from './utils.js';
-import { comorbMap, toggleInputs, normalRanges, GATE_LINKED_BLOODS, BLOOD_LABELS } from './config.js';
+import { $, num } from './utils.js';
+import { normalRanges } from './config.js';
 import {
     getState, isQuickReviewMode, initialQuickReviewRisks, quickReviewBaselineCaptured,
-    setQuickReviewBaselineCaptured, previousCategoryData,
+    setQuickReviewBaselineCaptured,
     addActiveIssue, maybeToastNewRisk, reconcileAutoIssues, renderScrapedIssuesList
 } from './state.js';
-import { updateSidebarRiskBadges, maybeOfferQuickReview, refreshCategorySelect, showNewRiskAlert, renderCarriedForward } from './ui.js';
+import {
+    updateSidebarRiskBadges, maybeOfferQuickReview, refreshCategorySelect, showNewRiskAlert,
+    renderCarriedForward, updateAgeMitigationUI, updateLosMitigationUI, renderPicsPanel
+} from './ui.js';
+import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
+import { applyTrendArrows } from './trends.js';
+import { evaluateRisks, calculateWardTime } from './rules.js';
 
-export function calculateWardTime(dateStr, timeStr, isPre) {
-    if (isPre) return { hours: 0, text: '(Pre-Stepdown)' };
-    if (!dateStr) return { hours: 0, text: '' };
+// Re-exported: the rules moved to rules.js, but callers still import this from here.
+export { calculateWardTime };
 
-    let h = 16;
-    let min = 0;
-    if (timeStr && timeStr.includes(':')) {
-        const parts = timeStr.split(':');
-        h = parseInt(parts[0], 10);
-        min = parseInt(parts[1], 10);
-    } else if (timeStr) {
-        h = { 'Morning': 9, 'Afternoon': 15, 'Evening': 18, 'Night': 21 }[timeStr] || 18;
-    }
-
-    const [y, m, d] = dateStr.split('-');
-    const stepObj = new Date(y, m - 1, d, h, min);
-    const diffHours = (new Date() - stepObj) / 3600000;
-
-    if (diffHours < 0) return { hours: diffHours, text: "(Planned Stepdown)" };
-
-    if (diffHours < 12) {
-        return { hours: diffHours, text: `${Math.round(diffHours)} hours` };
-    } else if (diffHours <= 48) {
-        const halfDays = Math.round((diffHours / 24) * 2) / 2;
-        return { hours: diffHours, text: `${halfDays} days` };
-    } else {
-        const days = Math.round(diffHours / 24);
-        return { hours: diffHours, text: `${days} days` };
-    }
-}
-
+// Everything the risk model decides now lives in rules.js as a pure function. What remains
+// here is the interface half: read the form, hand the state to the rules, then paint the
+// answer back onto the page. The split is what makes the rules testable without a browser,
+// and it is the only piece of this tool that would move to another platform intact.
 export function computeAll() {
     try {
         const s = getState();
-        console.log('computeAll called, state keys:', Object.keys(s).length);
-        const red = [], amber = [];
-        const suppressedRisks = [];
-        const flagged = { red: [], amber: [] };
 
-        const pmhSubtitle = $('pmh_subtitle');
-        const hasComorbidities = Object.keys(comorbMap).some(key => s[key]);
-        const hasPmhNote = s.pmh_note && s.pmh_note.trim().length > 0;
-        if (pmhSubtitle) {
-            pmhSubtitle.style.display = (hasComorbidities || hasPmhNote) ? 'block' : 'none';
+        // Fields the tool fills in on the clinician's behalf. Done before evaluation because
+        // they are derived from state rather than from the assessment, and skipped entirely
+        // once the clinician has typed over them.
+        autofillDerivedFields(s);
+
+        const ahGroup = document.querySelector('#seg_after_hours');
+        const result = evaluateRisks(s, {
+            prevBloods: window.prevBloods || {},
+            afterHoursManual: ahGroup ? ahGroup.dataset.manual === 'true' : false
+        });
+
+        // The rules report what after-hours should be; applying it to the control and to the
+        // state object is the interface's job.
+        if (result.afterHoursDerived !== null) {
+            s.after_hours = result.afterHoursDerived;
+            const yes = document.querySelector('#seg_after_hours .seg-btn[data-value="true"]');
+            const no = document.querySelector('#seg_after_hours .seg-btn[data-value="false"]');
+            if (result.afterHoursDerived) { yes?.classList.add('active'); no?.classList.remove('active'); }
+            else { no?.classList.add('active'); yes?.classList.remove('active'); }
         }
 
-        const riskEntries = [];
-        const add = (list, txt, id, type, noteValue = null) => {
-            let finalTxt = txt;
-            if (noteValue && noteValue.trim()) finalTxt = `${txt} (${noteValue.trim()})`;
-            list.push(finalTxt);
-            if (id) {
-                flagged[type].push(id);
-                riskEntries.push({ text: finalTxt, id, type });
-                // Every risk factor tees into Active Issues; toast only on first appearance.
-                const { isNew } = addActiveIssue({ text: finalTxt, source: 'auto', severity: type, key: id });
-                if (isNew) maybeToastNewRisk(id, finalTxt);
-            }
-        };
+        // Issues are staged in the order the rules produced them, so the Review List reads the
+        // same way it did when this was all one interleaved function.
+        result.issues.forEach(issue => {
+            const { isNew } = addActiveIssue(issue);
+            if (isNew && issue.source === 'auto') maybeToastNewRisk(issue.key, issue.text);
+        });
 
-        // Abnormal bloods are surfaced as informational issues only - deliberately NOT pushed
-        // into red/amber, so they never force a category on their own. Category behaviour is
-        // therefore identical in Quick Review and full review; out-of-range values keep their
-        // existing visual highlight via checkBloodRanges().
-        const bloodIssueKeys = [];
-        if (!s.chk_bloods_nil_sig && s.bloods_status !== 'nil_sig' && s.bloods_status !== 'not_checked') {
-            GATE_LINKED_BLOODS.forEach(key => {
-                const range = normalRanges[key];
-                if (!range) return;
-                const bid = `bl_${key}`;
-                const val = num(s[bid]);
-                if (val === null) return;
-                if (val < range.low || val > range.high) {
-                    const label = BLOOD_LABELS[key] || key.replace(/_review$/, '').toUpperCase();
-                    bloodIssueKeys.push(bid);
-                    addActiveIssue({ text: `Abnormal ${label} ${val}`, source: 'bloods', severity: 'info', key: bid });
-                }
-            });
+        if (s.bloods_status !== 'nil_sig' && s.bloods_status !== 'not_checked' && !s.chk_bloods_nil_sig) {
+            applyTrendArrows(s, window.prevBloods);
         }
-
-        const neut = num(s.bl_neut) || num(s.neut);
-        const lymph = num(s.bl_lymph) || num(s.lymph);
-        const nlrEl = $('nlrCalc');
-        if (nlrEl) {
-            if (neut > 0 && lymph > 0) {
-                const nlr = (neut / lymph).toFixed(2);
-                nlrEl.textContent = `NLR: ${nlr}`;
-                nlrEl.style.borderColor = (nlr > 10) ? 'var(--red)' : 'var(--line)';
-            } else {
-                nlrEl.textContent = `NLR: --`;
-            }
-        }
-
-        const fn = $('footerName'); if (fn) fn.textContent = s.ptName || '--';
-        const fl = $('footerLocation'); if (fl) fl.textContent = `${s.ptWard || '--'} ${s.ptBed || ''}`;
-        const fa = $('footerAdmission'); if (fa) fa.textContent = s.ptAdmissionReason || '--';
-
-        const isPre = s.reviewType === 'pre';
-        const timeData = calculateWardTime(s.stepdownDate, s.stepdownTime, isPre);
-        const isRecent = isPre || (timeData.hours < 24);
-
-        if (!isPre && s.stepdownDate) {
-            const ahGroup = document.querySelector('#seg_after_hours');
-            // Only auto-calculate if there's no manual override
-            if (!ahGroup || ahGroup.dataset.manual !== 'true') {
-                // Parse the actual stepdown date/time to determine if discharge was "after-hours"
-                const [y, m, d] = s.stepdownDate.split('-');
-                let stepH = 16;
-                if (s.stepdownTime && s.stepdownTime.includes(':')) {
-                    stepH = parseInt(s.stepdownTime.split(':')[0], 10);
-                }
-
-                const stepObj = new Date(y, m - 1, d, stepH, 0);
-                const stepDay = stepObj.getDay();
-                const isWeekend = stepDay === 0 || stepDay === 6;
-                const isAfterHoursStepdown = stepH >= 16 || stepH < 9;
-
-                let autoAh = false;
-                if (timeData.hours <= 24) {
-                    // Flag if the DISCHARGE was outside Mon-Fri 09:00-16:00, or it was a weekend
-                    if (isAfterHoursStepdown || isWeekend) {
-                        autoAh = true;
-                    }
-                }
-
-                s.after_hours = autoAh;
-                const toggleAhYes = document.querySelector('#seg_after_hours .seg-btn[data-value="true"]');
-                const toggleAhNo = document.querySelector('#seg_after_hours .seg-btn[data-value="false"]');
-                if (autoAh && toggleAhYes) {
-                    toggleAhYes.classList.add('active');
-                    toggleAhNo?.classList.remove('active');
-                } else if (!autoAh && toggleAhNo) {
-                    toggleAhNo.classList.add('active');
-                    toggleAhYes?.classList.remove('active');
-                }
-            }
-        }
-
-        const timeOffEl = $('pressor_time_off_display');
-        const recentKeys = ['pressor_recent_norad', 'pressor_recent_met', 'pressor_recent_gtn', 'pressor_recent_dob', 'pressor_recent_mid', 'pressor_recent_other'];
-        const currentKeys = ['pressor_current_mid', 'pressor_current_other'];
-
-        let hasRecent = recentKeys.some(k => s[k]);
-        let hasCurrent = currentKeys.some(k => s[k]);
-
-        if (timeOffEl) {
-            if (hasRecent && s.pressor_ceased_time) {
-                const now = new Date();
-                const [cH, cM] = s.pressor_ceased_time.split(':');
-                const ceasedDate = new Date();
-                ceasedDate.setHours(cH, cM);
-                if (ceasedDate > now) ceasedDate.setDate(ceasedDate.getDate() - 1);
-                const diffMs = now - ceasedDate;
-                const diffHrs = Math.floor(diffMs / 3600000);
-                timeOffEl.textContent = `~${diffHrs} hrs ago`;
-            } else {
-                timeOffEl.textContent = '';
-            }
-        }
-
-        if (hasCurrent || hasRecent) {
-            let details = [];
-            let currentList = [];
-            currentKeys.forEach(k => {
-                if (s[k]) {
-                    let label = k.replace('pressor_current_', '').replace('mid', 'Midodrine');
-                    if (k === 'pressor_current_other') label = `Other (${s.pressor_current_other_note || ''})`;
-                    currentList.push(label);
-                }
-            });
-            if (currentList.length > 0) {
-                details.push(`Current vasoactive support - ${joinGrammatically(currentList)}`);
-            }
-            if (hasRecent) {
-                let recentsList = [];
-                recentKeys.forEach(k => {
-                    if (s[k]) {
-                        let label = k.replace('pressor_recent_', '').replace('norad', 'Noradrenaline').replace('met', 'Metaraminol').replace('gtn', 'GTN').replace('dob', 'Dobutamine').replace('mid', 'Midodrine');
-                        if (k === 'pressor_recent_other') label = `Other (${s.pressor_recent_other_note || ''})`;
-                        recentsList.push(label);
-                    }
-                });
-                let recentPart = `Recent vasoactive support, ${joinGrammatically(recentsList)}`;
-                if (s.pressor_ceased_time) recentPart += ` - ceased at approximately ${s.pressor_ceased_time}`;
-                details.push(recentPart);
-            }
-            add(amber, details.join('. '), 'seg_pressors', 'amber', s.pressors_note);
-        }
-
-        const adds = num(s.adds);
-        // The score field holds MODS when the clinician has switched to it, so the flag has to
-        // name the chart the number actually came from.
-        const scoreName = s.chk_use_mods ? 'MODS' : 'ADDS';
-        if (adds !== null) {
-            if (adds >= 6) add(red, `Elevated ${scoreName} ${adds}`, 'adds', 'red');
-            else if (adds >= 4) add(red, `Elevated ${scoreName} ${adds}`, 'adds', 'red');
-            else if (adds === 3 && isRecent) add(amber, `${scoreName} 3`, 'adds', 'amber');
-        }
-
-        const hr = num(s.c_hr);
-        if (hr) {
-            if (hr > 130) add(red, `Tachycardia HR ${hr}`, 'c_hr', 'red');
-            else if (hr > 110) add(amber, `Tachycardia HR ${hr}`, 'c_hr', 'amber');
-            else if (hr < 40) add(red, `Bradycardia HR ${hr}`, 'c_hr', 'red');
-            else if (hr < 50) add(amber, `Bradycardia HR ${hr}`, 'c_hr', 'amber');
-        }
-
-        const bpStr = s.c_nibp;
-        if (bpStr) {
-            const sbp = parseFloat(bpStr.split('/')[0]);
-            if (!isNaN(sbp)) {
-                if (sbp < 90) add(red, `Hypotension SBP ${sbp}`, 'c_nibp', 'red');
-            }
-        }
-
-        const rr = num(s.b_rr);
-        if (rr) {
-            if (rr > 25) add(red, `Tachypnea RR ${rr}`, 'b_rr', 'red');
-            else if (rr > 20) add(amber, `Mild tachypnea RR ${rr}`, 'b_rr', 'amber');
-            else if (rr < 8) add(red, `Bradypnea RR ${rr}`, 'b_rr', 'red');
-        }
-
-        const spo2Str = s.b_spo2 ? s.b_spo2.replace('%', '') : '';
-        const spo2 = num(spo2Str);
-        if (spo2 && spo2 < 88) add(red, `Hypoxia SpO2 ${spo2}%`, 'b_spo2', 'red');
-
-        const temp = num(s.e_temp);
-        if (temp) {
-            if (temp > 38.5) add(red, `Febrile ${temp}`, 'e_temp', 'red');
-            else if (temp < 35.5) add(red, `Temp low ${temp}`, 'e_temp', 'red');
-        }
-
-        const oxDevInput = $('b_device');
-        if (oxDevInput && oxDevInput.dataset.manual !== 'true') {
-            let devStr = '';
-            const mode = s.oxMod;
-            if (mode === 'RA') devStr = 'RA';
-            else if (mode === 'NP') devStr = `NP ${s.npFlow || ''}L`;
-            else if (mode === 'HFNP') devStr = `HFNP ${s.hfnpFio2 || ''}%/${s.hfnpFlow || ''}L`;
-            else if (mode === 'NIV') devStr = `NIV ${s.nivFio2 || ''}%`;
-            oxDevInput.value = devStr;
-        }
-
-        const airwayInput = $('airway_a');
-        if (airwayInput && airwayInput.dataset.manual !== 'true') {
-            if (s.oxMod === 'Trache') {
-                airwayInput.value = `${s.tracheType || 'Tracheostomy'}${s.tracheStatus === 'New' ? ' (New)' : ''}`;
-            } else if (airwayInput.value.startsWith('Tracheostomy') || airwayInput.value.startsWith('Laryngectomy')) {
-                airwayInput.value = '';
-            }
-        }
-
-        if (s.resp_concern === true) {
-            let parts = [], hasRed = false;
-            if (s.oxMod === 'NP') {
-                const flow = num(s.npFlow);
-                if (flow >= 3) { parts.push(`high flow NP ${flow}L`); flagged.red.push('npFlow'); hasRed = true; }
-                else if (flow > 2) { parts.push(`Oxygen requirement - ${flow}LNP`); flagged.amber.push('npFlow'); }
-            } else if (s.oxMod === 'HFNP') {
-                const fio2Val = num(s.hfnpFio2);
-                if (fio2Val >= 60) { parts.push(`HFNP - high FiO2 ${s.hfnpFio2 || ''}%`); flagged.red.push('oxMod'); hasRed = true; }
-                else { parts.push(`HFNP - FiO2 ${s.hfnpFio2 || ''}%`); flagged.red.push('oxMod'); hasRed = true; }
-            } else if (s.oxMod === 'NIV') {
-                const fio2Val = num(s.nivFio2);
-                if (fio2Val >= 60) { parts.push(`NIV - high FiO2 ${s.nivFio2 || ''}%`); flagged.red.push('oxMod'); hasRed = true; }
-                else { parts.push(`NIV - FiO2 ${s.nivFio2 || ''}%`); flagged.red.push('oxMod'); hasRed = true; }
-            } else if (s.oxMod === 'RA') {
-            }
-            if (s.resp_dyspnea === true) {
-                const dysp = s.dyspneaConcern;
-                if (dysp === 'severe' || dysp === 'moderate') { parts.push(`Dyspnea ${dysp}`); flagged.red.push('dyspneaConcern'); hasRed = true; }
-                else if (dysp === 'mild') { parts.push(`Dyspnea mild`); flagged.amber.push('dyspneaConcern'); }
-                else if (!dysp) { parts.push(`Dyspnea`); flagged.amber.push('seg_resp_dyspnea'); }
-            }
-            if (s.resp_tachypnea === true) { parts.push('tachypnea >20bpm'); flagged.amber.push('seg_resp_tachypnea'); }
-            if (s.resp_rapid_wean === true) { parts.push('rapid O2 wean within last 12h'); flagged.red.push('seg_resp_rapid_wean'); hasRed = true; }
-            if (s.resp_poor_cough === true) { parts.push('poor cough effort'); flagged.amber.push('seg_resp_poor_cough'); }
-            if (s.resp_poor_swallow === true) { parts.push('poor swallow'); flagged.amber.push('seg_resp_poor_swallow'); }
-
-            if (s.hist_o2 === true) { parts.push('recent high O2/NIV requirement <12hrs'); flagged.red.push('seg_hist_o2'); hasRed = true; }
-
-            if (s.intubated === true) {
-                const reason = $('intubatedReason')?.querySelector('.active')?.dataset.value;
-                if (reason === 'concern') { parts.push('intubated <24hrs ago'); flagged.red.push('seg_intubated'); hasRed = true; }
-                else { parts.push('intubated <24hrs ago (elective)'); flagged.amber.push('seg_intubated'); }
-            }
-
-            if (s.dyspneaConcern_note && parts.length > 0) {
-                parts[parts.length - 1] += `. Note: ${s.dyspneaConcern_note}`;
-            }
-
-            if (parts.length > 0) {
-                const joined = joinGrammatically(parts);
-                const finalTxt = `Respiratory concern - ${joined}`;
-                if (hasRed) red.push(finalTxt); else amber.push(finalTxt);
-            } else {
-                const isLowFlowNP = (s.oxMod === 'NP' && (num(s.npFlow) || 0) <= 2);
-                if (!isLowFlowNP) {
-                    add(amber, 'Respiratory concern', 'seg_resp_concern', 'amber', s.dyspneaConcern_note);
-                }
-            }
-        }
-
-        if (s.oxMod === 'Trache') {
-            const isLary = s.tracheType === 'Laryngectomy';
-            const label = isLary ? 'Laryngectomy patient' : 'Tracheostomy patient';
-            if (s.tracheStatus === 'New') {
-                add(red, `New ${label.toLowerCase()}`, 'tracheStatus', 'red');
-            } else {
-                add(amber, label, 'oxMod', 'amber');
-            }
-        }
-
-        if (s.after_hours === true) add(amber, 'Discharged after-hours', 'seg_after_hours', 'amber', s.after_hours_note);
-        if (s.hac === true) add(amber, 'Hospital acquired complication', 'seg_hac', 'amber', s.hac_note);
-
-        if (s.neuro_gate === true) {
-            let txt = "Neurological concern";
-            const gcsInput = s.d_alert;
-            const type = s.neuroType;
-            const severity = s.neuroConcern;
-            let details = [];
-            if (gcsInput && gcsInput.toLowerCase().includes('gcs')) details.push(gcsInput);
-            if (type) details.push(type.toLowerCase());
-            if (details.length > 0) txt += ` with ${joinGrammatically(details)}`;
-
-            const isRed = (severity === 'severe');
-            add(isRed ? red : amber, sentenceCase(txt), 'neuroConcern', isRed ? 'red' : 'amber', s.neuroType_note);
-        }
-
-        const k = num(s.bl_k);
-        // Mg and PO4 open the gate and are described, but never escalate it on their own -
-        // they stay amber whatever the value; only K, Na or a severe rating can make it red.
-        const mg = num(s.bl_mg);
-        const phos = num(s.bl_phos);
-        const mgAbnormal = mg !== null && (mg < normalRanges.mg.low || mg > normalRanges.mg.high);
-        const phosAbnormal = phos !== null && (phos < normalRanges.phos.low || phos > normalRanges.phos.high);
-
-        if (s.electrolyte_gate === true || (k && (k < 3.0 || k > 6.0)) || mgAbnormal || phosAbnormal) {
-            let msg = "Electrolyte concern", isRed = false;
-            let parts = [];
-            if (k) {
-                if (k > 6.0) { parts.push(`high K+ ${k}`); isRed = true; }
-                else if (k < 3.0) { parts.push(`low K+ ${k}`); isRed = true; }
-            }
-            const na = num(s.bl_na);
-            if (na && (na < 125 || na > 155)) {
-                if (na < 125) parts.push(`low Na ${na}`);
-                else parts.push(`high Na ${na}`);
-                isRed = true;
-            }
-            if (mgAbnormal) parts.push(`${mg < normalRanges.mg.low ? 'low' : 'high'} Mg ${mg}`);
-            if (phosAbnormal) parts.push(`${phos < normalRanges.phos.low ? 'low' : 'high'} PO4 ${phos}`);
-            const sev = s.electrolyteConcern;
-            if (sev === 'severe') {
-                if (parts.length === 0) parts.push("severe derangement");
-                isRed = true;
-            } else if (sev === 'mild' && parts.length === 0) {
-                parts.push("mild/moderate derangement");
-            }
-            // Plain join here: joinGrammatically lower-cases trailing items, which turns the
-            // analyte names into "low mg" / "low po4". Same separator, correct case.
-            if (parts.length > 0) msg += ` with ${parts.join(', ')}`;
-            add(isRed ? red : amber, msg, 'electrolyteConcern', isRed ? 'red' : 'amber', s.electrolyteConcern_note);
-        }
-
-        const cr = num(s.bl_cr_review) || num(s.cr_review);
-        const renalOpen = (s.renal === true) || (cr && cr > 150);
-
-        if (renalOpen) {
-            const fluidFlags = [];
-            const renalFlags = [];
-
-            if (s.renal_fluid) fluidFlags.push('fluid overload');
-            if (s.renal_oedema) fluidFlags.push('oedema');
-            if (s.renal_dehydrated) fluidFlags.push('dehydrated');
-
-            const isMitigated = (s.renal_chronic === true);
-
-            if (s.renal_oliguria) renalFlags.push('oliguria <0.5ml/kg/hr');
-            if (s.renal_anuria) renalFlags.push('anuria');
-            if (s.renal_dysfunction) renalFlags.push('AKI');
-            // Only add high Cr to flags if not mitigated by known CKD at baseline
-            if (cr > 150 && !isMitigated) renalFlags.push(`Cr ${cr}`);
-
-            if (s.renal_dialysis) {
-                const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
-                if (dType === 'new') renalFlags.push('acute dialysis');
-                // Chronic dialysis suppressed when KnownCKD is selected
-                else if (!isMitigated) renalFlags.push('chronic dialysis');
-            }
-
-            const hasFluid = fluidFlags.length > 0;
-            const hasRenal = renalFlags.length > 0;
-
-            let label = "Renal concern";
-            if (hasFluid && hasRenal) label = "Renal and fluid concern";
-            else if (hasFluid && !hasRenal) label = "Fluid concern";
-
-            const allFlags = [...renalFlags, ...fluidFlags];
-            if (allFlags.length > 0) label += ` with ${joinGrammatically(allFlags)}`;
-
-            const overrideChips = [
-                // When mitigated (known CKD), oliguria/anuria are expected and don't override
-                ...(isMitigated ? [] : [s.renal_oliguria, s.renal_anuria]),
-                s.renal_dysfunction,
-                s.renal_fluid, s.renal_oedema, s.renal_dehydrated
-            ];
-
-            const dType = $('dialysis_type')?.querySelector('.active')?.dataset.value;
-            // Only acute dialysis overrides mitigation (chronic dialysis is expected in known CKD)
-            if (s.renal_dialysis && dType === 'new') overrideChips.push(true);
-
-            const isForceAmber = overrideChips.some(x => x === true);
-
-            if (isMitigated && !isForceAmber) {
-                suppressedRisks.push(`${label} (mitigated: known CKD and Cr/urine output around baseline)`);
-            } else {
-                // When mitigated, anuria/high Cr are expected baselines; only AKI+fluid combo escalates to red
-                const critical = (isMitigated
-                    ? (hasFluid && hasRenal && s.renal_dysfunction)
-                    : (s.renal_anuria || cr > 200 || (hasFluid && hasRenal && s.renal_dysfunction)));
-                if (critical) add(red, label, 'seg_renal', 'red', s.renal_note);
-                else add(amber, label, 'seg_renal', 'amber', s.renal_note);
-            }
-        }
-
-        const wcc = num(s.bl_wcc) || num(s.wcc);
-        const crp = num(s.crp) || num(s.bl_crp);
-        const nlrVal = (neut > 0 && lymph > 0) ? (neut / lymph) : 0;
-
-        const autoTrigger = (wcc && (wcc > 15 || wcc < 2)) ||
-            (temp && temp > 38) ||
-            (crp && crp > 100) ||
-            (nlrVal > 10);
-
-        const manualConcern = s.infection === true;
-
-        if (autoTrigger || manualConcern) {
-            let markers = [], isRed = false;
-
-            if (crp > 100) isRed = true;
-            if (temp > 38.5) isRed = true;
-            if (nlrVal > 10) isRed = true;
-
-            if (wcc !== null && (wcc < 3 || wcc > 15)) markers.push(`WCC ${wcc}`);
-            else if (wcc !== null && (wcc > 11)) markers.push(`WCC ${wcc}`);
-
-            if (crp > 100) markers.push(`CRP ${crp}`);
-            else if (crp > 50) markers.push(`CRP ${crp}`);
-
-            if (temp > 38.5) markers.push(`Temp ${temp}`);
-            else if (temp > 37.8) markers.push(`Temp ${temp}`);
-
-            if (nlrVal > 10) markers.push(`NLR ${nlrVal.toFixed(1)}`);
-
-            let msg = isRed ? "Infection risk" : "Infection risk";
-            if (markers.length) msg += ` with ${joinGrammatically(markers)}`;
-
-            const shouldSuppress = (s.infection_downtrend === true);
-
-            if (shouldSuppress) {
-                suppressedRisks.push("Infection risk (however, infection markers downtrending, ADDS low and the patient is on appropriate antibiotics)");
-            } else {
-                add(isRed ? red : amber, msg, 'seg_infection', isRed ? 'red' : 'amber', s.infection_note);
-            }
-        }
-
-        if (s.immobility === true) {
-            const icuLos = num(s.icuLos) || 0;
-            const ptAge = num(s.ptAge) || 0;
-            
-            const uniqueRedPreLos = [...new Set(red)];
-            const uniqueAmberPreLos = [...new Set(amber)];
-            const hasOtherRisks = uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0;
-            
-            if (icuLos > 4) {
-                if (hasOtherRisks) {
-                    const hasNonImmobilityAndNonAgeRisk = 
-                        uniqueRedPreLos.some(r => !r.toLowerCase().includes('immobility') && !r.toLowerCase().includes('age')) || 
-                        uniqueAmberPreLos.some(a => !a.toLowerCase().includes('immobility') && !a.toLowerCase().includes('age'));
-                        
-                    if (hasNonImmobilityAndNonAgeRisk) {
-                        add(red, `Immobility concern - prolonged ICU stay`, 'seg_immobility', 'red', s.immobility_note);
-                    } else if (ptAge >= 75) {
-                        add(amber, `Immobility concern - prolonged ICU stay`, 'seg_immobility', 'amber', s.immobility_note);
-                    } else {
-                        add(amber, 'Immobility concern', 'seg_immobility', 'amber', s.immobility_note);
-                    }
-                } else if (ptAge >= 75) {
-                    add(amber, `Immobility concern - prolonged ICU stay`, 'seg_immobility', 'amber', s.immobility_note);
-                } else {
-                    add(amber, 'Immobility concern', 'seg_immobility', 'amber', s.immobility_note);
-                }
-            } else {
-                add(amber, 'Immobility concern', 'seg_immobility', 'amber', s.immobility_note);
-            }
-        }
-
-        const hb = num(s.hb) || num(s.bl_hb);
-        const isHbDropping = s.hb_dropping || s.bl_hb_trend === '↓';
-        if (hb && hb <= 70) add(red, `Low Hb ${hb}`, 'hb', 'red');
-        else if (hb && hb <= 90 && isHbDropping) add(amber, `Low Hb ${hb} and dropping`, 'hb', 'amber');
-
-        const alb = num(s.bl_alb);
-        if (alb && alb < 20) add(amber, `Low albumin Alb ${alb}`, 'bl_alb', 'amber');
-
-        const plts = num(s.bl_plts);
-        if (plts && plts < 100) add(amber, `Low platelets Plts ${plts}`, 'bl_plts', 'amber');
-
-        const inr = num(s.bl_inr);
-        if (inr && inr > 3.5) add(red, `High INR ${inr}`, 'bl_inr', 'red');
-        else if (inr && inr > 2.5) add(amber, `Elevated INR ${inr}`, 'bl_inr', 'amber');
-
-
-        const bsl = num(s.e_bsl);
-        if (bsl) {
-            if (bsl < 4.0) add(red, `Low BSL ${bsl}`, 'e_bsl', 'red');
-            else if (bsl > 20) add(red, `High BSL ${bsl}`, 'e_bsl', 'red');
-            else if (bsl >= 15) add(amber, `High BSL ${bsl}`, 'e_bsl', 'amber');
-        }
-
-        const painScore = num(s.d_pain);
-        if (painScore >= 7) {
-            add(amber, `Pain not well controlled with score of ${painScore} out of 10`, 'neuro_section', 'amber', null);
-        }
-
-        if (window.prevBloods && window.prevBloods.cr_review && !s.renal_worsening_cr) {
-            const prevCr = num(window.prevBloods.cr_review);
-            const currCr = cr;
-            if (currCr && prevCr && currCr > prevCr) {
-                const percentChange = ((currCr - prevCr) / prevCr) * 100;
-                if (percentChange > 30 || (currCr - prevCr) > 30) {
-                    const chipEl = $('toggle_renal_worsening_cr');
-                    if (chipEl && chipEl.dataset.value === 'false') {
-                        chipEl.click();
-                    }
-                }
-            }
-        }
-
-        if (s.renal_worsening_cr && window.prevBloods && window.prevBloods.cr_review) {
-            const prevCr = num(window.prevBloods.cr_review);
-            const currCr = cr;
-            if (currCr && prevCr && currCr > prevCr) {
-                const percentChange = ((currCr - prevCr) / prevCr) * 100;
-                if (percentChange > 30 || (currCr - prevCr) > 30) {
-                    add(amber, `Worsening Cr ${prevCr}→${currCr}`, 'bl_cr_review', 'amber');
-                }
-            }
-        }
-
-
-        if (s.neuro_psych) {
-            add(amber, `Psychological concern`, 'neuro_section', 'amber', s.neuro_psych_note);
-        }
-
-        if (s.pics === 'positive') {
-            add(amber, `Post ICU Syndrome Positive`, 'seg_pics', 'amber', s.pics_note);
-        }
-
-        const activeComorbsKeys = toggleInputs.filter(k => k.startsWith('comorb_') && s[k]);
-        const countComorbs = activeComorbsKeys.length;
-        if (countComorbs >= 3) {
-            add(red, sentenceCase('Multiple comorbidities'), null, 'red', null);
-            flagged.red.push('comorbs_wrapper');
-        } else if (countComorbs > 0) {
-            let cList = [];
-            activeComorbsKeys.forEach(k => {
-                if (k === 'comorb_other' && s.comorb_other_note) {
-                    s.comorb_other_note.split(/[\n,]+/).forEach(v => {
-                        const trimmed = v.trim();
-                        if (trimmed) cList.push(trimmed);
-                    });
-                } else if (k !== 'comorb_other') {
-                    cList.push(comorbMap[k]);
-                }
-            });
-            add(amber, sentenceCase(`Comorbidities - ${joinGrammatically(cList)}`), null, 'amber', null);
-            flagged.amber.push('comorbs_wrapper');
-        }
-
-        const lact = num(s.lactate) || num(s.bl_lac_review);
-        if (lact > 4.0) add(red, `Lactate ${lact}`, 'lactate', 'red');
-        else if (lact >= 2.0) add(amber, `Lactate ${lact}`, 'lactate', 'amber');
-
-        if (s.override === 'red') {
-            const reason = s.overrideNote || 'Clinician override: CAT 1';
-            add(red, reason, 'override_red', 'red');
-        }
-        if (s.override === 'amber') {
-            const reason = s.overrideNote || 'Clinician override: CAT 2';
-            add(amber, reason, 'override_amber', 'amber');
-        }
-
-        const age = num(s.ptAge);
-        if (age >= 75) {
-            if (s.age_mitigated === true) {
-                suppressedRisks.push(`Age ${age} (frailty risk - mitigated: ${s.age_mitigate_reason || 'baseline function active'})`);
-            } else {
-                add(amber, `Age ${age}, increased risk of complications`, 'ptAge', 'amber');
-            }
-        }
-
-        if (s.frailty_known === true) {
-            add(amber, 'Known frailty at baseline', 'seg_frailty_known', 'amber', s.frailty_note);
-        }
-
-        const icuLos = num(s.icuLos) || 0;
-        if (icuLos > 4) {
-            const uniqueRedPreLos = [...new Set(red)];
-            const uniqueAmberPreLos = [...new Set(amber)];
-            
-            const hasOtherRisks = uniqueRedPreLos.length > 0 || uniqueAmberPreLos.length > 0;
-            
-            if (hasOtherRisks) {
-                // Check if the other risk is something other than Immobility or Age
-                const hasNonImmobilityAndNonAgeRisk = 
-                    uniqueRedPreLos.some(r => !r.toLowerCase().includes('immobility') && !r.toLowerCase().includes('age')) || 
-                    uniqueAmberPreLos.some(a => !a.toLowerCase().includes('immobility') && !a.toLowerCase().includes('age'));
-                
-                if (hasNonImmobilityAndNonAgeRisk) {
-                    add(red, `Prolonged ICU stay >4 days`, 'icuLos', 'red');
-                } else if (age >= 75) {
-                    add(amber, `Prolonged ICU stay >4 days`, 'icuLos', 'amber');
-                } else {
-                    suppressedRisks.push(`Prolonged ICU stay >4 days`);
-                }
-            } else {
-                suppressedRisks.push(`Prolonged ICU stay >4 days`);
-            }
-        }
-
-        const uniqueRed = [...new Set(red)];
-        const uniqueAmber = [...new Set(amber)];
-        const redCount = uniqueRed.length;
-        const amberCount = uniqueAmber.length;
-        let autoCat = { id: 'green', text: 'CAT 3' };
-        if (redCount > 0) autoCat = { id: 'red', text: 'CAT 1' };
-        else if (amberCount > 0) autoCat = { id: 'amber', text: 'CAT 2' };
-
-        // A CAT 3 selection is a genuine downgrade, not another flag: it wins over the
-        // computed category. The flags themselves are still counted, listed and carried into
-        // the summary - the clinician overrules the conclusion, not the evidence. A reason is
-        // mandatory, so an unexplained downgrade simply doesn't apply.
-        let cat = autoCat;
-        const downgradeReason = (s.overrideNote || '').trim();
-        if (s.override === 'green' && downgradeReason) {
-            cat = {
-                id: 'green',
-                text: 'CAT 3',
-                downgradedFrom: autoCat.text,
-                downgradeReason
-            };
-        }
-        refreshCategorySelect(autoCat, s.override, downgradeReason, redCount, amberCount);
+        updatePrevBloodsHint();
+        renderDerivedDisplays(s, result);
+
+        // Names the render half of this function still expects.
+        const { red: uniqueRed, amber: uniqueAmber, suppressed: suppressedRisks,
+            redCount, amberCount, cat, autoCat, downgradeReason, flagged, riskEntries,
+            timeData, countComorbs, activeComorbsKeys } = result;
+
+                refreshCategorySelect(autoCat, s.override, downgradeReason, redCount, amberCount);
 
         const catText = $('catText'); if (catText) { catText.className = `status ${cat.id}`; catText.textContent = cat.text; }
         const catBox = $('categoryBox'); if (catBox) catBox.style.borderColor = `var(--${cat.id})`;
@@ -673,7 +74,7 @@ export function computeAll() {
 
         updateSidebarRiskBadges(redCount, amberCount);
 
-        reconcileAutoIssues(new Set([...riskEntries.map(e => e.id), ...bloodIssueKeys]));
+        reconcileAutoIssues(new Set(result.issueKeys));
         renderScrapedIssuesList();
         renderCarriedForward();
         maybeOfferQuickReview(timeData, s);
@@ -760,9 +161,11 @@ export function computeAll() {
             let showPrompt = false;
 
             if (isPost && !alreadyChecked && !dismissed) {
-                if (cat.id === 'green' && hoursSinceStep >= 12) {
-                    showPrompt = true;
-                }
+                // A CAT 3 needs a full 24h on the list before discharge is even offered. The
+                // rest of the criteria - two reviews, at least one of them physical - are
+                // things the spreadsheet already records, so they're confirmed by the
+                // clinician in the modal behind this prompt rather than re-asked here.
+                if (cat.id === 'green' && hoursSinceStep >= 24) showPrompt = true;
                 else if (cat.id === 'amber' && hoursSinceStep >= 48) showPrompt = true;
                 else if (cat.id === 'red' && hoursSinceStep >= 72) showPrompt = true;
             }
@@ -778,21 +181,15 @@ export function computeAll() {
 
                 let hoursTxt = Math.round(hoursSinceStep) + " hours";
 
-                const catColorStr = cat.id === 'green' ? 'var(--green)' : `var(--${cat.id})`;
-                const mainTitle = `${cat.text} ${colorName} - ${hoursTxt} on list`;
-                
+                // Styling lives in style.css now - the category colour is the only part that
+                // varies, so it is the only thing set from here. No pulse: it competed with
+                // every other thing on the page asking to be looked at.
                 disMsg.innerHTML = `
-                    <div style="font-size: 1.4rem; font-weight: 800; color: ${catColorStr}; margin-bottom: 12px; text-transform: uppercase;">
-                        ${mainTitle}
-                    </div>
-                    <div style="font-size: 1.3rem; font-weight: 700; color: var(--ink); margin-bottom: 16px;">
-                        Can the patient be discharged?
-                    </div>
+                    <div class="discharge-prompt-title status ${cat.id}">${cat.text} ${colorName} - ${hoursTxt} on list</div>
+                    <div class="discharge-prompt-question">Can the patient be discharged?</div>
                 `;
-                if (disWrap) disWrap.classList.add('pulse-highlight');
             } else {
                 disPrompt.style.display = 'none';
-                if (disWrap) disWrap.classList.remove('pulse-highlight');
 
                 const continueChk = $('chk_continue_alert');
                 if (continueChk && !s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.reviewType === 'post') {
@@ -832,19 +229,121 @@ export function computeAll() {
     }
 }
 
+// Fields the tool writes into the form rather than reads from it. Each one steps aside the
+// moment the clinician types over it - dataset.manual is set by the input handler.
+function autofillDerivedFields(s) {
+    const oxDevInput = $('b_device');
+    if (oxDevInput && oxDevInput.dataset.manual !== 'true') {
+        const mode = s.oxMod;
+        let devStr = '';
+        if (mode === 'RA') devStr = 'RA';
+        else if (mode === 'NP') devStr = `NP ${s.npFlow || ''}L`;
+        else if (mode === 'HFNP') devStr = `HFNP ${s.hfnpFio2 || ''}%/${s.hfnpFlow || ''}L`;
+        else if (mode === 'NIV') devStr = `NIV ${s.nivFio2 || ''}%`;
+        oxDevInput.value = devStr;
+    }
+
+    const airwayInput = $('airway_a');
+    if (airwayInput && airwayInput.dataset.manual !== 'true') {
+        if (s.oxMod === 'Trache') {
+            airwayInput.value = `${s.tracheType || 'Tracheostomy'}${s.tracheStatus === 'New' ? ' (New)' : ''}`;
+        } else if (airwayInput.value.startsWith('Tracheostomy') || airwayInput.value.startsWith('Laryngectomy')) {
+            airwayInput.value = '';
+        }
+    }
+}
+
+// Read-outs that describe the assessment without being part of it.
+function renderDerivedDisplays(s, result) {
+    // Driven from here rather than only from the debounced compute() in main.js: the segmented
+    // buttons call computeAll() directly, so a mitigator whose visibility depends on a gate -
+    // the LOS one hides once immobility is recorded - was never refreshed when that gate was
+    // the thing that changed.
+    updateAgeMitigationUI();
+    updateLosMitigationUI();
+
+    const pmhSubtitle = $('pmh_subtitle');
+    if (pmhSubtitle) {
+        const hasComorbidities = result.countComorbs > 0;
+        const hasPmhNote = s.pmh_note && s.pmh_note.trim().length > 0;
+        pmhSubtitle.style.display = (hasComorbidities || hasPmhNote) ? 'block' : 'none';
+    }
+
+    const nlrEl = $('nlrCalc');
+    if (nlrEl) {
+        if (result.nlrVal > 0) {
+            nlrEl.textContent = `NLR: ${result.nlrVal.toFixed(2)}`;
+            nlrEl.style.borderColor = (result.nlrVal > 10) ? 'var(--red)' : 'var(--line)';
+        } else {
+            nlrEl.textContent = 'NLR: --';
+            nlrEl.style.borderColor = 'var(--line)';
+        }
+    }
+
+    const fn = $('footerName'); if (fn) fn.textContent = s.ptName || '--';
+    const fl = $('footerLocation'); if (fl) fl.textContent = `${s.ptWard || '--'} ${s.ptBed || ''}`;
+    const fa = $('footerAdmission'); if (fa) fa.textContent = s.ptAdmissionReason || '--';
+
+    const timeOffEl = $('pressor_time_off_display');
+    if (timeOffEl) {
+        const recentKeys = ['pressor_recent_norad', 'pressor_recent_met', 'pressor_recent_gtn', 'pressor_recent_dob', 'pressor_recent_mid', 'pressor_recent_other'];
+        if (recentKeys.some(k => s[k]) && s.pressor_ceased_time) {
+            const now = new Date();
+            const [cH, cM] = s.pressor_ceased_time.split(':');
+            const ceasedDate = new Date();
+            ceasedDate.setHours(cH, cM);
+            if (ceasedDate > now) ceasedDate.setDate(ceasedDate.getDate() - 1);
+            timeOffEl.textContent = `~${Math.floor((now - ceasedDate) / 3600000)} hrs ago`;
+        } else {
+            timeOffEl.textContent = '';
+        }
+    }
+
+    // The score, the band and which items the tool ticked are all decided in the rules; this
+    // only paints the answer, the same division of labour as the after-hours control above.
+    renderPicsPanel(result.pics);
+
+    // Offered suppression - the rules decide whether the evidence supports it, the interface
+    // asks the question, and only the clinician's click discounts the risk.
+    const suggestion = $('infection_downtrend_suggestion');
+    if (suggestion) {
+        if (result.downtrendSuggestion) {
+            suggestion.innerHTML = `<span>${result.downtrendSuggestion} - mark markers as downtrending?</span>
+                <button type="button" id="btnAcceptDowntrend" class="btn small">Yes, downtrending</button>`;
+            suggestion.hidden = false;
+        } else {
+            suggestion.hidden = true;
+            suggestion.innerHTML = '';
+        }
+    }
+}
+
+// Absence of previous results is easy to miss, because the tool simply shows no arrows and
+// fires no trend flags. Only shown once the clinician has started entering results - before
+// that there is nothing to compare and the hint would just be noise.
+function updatePrevBloodsHint() {
+    const hint = $('prev_bloods_hint');
+    if (!hint) return;
+    const hasPrev = window.prevBloods && Object.keys(window.prevBloods).length > 0;
+    const hasCurrent = Object.keys(normalRanges).some(k => num($(`bl_${k}`)?.value) !== null);
+    hint.hidden = hasPrev || !hasCurrent;
+}
+
 export function checkCompleteness(s, comorbCount) {
-    const nudges = document.querySelectorAll('#completeness_nudge');
-    if (!nudges.length) return;
-    let missing = [];
-    if (!s.ptName) missing.push('Patient Name');
+    const missing = [];
+    if (!s.ptName) missing.push('Patient initials');
     if (!s.ptMrn) missing.push('URN');
     if (!s.ptWard) missing.push('Ward');
     if (!s.reviewerInitials) missing.push('Reviewer');
-    nudges.forEach(nudge => {
-        if (missing.length > 0) {
-            nudge.style.display = 'block';
-            nudge.textContent = 'Missing: ' + missing.join(', ');
-            nudge.style.color = '#7c3aed';
-        } else { nudge.style.display = 'none'; }
-    });
+
+    // Lowest priority of any notice: worth saying, never worth saying over a new red flag.
+    if (missing.length) {
+        setNotice('completeness', {
+            priority: NOTICE_PRIORITY.COMPLETENESS,
+            tone: 'info',
+            html: `<div class="notice-title">Not yet recorded: ${missing.join(', ')}</div>`
+        });
+    } else {
+        clearNotice('completeness');
+    }
 }

@@ -1,4 +1,5 @@
-import { $, debounce, showToast } from './utils.js';
+import { $, debounce, showToast, disableAutofill } from './utils.js';
+import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
 import { ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs } from './config.js';
 import {
     getState, saveState, loadState, restoreState, previousCategoryData, updateLastSaved,
@@ -12,12 +13,48 @@ import {
     createDeviceEntry, updateDevicesSectionVisibility, toggleOxyFields, toggleInfusionsBox,
     handleUnknownBLODate, showClearDataModal, hideClearDataModal, syncComorbsToPMH, clearData,
     enableQuickReviewMode, exitQuickReviewMode, showQuickReviewPrompt, openMobileNav, closeMobileNav,
-    handleSegmentClick, toggleBowelDate, updateAgeMitigationUI, openAccordion, closeAccordion,
-    setBloodsOverlay, closeQuickOverlays, toggleAddsOverride, refreshAddsOverrideUI, setPanelOpen
+    handleSegmentClick, toggleBowelDate, updateAgeMitigationUI, updateLosMitigationUI, openAccordion, closeAccordion,
+    setBloodsOverlay, closeQuickOverlays, toggleAddsOverride, refreshAddsOverrideUI, setPanelOpen,
+    buildPicsPanel
 } from './ui.js';
+
+// A tab left open at a nurses' station holds a full review indefinitely. This hides it, and
+// only hides it - the earlier proposal was to clear state on a timer, which would have thrown
+// away the work of anyone who started a review, went to see the patient, and came back.
+const PRIVACY_IDLE_MS = 10 * 60 * 1000;
+
+function setupPrivacyScreen() {
+    const screen = $('privacyScreen');
+    if (!screen) return;
+    let timer;
+
+    const hide = () => { screen.hidden = true; arm(); };
+    const show = () => { screen.hidden = false; };
+
+    function arm() {
+        clearTimeout(timer);
+        timer = setTimeout(show, PRIVACY_IDLE_MS);
+    }
+
+    // Only real interaction counts. mousemove would keep it awake on a knocked desk.
+    ['pointerdown', 'keydown', 'input', 'change'].forEach(evt => {
+        document.addEventListener(evt, () => { if (screen.hidden) arm(); }, true);
+    });
+
+    $('btnResumeFromPrivacy')?.addEventListener('click', hide);
+    screen.addEventListener('click', hide);
+    arm();
+}
 
 function initialize() {
     updateLastSaved();
+    disableAutofill();
+    setupPrivacyScreen();
+
+    // Before anything else touches the DOM: the PICS item rows are generated rather than
+    // written into index.html, and both the chip click handler below and restoreState() at the
+    // end of this function expect them to already exist.
+    buildPicsPanel();
 
     document.querySelectorAll('.quick-select, .select-btn, .detail-toggle, .accordion, .trend-btn').forEach(btn => {
         btn.setAttribute('tabindex', '-1');
@@ -39,7 +76,7 @@ function initialize() {
         }
     });
 
-    const compute = debounce(() => { computeAll(); checkBloodRanges(); updateAgeMitigationUI(); saveState(true); }, 350);
+    const compute = debounce(() => { computeAll(); checkBloodRanges(); updateAgeMitigationUI(); updateLosMitigationUI(); saveState(true); }, 350);
 
     window.addDevice = (type, val, insertionDate = '') => { createDeviceEntry(type, val, insertionDate); compute(); };
     window.compute = compute;
@@ -48,6 +85,19 @@ function initialize() {
     // Used by plugins/importer.js to stage scraped issues.
     window.addActiveIssue = addActiveIssue;
     window.renderScrapedIssuesList = renderScrapedIssuesList;
+
+    // Deliberately narrow: the importer can raise a prompt about what the previous review
+    // recommended, but it cannot act on it. The one-click "approve handover discharge" button
+    // this replaces bypassed the discharge criteria check entirely.
+    window.flagPreviousRecommendation = (detail) => {
+        setNotice('handover', {
+            priority: NOTICE_PRIORITY.HANDOVER,
+            tone: 'info',
+            html: `<div class="notice-title">📋 Previous review recommended discharge pending next bloods</div>
+                   ${detail ? `<div class="notice-foot">Bloods being followed: ${detail}</div>` : ''}`,
+            actions: [{ id: 'dismiss-handover', label: 'Dismiss', onClick: () => clearNotice('handover') }]
+        });
+    };
     // plugins/adds_calc.js pings this after each recalculation.
     window.refreshAddsOverrideUI = refreshAddsOverrideUI;
 
@@ -127,88 +177,65 @@ function initialize() {
         });
     }
 
-    const btnYes = $('btn_discharge_yes');
-    if (btnYes) {
-        btnYes.addEventListener('click', (e) => {
-            e.preventDefault();
-            const catScoreText = $('catText')?.textContent || '';
-            if (catScoreText.includes('CAT 3') || catScoreText.includes('Green')) {
-                window.dischargeIntent = 'full';
-                const modal = $('greenDischargeConfirmModal');
-                if (modal) modal.style.display = 'flex';
-                return;
-            }
+    // Discharge confirmation. The 24/48/72h wait is already enforced before the prompt can
+    // appear, so the modal no longer re-asks about it - what it confirms is the review history,
+    // which the tool has no way of knowing. Shown for every category: a CAT 1 reaching 72 hours
+    // deserves at least the scrutiny a CAT 3 gets at 24.
+    window.openDischargeConfirm = (intent) => {
+        window.dischargeIntent = intent;
+        const body = $('discharge_confirm_body');
+        if (body) {
+            // If this review is itself physical, that criterion is met by definition and asking
+            // about it is noise. It only needs raising when today's review is a chart review.
+            const isChartReview = document.querySelector('input[name="reviewModeType"]:checked')?.value === 'chart';
+            body.innerHTML = isChartReview
+                ? 'Has this patient had at least <strong>2 completed ALERT reviews</strong>, including at least <strong>one physical review</strong>?'
+                : 'Has this patient had at least <strong>2 completed ALERT reviews</strong>?';
+        }
+        const modal = $('dischargeConfirmModal');
+        if (modal) modal.style.display = 'flex';
+    };
 
-            const chk = $('chk_discharge_alert');
-            if (chk) {
-                chk.checked = true;
-                chk.dispatchEvent(new Event('change'));
-                compute();
-                showToast("Patient marked for discharge", 1500);
-            }
-        });
-    }
+    const applyDischarge = (intent, msg) => {
+        const chk = $(intent === 'pending' ? 'chk_discharge_pending_bloods' : 'chk_discharge_alert');
+        if (!chk) return;
+        chk.checked = true;
+        chk.dispatchEvent(new Event('change'));
+        compute();
+        showToast(msg, 1500);
+    };
 
-    const btnPending = $('btn_discharge_pending');
-    if (btnPending) {
-        btnPending.addEventListener('click', (e) => {
-            e.preventDefault();
-            const catScoreText = $('catText')?.textContent || '';
-            if (catScoreText.includes('CAT 3') || catScoreText.includes('Green')) {
-                window.dischargeIntent = 'pending';
-                const modal = $('greenDischargeConfirmModal');
-                if (modal) modal.style.display = 'flex';
-                return;
-            }
+    $('btn_discharge_yes')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.openDischargeConfirm('full');
+    });
 
-            const chk = $('chk_discharge_pending_bloods');
-            if (chk) {
-                chk.checked = true;
-                chk.dispatchEvent(new Event('change'));
-                compute();
-                showToast("Patient marked for discharge pending bloods", 1500);
-            }
-        });
-    }
+    $('btn_discharge_pending')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.openDischargeConfirm('pending');
+    });
 
-    const btnConfirmGreenYes = $('btn_green_confirm_yes');
-    if (btnConfirmGreenYes) {
-        btnConfirmGreenYes.addEventListener('click', (e) => {
-            e.preventDefault();
-            const modal = $('greenDischargeConfirmModal');
-            if (modal) modal.style.display = 'none';
+    $('btn_discharge_confirm_yes')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        const modal = $('dischargeConfirmModal');
+        if (modal) modal.style.display = 'none';
 
-            window.dischargeConfirmed = true;
+        // Set while the checkbox change handler runs, so it doesn't re-open this same modal.
+        window.dischargeConfirmed = true;
+        const intent = window.dischargeIntent;
+        applyDischarge(intent, intent === 'pending'
+            ? 'Marked for discharge pending bloods (criteria confirmed)'
+            : 'Marked for discharge (criteria confirmed)');
+        window.dischargeIntent = null;
+        window.dischargeConfirmed = false;
+    });
 
-            if (window.dischargeIntent === 'pending') {
-                const chk = $('chk_discharge_pending_bloods');
-                if (chk) {
-                    chk.checked = true;
-                    chk.dispatchEvent(new Event('change'));
-                    compute();
-                    showToast("Patient marked for discharge pending bloods (criteria confirmed)", 1500);
-                }
-            } else {
-                const chk = $('chk_discharge_alert');
-                if (chk) {
-                    chk.checked = true;
-                    chk.dispatchEvent(new Event('change'));
-                    compute();
-                    showToast("Patient marked for discharge (criteria confirmed)", 1500);
-                }
-            }
-            window.dischargeIntent = null;
-            window.dischargeConfirmed = false;
-        });
-    }
-    const btnConfirmGreenNo = $('btn_green_confirm_no');
-    if (btnConfirmGreenNo) {
-        btnConfirmGreenNo.addEventListener('click', (e) => {
-            e.preventDefault();
-            const modal = $('greenDischargeConfirmModal');
-            if (modal) modal.style.display = 'none';
-        });
-    }
+    $('btn_discharge_confirm_no')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        const modal = $('dischargeConfirmModal');
+        if (modal) modal.style.display = 'none';
+        window.dischargeIntent = null;
+    });
 
     const btnNo = $('btn_discharge_no');
     if (btnNo) {
@@ -221,23 +248,6 @@ function initialize() {
         });
     }
 
-    const btnRevPlus = $('btn_review_plus');
-    const btnRevMinus = $('btn_review_minus');
-    const revCountEl = $('wardReviewCount');
-    if (btnRevPlus && revCountEl) {
-        btnRevPlus.addEventListener('click', () => {
-            const cur = parseInt(revCountEl.value) || 0;
-            revCountEl.value = cur + 1;
-            compute();
-        });
-    }
-    if (btnRevMinus && revCountEl) {
-        btnRevMinus.addEventListener('click', () => {
-            const cur = parseInt(revCountEl.value) || 1;
-            revCountEl.value = Math.max(1, cur - 1);
-            compute();
-        });
-    }
 
     function syncSegments(id1, id2, type) {
         const g1 = $(id1);
@@ -439,8 +449,8 @@ function initialize() {
                 }
             }
 
-            // Auto-flag the respiratory concern gate if NOT room air and NOT low-flow NP (<=2L)
-            const isLowFlowNP = (selectedMode === 'NP' && selectedFlow && parseFloat(selectedFlow) <= 2);
+            // Auto-flag the respiratory concern gate if NOT room air and NOT low-flow NP (<3L)
+            const isLowFlowNP = (selectedMode === 'NP' && selectedFlow && parseFloat(selectedFlow) < 3);
             if (selectedMode && selectedMode !== 'RA' && !isLowFlowNP) {
                 const respSeg = $('seg_resp_concern');
                 const respYes = respSeg?.querySelector('.seg-btn[data-value="true"]');
@@ -776,6 +786,13 @@ function initialize() {
             if (el.id.startsWith('toggle_comorb_')) {
                 syncComorbsToPMH();
             }
+            // A PICS item the clinician has touched stops being derived. Several of these items
+            // ask about the whole ICU admission while the fields behind them describe today's
+            // review, so the clinician's answer is the better one and has to survive the next
+            // render - and the next reload.
+            if (el.id.startsWith('toggle_pics_p')) {
+                el.dataset.manual = 'true';
+            }
             saveState(true);
             computeAll();
             checkBloodRanges();
@@ -884,6 +901,42 @@ function initialize() {
 
     $('age_mitigate_reason')?.addEventListener('input', compute);
 
+    $('btn_los_mitigated')?.addEventListener('click', () => {
+        const seg = $('seg_los_mitigated');
+        if (seg) {
+            const activeBtn = seg.querySelector('.seg-btn.active');
+            const isMitigated = activeBtn ? (activeBtn.dataset.value === 'true') : false;
+            const newValStr = !isMitigated ? 'true' : 'false';
+            seg.querySelectorAll('.seg-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.value === newValStr);
+            });
+            handleSegmentClick('los_mitigated', newValStr);
+        }
+        compute();
+    });
+
+    $('los_mitigate_reason')?.addEventListener('input', compute);
+
+    // Delegated: the suggestion is re-rendered by computeAll, so its button is a new element
+    // each time and cannot hold a listener of its own.
+    document.addEventListener('click', (e) => {
+        if (e.target?.id !== 'btnAcceptDowntrend') return;
+        e.preventDefault();
+        const yes = document.querySelector('#seg_infection_downtrend .seg-btn[data-value="true"]');
+        if (yes && !yes.classList.contains('active')) yes.click();
+    });
+
+    // Same contract for the PICS suggestions: the tool asks, the click answers. Clicking the
+    // chip clicks the item, which marks it as the clinician's and recomputes.
+    document.addEventListener('click', (e) => {
+        const sug = e.target?.closest?.('[data-pics-suggest]');
+        if (!sug) return;
+        e.preventDefault();
+        $(`toggle_${sug.dataset.picsSuggest}`)?.click();
+    });
+
+    $('chk_pics_action')?.addEventListener('change', compute);
+
     $('chk_use_mods')?.addEventListener('change', () => { $('mods_inputs').style.display = $('chk_use_mods').checked ? 'block' : 'none'; compute(); });
     $('chk_aperients')?.addEventListener('change', compute);
     $('chk_bloods_nil_sig')?.addEventListener('change', (e) => {
@@ -905,15 +958,10 @@ function initialize() {
         const wrapper = $('discharge_pending_bloods_note_wrapper');
 
         if (dischargeChk && dischargeChk.checked) {
-            const catScoreText = $('catText')?.textContent || '';
-            if (catScoreText.includes('CAT 3') || catScoreText.includes('Green')) {
-                if (!window.dischargeConfirmed) {
-                    dischargeChk.checked = false;
-                    window.dischargeIntent = 'full';
-                    const modal = $('greenDischargeConfirmModal');
-                    if (modal) modal.style.display = 'flex';
-                    return;
-                }
+            if (!window.dischargeConfirmed) {
+                dischargeChk.checked = false;
+                window.openDischargeConfirm('full');
+                return;
             }
 
             if (continueChk) {
@@ -936,15 +984,10 @@ function initialize() {
         const wrapper = $('discharge_pending_bloods_note_wrapper');
 
         if (pendingChk && pendingChk.checked) {
-            const catScoreText = $('catText')?.textContent || '';
-            if (catScoreText.includes('CAT 3') || catScoreText.includes('Green')) {
-                if (!window.dischargeConfirmed) {
-                    pendingChk.checked = false;
-                    window.dischargeIntent = 'pending';
-                    const modal = $('greenDischargeConfirmModal');
-                    if (modal) modal.style.display = 'flex';
-                    return;
-                }
+            if (!window.dischargeConfirmed) {
+                pendingChk.checked = false;
+                window.openDischargeConfirm('pending');
+                return;
             }
 
             if (dischargeChk) dischargeChk.checked = false;
@@ -983,6 +1026,10 @@ function initialize() {
         if (mainCheckbox) mainCheckbox.checked = $('chk_medical_rounding_pre').checked;
         compute();
     });
+
+    // Chart vs physical decides both the DMR heading and the CAT 3 discharge criteria.
+    document.querySelectorAll('input[name="reviewModeType"]').forEach(r => r.addEventListener('change', compute));
+    document.querySelectorAll('input[name="clinicianRole"]').forEach(r => r.addEventListener('change', compute));
 
     document.querySelectorAll('input[name="reviewType"]').forEach(r => r.addEventListener('change', () => {
         updateWardOptions();
@@ -1150,6 +1197,8 @@ function initialize() {
                 const was = btn.classList.contains('active');
                 group.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
                 if (!was) btn.classList.add('active');
+                // Once a clinician sets an arrow themselves it stops being recalculated.
+                group.dataset.manual = 'true';
                 compute();
             });
             group.appendChild(btn);
@@ -1210,6 +1259,7 @@ function initialize() {
     const saved = loadState();
     if (saved) restoreState(saved);
     updateAgeMitigationUI();
+    updateLosMitigationUI();
     refreshAddsOverrideUI();
     refreshDetailToggleState();
     updateReviewTypeVisibility();
