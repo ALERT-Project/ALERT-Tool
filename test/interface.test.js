@@ -35,14 +35,6 @@ test('spellcheck is disabled, so browsers cannot send free text to a remote chec
     close();
 });
 
-test('the privacy screen exists and starts hidden', async () => {
-    const { document, close } = await loadTool();
-    const screen = document.getElementById('privacyScreen');
-    assert.ok(screen);
-    assert.ok(screen.hidden, 'not covering the page on load');
-    close();
-});
-
 test('typing a risk factor moves the category', async () => {
     const { window, document, close } = await loadTool();
     type(window, 'ptAge', '82');
@@ -247,98 +239,330 @@ test('the on-screen plan still shows the review schedule', async () => {
     close();
 });
 
-// --- PICS risk score panel --------------------------------------------------------------------
 
-test('the PICS panel is built from the item table and every row is registered', async () => {
+// --- Data minimisation --------------------------------------------------------------------
+
+test('an imported note cannot put a full name or URN into the tool', async () => {
+    const { window, document, close } = await loadTool();
+    // maxlength stops a clinician typing a full name; it does not stop the importer assigning
+    // one, which is how a DMR note's real identifiers would have got in.
+    type(window, 'importText', [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: Casey Bond | URN: ...9876543 | Location: 4B, Room: 12',
+        'Age: 61'
+    ].join('\n'));
+    click(window, '#runImport');
+    await tick(window);
+
+    assert.equal(document.getElementById('ptName').value, 'CB', 'reduced to initials');
+    assert.equal(document.getElementById('ptMrn').value, '543', 'last three digits only');
+    close();
+});
+
+test('initials already in the tool\'s own format survive a round trip', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'importText', 'Patient: ABC | URN: ...123 | Location: 4B, Room: 12');
+    click(window, '#runImport');
+    await tick(window);
+    assert.equal(document.getElementById('ptName').value, 'ABC', 'not collapsed to one letter');
+    close();
+});
+
+test('the identifier fields cannot be typed past three characters', async () => {
     const { document, close } = await loadTool();
-    const ids = ['pics_p01', 'pics_p02', 'pics_p03', 'pics_p04', 'pics_p05', 'pics_p06',
-        'pics_p07', 'pics_p08', 'pics_p09', 'pics_p10', 'pics_p11'];
-    const missing = ids.filter(id => !document.getElementById(`toggle_${id}`));
-    assert.deepEqual(missing, [], 'all eleven item rows exist');
-    assert.ok(document.getElementById('pics_score_value'), 'running total');
-    assert.ok(document.getElementById('pics_band_chip'), 'band chip');
-    // The old binary survives as the override, so nothing downstream loses its control.
-    assert.ok(document.querySelector('#seg_pics .seg-btn[data-value="positive"]'));
+    assert.equal(document.getElementById('ptName').getAttribute('maxlength'), '3');
+    assert.equal(document.getElementById('ptMrn').getAttribute('maxlength'), '3');
     close();
 });
 
-test('a derived item ticks itself and says so', async () => {
+test('a room label with a letter in it imports and stays editable', async () => {
     const { window, document, close } = await loadTool();
-    type(window, 'icuLos', '7');
+    // #ptBed used to be type=number, which discards "24B" on assignment: the scraped room
+    // vanished and could not be typed back in either.
+    type(window, 'importText', 'Patient: ABC | URN: ...123 | Location: 4B, Room: 24B');
+    click(window, '#runImport');
     await tick(window);
 
-    const los = document.getElementById('toggle_pics_p08');
-    assert.equal(los.dataset.value, 'true', 'ICU LOS >3 days ticked itself');
-    assert.match(los.textContent, /auto: ICU LOS/, 'and is marked as the tool doing it');
-    assert.equal(document.getElementById('pics_score_value').textContent, '1');
+    assert.equal(document.getElementById('ptBed').value, '24B');
+    type(window, 'ptBed', 'A4');
+    assert.equal(document.getElementById('ptBed').value, 'A4');
     close();
 });
 
-test('unticking a derived item sticks across a save and reload', async () => {
+test('a note written with blank identifiers does not import its own dashes', async () => {
     const { window, document, close } = await loadTool();
-    type(window, 'icuLos', '7');
+    type(window, 'importText', 'Patient: -- | URN: ... | Location: --, Room: --');
+    click(window, '#runImport');
     await tick(window);
-    assert.equal(document.getElementById('toggle_pics_p08').dataset.value, 'true');
 
-    click(window, '#toggle_pics_p08');
-    await tick(window);
-    assert.equal(document.getElementById('toggle_pics_p08').dataset.value, 'false',
-        'the clinician overruled the derivation');
-    assert.equal(document.getElementById('pics_score_value').textContent, '0');
-
-    // sessionStorage is what a refresh restores from.
-    const saved = JSON.parse(window.sessionStorage.getItem('alertToolData_v7_7'));
-    assert.ok(saved.pics_manual.includes('pics_p08'), 'the override is persisted, not just painted');
+    assert.equal(document.getElementById('ptName').value, '');
+    assert.equal(document.getElementById('ptBed').value, '');
     close();
 });
 
-test('a high score reaches the note and the plan, and stays out of red', async () => {
+test('2L nasal prongs scores nothing on the ADDS calculator', async () => {
     const { window, document, close } = await loadTool();
-    type(window, 'ptName', 'ABC');
-    click(window, '#toggle_pics_p01');   // ventilation >48h, 3
-    click(window, '#toggle_pics_p02');   // CAM-ICU positive, 3
+    click(window, '#btnAddsOverride');   // no-op if absent; the calculator lives in the page
+    click(window, '.o2-chip[data-val="2LNP"]');
     await tick(window);
+    assert.equal(String(document.getElementById('score_o2').innerText), '0', '2L is ward-normal');
 
-    assert.equal(document.getElementById('pics_score_value').textContent, '6');
-    assert.match(document.getElementById('pics_band_chip').textContent, /High risk/);
-    assert.equal(document.getElementById('catText').textContent, 'CAT 2', 'amber, never red');
-
-    click(window, '#btn_generate_summary');
+    click(window, '.o2-chip[data-val="3LNP"]');
     await tick(window);
-    const note = document.getElementById('summary').value;
-    assert.match(note, /Post ICU Syndrome: High risk - PICS score 6 \(Dhanju 2026, local score\)/);
-    assert.match(note, /mechanical ventilation >48h/, 'the note carries the working');
-    assert.match(note, /- PICS high risk: formal PICS alert given at handover/, 'band action in the plan');
+    assert.equal(String(document.getElementById('score_o2').innerText), '1', '3L still scores');
     close();
 });
 
-test('the plan action can be taken out before the note is generated', async () => {
+test('a manual category selection is not annotated in the DMR note', async () => {
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
-    click(window, '#toggle_pics_p01');
-    click(window, '#toggle_pics_p02');
+    type(window, 'adds', '4');
     await tick(window);
-
-    const chk = document.getElementById('chk_pics_action');
-    assert.equal(chk.checked, true, 'pre-ticked, because it usually applies');
-    chk.checked = false;
-    chk.dispatchEvent(new window.Event('change', { bubbles: true }));
+    click(window, '#override_amber');
     await tick(window);
 
     click(window, '#btn_generate_summary');
     await tick(window);
     const note = document.getElementById('summary').value;
-    assert.ok(!/PICS high risk: formal PICS alert/.test(note), 'the action is gone');
-    assert.match(note, /Post ICU Syndrome: High risk/, 'the score itself stays');
+    assert.ok(note.includes('ALERT Nursing Review Category - CAT 2'), 'the clinician\'s choice is the category');
+    assert.ok(!/manually set/i.test(note), 'and it is not editorialised');
     close();
 });
 
-test('a patient with no PICS input says nothing about it', async () => {
+test('the device dwell line reports days without calling them long', async () => {
+    const { window, document, close } = await loadTool();
+    const old = new Date(Date.now() - 12 * 86400000).toISOString().slice(0, 10);
+    click(window, '.device-add-group .btn[data-device-type="PIVC"]');
+    await tick(window);
+    const dateEl = document.querySelector('#devices-container .device-date');
+    assert.ok(dateEl, 'the PIVC row was added');
+    dateEl.value = old;
+    dateEl.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await tick(window);
+
+    const shown = document.getElementById('devices-container').textContent;
+    assert.match(shown, /12d dwell/, 'the day count is still reported');
+    assert.ok(!/long dwell/i.test(shown), 'no "long"/"very long" wording on screen');
+
+    type(window, 'ptName', 'ABC');
+    click(window, '#btn_generate_summary');
+    await tick(window);
+    const note = document.getElementById('summary').value;
+    assert.match(note, /12d dwell/);
+    assert.ok(!/long dwell/i.test(note), 'nor in the note');
+    close();
+});
+
+test('the reviewer field marks itself until it is signed', async () => {
+    const { window, document, close } = await loadTool();
+    const field = document.querySelector('.rs-field-reviewer');
+    assert.ok(field, 'the reviewer field is its own marked block');
+
+    type(window, 'ptName', 'ABC');
+    await tick(window);
+    assert.ok(field.classList.contains('reviewer-missing'), 'unsigned notes say so');
+
+    type(window, 'reviewerInitials', 'CB');
+    await tick(window);
+    assert.ok(!field.classList.contains('reviewer-missing'), 'and stop once signed');
+    close();
+});
+
+// --- Note hygiene: only fields with data reach the DMR -----------------------------------
+
+test('a note with no ward or bed prints no location and no dashes', async () => {
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
+    type(window, 'icuLos', '6');
     await tick(window);
     click(window, '#btn_generate_summary');
     await tick(window);
-    assert.ok(!/Post ICU Syndrome/.test(document.getElementById('summary').value));
+
+    const note = document.getElementById('summary').value;
+    assert.match(note, /Patient: ABC/);
+    assert.ok(!/Location:/.test(note), 'no empty Location');
+    assert.ok(!/Room:/.test(note), 'no empty Room');
+    assert.ok(!/--/.test(note), 'no placeholder dashes anywhere in the note');
+    assert.ok(!/Reason for ICU Admission/.test(note), 'no empty admission reason');
+    close();
+});
+
+test('the note names the ward the clinician typed, not the word "Other"', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'ptWard', 'Other');
+    type(window, 'ptWardOther', 'Short Stay Unit');
+    type(window, 'ptBed', '4A');
+    await tick(window);
+    click(window, '#btn_generate_summary');
+    await tick(window);
+
+    const note = document.getElementById('summary').value;
+    assert.match(note, /Location: Short Stay Unit, Room: 4A/);
+    assert.ok(!/Location: Other/.test(note));
+    close();
+});
+
+test('the reviewer field holds initials, not a name', async () => {
+    const { document, close } = await loadTool();
+    assert.equal(document.getElementById('reviewerInitials').getAttribute('maxlength'), '3');
+    close();
+});
+
+// --- Quick Review layout ------------------------------------------------------------------
+
+test('the category buttons live inside the category card and still work', async () => {
+    const { window, document, close } = await loadTool();
+    // They used to be a separate card 800 lines up the page. The move must not break the
+    // listeners bound to them by id.
+    assert.ok(document.getElementById('section-category').contains(document.getElementById('override_red')),
+        'the decision sits with the evidence for it');
+
+    type(window, 'ptName', 'ABC');
+    await tick(window);
+    click(window, '#override_red');
+    await tick(window);
+    assert.equal(document.getElementById('catText').textContent, 'CAT 1');
+    close();
+});
+
+test('Quick Review fills the empty write-up panel with a prompt', async () => {
+    const { window, document, close } = await loadTool();
+    const list = document.getElementById('scraped_issues_list');
+    assert.equal(list.innerHTML, '', 'Full Review leaves it blank');
+
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window);
+    assert.match(list.textContent, /Add issues from your review/, 'Quick Review says what to do with it');
+
+    click(window, 'input[name="reviewDepth"][value="full"]');
+    await tick(window);
+    assert.equal(list.innerHTML, '', 'and the prompt does not linger on the way back');
+    close();
+});
+
+test('Quick Review puts lines in the rail and the write-up in the wide column', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window);
+
+    const inCell = (cell, id) => document.getElementById(cell).contains(document.getElementById(id));
+    assert.ok(inCell('qgLeft', 'section-devices'), 'lines moved to the rail');
+    assert.ok(inCell('qgRight', 'scraped_risks_wrapper'));
+    assert.ok(inCell('qgRight', 'quick_notes_wrapper'), 'notes joined to the review list');
+    assert.ok(inCell('qgBottom', 'override_card'), 'category buttons ride with the bottom band');
+    close();
+});
+
+test('the Quick Review-only cards carry no inline display of their own', async () => {
+    const { window, document, close } = await loadTool();
+    // Their visibility moved from an inline style to body.quick-review-active in style.css:
+    // the inline display outranked the stylesheet, so the write-up panel could never be the
+    // flex column it needs to be to stretch, and it kept a dead band at its foot. jsdom does
+    // not load the stylesheet (see harness.js), so what is asserted here is that nothing
+    // writes an inline display any more - the CSS itself is verified in a real browser.
+    const notes = document.getElementById('quick_notes_wrapper');
+    const list = document.getElementById('scraped_risks_wrapper');
+    assert.equal(notes.style.display, '');
+    assert.equal(list.style.display, '');
+
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window);
+    assert.equal(notes.style.display, '', 'entering Quick Review must not set one');
+    assert.equal(list.style.display, '');
+
+    click(window, 'input[name="reviewDepth"][value="full"]');
+    await tick(window);
+    assert.equal(notes.style.display, '', 'nor must leaving it');
+    assert.equal(list.style.display, '');
+    close();
+});
+
+test('a floating Quick Review card can be closed from its own corner', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window);
+
+    click(window, '#btnBloodsDetailsToggle');
+    await tick(window);
+    const bloods = document.getElementById('section-bloods');
+    assert.ok(bloods.classList.contains('qr-expanded'), 'the card floats over the page');
+
+    // Closing used to mean finding the Details toggle again, which scrolls out of sight.
+    click(window, '#section-bloods .qr-overlay-close');
+    await tick(window);
+    assert.ok(!bloods.classList.contains('qr-expanded'), 'the corner button closes it');
+    assert.ok(document.getElementById('qrBackdrop').hidden, 'and takes the backdrop with it');
+    close();
+});
+
+test('what the clinician writes down reaches the DMR note as plain bullets', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'adds', '2');
+    type(window, 'quickNotes', 'Reviewed with bedside nurse\nPlan discussed with team');
+    await tick(window);
+
+    type(window, 'manualIssueInput', 'Mobilising with 1 assist');
+    click(window, '#btnAddIssue');
+    type(window, 'manualIssueInput', 'Family updated re GOC');
+    click(window, '#btnAddIssue');
+    await tick(window);
+
+    click(window, '#btn_generate_summary');
+    await tick(window);
+    let note = document.getElementById('summary').value;
+
+    // Review List entries and Quick Notes both used to stop at the handover line or go
+    // nowhere at all. They are bullets under the score and the bloods now, with no heading.
+    assert.match(note, /- Mobilising with 1 assist/);
+    assert.match(note, /- Family updated re GOC/);
+    assert.match(note, /- Reviewed with bedside nurse/, 'Quick Notes reaches the note');
+    assert.match(note, /- Plan discussed with team/, 'one bullet per line');
+
+    // They must land before the risk section, not inside it - that section says what drove
+    // the category, and a typed item is not a readmission risk factor.
+    const risksAt = note.indexOf('IDENTIFIED ICU READMISSION RISK FACTORS');
+    assert.ok(note.indexOf('- Mobilising with 1 assist') < risksAt, 'bulleted above the risk section');
+    assert.ok(note.indexOf('- Reviewed with bedside nurse') < risksAt);
+    assert.ok(note.indexOf('- Mobilising with 1 assist') > note.indexOf('ADDS: 2'), 'and below the score');
+
+    // Resolving an entry takes it out, the same way it leaves the handover line.
+    click(window, '#scraped_issues_list .scraped-issue-row .scraped-issue-resolve');
+    await tick(window);
+    click(window, '#btn_generate_summary');
+    await tick(window);
+    note = document.getElementById('summary').value;
+    assert.ok(!/Mobilising with 1 assist/.test(note), 'resolved entries drop out');
+    assert.match(note, /Family updated re GOC/, 'the rest stay');
+    close();
+});
+
+test('an issue row explains its own controls', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'manualIssueInput', 'Awaiting speech path review');
+    click(window, '#btnAddIssue');
+    await tick(window);
+
+    const row = document.querySelector('#scraped_issues_list .scraped-issue-row');
+    assert.equal(row.querySelector('.scraped-issue-resolve').textContent, 'resolve', 'a word, not a bare checkbox');
+    assert.ok(row.querySelector('.scraped-issue-edit-btn'), 'a pencil says the row can be edited');
+    assert.equal(row.querySelector('.scraped-issue-delete'), null, 'delete is gone - resolve does the same job, reversibly');
+    assert.match(document.getElementById('issues_count').textContent, /1 open/);
+
+    // The pencil opens the same inline editor the text does.
+    click(window, '#scraped_issues_list .scraped-issue-edit-btn');
+    await tick(window);
+    const editor = document.querySelector('#scraped_issues_list .scraped-issue-edit');
+    assert.ok(editor, 'the pencil opens the editor');
+    editor.value = 'Awaiting SLT review';
+    editor.dispatchEvent(new window.Event('blur'));
+    await tick(window);
+    assert.match(document.querySelector('.scraped-issue-text').textContent, /Awaiting SLT review/);
+
+    click(window, '#scraped_issues_list .scraped-issue-resolve');
+    await tick(window);
+    assert.equal(document.querySelector('.scraped-issue-resolve').textContent, 'undo');
+    assert.match(document.getElementById('issues_count').textContent, /1 resolved/);
     close();
 });

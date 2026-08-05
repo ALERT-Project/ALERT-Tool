@@ -35,8 +35,8 @@
                 class="nav-label">Bloods</span></a>
         <a href="#section-devices" class="nav-item" title="Lines, Drains & Wounds"><span class="nav-icon">🔧</span><span
                 class="nav-label">Devices</span></a>
-        <a href="#section-context" class="nav-item" title="Other Factors"><span class="nav-icon">📝</span><span
-                class="nav-label">Other</span></a>
+        <a href="#section-context" class="nav-item" title="Patient Background"><span class="nav-icon">📝</span><span
+                class="nav-label">Background</span></a>
         <a href="#section-category" class="nav-item" title="Assessed Risk Category"><span
                 class="nav-icon">🎯</span><span class="nav-label">Category</span></a>
         <a href="#section-summary" class="nav-item" title="Auto-Generated Summary"><span class="nav-icon">📄</span><span
@@ -62,7 +62,7 @@
                 <a href="#section-devices" class="mobile-nav-link"><span class="nav-icon">🔧</span><span
                         class="nav-label">Lines, Drains & Wounds</span></a>
                 <a href="#section-context" class="mobile-nav-link"><span class="nav-icon">📝</span><span
-                        class="nav-label">Other Factors</span></a>
+                        class="nav-label">Patient Background</span></a>
                 <a href="#section-category" class="mobile-nav-link"><span class="nav-icon">🎯</span><span
                         class="nav-label">Assessed Risk Category</span></a>
                 <a href="#section-summary" class="mobile-nav-link"><span class="nav-icon">📄</span><span
@@ -96,7 +96,7 @@
     <main class="container" role="main">
 
         <div id="quickReviewBanner"
-            style="display:none; position:sticky; top:0; z-index:90; background:var(--quick); color:white; padding:12px 20px; margin:-20px -20px 20px -20px; font-weight:var(--fw-semibold); text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+            style="display:none; position:sticky; top:0; z-index:90; background:var(--quick); color:white; padding:12px 20px; margin:0 0 16px 0; border-radius:12px; font-weight:var(--fw-semibold); text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
             <span style="font-size:var(--fs-lg);">⚡ QUICK REVIEW MODE</span>
             <button id="btnExitQuickReview"
                 style="margin-left:16px; background:rgba(255,255,255,0.2); border:1px solid white; color:white; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:var(--fs-sm); font-weight:var(--fw-semibold);">Exit
@@ -219,9 +219,14 @@
                     </div>
                 </div>
 
-                <div class="rs-field">
-                    <label for="reviewerInitials">Reviewer</label>
-                    <input id="reviewerInitials" type="text" maxlength="6" autocomplete="off" />
+                <!-- Every note is signed by whoever wrote it, so this is the one strip field
+                     that can't be left blank. It sits first and stays outlined until it's
+                     filled - it was being read as optional metadata and skipped. Capped at
+                     three characters like #ptName: this tool holds initials, never names. -->
+                <div class="rs-field rs-field-reviewer">
+                    <label for="reviewerInitials">Reviewer <span class="rs-required">required</span></label>
+                    <input id="reviewerInitials" type="text" maxlength="3" autocomplete="off"
+                        placeholder="CB" style="text-transform:uppercase" />
                 </div>
 
                 <div class="rs-field" id="reviewTimeWrapper">
@@ -276,7 +281,10 @@
                 </div>
                 <div class="col-1">
                     <label for="ptBed">Bed</label>
-                    <input id="ptBed" type="number" min="1" />
+                    <!-- Text, not number: real bed/room labels are "24B", "3-2", "A4". A number
+                         input silently discards anything non-numeric, which is why scraped rooms
+                         never appeared and couldn't be typed back in. -->
+                    <input id="ptBed" type="text" maxlength="6" autocomplete="off" />
                 </div>
 
                 <div class="col-6" id="ptWardOtherWrapper" style="display:none;">
@@ -343,6 +351,8 @@
             <div class="risk-gates-grid">
                 <!-- ADDS Score Trigger & Drawer -->
                 <div class="input-box" id="adds_wrapper">
+                    <!-- Same overlay, same problem: shown only while the calculator floats. -->
+                    <button type="button" class="qr-overlay-close" data-qr-close aria-label="Close calculator">&times;</button>
                     <div class="gate-trigger-area">
                         <div class="question-label">📊 ADDS Score <span id="prev_adds" class="prev-datum"></span></div>
                         <div>
@@ -997,14 +1007,14 @@
             <div id="carried_forward_list"></div>
         </div>
 
-        <div id="quick_notes_wrapper" class="card" style="margin-top:20px; display:none;">
+        <div id="quick_notes_wrapper" class="card" style="margin-top:20px;">
             <h2 class="card-title">Quick Notes</h2>
             <div class="input-box" style="display:flex; flex-direction:column;">
                 <textarea id="quickNotes" style="width:100%; box-sizing:border-box; min-height:100px; flex:1;"></textarea>
             </div>
         </div>
 
-        <div id="scraped_risks_wrapper" class="card" style="margin-top:20px; display:none;">
+        <div id="scraped_risks_wrapper" class="card" style="margin-top:20px;">
             <h2 class="card-title">Review List <span id="issues_count" class="issues-count"></span></h2>
             <div id="scraped_issues_list"></div>
             <div class="issue-add-row">
@@ -1014,24 +1024,9 @@
             </div>
         </div>
 
-        <div class="card" id="override_card" style="margin-top:20px;">
-            <div class="section-title" style="margin:0 0 4px 0;">Select Category</div>
-            <div class="override-auto-hint" id="override_auto_hint">Auto-calculated: CAT 3</div>
-            <div class="override-btn-row">
-                <button class="override-btn red" id="override_red">CAT 1</button>
-                <button class="override-btn amber" id="override_amber">CAT 2</button>
-                <button class="override-btn green" id="override_green">CAT 3</button>
-                <button class="override-btn clear" id="override_clear" style="display:none;">Clear</button>
-            </div>
-            <input type="hidden" id="override" value="none">
-            <div id="override_reason_box" style="display:none;">
-                <div id="override_downgrade_warn" style="display:none;"></div>
-                <label for="overrideNote"><span id="override_reason_label">Reason for override</span></label>
-                <input id="overrideNote" type="text" autocomplete="off" />
-                <div id="override_reason_required" style="display:none;">A reason is required before a CAT 3
-                    downgrade is applied.</div>
-            </div>
-        </div>
+        <!-- #override_card used to sit here, 800 lines above the flag boxes that justify the
+             category it sets. It now lives inside #section-category so the decision is made
+             where the evidence for it is shown. -->
 
         </div>
 
@@ -1537,38 +1532,18 @@
                             Recovery</div>
 
                         <div class="grid" style="row-gap:12px;">
-                            <div class="col-12">
-                                <div class="pics-card" id="pics_panel">
-                                    <div class="pics-head">
-                                        <label class="question-label pics-title">PICS Risk Score <span
-                                                id="prev_pics_status" class="prev-datum"></span></label>
-                                        <div class="pics-total">
-                                            <span class="pics-score" id="pics_score_value">0</span>
-                                            <span class="pics-band low" id="pics_band_chip">Low risk</span>
-                                        </div>
+                            <div class="col-6">
+                                <div
+                                    style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
+                                    <label class="question-label"
+                                        style="font-size:var(--fs-base); margin-bottom:4px; display:block; color:var(--accent);">PICS? <span id="prev_pics_status" class="prev-datum"></span></label>
+                                    <div class="segmented-group" id="seg_pics">
+                                        <button type="button" class="seg-btn" data-value="positive">Positive</button>
+                                        <button type="button" class="seg-btn" data-value="negative">Negative</button>
                                     </div>
-                                    <!-- Item rows are built from PICS_ITEMS in config.js so the panel and the
-                                         rules can never disagree about what the score contains. -->
-                                    <div id="pics_items"></div>
-                                    <div id="pics_suggestions" class="pics-suggestions"></div>
-                                    <div id="pics_action_wrapper" class="pics-action" style="display:none;">
-                                        <label>
-                                            <input type="checkbox" id="chk_pics_action" checked>
-                                            <span id="pics_action_text"></span>
-                                        </label>
-                                    </div>
-                                    <div class="pics-override">
-                                        <span class="pics-override-label">Overall assessment</span>
-                                        <div class="segmented-group" id="seg_pics">
-                                            <button type="button" class="seg-btn"
-                                                data-value="positive">Positive</button>
-                                            <button type="button" class="seg-btn"
-                                                data-value="negative">Negative</button>
-                                        </div>
-                                        <div id="pics_wrapper" style="display:none; margin-top:8px;">
-                                            <textarea id="pics_note" placeholder="additional context..."
-                                                style="min-height:50px;"></textarea>
-                                        </div>
+                                    <div id="pics_wrapper" style="display:none; margin-top:8px;">
+                                        <textarea id="pics_note" placeholder="additional context..."
+                                            style="min-height:50px;"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -1614,6 +1589,10 @@
         </div>
 
         <div id="section-bloods" class="accordion-wrapper" data-accordion-id="bloods">
+            <!-- Only ever visible while this card is floating over the page in Quick Review.
+                 Closing it used to mean finding the "Details (close)" button again, which
+                 scrolls out of sight as soon as you move down the bloods grid. -->
+            <button type="button" class="qr-overlay-close" data-qr-close aria-label="Close bloods">&times;</button>
             <button type="button" class="accordion" aria-expanded="false" aria-controls="panel_bloods">🩸 Bloods <span class="icon"
                     aria-hidden="true"></span></button>
             <div id="bloods_quick_controls" style="display:none;">
@@ -1815,7 +1794,7 @@
         </div>
 
         <div id="section-context" class="accordion-wrapper" data-accordion-id="context" style="margin-top:20px;">
-            <button type="button" class="accordion" aria-expanded="false" aria-controls="panel_context">📝 Other Factors <span
+            <button type="button" class="accordion" aria-expanded="false" aria-controls="panel_context">📝 Patient Background <span
                     class="icon" aria-hidden="true"></span></button>
             <div class="panel" id="panel_context">
                 <div
@@ -1870,6 +1849,30 @@
                     <small>CAT 2 Amber Flags</small>
                     <h3 id="amberCount">0</h3>
                     <ul id="amberFlagList" class="flag-box-list"></ul>
+                </div>
+            </div>
+
+            <!-- The clinician's own call, sitting directly under the evidence for the
+                 calculated one. Phrased as a statement rather than "Select Category": these
+                 buttons record what the reviewer thinks, they don't correct the tool. -->
+            <div id="override_card">
+                <div class="override-head">
+                    <div class="section-title" style="margin:0;">Override category using the buttons below:</div>
+                    <div class="override-auto-hint" id="override_auto_hint">Auto-calculated: CAT 3</div>
+                </div>
+                <div class="override-btn-row">
+                    <button class="override-btn red" id="override_red">CAT 1</button>
+                    <button class="override-btn amber" id="override_amber">CAT 2</button>
+                    <button class="override-btn green" id="override_green">CAT 3</button>
+                    <button class="override-btn clear" id="override_clear" style="display:none;">Clear</button>
+                </div>
+                <input type="hidden" id="override" value="none">
+                <div id="override_reason_box" style="display:none;">
+                    <div id="override_downgrade_warn" style="display:none;"></div>
+                    <label for="overrideNote"><span id="override_reason_label">Reason for override</span></label>
+                    <input id="overrideNote" type="text" autocomplete="off" />
+                    <div id="override_reason_required" style="display:none;">Please record why - the category is
+                        already set to your selection.</div>
                 </div>
             </div>
 
@@ -2051,18 +2054,6 @@
             </button>
         </div>
     </footer>
-
-    <!-- Privacy screen. Obscures the page on a shared workstation after a period of inactivity.
-         Deliberately does NOT clear anything: a clinician starts a review, walks to the patient
-         and comes back to finish it, and losing that work would be worse than the exposure. -->
-    <div id="privacyScreen" hidden>
-        <div class="privacy-screen-panel">
-            <div class="privacy-screen-icon">🔒</div>
-            <div class="privacy-screen-title">ALERT tool</div>
-            <div class="privacy-screen-note">Screen hidden after inactivity. Your review is unchanged.</div>
-            <button type="button" id="btnResumeFromPrivacy" class="btn btn-primary">Resume review</button>
-        </div>
-    </div>
 
     <div id="toast" class="toast"></div>
 

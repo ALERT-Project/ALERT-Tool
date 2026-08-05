@@ -1,7 +1,12 @@
 # ALERT Tool — Risk Rule Decisions
 
 **Date:** 1 August 2026
+**Author:** Casey Bond, ALERT Clinical Nurse Specialist, Fiona Stanley Hospital, SMHS
 **Status:** Agreed, not yet implemented.
+**Approval status:** Clinical rationale recorded here for review. Rule changes affecting
+category distribution require clinical sign-off before ward use — see the implementation plan.
+**Ownership:** authorship and clinical ownership are separated in §0 of
+`ALERT_Data_Handling_Statement.md`.
 
 ## Governing principle
 
@@ -177,76 +182,46 @@ auto-click on the worsening-Cr chip.
 
 ---
 
-## 8. Cumulative PICS Risk Score
+## 8. PICS — scored version considered and removed
 
-**Source:** Prabhsimran Dhanju, 2026 — separate masters project, provided for inclusion.
-**Status:** implemented August 2026. **Local instrument, not a published or validated score**,
-and labelled as such wherever it appears: the DMR line reads *"(Dhanju 2026, local score)"*.
+A colleague's masters project (Dhanju, 2026) proposed an eleven-item cumulative PICS score with
+0–2 / 3–5 / 6+ bands. It was built in full on 2 August 2026 and removed on 5 August. The
+reasoning is recorded because the question will come round again.
 
-Replaces the bare Positive/Negative question, which was a judgement call with nothing behind
-it and gave the ward no action to take.
+**What the tool does instead:** the existing single question. New hallucinations or delirium on
+the ward, positive, refer to OT, pastoral care, and psychology where the presentation is
+PTSD-like. That is the practice the service already runs, and it is the practice the evidence
+supports.
 
-Eleven items, max 21. Bands **0–2 Low**, **3–5 Moderate**, **6+ High**.
+**Why the score didn't earn its place:**
 
-| ID | Item | Pts | Derivation |
-|---|---|---|---|
-| P-01 | Mechanical ventilation >48h | 3 | clinician |
-| P-02 | Positive delirium screen (CAM-ICU+) at any point | 3 | auto — neuro gate + type Delirium |
-| P-03 | Pre-existing baseline impairment (cognitive, frailty, PTSD/depression) | 3 | auto — `frailty_known`; `neuro_psych` **suggests only** |
-| P-04 | Severe sepsis, septic shock or ARDS | 2 | clinician |
-| P-05 | Neuromuscular blockade or high dose corticosteroids | 2 | clinician |
-| P-06 | Severe hypoxia or high dose vasopressors | 2 | suggested by `pressor_recent_norad`, never set |
-| P-07 | Strict bed rest / complete immobility >48h | 2 | auto — immobility gate + LOS ≥2 |
-| P-08 | ICU LOS >3 days | 1 | auto — `icuLos` |
-| P-09 | Physical restraints | 1 | clinician |
-| P-10 | Severe sleep disruption | 1 | auto — poor sleep |
-| P-11 | Extreme family or caregiver distress or conflict | 1 | clinician |
+- **Delirium is the predictor**, and this control already captures it. It is the only
+  significant cognitive risk factor in the 2020 meta-analysis (OR 2.85,
+  [PMID 31839375](https://pubmed.ncbi.nlm.nih.gov/31839375/)) and carries the heaviest weight in
+  the only published ward-based PICS screening tool (Blot et al., *Critical Care*, July 2025,
+  [PMC12243358](https://pmc.ncbi.nlm.nih.gov/articles/PMC12243358/)). Pre-existing cognitive or
+  psychiatric impairment is the other strong one — previous mental health problems OR 9.45.
+  Both were already on the form.
+- **That published tool has four predictors, not eleven** — previous cognitive problems,
+  negative ICU experience, delirium, renal support. Respiratory support was tested and dropped
+  for contributing under 1% to the AUC, which is the item Prabh's score weighted joint-highest
+  (mechanical ventilation >48h).
+- **ICU LOS >3 days does not separate risk.** *Critical Care* 2024
+  ([PMC10807116](https://pmc.ncbi.nlm.nih.gov/articles/PMC10807116/)) found impairment at six
+  months in 29% of patients staying under 72h against 33% over.
+- **The weights were not cohort-derived**, so summing them manufactured a precision that does
+  not exist. A systematic review of 16 PICS prediction models
+  ([PMC11846601](https://pmc.ncbi.nlm.nih.gov/articles/PMC11846601/)) rated 14 at high risk of
+  bias with only 3 externally validated — there is no gold standard to adopt instead, which
+  argues for a small screen rather than a comprehensive one.
+- **This tool cannot validate it anyway.** ALERT persists nothing beyond the session, so
+  embedding the score generates no dataset and tests no threshold. It could only ever add
+  interface.
 
-### Effect on category
-
-| Band | Effect |
-|---|---|
-| High (6+) | one **amber**, replacing the old `pics === 'positive'` rule |
-| Moderate (3–5) | **check item** (§3) — visible and carried in handover, scores nothing |
-| Low (0–2) | nothing |
-
-**Never red.** The score describes recovery trajectory over weeks; the ALERT category describes
-risk of coming back to ICU in the next 24–48 hours. A CAT 1 minted by a long stay and a frailty
-tick would say something about the patient that isn't true, and would move exactly the
-distribution §2 is trying to correct.
-
-### Derivation and override
-
-Five items are ticked from data already on the form rather than asked twice. Two rules govern
-this, and both matter:
-
-- **Derived items follow their field in both directions.** An untouched item is recomputed
-  every render, so an ICU LOS corrected from 7 to 2 retracts the tick. Reading the stored value
-  as well would strand the derivation on a number no longer on the form.
-- **A clinician's answer wins permanently.** Touching an item records it in `pics_manual`, and
-  the stored value governs from then on — because several instrument items ask about the whole
-  admission while the field behind them describes today's review. Auto-ticks are labelled
-  *(auto: ICU LOS)* on the panel so the distinction is visible rather than assumed.
-
-**P-03 and P-06 are deliberately not derived** despite a field being close:
-
-- `neuro_psych` records a psychological concern at a ward review; P-03 asks for a *pre-existing*
-  diagnosis. Deriving one from the other would be the tool making a claim the field doesn't
-  support — so it raises a suggestion chip instead. Same reasoning as §6, *suppressors suggest,
-  never set*, applied to a scorer.
-- The pressor toggles record which agent, never the dose, and P-06 turns on "high dose".
-
-### Ward actions
-
-The band's recommended action is the only part of the score the ward can act on, so it prints
-into the `PLAN:` block — pre-ticked, and removable before the note is generated, because the
-line states what was done.
-
-### Open
-
-- Needs clinical sign-off before ward use, on the same footing as Batch 2.
-- The 3-point auto-tick on P-03 moves a patient a third of the way to High on one existing
-  frailty tick. Visible and reversible by design, but worth watching in the canary fortnight.
+**The real gap is not assessment, it is what happens next.** PICS is hard to manage in the ≤3
+days ALERT holds a patient, and there is no follow-up service to hand to. A patient-facing
+leaflet on what to expect and where to go is the intervention that survives discharge; a score
+is not. Recorded here as the open item, not as a tool feature.
 
 ---
 

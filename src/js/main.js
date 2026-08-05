@@ -1,10 +1,17 @@
+/* =========================================
+   ALERT Nursing Risk Assessment Tool
+   Entry point: initialisation and event wiring
+   Copyright © 2025-2026 Casey Bond
+   MIT License - https://opensource.org/licenses/MIT
+   ========================================= */
+
 import { $, debounce, showToast, disableAutofill } from './utils.js';
 import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
 import { ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs } from './config.js';
 import {
     getState, saveState, loadState, restoreState, previousCategoryData, updateLastSaved,
     isQuickReviewMode, setQuickReviewDismissed, addActiveIssue, addManualIssue,
-    getUnresolvedActiveIssues, renderScrapedIssuesList
+    getUnresolvedActiveIssues, getManualIssuesForNote, renderScrapedIssuesList
 } from './state.js';
 import { computeAll } from './logic.js';
 import { generateSummary, generateHandoverLine } from './summary.js';
@@ -15,46 +22,12 @@ import {
     enableQuickReviewMode, exitQuickReviewMode, showQuickReviewPrompt, openMobileNav, closeMobileNav,
     handleSegmentClick, toggleBowelDate, updateAgeMitigationUI, updateLosMitigationUI, openAccordion, closeAccordion,
     setBloodsOverlay, closeQuickOverlays, toggleAddsOverride, refreshAddsOverrideUI, setPanelOpen,
-    buildPicsPanel
+    markCopiedOnExit
 } from './ui.js';
-
-// A tab left open at a nurses' station holds a full review indefinitely. This hides it, and
-// only hides it - the earlier proposal was to clear state on a timer, which would have thrown
-// away the work of anyone who started a review, went to see the patient, and came back.
-const PRIVACY_IDLE_MS = 10 * 60 * 1000;
-
-function setupPrivacyScreen() {
-    const screen = $('privacyScreen');
-    if (!screen) return;
-    let timer;
-
-    const hide = () => { screen.hidden = true; arm(); };
-    const show = () => { screen.hidden = false; };
-
-    function arm() {
-        clearTimeout(timer);
-        timer = setTimeout(show, PRIVACY_IDLE_MS);
-    }
-
-    // Only real interaction counts. mousemove would keep it awake on a knocked desk.
-    ['pointerdown', 'keydown', 'input', 'change'].forEach(evt => {
-        document.addEventListener(evt, () => { if (screen.hidden) arm(); }, true);
-    });
-
-    $('btnResumeFromPrivacy')?.addEventListener('click', hide);
-    screen.addEventListener('click', hide);
-    arm();
-}
 
 function initialize() {
     updateLastSaved();
     disableAutofill();
-    setupPrivacyScreen();
-
-    // Before anything else touches the DOM: the PICS item rows are generated rather than
-    // written into index.html, and both the chip click handler below and restoreState() at the
-    // end of this function expect them to already exist.
-    buildPicsPanel();
 
     document.querySelectorAll('.quick-select, .select-btn, .detail-toggle, .accordion, .trend-btn').forEach(btn => {
         btn.setAttribute('tabindex', '-1');
@@ -117,7 +90,8 @@ function initialize() {
             window._lastRed || [],
             window._lastAmber || [],
             window._lastSuppressed || [],
-            window._lastActiveComorbsKeys || []
+            window._lastActiveComorbsKeys || [],
+            getManualIssuesForNote()
         );
 
         summaryEl.style.height = 'auto';
@@ -786,13 +760,6 @@ function initialize() {
             if (el.id.startsWith('toggle_comorb_')) {
                 syncComorbsToPMH();
             }
-            // A PICS item the clinician has touched stops being derived. Several of these items
-            // ask about the whole ICU admission while the fields behind them describe today's
-            // review, so the clinician's answer is the better one and has to survive the next
-            // render - and the next reload.
-            if (el.id.startsWith('toggle_pics_p')) {
-                el.dataset.manual = 'true';
-            }
             saveState(true);
             computeAll();
             checkBloodRanges();
@@ -926,17 +893,6 @@ function initialize() {
         if (yes && !yes.classList.contains('active')) yes.click();
     });
 
-    // Same contract for the PICS suggestions: the tool asks, the click answers. Clicking the
-    // chip clicks the item, which marks it as the clinician's and recomputes.
-    document.addEventListener('click', (e) => {
-        const sug = e.target?.closest?.('[data-pics-suggest]');
-        if (!sug) return;
-        e.preventDefault();
-        $(`toggle_${sug.dataset.picsSuggest}`)?.click();
-    });
-
-    $('chk_pics_action')?.addEventListener('change', compute);
-
     $('chk_use_mods')?.addEventListener('change', () => { $('mods_inputs').style.display = $('chk_use_mods').checked ? 'block' : 'none'; compute(); });
     $('chk_aperients')?.addEventListener('change', compute);
     $('chk_bloods_nil_sig')?.addEventListener('change', (e) => {
@@ -1050,6 +1006,8 @@ function initialize() {
     $('btnQuickCopySummary')?.addEventListener('click', () => {
         const text = $('summary').value;
         if (!text) { showToast('Summary is empty', 1500); return; }
+        // Copying on the way out: the reset that follows must not wipe what was just copied.
+        markCopiedOnExit();
         navigator.clipboard.writeText(text).then(() => showToast('✓ Copied to clipboard', 1500));
     });
 
@@ -1079,6 +1037,10 @@ function initialize() {
     };
     $('btnBloodsDetailsToggle')?.addEventListener('click', toggleBloodsDetails);
     $('qrBackdrop')?.addEventListener('click', closeQuickOverlays);
+    // One handler for every floating card's ✕ - they all close the same way.
+    document.querySelectorAll('[data-qr-close]').forEach(btn => {
+        btn.addEventListener('click', closeQuickOverlays);
+    });
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && document.querySelector('.qr-expanded')) closeQuickOverlays();
     });

@@ -30,13 +30,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // The note prints '--' wherever a field was blank when it was written. Importing that back
+    // puts a literal '--' in Initials or Bed, which then reads as data - so it's dropped.
+    const isPlaceholder = (v) => /^-+$/.test((v || '').trim());
+
     function setVal(id, val) {
         const el = document.getElementById(id);
-        if (el && val) {
+        if (el && val && !isPlaceholder(val)) {
             el.value = val.trim();
             el.classList.add('scraped-data');
             el.dispatchEvent(new Event('input'));
         }
+    }
+
+    // "Casey Bond" -> "CB", "Bond, Casey" -> "BC", "ABC" -> "ABC". A single short token is
+    // already initials, which is what this tool's own notes carry, so it passes through
+    // untouched rather than collapsing to one letter.
+    function toInitials(raw) {
+        const cleaned = (raw || '').replace(/[^A-Za-z\s,'-]/g, ' ').trim();
+        if (!cleaned) return '';
+        const parts = cleaned.split(/[\s,]+/).filter(Boolean);
+        if (parts.length === 1 && parts[0].length <= 3) return parts[0].toUpperCase();
+        return parts.map(p => p[0]).join('').toUpperCase().slice(0, 3);
     }
 
     function setPrev(id, val) {
@@ -163,8 +178,12 @@ document.addEventListener('DOMContentLoaded', () => {
         flagPreviousPlan(text);
 
         // --- 1. DEMOGRAPHICS ---
-        const ptMatch = text.match(/Patient:\s*([A-Za-z\s]+?)\s*\|/i);
-        if (ptMatch) setVal('ptName', ptMatch[1]);
+        // The name field holds three initials and is capped at three characters in the markup -
+        // but maxlength only constrains typing, not assignment, so a scraped note would put a
+        // full name straight through it. A DMR note naturally carries the patient's full name,
+        // which is exactly the one identifier this tool is built not to hold.
+        const ptMatch = text.match(/Patient:\s*([A-Za-z\s,'-]+?)\s*\|/i);
+        if (ptMatch) setVal('ptName', toInitials(ptMatch[1]));
 
         const urnMatch = text.match(/URN:.*?(\d+)/i);
         if (urnMatch) setVal('ptMrn', urnMatch[1].slice(-3));
@@ -181,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const ward = locMatch[1].trim();
             const wardSelect = document.getElementById('ptWard');
             let found = false;
-            if (wardSelect) {
+            if (wardSelect && !isPlaceholder(ward)) {
                 for (let i = 0; i < wardSelect.options.length; i++) {
                     if (wardSelect.options[i].value === ward) {
                         wardSelect.selectedIndex = i;
@@ -198,6 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             if (locMatch[2]) setVal('ptBed', locMatch[2].trim());
+        } else {
+            // A note written with no ward carries the room on its own, with no "Location:" for
+            // the pattern above to anchor on.
+            const roomOnly = text.match(/(?:^|\|)\s*(?:Room|Bed):\s*([^|\n]+)/i);
+            if (roomOnly) setVal('ptBed', roomOnly[1].trim());
         }
 
         const losMatch = text.match(/ICU LOS:\s*([\d.]+)/i);
@@ -326,15 +350,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const nutritionMatch = text.match(/Nutrition:\s*(.*)/i);
             if (nutritionMatch) setPrev('prev_nutrition', nutritionMatch[1]);
 
-            // Two formats reach this: the scored line this tool now writes, and the bare
-            // Positive/Negative that every note before it carries. The band and the score are
-            // the useful part of the first - the contributing items belong to that review, not
-            // this one - so it is trimmed rather than shown whole.
             const picsStatusMatch = text.match(/Post ICU Syndrome:\s*(.*)/i);
-            if (picsStatusMatch) {
-                const scored = picsStatusMatch[1].match(/^(.*?risk)\s*-\s*PICS score\s*(\d+)/i);
-                setPrev('prev_pics_status', scored ? `${scored[1]} (score ${scored[2]})` : picsStatusMatch[1]);
-            }
+            if (picsStatusMatch) setPrev('prev_pics_status', picsStatusMatch[1]);
 
             const sleepMatch = text.match(/Sleep:\s*(.*)/i);
             if (sleepMatch) setPrev('prev_sleep', sleepMatch[1]);

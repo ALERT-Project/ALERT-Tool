@@ -1,3 +1,10 @@
+/* =========================================
+   ALERT Nursing Risk Assessment Tool
+   Blood trend deltas and arrow thresholds
+   Copyright © 2025-2026 Casey Bond
+   MIT License - https://opensource.org/licenses/MIT
+   ========================================= */
+
 import { num } from './utils.js';
 import { normalRanges } from './config.js';
 

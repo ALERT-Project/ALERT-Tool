@@ -277,6 +277,35 @@ header h1 .logo-em {
 }
 .rs-field { min-width: 0; }
 .rs-field input { margin: 0; }
+
+/* Reviewer: pulled to the front of the strip and given a standing outline, because an
+   unsigned note is the one gap the tool can't fill in for the clinician. The "required"
+   tag and the amber state clear the moment something is typed - see markReviewerState(). */
+.rs-field-reviewer { order: -1; }
+/* Sized between the two mistakes: a full-width box invited a full name, 7ch looked like a
+   stamp stuck on the form. It reads as a short code but still sits as a proper field beside
+   its neighbours, and maxlength is what actually enforces initials.
+   [type="text"] is needed to outrank the global input rule's width:100% - same specificity
+   otherwise, and the global one comes later in the file. */
+.rs-field-reviewer input[type="text"] {
+  width: 100%;
+  max-width: 130px;
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.rs-required {
+  display: none;
+  margin-left: 4px;
+  color: var(--amber);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.rs-field-reviewer.reviewer-missing .rs-required { display: inline; }
+.rs-field-reviewer.reviewer-missing input {
+  border-color: var(--amber);
+  background: rgba(245, 158, 11, 0.08);
+}
 /* Each group fills its grid cell, and its two options split that cell evenly. */
 .review-strip .radio-segmented-group { width: 100%; max-width: none; }
 .review-strip .radio-segmented-group label { flex: 1 1 0; min-width: 0; }
@@ -341,15 +370,25 @@ header h1 .logo-em {
    lines, category); right = what you write (issues, notes); bottom spans both and
    carries the computed category + ALERT actions, which Quick Review never skips. */
 #quickGrid { display: none; }
-/* The 980px reading column is too narrow for a two-column workspace. */
-body.quick-review-active .container { max-width: 1100px; padding-bottom: 160px; }
-/* Banner's inline -20px side margins overhang once the container fills the window. */
-body.quick-review-active #quickReviewBanner { margin-left: -12px !important; margin-right: -12px !important; }
+/* Quick Review used to widen the container to 1100px and shrink every card, title and button
+   inside it. Switching modes then resized the whole page, which read as two different tools.
+   The page measure, the card padding and the control sizes are now the ones Full Review uses;
+   only the arrangement of the cards differs between the modes. */
+/* The banner used to be pulled out to the container's padding edge with negative side
+   margins. Between about 768px and 1024px the container fills the space it's given, so that
+   put the banner hard against the window while every card below it kept a gutter - which is
+   what read as the right-hand side being clipped. It now lines up with the cards. */
 body.quick-review-active #quickGrid {
   display: grid;
-  grid-template-columns: minmax(300px, 1fr) 2fr;
+  /* Near-equal columns. The old minmax(300px,1fr) 2fr gave two thirds of the width to the
+     cards that collapse when nothing was scraped, which is what left a void down the middle.
+     At the standard 980px measure the rail lands near 460px, still clear of the ~356px a
+     .device-row needs to stay on one line. */
+  grid-template-columns: minmax(360px, 0.9fr) 1fr;
   gap: 16px;
-  align-items: start;
+  /* stretch, not start: both columns take the row's height so the write-up panel below can
+     flex into whatever the other column left over. */
+  align-items: stretch;
   margin-bottom: 16px;
   /* Clear the sticky Quick Review banner when scrollIntoView lands here. */
   scroll-margin-top: 90px;
@@ -358,10 +397,14 @@ body.quick-review-active #quickGrid {
 #qgTop, #qgBottom { grid-column: 1 / -1; }
 
 /* Patient Details spans the top of the workspace: it's a form to fill in, not a rail tile,
-   and the identifiers have to stay editable in Quick Review. */
-#quickGrid #section-patient .grid { gap: 8px 10px; }
-#quickGrid #section-patient textarea { min-height: 44px; }
-#quickGrid #section-patient .review-strip { margin-bottom: 10px; }
+   and the identifiers have to stay editable in Quick Review. It is otherwise the same card
+   at the same size as in Full Review - the fields used to be enlarged here to stop them
+   being skipped, which made switching modes resize the form under the clinician. What keeps
+   them from being skipped now is position and state: the reviewer sits first in the strip and
+   outlines itself until it's filled, and the completeness notice names what's missing. */
+#quickGrid #section-patient label[for="ptName"],
+#quickGrid #section-patient label[for="ptMrn"],
+#quickGrid #section-patient label[for="ptBed"] { color: var(--ink); }
 
 /* --- Notice region -------------------------------------------------------------------
    One banner at a time, shared by every source that used to have a strip of its own. Loud
@@ -404,17 +447,23 @@ body.quick-review-active #quickGrid {
 #quickGrid > div > .card,
 #quickGrid > div > .accordion-wrapper,
 #quickGrid > div > .input-box { margin-top: 0 !important; margin-bottom: 0 !important; }
-#quickGrid .card { padding: 12px 14px; }
-#quickGrid .card-title { font-size: var(--fs-base); margin-bottom: 8px; }
 
-/* ADDS tile: the moved #adds_wrapper, out of the risk grid and into the rail. */
+/* ADDS tile: the moved #adds_wrapper, out of the risk grid and into the rail.
+   height:auto is load-bearing. .input-box carries height:100%, which .risk-gates-grid
+   cancels - and that cancellation stops applying the moment the card is moved here. With
+   the rail stretched to the row height it inflated to ~300px around ~170px of controls,
+   which read as a broken empty card. Cards in the rail size to their contents. */
 #quickGrid #adds_wrapper {
+  height: auto;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 12px 14px;
+  padding: 20px;   /* the same card padding Full Review uses */
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04);
 }
+#quickGrid .input-box { height: auto; }
+/* Only the write-up panel is allowed to absorb slack; the rail ends where its content does. */
+#qgLeft { align-content: flex-start; }
 #quickGrid #adds_wrapper .quick-select-container { margin-bottom: 0 !important; }
 #quickGrid #addsCalculatorContainer { margin-top: 10px; padding-bottom: 12px !important; }
 
@@ -425,13 +474,14 @@ body.quick-review-active #bloods_quick_controls .segmented-group { flex-wrap: wr
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 12px 14px;
+  padding: 20px;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04);
 }
-#quickGrid .accordion { font-size: var(--fs-base); padding: 0 0 8px 0; background: none; border: none; }
-#quickGrid .panel { padding: 8px 0 0 0; border: none; }
-#quickGrid #panel_devices.open { gap: 8px; }
-#quickGrid .bloods-grid { gap: 8px; }
+/* The accordion header reads as this card's title, so it loses its own frame and padding -
+   the card supplies both. Its type size stays the .card-title / .accordion size it has in
+   Full Review; only the chrome around it goes. */
+#quickGrid .accordion { padding: 0 0 12px 0; background: none; border: none; }
+#quickGrid .panel { padding: 12px 0 0 0; border: none; }
 
 /* The full bloods grid is unreadable squeezed into the rail, so in Quick Review the
    Details drawer opens as a centred overlay instead of inline. */
@@ -449,6 +499,37 @@ body.quick-review-active #section-bloods.qr-expanded {
   box-shadow: 0 24px 64px rgba(15, 23, 42, 0.3);
 }
 body.quick-review-active #section-bloods.qr-expanded #btnBloodsDetailsToggle::after { content: ' (close)'; }
+/* An unambiguous way out of a floating card, in the place people look for one. Hidden
+   entirely outside the overlay state - these cards are ordinary tiles the rest of the time.
+   Sticky rather than absolute or fixed: the overlay scrolls its own contents, and both of
+   those scroll away with them - position:fixed included, because a transformed ancestor
+   becomes the containing block and takes its scrolling with it. Sticky stays put, which is
+   the whole requirement: the way out must never scroll off. */
+.qr-overlay-close { display: none; }
+.qr-expanded > .qr-overlay-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  margin-left: auto;
+  margin-bottom: -30px;   /* the heading sits alongside it, not pushed below */
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.qr-expanded > .qr-overlay-close:hover,
+.qr-expanded > .qr-overlay-close:focus-visible { color: var(--ink); border-color: var(--accent); }
+/* Keep the card's own heading clear of it. */
+.qr-expanded > .accordion, .qr-expanded .gate-trigger-area > .question-label { padding-right: 44px; }
 /* Same treatment for the ADDS calculator, which is also too wide for the rail. */
 body.quick-review-active #adds_wrapper.qr-expanded {
   position: fixed;
@@ -469,8 +550,8 @@ body.quick-review-active .device-add-group.show-all .btn[data-device-type] { dis
    Class doubled to outrank the .btn display rule that follows later in this file. */
 .btn.device-more-toggle { display: none; }
 body.quick-review-active .btn.device-more-toggle { display: inline-flex; color: var(--accent); }
-body.quick-review-active .device-add-group { gap: 6px; margin-bottom: 0; }
-body.quick-review-active .device-add-group .btn { padding: 5px 9px; font-size: var(--fs-xs); border-radius: 8px; }
+/* Buttons keep their Full Review size; only the stacking margin goes. */
+body.quick-review-active .device-add-group { margin-bottom: 0; }
 
 /* Risks carried forward from the previous DMR note: answered as Yes on import so they count
    toward the category, but visibly provisional until the clinician confirms or clears them. */
@@ -556,17 +637,96 @@ body.quick-review-active .device-add-group .btn { padding: 5px 9px; font-size: v
 .issue-add-row { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
 .issue-add-row input { flex: 1; min-width: 0; margin: 0; }
 .issue-add-row .btn { flex: 0 0 auto; padding: 8px 14px; font-weight: var(--fw-semibold); }
-body.quick-review-active .scraped-issue-row { padding: 5px 0; gap: 10px; }
-body.quick-review-active #scraped_issues_list { max-height: 46vh; overflow-y: auto; }
-body.quick-review-active #quickNotes { min-height: 150px; }
+
+/* --- The write-up panel ---------------------------------------------------------------
+   Review List and Quick Notes are two cards that mean the same thing: what the reviewer
+   concluded. In Quick Review they are joined into one panel that grows to fill the column,
+   so the space left over when little was scraped becomes the place you type rather than a
+   hole. The list is the part that stretches; the notes box keeps a fixed, generous height. */
+/* Quick-Review-only cards. Hidden by default in both directions - see the note beside
+   QUICK_REVIEW_SECTIONS_TO_HIDE in ui.js for why this moved out of JS. */
+#quick_notes_wrapper, #scraped_risks_wrapper { display: none; }
+body.quick-review-active #quick_notes_wrapper { display: block; }
+body.quick-review-active #scraped_risks_wrapper { display: flex; }
+
+#quickGrid #scraped_risks_wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 220px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom: none;
+}
+/* The inline padding is load-bearing. Setting overflow-y:auto makes overflow-x compute to
+   auto too, so this box clips sideways - and inputs carry a 3px box-shadow focus ring that
+   sits outside their border. A full-width field inside had its ring shaved off at both edges
+   the moment it was clicked. The negative margin keeps the rows lined up with the card. */
+#quickGrid #scraped_issues_list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 4px;
+  margin: 0 -4px;
+}
+#quickGrid #scraped_risks_wrapper .issue-add-row { flex: 0 0 auto; }
+#quickGrid #quick_notes_wrapper {
+  flex: 0 0 auto;
+  margin-top: -14px !important;   /* close the column gap: one panel, not two cards */
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+#quickGrid #quick_notes_wrapper .card-title { color: var(--muted); font-size: var(--fs-sm); }
+body.quick-review-active #quickNotes { min-height: 110px; }
+
+/* Nothing staged yet. In Full Review an empty list is one quiet card among many and is left
+   blank on purpose (see renderScrapedIssuesList); here it is the biggest thing on the page,
+   so it says what to do with itself. */
+.issues-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 120px;
+  padding: 16px;
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
 
 /* Bottom row: category KPIs and ALERT actions side by side rather than stacked. */
 body.quick-review-active #qgBottom .kpi { margin-bottom: 12px; }
 body.quick-review-active #alert_actions_section { margin-top: 12px; padding-top: 12px; }
 
+/* --- Category band -------------------------------------------------------------------
+   The calculated category and the buttons that overrule it, in one block. */
+#override_card {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+.override-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.override-head .override-auto-hint { margin-bottom: 0; }
+
 @media (max-width: 900px) {
   body.quick-review-active #quickGrid { grid-template-columns: 1fr; }
-  body.quick-review-active #scraped_issues_list { max-height: none; }
+  /* Back to a plain stack: nothing needs to absorb slack in a single column. */
+  #quickGrid #scraped_risks_wrapper {
+    flex: 0 0 auto;
+    min-height: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 16px;
+  }
+  #quickGrid #scraped_issues_list { overflow-y: visible; }
+  #quickGrid #quick_notes_wrapper { margin-top: 0 !important; border-radius: 16px; }
+  .issues-empty { min-height: 0; }
 }
 
 /* Scraped Risks staging list */
@@ -578,7 +738,25 @@ body.quick-review-active #alert_actions_section { margin-top: 12px; padding-top:
   border-bottom: 1px solid var(--line);
 }
 .scraped-issue-row:last-child { border-bottom: none; }
-.scraped-issue-resolve { flex: 0 0 auto; margin: 0; }
+/* Was a bare checkbox. It marks an entry dealt with - kept on screen, left out of the
+   handover line - which is not something a tickbox can say on its own. */
+.scraped-issue-resolve {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 4px 10px;
+  font-size: var(--fs-hint);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.scraped-issue-resolve:hover, .scraped-issue-resolve:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.scraped-issue-row.resolved .scraped-issue-resolve { color: var(--accent); border-color: var(--accent); }
 .scraped-issue-text {
   flex: 1;
   cursor: text;
@@ -607,39 +785,33 @@ body.quick-review-active #alert_actions_section { margin-top: 12px; padding-top:
   background: var(--input-bg);
   color: var(--text);
 }
-/* Real buttons, not faint glyphs: these are used at speed, sometimes by people who
-   don't want to hunt for a 12px x. 36px square, visible border, colour-coded. */
-.scraped-issue-edit-btn, .scraped-issue-delete {
+/* The edit affordance. Quiet by design - the row's job is to be read, and this only has to
+   say "you can change this". Still a 32px target, because it gets used on a ward tablet. */
+.scraped-issue-edit-btn {
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  cursor: pointer;
+  padding: 0;
   font-size: var(--fs-base);
   line-height: 1;
-  padding: 0;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  color: var(--muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
-.scraped-issue-edit-btn { color: var(--accent); }
+.scraped-issue-row:hover .scraped-issue-edit-btn { color: var(--accent); }
 .scraped-issue-edit-btn:hover, .scraped-issue-edit-btn:focus-visible {
-  background: #ecfdf5;
+  color: var(--accent);
   border-color: var(--accent);
 }
-.scraped-issue-delete { color: var(--red); }
-.scraped-issue-delete svg { display: block; }
-/* Ticking an entry means "dealt with", not "gone" - it stays readable and reversible. */
+/* Resolving an entry means "dealt with", not "gone" - it stays readable and reversible. */
 .scraped-issue-row.resolved .scraped-issue-text { text-decoration: line-through; color: var(--muted); }
 .scraped-issue-row.resolved .scraped-issue-note-tag { opacity: 0.6; }
-.scraped-issue-delete:hover, .scraped-issue-delete:focus-visible {
-  background: #fef2f2;
-  border-color: var(--red);
-}
-.scraped-issue-resolve { width: 22px; height: 22px; cursor: pointer; accent-color: var(--accent); }
 
 /* Grid Spans */
 .col-1 { grid-column: span 1; }
@@ -1178,35 +1350,6 @@ textarea { min-height: 80px; resize: vertical; max-height: 240px; }
   font-weight: var(--fw-semibold);
   color: var(--ink);
   margin-bottom: 16px;
-}
-
-/* --- Privacy screen ------------------------------------------------------------------
-   Opaque, not translucent: the point is that nothing behind it is readable from across a
-   nurses' station. */
-#privacyScreen[hidden] { display: none; }
-#privacyScreen {
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-    background: var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.privacy-screen-panel {
-    text-align: center;
-    padding: 32px;
-    max-width: 360px;
-}
-
-.privacy-screen-icon { font-size: var(--fs-3xl); margin-bottom: 12px; }
-.privacy-screen-title { font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--accent); }
-.privacy-screen-note {
-    font-size: var(--fs-sm);
-    color: var(--muted);
-    margin: 8px 0 20px 0;
-    line-height: var(--lh-body);
 }
 
 /* Offered suppression. Quiet by design - it is proposing that a risk be discounted, which
@@ -1935,68 +2078,25 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 
 
 
-/* --- PICS risk score panel ----------------------------------------------
-   Eleven scored items in one card. Reuses .toggle-label for the item rows so the
-   chips behave, save and restore exactly like the comorbidity chips - the only
-   additions here are the running total, the band chip, and the marks that say
-   which items the tool ticked on the clinician's behalf. */
-.pics-card {
-    padding: 14px 16px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-}
-.pics-head {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
-}
-.pics-title { font-size: var(--fs-base); color: var(--accent); margin: 0; }
-.pics-total { display: flex; align-items: center; gap: 8px; }
-.pics-score {
-    font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: var(--fw-semibold);
-    color: var(--ink); min-width: 1.5em; text-align: right;
-}
-/* Band colours are deliberately not the CAT red/amber/green: the score does not set a
-   category, and borrowing those hues would say it does. */
-.pics-band {
-    display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
-    font-size: var(--fs-xs); font-weight: var(--fw-semibold); border: 1px solid;
-}
-.pics-band.low { background: rgba(90,102,117,.08); color: var(--muted); border-color: rgba(90,102,117,.18); }
-.pics-band.moderate { background: rgba(37,99,235,.08); color: var(--blue-hint); border-color: rgba(37,99,235,.2); }
-.pics-band.high { background: rgba(127,29,58,.08); color: var(--maroon); border-color: rgba(127,29,58,.2); }
 
-.pics-tier {
-    font-size: var(--fs-hint); text-transform: uppercase; letter-spacing: 0.05em;
-    color: var(--accent); font-weight: var(--fw-semibold);
-    margin-top: 12px; margin-bottom: 6px;
-    border-bottom: 1px solid var(--line); padding-bottom: 2px;
-}
-.pics-tier:first-child { margin-top: 0; }
-.pics-row { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 6px; }
-.pics-points { font-family: var(--font-mono); font-size: var(--fs-xs); opacity: 0.75; }
-/* Says the tool ticked this, not the clinician - and stays visible after it is ticked,
-   which is the whole point of showing it. */
-.pics-auto {
-    font-size: var(--fs-xs); font-weight: var(--fw-medium); font-style: italic;
-    opacity: 0.8; margin-left: 6px;
-}
-.pics-suggestions:empty { display: none; }
-.pics-suggestion {
-    display: block; width: 100%; text-align: left; margin-top: 8px;
-    padding: 8px 12px; border-radius: 8px; cursor: pointer;
-    background: rgba(37,99,235,.06); border: 1px dashed rgba(37,99,235,.35);
-    color: var(--blue-hint); font-size: var(--fs-sm); font-weight: var(--fw-medium);
-}
-.pics-suggestion:hover { background: rgba(37,99,235,.12); }
-.pics-action {
-    margin-top: 12px; padding: 10px 12px; border-radius: 8px;
-    background: var(--card); border: 1px solid var(--line);
-}
-.pics-action label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: var(--fs-sm); }
-.pics-action input { width: auto; margin-top: 2px; flex: none; }
-.pics-override { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
-.pics-override-label {
-    display: block; margin-bottom: 6px;
-    font-size: var(--fs-hint); color: var(--muted); font-weight: var(--fw-semibold);
+/* --- Print --------------------------------------------------------------
+   Paper is the one copy of a review that leaves the building, survives the tab
+   closing, and depends on someone remembering the confidential waste bin. The
+   tool has no reason to be printed - its output goes to the DMR by clipboard -
+   so an accidental Ctrl+P produces a notice rather than a patient's review. */
+@media print {
+    body * { visibility: hidden; }
+    body::before {
+        visibility: visible;
+        content: "ALERT Nursing Risk Assessment Tool — printing is disabled. Reviews are transferred to the DMR by copy and paste; no paper copy should be created.";
+        display: block;
+        position: fixed;
+        inset: 0;
+        padding: 2cm;
+        font-family: var(--font-ui);
+        font-size: 12pt;
+        line-height: 1.6;
+        color: #000;
+        background: #fff;
+    }
 }

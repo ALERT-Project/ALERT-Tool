@@ -1,3 +1,10 @@
+/* =========================================
+   ALERT Nursing Risk Assessment Tool
+   Notice region: one prioritised banner at a time
+   Copyright © 2025-2026 Casey Bond
+   MIT License - https://opensource.org/licenses/MIT
+   ========================================= */
+
 import { $ } from './utils.js';
 
 // One notice at a time.

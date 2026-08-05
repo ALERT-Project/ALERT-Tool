@@ -1,3 +1,10 @@
+/* =========================================
+   ALERT Nursing Risk Assessment Tool
+   Shared helpers
+   Copyright © 2025-2026 Casey Bond
+   MIT License - https://opensource.org/licenses/MIT
+   ========================================= */
+
 export const $ = id => document.getElementById(id);
 
 export const debounce = (fn, wait = 350) => {
@@ -21,6 +28,15 @@ export function formatDateDDMMYYYY(isoStr) {
     if (!isoStr) return '';
     const [y, m, d] = isoStr.split('-');
     return `${d}/${m}/${y}`;
+}
+
+// The ward select's "Other" option is a control value, not a place. Reading s.ptWard straight
+// put the literal word "Other" into the DMR note and the footer, hiding the ward the clinician
+// had just typed into #ptWardOther beside it.
+export function wardLabel(s) {
+    const ward = (s.ptWard || '').trim();
+    if (ward === 'Other') return (s.ptWardOther || '').trim();
+    return ward;
 }
 
 export function sentenceCase(str) {

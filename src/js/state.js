@@ -1,4 +1,11 @@
-import { STORAGE_KEY, UNDO_KEY, ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs, selectInputs, deviceTypes, PICS_ITEMS } from './config.js';
+/* =========================================
+   ALERT Nursing Risk Assessment Tool
+   Session state: save, restore, and the Review List model
+   Copyright © 2025-2026 Casey Bond
+   MIT License - https://opensource.org/licenses/MIT
+   ========================================= */
+
+import { STORAGE_KEY, UNDO_KEY, ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs, selectInputs, deviceTypes } from './config.js';
 import { $, showToast } from './utils.js';
 import { handleSegmentClick, updateWardOptions, updateReviewTypeVisibility, updateWardOtherVisibility, createDeviceEntry, updateDevicesSectionVisibility, toggleOxyFields, toggleInfusionsBox, toggleBowelDate } from './ui.js';
 
@@ -47,8 +54,9 @@ export function addManualIssue(text) {
     return addActiveIssue({ text, source: 'manual', severity: 'amber', key: `manual_${_activeIssueCounter + 1}` });
 }
 
-// Ticking an entry marks it resolved without removing it: it stays visible (struck through)
-// and can be un-ticked. Only the delete button takes anything off the list.
+// Resolving an entry marks it dealt with without removing it: it stays visible (struck
+// through), drops out of the note and the handover line, and can be undone. This is the only
+// control on a row that changes what the outputs say.
 export function toggleActiveIssueResolved(id) {
     const issue = activeIssues.find(i => i.id === id);
     if (!issue) return;
@@ -59,6 +67,9 @@ export function toggleActiveIssueResolved(id) {
     renderScrapedIssuesList();
 }
 
+// No longer wired to a control on the row - resolve covers taking an entry out of the note
+// and the handover line, and does it reversibly. Kept because clearActiveIssues and any
+// future tidy-up path need a way to actually remove one.
 export function deleteActiveIssue(id) {
     activeIssues = activeIssues.filter(i => i.id !== id);
     renderScrapedIssuesList();
@@ -71,6 +82,14 @@ export function editActiveIssueText(id, newText) {
 }
 
 export function getUnresolvedActiveIssues() { return activeIssues.filter(i => !i.resolved); }
+
+// What the clinician typed into the Review List themselves. Until now this reached the Excel
+// handover line and nothing else, so an observation made during a Quick Review never got into
+// the record. The auto and bloods entries are excluded: those are the tool's own findings and
+// the note already states them from the rules, in the rules' own wording.
+export function getManualIssuesForNote() {
+    return activeIssues.filter(i => i.source === 'manual' && !i.resolved).map(i => i.text);
+}
 
 // What the list shows: everything live, plus anything the clinician ticked off themselves.
 function getVisibleActiveIssues() { return activeIssues.filter(i => !i.resolved || i.resolvedByUser); }
@@ -108,28 +127,42 @@ export function renderScrapedIssuesList() {
     const issues = getVisibleActiveIssues();
     const count = $('issues_count');
     const openCount = issues.filter(i => !i.resolved).length;
-    if (count) count.textContent = openCount ? `(${openCount})` : '';
-    // An empty list stays empty - the add row underneath already says what it's for.
+    const doneCount = issues.length - openCount;
+    // Says what the two states are, so a struck-through line isn't a mystery.
+    if (count) {
+        const parts = [];
+        if (openCount) parts.push(`${openCount} open`);
+        if (doneCount) parts.push(`${doneCount} resolved`);
+        count.textContent = parts.length ? `(${parts.join(' · ')})` : '';
+    }
+    // In Full Review an empty list stays empty - it is one quiet card among many, and the add
+    // row underneath already says what it's for. In Quick Review the same card is the largest
+    // thing on the page and it grows to fill the column, so blank reads as broken rather than
+    // as "nothing yet"; there it says what to do with itself.
     if (issues.length === 0) {
-        list.innerHTML = '';
+        list.innerHTML = document.body.classList.contains('quick-review-active')
+            ? `<div class="issues-empty">Add issues from your review below</div>`
+            : '';
         return;
     }
-    const BIN_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+    // Two controls, each saying what it does. Delete is gone: it and resolve were the same
+    // act from the reader's side - the entry leaves the note and the handover line either way
+    // - except resolve is reversible and leaves a record on screen of what was considered.
+    // Correcting a wrong entry is what edit is for, and the pencil is what says so; the text
+    // has always been click-to-edit, but nothing on the row admitted it.
     list.innerHTML = issues.map(issue => `
         <div class="scraped-issue-row${issue.resolved ? ' resolved' : ''}" data-id="${issue.id}">
-            <input type="checkbox" class="scraped-issue-resolve" data-id="${issue.id}"${issue.resolved ? ' checked' : ''} title="Mark as resolved">
             <span class="scraped-issue-text" data-id="${issue.id}" title="Click to edit">${issue.text}</span>
             ${issue.severity === 'info' ? '<span class="scraped-issue-note-tag">note</span>' : ''}
-            <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}" title="Edit">&#9998;</button>
-            <button type="button" class="scraped-issue-delete" data-id="${issue.id}" title="Delete">${BIN_ICON}</button>
+            <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}"
+                title="Edit" aria-label="Edit">&#9998;</button>
+            <button type="button" class="scraped-issue-resolve" data-id="${issue.id}"
+                title="${issue.resolved ? 'Put it back on the list' : 'Dealt with - keeps it here but leaves it out of the note and the handover line'}">${issue.resolved ? 'undo' : 'resolve'}</button>
         </div>
     `).join('');
 
-    list.querySelectorAll('.scraped-issue-resolve').forEach(cb => {
-        cb.addEventListener('change', e => toggleActiveIssueResolved(e.target.dataset.id));
-    });
-    list.querySelectorAll('.scraped-issue-delete').forEach(btn => {
-        btn.addEventListener('click', e => deleteActiveIssue(e.currentTarget.dataset.id));
+    list.querySelectorAll('.scraped-issue-resolve').forEach(btn => {
+        btn.addEventListener('click', e => toggleActiveIssueResolved(e.currentTarget.dataset.id));
     });
     const startEdit = (span) => {
         const id = span.dataset.id;
@@ -223,19 +256,12 @@ export function getState() {
         state[id] = group?.querySelector('.select-btn.active')?.dataset.value || '';
     });
 
-    // Which PICS items the clinician has answered themselves. Without this the tool would
-    // re-derive an item on the next render and quietly undo the correction - the same reason
-    // the trend arrows carry dataset.manual.
-    state.pics_manual = PICS_ITEMS
-        .filter(item => $(`toggle_${item.id}`)?.dataset.manual === 'true')
-        .map(item => item.id);
-
     state['reviewType'] = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
     state['clinicianRole'] = document.querySelector('input[name="clinicianRole"]:checked')?.value || 'ALERT CNS';
     state['reviewModeType'] = document.querySelector('input[name="reviewModeType"]:checked')?.value || 'physical';
     state.activeIssues = activeIssues;
 
-    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods', 'chk_pics_action'].forEach(id => {
+    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods'].forEach(id => {
         const el = $(id);
         if (el) state[id] = el.checked;
     });
@@ -304,13 +330,6 @@ export function restoreState(state) {
         }
     });
 
-    if (Array.isArray(state.pics_manual)) {
-        state.pics_manual.forEach(id => {
-            const el = $(`toggle_${id}`);
-            if (el) el.dataset.manual = 'true';
-        });
-    }
-
     if (state['comorbs_gate'] === undefined) {
         const anyComorb = toggleInputs.filter(k => k.startsWith('comorb_') && state[k]).length > 0;
         if (anyComorb) {
@@ -355,7 +374,7 @@ export function restoreState(state) {
         renderScrapedIssuesList();
     }
 
-    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods', 'chk_pics_action'].forEach(id => {
+    ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods'].forEach(id => {
         const el = $(id);
         if (el && state[id] !== undefined) el.checked = state[id];
     });

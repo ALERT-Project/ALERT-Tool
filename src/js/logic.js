@@ -1,4 +1,11 @@
-import { $, num } from './utils.js';
+/* =========================================
+   ALERT Nursing Risk Assessment Tool
+   Interface layer: reads the form, runs the rules, paints the result
+   Copyright © 2025-2026 Casey Bond
+   MIT License - https://opensource.org/licenses/MIT
+   ========================================= */
+
+import { $, num, wardLabel } from './utils.js';
 import { normalRanges } from './config.js';
 import {
     getState, isQuickReviewMode, initialQuickReviewRisks, quickReviewBaselineCaptured,
@@ -7,7 +14,7 @@ import {
 } from './state.js';
 import {
     updateSidebarRiskBadges, maybeOfferQuickReview, refreshCategorySelect, showNewRiskAlert,
-    renderCarriedForward, updateAgeMitigationUI, updateLosMitigationUI, renderPicsPanel
+    renderCarriedForward, updateAgeMitigationUI, updateLosMitigationUI
 } from './ui.js';
 import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
 import { applyTrendArrows } from './trends.js';
@@ -281,7 +288,7 @@ function renderDerivedDisplays(s, result) {
     }
 
     const fn = $('footerName'); if (fn) fn.textContent = s.ptName || '--';
-    const fl = $('footerLocation'); if (fl) fl.textContent = `${s.ptWard || '--'} ${s.ptBed || ''}`;
+    const fl = $('footerLocation'); if (fl) fl.textContent = `${wardLabel(s) || '--'} ${s.ptBed || ''}`;
     const fa = $('footerAdmission'); if (fa) fa.textContent = s.ptAdmissionReason || '--';
 
     const timeOffEl = $('pressor_time_off_display');
@@ -298,10 +305,6 @@ function renderDerivedDisplays(s, result) {
             timeOffEl.textContent = '';
         }
     }
-
-    // The score, the band and which items the tool ticked are all decided in the rules; this
-    // only paints the answer, the same division of labour as the after-hours control above.
-    renderPicsPanel(result.pics);
 
     // Offered suppression - the rules decide whether the evidence supports it, the interface
     // asks the question, and only the clinician's click discounts the risk.
@@ -335,6 +338,10 @@ export function checkCompleteness(s, comorbCount) {
     if (!s.ptMrn) missing.push('URN');
     if (!s.ptWard) missing.push('Ward');
     if (!s.reviewerInitials) missing.push('Reviewer');
+
+    // The completeness notice is easy to scroll past, so the reviewer field also marks itself.
+    $('reviewerInitials')?.closest('.rs-field-reviewer')
+        ?.classList.toggle('reviewer-missing', !s.reviewerInitials);
 
     // Lowest priority of any notice: worth saying, never worth saying over a new red flag.
     if (missing.length) {

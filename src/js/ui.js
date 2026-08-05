@@ -1,6 +1,13 @@
+/* =========================================
+   ALERT Nursing Risk Assessment Tool
+   Interface helpers: panels, gates, modes, reset
+   Copyright © 2025-2026 Casey Bond
+   MIT License - https://opensource.org/licenses/MIT
+   ========================================= */
+
 import { $, debounce, showToast, disableAutofill } from './utils.js';
 import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
-import { normalRanges, comorbMap, toggleInputs, staticInputs, PICS_ITEMS, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY } from './config.js';
+import { normalRanges, comorbMap, toggleInputs, staticInputs, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY } from './config.js';
 import {
     getState, saveState, pushUndo, isQuickReviewMode, setQuickReviewMode, initialQuickReviewRisks,
     setInitialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured,
@@ -22,86 +29,6 @@ export function checkBloodRanges() {
             } else {
                 parent?.classList.remove('blood-abnormal');
             }
-        }
-    }
-}
-
-// --- PICS risk score panel ---------------------------------------------------------------
-// The rows are generated from PICS_ITEMS rather than written into index.html, so adding or
-// reweighting an item is one edit in config.js and the panel, the rules and the summary all
-// move together. Rows carry .toggle-label, which means the existing chip handler in main.js
-// and the generic toggleInputs save/restore in state.js already cover them.
-export function buildPicsPanel() {
-    const host = $('pics_items');
-    if (!host || host.dataset.built === 'true') return;
-
-    let lastTier = null;
-    const parts = [];
-    PICS_ITEMS.forEach(item => {
-        if (item.tier !== lastTier) {
-            const pts = item.points;
-            parts.push(`<div class="pics-tier">${item.tier} - ${pts} point${pts === 1 ? '' : 's'} each</div>`);
-            lastTier = item.tier;
-        }
-        parts.push(`<div class="pics-row">
-            <div class="toggle-label" id="toggle_${item.id}" data-value="false" role="button" tabindex="0"
-                 title="${item.code}, ${item.points} point${item.points === 1 ? '' : 's'}">
-                <span>${item.label}<span class="pics-auto" data-auto-for="${item.id}" hidden></span></span>
-                <span class="pics-points">+${item.points}</span>
-                <span class="state"></span>
-            </div>
-        </div>`);
-    });
-
-    host.innerHTML = parts.join('');
-    host.dataset.built = 'true';
-}
-
-// Paints the computed score back onto the panel. Everything shown here is decided by
-// evaluatePicsScore() - including which items are ticked - so an auto-tick the clinician has
-// since overruled arrives already resolved and this function never has to know the difference.
-export function renderPicsPanel(pics) {
-    if (!pics || $('pics_items')?.dataset.built !== 'true') return;
-
-    pics.items.forEach(item => {
-        const el = $(`toggle_${item.id}`);
-        if (!el) return;
-        el.dataset.value = item.ticked ? 'true' : 'false';
-        el.classList.toggle('active', item.ticked);
-        const autoTag = el.querySelector(`[data-auto-for="${item.id}"]`);
-        if (autoTag) {
-            autoTag.hidden = !item.auto;
-            autoTag.textContent = item.auto ? ` (auto: ${item.derivedFrom})` : '';
-        }
-    });
-
-    const scoreEl = $('pics_score_value');
-    if (scoreEl) scoreEl.textContent = String(pics.score);
-    const chip = $('pics_band_chip');
-    if (chip) {
-        chip.className = `pics-band ${pics.band}`;
-        chip.textContent = `${pics.bandLabel} (${pics.band === 'high' ? '6+' : pics.band === 'moderate' ? '3-5' : '0-2'})`;
-    }
-
-    // Suggestions offer, never set - the same contract the infection downtrend prompt follows.
-    // These are the items where a field is close enough to be worth asking about but not close
-    // enough for the tool to answer: "psychological concern" is not "pre-existing diagnosis",
-    // and the pressor toggles never recorded a dose.
-    const sugHost = $('pics_suggestions');
-    if (sugHost) {
-        sugHost.innerHTML = pics.suggestions.map(sug =>
-            `<button type="button" class="pics-suggestion" data-pics-suggest="${sug.id}">${sug.reason}</button>`
-        ).join('');
-    }
-
-    const actionWrapper = $('pics_action_wrapper');
-    const actionText = $('pics_action_text');
-    if (actionWrapper && actionText) {
-        if (pics.action) {
-            actionText.textContent = `Add to plan: ${pics.action}`;
-            actionWrapper.style.display = 'block';
-        } else {
-            actionWrapper.style.display = 'none';
         }
     }
 }
@@ -231,14 +158,16 @@ export function createDeviceEntry(type, val = '', insertionDate = '') {
         infoText = `${dwellDays}d dwell`;
         infoColor = 'var(--text)';
 
+        // Colour carries the urgency; the label is always just the day count. "Long" and
+        // "very long" read as alarm on a number the clinician can already interpret.
         if (type === 'PIVC') {
-            if (dwellDays >= 7) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
-            else if (dwellDays >= 5) { infoText = `${dwellDays}d, long dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
-            else if (dwellDays >= 3) { infoText = `${dwellDays}d dwell`; infoColor = '#9333ea'; borderColor = '#9333ea'; }
+            if (dwellDays >= 7) { infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
+            else if (dwellDays >= 5) { infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
+            else if (dwellDays >= 3) { infoColor = '#9333ea'; borderColor = '#9333ea'; }
         } else {
-            if (dwellDays >= 14) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
-            else if (dwellDays >= 10) { infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
-            else if (dwellDays >= 7) { infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; borderColor = '#9333ea'; }
+            if (dwellDays >= 14) { infoColor = 'var(--red)'; borderColor = 'var(--red)'; }
+            else if (dwellDays >= 10) { infoColor = 'var(--amber)'; borderColor = 'var(--amber)'; }
+            else if (dwellDays >= 7) { infoColor = '#9333ea'; borderColor = '#9333ea'; }
         }
     }
 
@@ -333,36 +262,34 @@ export function createDeviceEntry(type, val = '', insertionDate = '') {
                 const dwellDays = Math.floor((new Date() - deviceDate) / (1000 * 60 * 60 * 24));
 
                 let newBorderColor = 'var(--line)';
-                let infoText = `${dwellDays}d dwell`;
+                const infoText = `${dwellDays}d dwell`;
                 let infoColor = 'var(--text)';
 
                 if (type === 'PIVC') {
-                    if (dwellDays >= 7) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; }
-                    else if (dwellDays >= 5) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, long dwell`; infoColor = 'var(--amber)'; }
-                    else if (dwellDays >= 3) { newBorderColor = '#9333ea'; infoText = `${dwellDays}d dwell`; infoColor = '#9333ea'; }
+                    if (dwellDays >= 7) { newBorderColor = 'var(--red)'; infoColor = 'var(--red)'; }
+                    else if (dwellDays >= 5) { newBorderColor = 'var(--amber)'; infoColor = 'var(--amber)'; }
+                    else if (dwellDays >= 3) { newBorderColor = '#9333ea'; infoColor = '#9333ea'; }
                 } else {
-                    if (dwellDays >= 14) { newBorderColor = 'var(--red)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--red)'; }
-                    else if (dwellDays >= 10) { newBorderColor = 'var(--amber)'; infoText = `${dwellDays}d, very long dwell`; infoColor = 'var(--amber)'; }
-                    else if (dwellDays >= 7) { newBorderColor = '#9333ea'; infoText = `${dwellDays}d, long dwell`; infoColor = '#9333ea'; }
+                    if (dwellDays >= 14) { newBorderColor = 'var(--red)'; infoColor = 'var(--red)'; }
+                    else if (dwellDays >= 10) { newBorderColor = 'var(--amber)'; infoColor = 'var(--amber)'; }
+                    else if (dwellDays >= 7) { newBorderColor = '#9333ea'; infoColor = '#9333ea'; }
                 }
 
-                const innerDiv = div.querySelector('div[style*="border"]');
-                if (innerDiv) {
-                    innerDiv.style.borderColor = newBorderColor;
-                }
+                // These used to look the row up by its inline styles, from before the row was
+                // given classes - so a date typed onto an existing device updated neither the
+                // border nor the dwell text.
+                const row = div.querySelector('.device-row');
+                if (row) row.style.borderColor = newBorderColor;
 
                 let infoTextEl = div.querySelector('.device-info-text');
-                if (infoText && infoColor) {
-                    if (!infoTextEl) {
-                        infoTextEl = document.createElement('div');
-                        infoTextEl.className = 'device-info-text';
-                        infoTextEl.style.cssText = 'font-size:0.8rem; font-weight:600; padding-left:8px;';
-                        div.querySelector('div[style*="flex-direction"]')?.appendChild(infoTextEl);
-                    }
+                if (!infoTextEl && row) {
+                    infoTextEl = document.createElement('div');
+                    infoTextEl.className = 'device-info-text';
+                    row.insertBefore(infoTextEl, row.querySelector('.remove-entry'));
+                }
+                if (infoTextEl) {
                     infoTextEl.textContent = infoText;
                     infoTextEl.style.color = infoColor;
-                } else if (infoTextEl) {
-                    infoTextEl.remove();
                 }
             }
             window.devicesModifiedSinceLastSummary = true;
@@ -425,7 +352,21 @@ export function handleUnknownBLODate() {
     }
 }
 
+// Set when the clinician copies the note from inside the reset dialog, so clearData() knows
+// they are mid-way between copying and pasting and leaves the clipboard alone. Reset each time
+// the dialog opens: it describes this exit, not the last one.
+let copiedOnExit = false;
+export function markCopiedOnExit() { copiedOnExit = true; }
+
+// Overwrites rather than reads: reading the clipboard needs a permission prompt, and the tool
+// has no business knowing what else is on there. A browser that refuses the write - no focus,
+// no permission - leaves it as it was, which is the behaviour before this existed.
+export function clearClipboard() {
+    navigator.clipboard?.writeText('')?.catch(() => {});
+}
+
 export function showClearDataModal() {
+    copiedOnExit = false;
     const modal = $('clearDataModal');
     if (modal) modal.style.display = 'flex';
 }
@@ -480,6 +421,15 @@ export function syncComorbsToPMH() {
 export function clearData() {
     hideClearDataModal();
 
+    // The clipboard is the one place this tool's data outlives the tab: everything else dies
+    // with the session, but a copied note stays available to every other application, and on
+    // some configurations to the user's other devices.
+    //
+    // Not cleared when the clinician copied from the reset dialog itself. That button exists so
+    // they can copy on their way out and paste afterwards, so wiping it here would delete the
+    // note between copying and pasting - the one thing worse than leaving it there.
+    if (!copiedOnExit) clearClipboard();
+
     if (isQuickReviewMode) {
         exitQuickReviewMode();
     }
@@ -514,12 +464,7 @@ export function clearData() {
 
     document.querySelectorAll('.active').forEach(e => e.classList.remove('active'));
     document.querySelectorAll('input[type="checkbox"]').forEach(e => e.checked = false);
-    document.querySelectorAll('.toggle-label').forEach(e => {
-        e.dataset.value = 'false';
-        // A new patient inherits none of the last one's overrides, or their PICS items would
-        // stay pinned to answers given about somebody else.
-        delete e.dataset.manual;
-    });
+    document.querySelectorAll('.toggle-label').forEach(e => e.dataset.value = 'false');
     document.querySelectorAll('.blood-abnormal').forEach(e => e.classList.remove('blood-abnormal'));
 
     const dc = $('devices-container'); if (dc) dc.innerHTML = '';
@@ -619,9 +564,15 @@ export function refreshCategorySelect(autoCat, override, reason, redCount, amber
     const warn = $('override_downgrade_warn');
     const label = $('override_reason_label');
     const required = $('override_reason_required');
-    const isDowngrade = override === 'green';
 
-    if (label) label.textContent = isDowngrade ? 'Reason for CAT 3 downgrade (required)' : 'Reason for override';
+    // A downgrade is now anything below what was calculated, not just CAT 3 - selecting CAT 2
+    // on a CAT 1 patient is the same act. The reason is asked for, and its absence is shown,
+    // but the selection applies either way: an override that quietly didn't take is worse.
+    const CAT_RANK = { green: 0, amber: 1, red: 2 };
+    const chosenText = { red: 'CAT 1', amber: 'CAT 2', green: 'CAT 3' }[chosen];
+    const isDowngrade = !!chosen && CAT_RANK[chosen] < CAT_RANK[autoCat.id];
+
+    if (label) label.textContent = isDowngrade ? `Reason for downgrade to ${chosenText}` : 'Reason for override';
     if (required) required.style.display = (isDowngrade && !reason) ? 'block' : 'none';
     if (box) box.classList.toggle('reason-missing', isDowngrade && !reason);
 
@@ -630,7 +581,7 @@ export function refreshCategorySelect(autoCat, override, reason, redCount, amber
             const parts = [];
             if (redCount) parts.push(`${redCount} red flag${redCount > 1 ? 's' : ''}`);
             if (amberCount) parts.push(`${amberCount} amber flag${amberCount > 1 ? 's' : ''}`);
-            warn.textContent = `⚠ Downgrading to CAT 3 with ${parts.join(' and ')} present. The flags stay in the summary.`;
+            warn.textContent = `⚠ Set to ${chosenText} with ${parts.join(' and ')} present (auto-calculated ${autoCat.text}). The flags stay in the summary.`;
             warn.style.display = 'block';
         } else {
             warn.style.display = 'none';
@@ -879,17 +830,27 @@ export function closeAccordion(panelId, btnSelector) {
 // stays because the note's identifiers and the stepdown clock come from it, and a Quick
 // Review is often the first time they're typed.
 const QUICK_REVIEW_SECTIONS_TO_HIDE = ['section-risk', 'section-ae', 'section-context'];
-const QUICK_REVIEW_ONLY_SECTIONS = ['quick_notes_wrapper', 'scraped_risks_wrapper'];
+// The two Quick-Review-only cards used to be shown and hidden from here with an inline
+// display, which then beat the stylesheet: the write-up panel could never be display:flex,
+// so its list could not stretch and the card kept a dead band at its foot. They are now
+// driven purely by body.quick-review-active in style.css, which owns their layout anyway.
 
 // Which live nodes get moved into which cell of #quickGrid, in the order they should appear.
 // Nothing is cloned: IDs must stay unique and every listener already bound to these elements
 // has to keep working, so the elements themselves move and are put back on exit.
-// Lines live in the wide column: at 2/3 width each device fits on one row instead of
-// wrapping to three in the rail, and they fill the space the notes card leaves over.
+//
+// The two columns are now near-equal width rather than 1:2. The old split gave two thirds of
+// the page to cards that collapse to nothing when little was scraped - Review List, Lines,
+// carried-forward - so a quiet patient left a wide void down the middle. Lines moved to the
+// rail (it still gets ~500px, well past the ~356px a device row needs for one line) and the
+// right column now holds only the write-up, which is styled to stretch and absorb the slack.
 const QUICK_GRID_LAYOUT = {
     qgTop: ['section-patient'],
-    qgLeft: ['adds_wrapper', 'section-bloods', 'override_card', 'quick_notes_wrapper'],
-    qgRight: ['carried_forward_card', 'scraped_risks_wrapper', 'section-devices'],
+    // Left rail is what you measured; the right column is what you concluded. The category
+    // buttons no longer appear here - they moved inside #section-category, which is the whole
+    // bottom band, so the call is made next to the flags that produced it.
+    qgLeft: ['adds_wrapper', 'section-bloods', 'section-devices'],
+    qgRight: ['carried_forward_card', 'scraped_risks_wrapper', 'quick_notes_wrapper'],
     qgBottom: ['section-category']
 };
 
@@ -944,11 +905,6 @@ export function enableQuickReviewMode() {
             section.style.display = 'none';
             section.setAttribute('data-hidden-by-quick-review', 'true');
         }
-    });
-
-    QUICK_REVIEW_ONLY_SECTIONS.forEach(id => {
-        const section = $(id);
-        if (section) section.style.display = 'block';
     });
 
     moveIntoQuickGrid();
@@ -1021,11 +977,6 @@ export function exitQuickReviewMode() {
         section.removeAttribute('data-hidden-by-quick-review');
     });
 
-    QUICK_REVIEW_ONLY_SECTIONS.forEach(id => {
-        const section = $(id);
-        if (section) section.style.display = 'none';
-    });
-
     const bloodsQuick = $('bloods_quick_controls');
     if (bloodsQuick) bloodsQuick.style.display = 'none';
 
@@ -1036,6 +987,9 @@ export function exitQuickReviewMode() {
 
     const depthFull = document.querySelector('input[name="reviewDepth"][value="full"]');
     if (depthFull) depthFull.checked = true;
+
+    // The issues list renders a Quick-Review-only empty state; re-render so it doesn't linger.
+    renderScrapedIssuesList();
 
     showToast("Full review mode restored", 2000);
 }

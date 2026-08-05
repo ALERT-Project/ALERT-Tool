@@ -33,8 +33,8 @@ export async function loadTool() {
 
     window.document.dispatchEvent(new window.Event('DOMContentLoaded', { bubbles: true }));
     await tick(window);
-    // close() is not optional: the privacy screen arms a ten-minute timer on load, which keeps
-    // Node's event loop alive and hangs the test run until it fires.
+    // close() releases the jsdom window. Leaving it open keeps Node's event loop alive if
+    // anything in the page has scheduled a timer.
     return { dom, window, document: window.document, close: () => dom.window.close() };
 }
 

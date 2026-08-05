@@ -310,12 +310,18 @@ test('any red makes CAT 1; any amber with no red makes CAT 2', () => {
     assert.equal(catOf({ bl_mg: '0.6' }), 'CAT 2');
 });
 
-test('a downgrade needs a reason, and records what it overruled', () => {
-    assert.equal(catOf({ adds: '4', override: 'green' }), 'CAT 1', 'no reason, no downgrade');
+test('a manual category applies in either direction and records what it overruled', () => {
     const r = evaluate({ adds: '4', override: 'green', overrideNote: 'known chronic, at baseline' });
     assert.equal(r.cat.text, 'CAT 3');
     assert.equal(r.cat.downgradedFrom, 'CAT 1');
     assert.equal(r.red.length, 1, 'the evidence is still listed');
+
+    // The reported bug: CAT 2 selected on a patient scoring CAT 1 stayed CAT 1.
+    assert.equal(catOf({ adds: '4', override: 'amber' }), 'CAT 2');
+    assert.equal(evaluate({ adds: '4', override: 'amber' }).autoCat.text, 'CAT 1');
+
+    // A reason is asked for on screen but never gates the selection.
+    assert.equal(catOf({ adds: '4', override: 'green' }), 'CAT 3', 'no reason, still applies');
 });
 
 test('an upgrade override is itself a flag', () => {
@@ -353,150 +359,3 @@ test('stable pre-stepdown patient with a modification is not escalated by it', (
     assert.equal(r.cat.text, 'CAT 3');
 });
 
-// --- Cumulative PICS risk score ---------------------------------------------------------------
-// Local instrument (Dhanju, 2026). It is a recovery-trajectory score, not a readmission score,
-// so the thing most of these fixtures pin down is what it does *not* do to the category.
-
-// Ticking a derived item by hand is a click in the tool, and a click marks the item as the
-// clinician's. Fixtures that set one directly have to say so, or the derivation still wins.
-const DERIVED = ['pics_p02', 'pics_p03', 'pics_p07', 'pics_p08', 'pics_p10'];
-const byHand = (overrides) => ({
-    ...overrides,
-    pics_manual: overrides.pics_manual
-        || DERIVED.filter(id => Object.prototype.hasOwnProperty.call(overrides, id))
-});
-const picsOf = (overrides) => evaluate(overrides).pics;
-
-test('the score adds up its items and lands in the right band', () => {
-    assert.equal(picsOf({}).score, 0);
-    assert.equal(picsOf({}).band, 'low');
-
-    // 3 + 2 = 5, one short of high.
-    const moderate = picsOf({ pics_p01: true, pics_p04: true });
-    assert.equal(moderate.score, 5);
-    assert.equal(moderate.band, 'moderate');
-
-    // 3 + 3 = 6.
-    const high = picsOf(byHand({ pics_p01: true, pics_p02: true }));
-    assert.equal(high.score, 6);
-    assert.equal(high.band, 'high');
-});
-
-test('the band boundaries sit at 3 and 6', () => {
-    assert.equal(picsOf(byHand({ pics_p09: true, pics_p10: true })).band, 'low');             // 2
-    assert.equal(picsOf(byHand({ pics_p09: true, pics_p10: true, pics_p11: true })).band, 'moderate'); // 3
-    assert.equal(picsOf({ pics_p04: true, pics_p05: true, pics_p09: true }).band, 'moderate'); // 5
-    assert.equal(picsOf({ pics_p04: true, pics_p05: true, pics_p06: true }).band, 'high');     // 6
-});
-
-test('high risk is one amber, moderate is a check item, low is silent', () => {
-    // Ticked by hand so the derivations are not what is under test here.
-    const high = byHand({ pics_p01: true, pics_p02: true });
-    assert.equal(catOf(high), 'CAT 2');
-    assert.ok(hasFlag(high, 'PICS high risk - score 6'));
-
-    const moderate = { pics_p01: true };
-    assert.equal(catOf(moderate), 'CAT 3', 'moderate does not move the category');
-    assert.ok(hasCheck(moderate, 'PICS moderate risk - score 3'));
-    assert.ok(!flagsOf(moderate).some(f => f.includes('PICS')), 'and raises no flag');
-
-    assert.ok(!flagsOf({ pics_p09: true }).some(f => f.includes('PICS')));
-});
-
-test('the score never reaches red, whatever is ticked', () => {
-    const everything = {};
-    for (let i = 1; i <= 11; i++) everything[`pics_p${String(i).padStart(2, '0')}`] = true;
-    everything.pics_manual = DERIVED;
-    const r = evaluate(everything);
-    assert.equal(r.pics.score, 21);
-    assert.ok(!r.red.some(f => f.includes('PICS')));
-    assert.equal(r.cat.text, 'CAT 2');
-});
-
-test('the flag names the items behind the number', () => {
-    const flag = flagsOf(byHand({ pics_p01: true, pics_p02: true })).find(f => f.startsWith('PICS high risk'));
-    assert.ok(flag.includes('mechanical ventilation >48h'));
-    assert.ok(flag.includes('CAM-ICU positive'));
-});
-
-// --- Derivation -------------------------------------------------------------------------------
-
-test('each derived item fires from its own field and nothing else', () => {
-    assert.ok(picsOf({ icuLos: '5' }).items.find(i => i.id === 'pics_p08').ticked, 'LOS >3 days');
-    assert.ok(!picsOf({ icuLos: '3' }).items.find(i => i.id === 'pics_p08').ticked, 'exactly 3 is not >3');
-
-    assert.ok(picsOf({ neuro_gate: true, neuroType: 'Delirium' }).items.find(i => i.id === 'pics_p02').ticked);
-    assert.ok(!picsOf({ neuro_gate: true, neuroType: 'Agitation' }).items.find(i => i.id === 'pics_p02').ticked);
-
-    assert.ok(picsOf({ frailty_known: true }).items.find(i => i.id === 'pics_p03').ticked);
-    assert.ok(picsOf({ sleep_quality: true }).items.find(i => i.id === 'pics_p10').ticked);
-
-    // Immobility alone is not >48h - the stay has to be long enough for the claim to hold.
-    assert.ok(!picsOf({ immobility: true, icuLos: '1' }).items.find(i => i.id === 'pics_p07').ticked);
-    assert.ok(picsOf({ immobility: true, icuLos: '4' }).items.find(i => i.id === 'pics_p07').ticked);
-});
-
-test('an auto-ticked item says it was auto-ticked, and where from', () => {
-    const item = picsOf({ icuLos: '5' }).items.find(i => i.id === 'pics_p08');
-    assert.equal(item.auto, true);
-    assert.equal(item.derivedFrom, 'ICU LOS');
-    // Ticked by hand, same value, but not the tool's doing.
-    assert.equal(picsOf({ pics_p01: true }).items.find(i => i.id === 'pics_p01').auto, false);
-});
-
-test('a clinician override beats the derivation in both directions', () => {
-    // Untick something the tool derived.
-    const off = picsOf({ icuLos: '9', pics_p08: false, pics_manual: ['pics_p08'] });
-    assert.ok(!off.items.find(i => i.id === 'pics_p08').ticked);
-    assert.equal(off.score, 0);
-
-    // Tick something the tool did not derive - the item asks about the whole admission.
-    const on = picsOf({ icuLos: '1', pics_p08: true, pics_manual: ['pics_p08'] });
-    assert.ok(on.items.find(i => i.id === 'pics_p08').ticked);
-    assert.equal(on.score, 1);
-});
-
-test('suggestions offer without setting, and stop once the item is answered', () => {
-    // Noradrenaline was recorded, but the dose - which is what P-06 turns on - never was.
-    const sug = picsOf({ pressor_recent_norad: true });
-    assert.ok(!sug.items.find(i => i.id === 'pics_p06').ticked);
-    assert.ok(sug.suggestions.some(x => x.id === 'pics_p06'));
-
-    // A psychological concern is not a pre-existing diagnosis, so P-03 asks rather than ticks.
-    const psych = picsOf({ neuro_psych: true });
-    assert.ok(!psych.items.find(i => i.id === 'pics_p03').ticked);
-    assert.ok(psych.suggestions.some(x => x.id === 'pics_p03'));
-    // Frailty answers it outright, so there is nothing left to ask.
-    assert.ok(!picsOf({ neuro_psych: true, frailty_known: true }).suggestions.some(x => x.id === 'pics_p03'));
-
-    // Answered either way, the prompt goes.
-    assert.ok(!picsOf({ pressor_recent_norad: true, pics_p06: true }).suggestions.length);
-    assert.ok(!picsOf({ pressor_recent_norad: true, pics_p06: false, pics_manual: ['pics_p06'] }).suggestions.length);
-});
-
-// --- Compatibility with what came before ------------------------------------------------------
-
-test('a session saved before the score still flags on its Positive/Negative answer', () => {
-    assert.equal(catOf({ pics: 'positive' }), 'CAT 2');
-    assert.ok(hasFlag({ pics: 'positive' }, 'Post ICU Syndrome Positive'));
-    assert.equal(catOf({ pics: 'negative' }), 'CAT 3');
-});
-
-test('the legacy flag stands down once the score is doing the work', () => {
-    // Score already says high; the old wording would be a second line about the same thing.
-    const r = evaluate(byHand({ pics: 'positive', pics_p01: true, pics_p02: true }));
-    assert.ok(!r.amber.includes('Post ICU Syndrome Positive'));
-    assert.equal(r.amber.filter(f => f.includes('PICS') || f.includes('Post ICU')).length, 1);
-});
-
-test('the binary status is derived from the score for anything downstream', () => {
-    assert.equal(picsOf({}).status, 'negative');
-    assert.equal(picsOf({ pics_p01: true }).status, 'positive');
-});
-
-test('a derived item retracts when its field changes back', () => {
-    // The previous render wrote this tick onto the form; correcting the LOS has to undo it.
-    const stale = picsOf({ icuLos: '1', pics_p08: true });
-    assert.ok(!stale.items.find(i => i.id === 'pics_p08').ticked);
-    assert.equal(stale.score, 0);
-});

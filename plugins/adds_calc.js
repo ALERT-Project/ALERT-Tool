@@ -467,9 +467,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (rawStr === 'ra') return { s: 0, m: false };
 
             if (mode === 'std') {
+                // Up to 2L NP is ward-normal and scores nothing - the same line the risk
+                // rules draw, which only start flagging nasal prongs at 3L.
                 if (n > 10) return { s: 3, m: false };
                 if (n >= 5) return { s: 2, m: false };
-                if (n >= 2) return { s: 1, m: false };
+                if (n >= 3) return { s: 1, m: false };
                 return { s: 0, m: false };
             } else {
                 if (n > 40) return { s: 3, m: false };

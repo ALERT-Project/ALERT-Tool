@@ -1,8 +1,14 @@
-import { $, nowTimeStr, todayDateStr, formatDateDDMMYYYY, num, toDmrSafeText } from './utils.js';
-import { comorbMap } from './config.js';
-import { evaluatePicsScore } from './rules.js';
+/* =========================================
+   ALERT Nursing Risk Assessment Tool
+   Output: DMR note and Excel handover line
+   Copyright © 2025-2026 Casey Bond
+   MIT License - https://opensource.org/licenses/MIT
+   ========================================= */
 
-export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys) {
+import { $, nowTimeStr, todayDateStr, formatDateDDMMYYYY, num, toDmrSafeText, wardLabel } from './utils.js';
+import { comorbMap } from './config.js';
+
+export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, manualIssues = []) {
 
     const sum = $('summary');
 
@@ -26,7 +32,19 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         lines.push(`${role} ${reviewName} - ${methodName}`);
     }
 
-    lines.push(`Patient: ${s.ptName || '--'} | URN: ...${s.ptMrn || ''} | Location: ${s.ptWard || '--'}, Room: ${s.ptBed || '--'}`);
+    // Only what's actually known. This line used to print "Patient: -- | URN: ... | Location:
+    // --, Room: --" on a half-filled form, which reads as a sloppy note rather than an
+    // incomplete one - the dashes said nothing the absence of the field wouldn't have.
+    const idParts = [];
+    if (s.ptName) idParts.push(`Patient: ${s.ptName}`);
+    if (s.ptMrn) idParts.push(`URN: ...${s.ptMrn}`);
+    // Ward and room stay in the "Location: <ward>, Room: <bed>" shape the importer reads back.
+    // With no ward there is nothing for "Location:" to name, so the room stands alone.
+    const ward = wardLabel(s);
+    if (ward) idParts.push(`Location: ${ward}${s.ptBed ? `, Room: ${s.ptBed}` : ''}`);
+    else if (s.ptBed) idParts.push(`Room: ${s.ptBed}`);
+    if (idParts.length) lines.push(idParts.join(' | '));
+
     let demo = [];
     if (s.ptAge) demo.push(`Age: ${s.ptAge}`);
     if (s.ptWeight) demo.push(`Weight: ${s.ptWeight}kg`);
@@ -43,7 +61,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
     if (wardTimeTxt && s.reviewType !== 'pre') lines.push(`Time since stepdown: ${wardTimeTxt}`);
     if (s.icuLos) lines.push(`ICU LOS: ${s.icuLos} days`);
-    lines.push(`Reason for ICU Admission: ${s.ptAdmissionReason || '--'}`);
+    if (s.ptAdmissionReason) lines.push(`Reason for ICU Admission: ${s.ptAdmissionReason}`);
 
     if (s.reviewType === 'pre' && s.icuSummary) {
         pushBlank();
@@ -62,10 +80,9 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         pushBlank();
     } else {
         lines.push(`ALERT Nursing Review Category - ${cat.text}`);
-        // A manual downgrade must never be silent: the note has to show both categories.
-        if (cat.downgradedFrom) {
-            lines.push(`Category manually set to ${cat.text} by clinician - ${cat.downgradeReason} (auto-calculated: ${cat.downgradedFrom})`);
-        }
+        // The category line stands on its own. A manual selection is not annotated in the note:
+        // it reads as second-guessing the clinician who made it, and the flags that produced the
+        // auto-calculated category are listed below regardless.
         if (s.stepdown_suitable === true && s.reviewType === 'pre') {
             lines.push('Patient is suitable for ward stepdown.');
         }
@@ -121,9 +138,13 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         pushBlank();
     }
 
+    // The header is provisional until something lands beneath it - see the truncate below.
+    // addLine() only skips an empty string, and `ADDS: ${undefined}` is not one, so a form with
+    // no score still emitted a bare "ADDS: ".
+    const aeHeaderAt = lines.length;
     lines.push('A-E ASSESSMENT:');
-    if (s.chk_use_mods) addLine(`MODS: ${s.mods_score} ${s.mods_details ? `(${s.mods_details})` : ''}`);
-    else addLine(`ADDS: ${s.adds}`);
+    if (s.chk_use_mods) { if (s.mods_score) addLine(`MODS: ${s.mods_score}${s.mods_details ? ` (${s.mods_details})` : ''}`); }
+    else if (s.adds) addLine(`ADDS: ${s.adds}`);
 
     if (s.airway_a) addLine(`A: ${s.airway_a}`);
     else if (s.a_comment) addLine(`A:`);
@@ -168,6 +189,9 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (e.length) addLine(`E: ${e.join(', ')}`);
     else if (s.e_comment) addLine(`E:`);
     if (s.e_comment) addLine(`  - ${s.e_comment}`);
+
+    // Nothing was recorded under A-E, so take the header back off.
+    if (lines.length === aeHeaderAt + 1) lines.length = aeHeaderAt;
 
     pushBlank();
 
@@ -219,23 +243,9 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
 
-    // The band, the score and the items behind it - the note has to carry the working, or the
-    // ward receives a number it has no way to check. Recomputed rather than passed in: the
-    // function is pure, so this is the same answer the rules reached.
-    const pics = evaluatePicsScore(s);
-    if (pics.score > 0 || s.pics) {
-        const contributors = pics.tickedItems.map(i => i.short).join(', ');
-        // Attributed, because it is a local instrument rather than a published score, and
-        // anyone reading the note in six months should be able to tell which is which.
-        let picsLine = `Post ICU Syndrome: ${pics.bandLabel} - PICS score ${pics.score} (Dhanju 2026, local score)`;
-        if (contributors) picsLine += `: ${contributors}`;
-        if (s.pics && s.pics !== pics.status) {
-            // Clinician overruling the score. Both are printed - the disagreement is the
-            // clinical judgement, not an error to be hidden.
-            picsLine += `. Clinician assessment: ${s.pics === 'positive' ? 'Positive' : 'Negative'}`;
-        }
-        if (s.pics_note) picsLine += ` - ${s.pics_note}`;
-        addLine(picsLine);
+    if (s.pics) {
+        const picsStatus = s.pics === 'positive' ? 'Positive' : 'Negative';
+        addLine(`Post ICU Syndrome: ${picsStatus}${s.pics_note ? ` - ${s.pics_note}` : ''}`);
     }
     if (s.sleep_quality === true) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ''}`);
     else if (s.sleep_quality === false) addLine(`Sleep: No sleep issues identified`);
@@ -288,6 +298,23 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
     pushBlank();
 
+    // What the clinician wrote down themselves - the Review List entries they typed, and the
+    // Quick Notes box - as plain bullets under the score and the bloods. No heading: these
+    // aren't a category of finding, they're the things worth listing. Deliberately not in the
+    // risk factors section, which states what drove the category and nothing else.
+    const ownWords = [];
+    const seenOwn = new Set();
+    const pushOwn = (t) => {
+        const txt = (t || '').trim().replace(/^[-•]\s*/, '');
+        if (txt && !seenOwn.has(txt.toLowerCase())) { seenOwn.add(txt.toLowerCase()); ownWords.push(txt); }
+    };
+    manualIssues.forEach(pushOwn);
+    (s.quickNotes || '').split('\n').forEach(pushOwn);
+    if (ownWords.length) {
+        ownWords.forEach(t => lines.push(`- ${t}`));
+        pushBlank();
+    }
+
     const hasAnyDevices = Object.values(s.devices || {}).some(arr => arr.length);
     if (hasAnyDevices) {
         lines.push('LINES, DRAINS, DEVICES & WOUNDS:');
@@ -302,14 +329,10 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
                     if (item.details) deviceLine += ` - ${item.details}`;
 
-                    const threshold = (k === 'PIVC') ? 5 : 7;
-                    if (k === 'PIVC') {
-                        if (dwellDays >= 5) deviceLine += ` - ${dwellDays}d long dwell`;
-                        else deviceLine += ` - ${dwellDays}d dwell`;
-                    } else {
-                        if (dwellDays >= 7) deviceLine += ` - ${dwellDays}d long dwell`;
-                        else deviceLine += ` - ${dwellDays}d dwell`;
-                    }
+                    // The day count is the clinical fact and speaks for itself; "long dwell"
+                    // only editorialised it. The device card on-screen still colours the
+                    // ones past their review threshold.
+                    deviceLine += ` - ${dwellDays}d dwell`;
 
                     const bd = new Date(item.insertionDate);
                     deviceLine += `, inserted ${bd.getDate()}/${bd.getMonth() + 1}/${bd.getFullYear().toString().slice(-2)}`;
@@ -332,7 +355,9 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     lines.push('IDENTIFIED ICU READMISSION RISK FACTORS:');
     // One list, not two. Risks that were considered and discounted stay in it and carry their
     // reason inline - "(mitigated: ...)" - so the note says what didn't count and why without
-    // splitting the reader's attention across two sections.
+    // splitting the reader's attention across two sections. Only computed risks appear here:
+    // this section says what drove the category, so a typed item like "family updated re GOC"
+    // would read as a readmission risk factor. Those are bulleted after the bloods instead.
     const risks = [...red, ...amber, ...suppressed];
     if (risks.length) { risks.forEach(r => lines.push(`- ${r}`)); }
     else { lines.push('- None identified'); }
@@ -361,13 +386,6 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
     if (s.chk_medical_rounding) {
         lines.push('- Patient added to ALERT medical rounding list for further review.');
-    }
-
-    // The band's recommended action, which is the only part of the score the ward can act on.
-    // Pre-ticked on the panel rather than unconditional: this states what was done, so the
-    // clinician who didn't do it needs to be able to take it out.
-    if (pics.action && s.chk_pics_action !== false) {
-        lines.push(`- ${pics.action}`);
     }
 
     if (!s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.stepdown_suitable !== false) {
@@ -408,7 +426,9 @@ function trimRiskForHandover(text) {
 export function generateHandoverLine(s, activeIssuesList = [], cat = null, red = [], amber = []) {
     const now = new Date();
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
-    const initials = s.reviewerInitials || '--';
+    // Upper-cased on read: the field only *displays* uppercase, via CSS, so the stored value
+    // is whatever was typed and this column is scanned by eye.
+    const initials = (s.reviewerInitials || '').toUpperCase() || '--';
     const time = s.reviewTime || nowTimeStr();
     const parts = [`${dateStr} ${time} ${initials}.`];
 

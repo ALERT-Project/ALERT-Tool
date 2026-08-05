@@ -24,6 +24,11 @@
     const [y, m, d] = isoStr.split("-");
     return `${d}/${m}/${y}`;
   }
+  function wardLabel(s) {
+    const ward = (s.ptWard || "").trim();
+    if (ward === "Other") return (s.ptWardOther || "").trim();
+    return ward;
+  }
   function sentenceCase(str) {
     if (!str) return "";
     str = str.trim();
@@ -215,86 +220,6 @@
     "comorb_immuno": "Immunosuppression",
     "comorb_other": "Other"
   };
-  var PICS_ITEMS = [
-    { id: "pics_p01", code: "P-01", points: 3, tier: "High-yield", label: "Mechanical ventilation >48h", short: "mechanical ventilation >48h" },
-    {
-      id: "pics_p02",
-      code: "P-02",
-      points: 3,
-      tier: "High-yield",
-      label: "Positive delirium screen (CAM-ICU+) at any point",
-      short: "CAM-ICU positive",
-      derive: (s) => s.neuro_gate === true && s.neuroType === "Delirium",
-      derivedFrom: "neuro type Delirium"
-    },
-    {
-      id: "pics_p03",
-      code: "P-03",
-      points: 3,
-      tier: "High-yield",
-      label: "Pre-existing baseline impairment (cognitive decline, frailty, PTSD/depression)",
-      short: "pre-existing baseline impairment",
-      derive: (s) => s.frailty_known === true,
-      derivedFrom: "known frailty at baseline",
-      suggest: (s) => s.neuro_psych === true && s.frailty_known !== true,
-      suggestReason: "Psychological concern recorded - pre-existing diagnosis?"
-    },
-    { id: "pics_p04", code: "P-04", points: 2, tier: "Moderate", label: "Severe sepsis, septic shock or ARDS", short: "severe sepsis/ARDS" },
-    { id: "pics_p05", code: "P-05", points: 2, tier: "Moderate", label: "Neuromuscular blockade or high dose corticosteroids", short: "paralytics/high dose steroids" },
-    {
-      id: "pics_p06",
-      code: "P-06",
-      points: 2,
-      tier: "Moderate",
-      label: "Severe hypoxia or high dose vasopressors",
-      short: "severe hypoxia/high dose vasopressors",
-      suggest: (s) => s.pressor_recent_norad === true,
-      suggestReason: "Noradrenaline recorded in ICU - was the dose high?"
-    },
-    {
-      id: "pics_p07",
-      code: "P-07",
-      points: 2,
-      tier: "Moderate",
-      label: "Strict bed rest or complete immobility >48h",
-      short: "immobile >48h",
-      derive: (s) => s.immobility === true && (parseFloat(s.icuLos) || 0) >= 2,
-      derivedFrom: "immobility gate"
-    },
-    {
-      id: "pics_p08",
-      code: "P-08",
-      points: 1,
-      tier: "Additive",
-      label: "ICU length of stay >3 days",
-      short: "ICU LOS >3 days",
-      derive: (s) => (parseFloat(s.icuLos) || 0) > 3,
-      derivedFrom: "ICU LOS"
-    },
-    { id: "pics_p09", code: "P-09", points: 1, tier: "Additive", label: "Use of physical restraints", short: "physical restraints" },
-    {
-      id: "pics_p10",
-      code: "P-10",
-      points: 1,
-      tier: "Additive",
-      label: "Severe sleep disruption or altered sleep architecture",
-      short: "severe sleep disruption",
-      derive: (s) => s.sleep_quality === true,
-      derivedFrom: "poor sleep"
-    },
-    { id: "pics_p11", code: "P-11", points: 1, tier: "Additive", label: "Extreme family or caregiver distress or conflict", short: "family/caregiver distress" }
-  ];
-  var PICS_BANDS = {
-    low: { label: "Low risk", action: null },
-    moderate: {
-      label: "Moderate risk",
-      action: "PICS moderate risk: patient & family education bundle delivered. Monitor for emerging symptoms at next review."
-    },
-    high: {
-      label: "High risk",
-      action: "PICS high risk: formal PICS alert given at handover, priority 72-hour ICU Outreach review, referrals to Physiotherapy and Social Work."
-    }
-  };
   var staticInputs = [
     "reviewTime",
     "reviewerInitials",
@@ -474,8 +399,7 @@
     "pressor_recent_mid",
     "pressor_recent_other",
     "pressor_current_mid",
-    "pressor_current_other",
-    ...PICS_ITEMS.map((i) => i.id)
+    "pressor_current_other"
   ];
   var selectInputs = [
     "oxMod",
@@ -570,37 +494,6 @@
       return { hours: diffHours, text: `${halfDays} days` };
     }
     return { hours: diffHours, text: `${Math.round(diffHours / 24)} days` };
-  }
-  function evaluatePicsScore(s) {
-    const overridden = new Set(Array.isArray(s.pics_manual) ? s.pics_manual : []);
-    const items = PICS_ITEMS.map((item) => {
-      const derived = item.derive ? !!item.derive(s) : false;
-      const isOverridden = overridden.has(item.id);
-      const ticked2 = isOverridden || !item.derive ? s[item.id] === true : derived;
-      return {
-        ...item,
-        ticked: ticked2,
-        // Only claim an item was auto-ticked when the derivation is what put it there.
-        auto: ticked2 && derived && !isOverridden
-      };
-    });
-    const suggestions = PICS_ITEMS.filter((item) => item.suggest && item.suggest(s) && !overridden.has(item.id) && s[item.id] !== true).map((item) => ({ id: item.id, reason: item.suggestReason }));
-    const ticked = items.filter((i) => i.ticked);
-    const score = ticked.reduce((sum, i) => sum + i.points, 0);
-    const band = score >= 6 ? "high" : score >= 3 ? "moderate" : "low";
-    return {
-      score,
-      band,
-      bandLabel: PICS_BANDS[band].label,
-      action: PICS_BANDS[band].action,
-      items,
-      tickedItems: ticked,
-      suggestions,
-      // The binary the tool asked before this score existed, now derived from it. Anything
-      // downstream that only wants positive/negative - the summary's previous-review datum,
-      // the importer - keeps working without knowing the score exists.
-      status: score >= 3 ? "positive" : "negative"
-    };
   }
   function deriveAfterHours(s, timeData, isPre) {
     if (isPre || !s.stepdownDate) return null;
@@ -981,15 +874,7 @@
       add(amber, `Rising CRP ${crpTrend.previous} to ${crpTrend.current}`, "bl_crp", "amber");
     }
     if (s.neuro_psych) add(amber, "Psychological concern", "neuro_section", "amber", s.neuro_psych_note);
-    const pics = evaluatePicsScore(s);
-    const picsSummary = pics.tickedItems.map((i) => i.short).join(", ");
-    if (pics.band === "high") {
-      add(amber, `PICS high risk - score ${pics.score}${picsSummary ? ` (${picsSummary})` : ""}`, "seg_pics", "amber", s.pics_note);
-    } else if (pics.band === "moderate") {
-      addCheck(`PICS moderate risk - score ${pics.score}${picsSummary ? ` (${picsSummary})` : ""}`, "pics_score");
-    } else if (s.pics === "positive") {
-      add(amber, "Post ICU Syndrome Positive", "seg_pics", "amber", s.pics_note);
-    }
+    if (s.pics === "positive") add(amber, "Post ICU Syndrome Positive", "seg_pics", "amber", s.pics_note);
     const activeComorbsKeys = toggleInputs.filter((key) => key.startsWith("comorb_") && s[key]);
     const countComorbs = activeComorbsKeys.length;
     if (countComorbs >= 3) {
@@ -1054,10 +939,16 @@
     let autoCat = { id: "green", text: "CAT 3" };
     if (redCount > 0) autoCat = { id: "red", text: "CAT 1" };
     else if (amberCount > 0) autoCat = { id: "amber", text: "CAT 2" };
+    const OVERRIDE_CATS = {
+      red: { id: "red", text: "CAT 1" },
+      amber: { id: "amber", text: "CAT 2" },
+      green: { id: "green", text: "CAT 3" }
+    };
     let cat = autoCat;
     const downgradeReason = (s.overrideNote || "").trim();
-    if (s.override === "green" && downgradeReason) {
-      cat = { id: "green", text: "CAT 3", downgradedFrom: autoCat.text, downgradeReason };
+    const chosenCat = OVERRIDE_CATS[s.override];
+    if (chosenCat) {
+      cat = chosenCat.id === autoCat.id ? autoCat : { ...chosenCat, downgradedFrom: autoCat.text, downgradeReason };
     }
     return {
       red: uniqueRed,
@@ -1080,8 +971,7 @@
       activeComorbsKeys,
       countComorbs,
       downtrendSuggestion,
-      bloodsReviewed,
-      pics
+      bloodsReviewed
     };
   }
 
@@ -1312,7 +1202,7 @@
     const fn = $("footerName");
     if (fn) fn.textContent = s.ptName || "--";
     const fl = $("footerLocation");
-    if (fl) fl.textContent = `${s.ptWard || "--"} ${s.ptBed || ""}`;
+    if (fl) fl.textContent = `${wardLabel(s) || "--"} ${s.ptBed || ""}`;
     const fa = $("footerAdmission");
     if (fa) fa.textContent = s.ptAdmissionReason || "--";
     const timeOffEl = $("pressor_time_off_display");
@@ -1329,7 +1219,6 @@
         timeOffEl.textContent = "";
       }
     }
-    renderPicsPanel(result.pics);
     const suggestion = $("infection_downtrend_suggestion");
     if (suggestion) {
       if (result.downtrendSuggestion) {
@@ -1355,6 +1244,7 @@
     if (!s.ptMrn) missing.push("URN");
     if (!s.ptWard) missing.push("Ward");
     if (!s.reviewerInitials) missing.push("Reviewer");
+    $("reviewerInitials")?.closest(".rs-field-reviewer")?.classList.toggle("reviewer-missing", !s.reviewerInitials);
     if (missing.length) {
       setNotice("completeness", {
         priority: NOTICE_PRIORITY.COMPLETENESS,
@@ -1379,66 +1269,6 @@
         } else {
           parent?.classList.remove("blood-abnormal");
         }
-      }
-    }
-  }
-  function buildPicsPanel() {
-    const host = $("pics_items");
-    if (!host || host.dataset.built === "true") return;
-    let lastTier = null;
-    const parts = [];
-    PICS_ITEMS.forEach((item) => {
-      if (item.tier !== lastTier) {
-        const pts = item.points;
-        parts.push(`<div class="pics-tier">${item.tier} - ${pts} point${pts === 1 ? "" : "s"} each</div>`);
-        lastTier = item.tier;
-      }
-      parts.push(`<div class="pics-row">
-            <div class="toggle-label" id="toggle_${item.id}" data-value="false" role="button" tabindex="0"
-                 title="${item.code}, ${item.points} point${item.points === 1 ? "" : "s"}">
-                <span>${item.label}<span class="pics-auto" data-auto-for="${item.id}" hidden></span></span>
-                <span class="pics-points">+${item.points}</span>
-                <span class="state"></span>
-            </div>
-        </div>`);
-    });
-    host.innerHTML = parts.join("");
-    host.dataset.built = "true";
-  }
-  function renderPicsPanel(pics) {
-    if (!pics || $("pics_items")?.dataset.built !== "true") return;
-    pics.items.forEach((item) => {
-      const el = $(`toggle_${item.id}`);
-      if (!el) return;
-      el.dataset.value = item.ticked ? "true" : "false";
-      el.classList.toggle("active", item.ticked);
-      const autoTag = el.querySelector(`[data-auto-for="${item.id}"]`);
-      if (autoTag) {
-        autoTag.hidden = !item.auto;
-        autoTag.textContent = item.auto ? ` (auto: ${item.derivedFrom})` : "";
-      }
-    });
-    const scoreEl = $("pics_score_value");
-    if (scoreEl) scoreEl.textContent = String(pics.score);
-    const chip = $("pics_band_chip");
-    if (chip) {
-      chip.className = `pics-band ${pics.band}`;
-      chip.textContent = `${pics.bandLabel} (${pics.band === "high" ? "6+" : pics.band === "moderate" ? "3-5" : "0-2"})`;
-    }
-    const sugHost = $("pics_suggestions");
-    if (sugHost) {
-      sugHost.innerHTML = pics.suggestions.map(
-        (sug) => `<button type="button" class="pics-suggestion" data-pics-suggest="${sug.id}">${sug.reason}</button>`
-      ).join("");
-    }
-    const actionWrapper = $("pics_action_wrapper");
-    const actionText = $("pics_action_text");
-    if (actionWrapper && actionText) {
-      if (pics.action) {
-        actionText.textContent = `Add to plan: ${pics.action}`;
-        actionWrapper.style.display = "block";
-      } else {
-        actionWrapper.style.display = "none";
       }
     }
   }
@@ -1559,29 +1389,23 @@
       infoColor = "var(--text)";
       if (type === "PIVC") {
         if (dwellDays >= 7) {
-          infoText = `${dwellDays}d, very long dwell`;
           infoColor = "var(--red)";
           borderColor = "var(--red)";
         } else if (dwellDays >= 5) {
-          infoText = `${dwellDays}d, long dwell`;
           infoColor = "var(--amber)";
           borderColor = "var(--amber)";
         } else if (dwellDays >= 3) {
-          infoText = `${dwellDays}d dwell`;
           infoColor = "#9333ea";
           borderColor = "#9333ea";
         }
       } else {
         if (dwellDays >= 14) {
-          infoText = `${dwellDays}d, very long dwell`;
           infoColor = "var(--red)";
           borderColor = "var(--red)";
         } else if (dwellDays >= 10) {
-          infoText = `${dwellDays}d, very long dwell`;
           infoColor = "var(--amber)";
           borderColor = "var(--amber)";
         } else if (dwellDays >= 7) {
-          infoText = `${dwellDays}d, long dwell`;
           infoColor = "#9333ea";
           borderColor = "#9333ea";
         }
@@ -1669,53 +1493,42 @@
           const deviceDate = /* @__PURE__ */ new Date(newDate + "T00:00:00");
           const dwellDays2 = Math.floor((/* @__PURE__ */ new Date() - deviceDate) / (1e3 * 60 * 60 * 24));
           let newBorderColor = "var(--line)";
-          let infoText2 = `${dwellDays2}d dwell`;
+          const infoText2 = `${dwellDays2}d dwell`;
           let infoColor2 = "var(--text)";
           if (type === "PIVC") {
             if (dwellDays2 >= 7) {
               newBorderColor = "var(--red)";
-              infoText2 = `${dwellDays2}d, very long dwell`;
               infoColor2 = "var(--red)";
             } else if (dwellDays2 >= 5) {
               newBorderColor = "var(--amber)";
-              infoText2 = `${dwellDays2}d, long dwell`;
               infoColor2 = "var(--amber)";
             } else if (dwellDays2 >= 3) {
               newBorderColor = "#9333ea";
-              infoText2 = `${dwellDays2}d dwell`;
               infoColor2 = "#9333ea";
             }
           } else {
             if (dwellDays2 >= 14) {
               newBorderColor = "var(--red)";
-              infoText2 = `${dwellDays2}d, very long dwell`;
               infoColor2 = "var(--red)";
             } else if (dwellDays2 >= 10) {
               newBorderColor = "var(--amber)";
-              infoText2 = `${dwellDays2}d, very long dwell`;
               infoColor2 = "var(--amber)";
             } else if (dwellDays2 >= 7) {
               newBorderColor = "#9333ea";
-              infoText2 = `${dwellDays2}d, long dwell`;
               infoColor2 = "#9333ea";
             }
           }
-          const innerDiv = div.querySelector('div[style*="border"]');
-          if (innerDiv) {
-            innerDiv.style.borderColor = newBorderColor;
-          }
+          const row = div.querySelector(".device-row");
+          if (row) row.style.borderColor = newBorderColor;
           let infoTextEl = div.querySelector(".device-info-text");
-          if (infoText2 && infoColor2) {
-            if (!infoTextEl) {
-              infoTextEl = document.createElement("div");
-              infoTextEl.className = "device-info-text";
-              infoTextEl.style.cssText = "font-size:0.8rem; font-weight:600; padding-left:8px;";
-              div.querySelector('div[style*="flex-direction"]')?.appendChild(infoTextEl);
-            }
+          if (!infoTextEl && row) {
+            infoTextEl = document.createElement("div");
+            infoTextEl.className = "device-info-text";
+            row.insertBefore(infoTextEl, row.querySelector(".remove-entry"));
+          }
+          if (infoTextEl) {
             infoTextEl.textContent = infoText2;
             infoTextEl.style.color = infoColor2;
-          } else if (infoTextEl) {
-            infoTextEl.remove();
           }
         }
         window.devicesModifiedSinceLastSummary = true;
@@ -1775,7 +1588,16 @@
       }
     }
   }
+  var copiedOnExit = false;
+  function markCopiedOnExit() {
+    copiedOnExit = true;
+  }
+  function clearClipboard() {
+    navigator.clipboard?.writeText("")?.catch(() => {
+    });
+  }
   function showClearDataModal() {
+    copiedOnExit = false;
     const modal = $("clearDataModal");
     if (modal) modal.style.display = "flex";
   }
@@ -1824,6 +1646,7 @@
   }
   function clearData() {
     hideClearDataModal();
+    if (!copiedOnExit) clearClipboard();
     if (isQuickReviewMode) {
       exitQuickReviewMode();
     }
@@ -1853,10 +1676,7 @@
     if (impTxt) impTxt.value = "";
     document.querySelectorAll(".active").forEach((e) => e.classList.remove("active"));
     document.querySelectorAll('input[type="checkbox"]').forEach((e) => e.checked = false);
-    document.querySelectorAll(".toggle-label").forEach((e) => {
-      e.dataset.value = "false";
-      delete e.dataset.manual;
-    });
+    document.querySelectorAll(".toggle-label").forEach((e) => e.dataset.value = "false");
     document.querySelectorAll(".blood-abnormal").forEach((e) => e.classList.remove("blood-abnormal"));
     const dc = $("devices-container");
     if (dc) dc.innerHTML = "";
@@ -1969,8 +1789,10 @@
     const warn = $("override_downgrade_warn");
     const label = $("override_reason_label");
     const required = $("override_reason_required");
-    const isDowngrade = override === "green";
-    if (label) label.textContent = isDowngrade ? "Reason for CAT 3 downgrade (required)" : "Reason for override";
+    const CAT_RANK = { green: 0, amber: 1, red: 2 };
+    const chosenText = { red: "CAT 1", amber: "CAT 2", green: "CAT 3" }[chosen];
+    const isDowngrade = !!chosen && CAT_RANK[chosen] < CAT_RANK[autoCat.id];
+    if (label) label.textContent = isDowngrade ? `Reason for downgrade to ${chosenText}` : "Reason for override";
     if (required) required.style.display = isDowngrade && !reason ? "block" : "none";
     if (box) box.classList.toggle("reason-missing", isDowngrade && !reason);
     if (warn) {
@@ -1978,7 +1800,7 @@
         const parts = [];
         if (redCount) parts.push(`${redCount} red flag${redCount > 1 ? "s" : ""}`);
         if (amberCount) parts.push(`${amberCount} amber flag${amberCount > 1 ? "s" : ""}`);
-        warn.textContent = `\u26A0 Downgrading to CAT 3 with ${parts.join(" and ")} present. The flags stay in the summary.`;
+        warn.textContent = `\u26A0 Set to ${chosenText} with ${parts.join(" and ")} present (auto-calculated ${autoCat.text}). The flags stay in the summary.`;
         warn.style.display = "block";
       } else {
         warn.style.display = "none";
@@ -2169,11 +1991,13 @@
     setPanelOpen($(panelId), document.querySelector(btnSelector), false);
   }
   var QUICK_REVIEW_SECTIONS_TO_HIDE = ["section-risk", "section-ae", "section-context"];
-  var QUICK_REVIEW_ONLY_SECTIONS = ["quick_notes_wrapper", "scraped_risks_wrapper"];
   var QUICK_GRID_LAYOUT = {
     qgTop: ["section-patient"],
-    qgLeft: ["adds_wrapper", "section-bloods", "override_card", "quick_notes_wrapper"],
-    qgRight: ["carried_forward_card", "scraped_risks_wrapper", "section-devices"],
+    // Left rail is what you measured; the right column is what you concluded. The category
+    // buttons no longer appear here - they moved inside #section-category, which is the whole
+    // bottom band, so the call is made next to the flags that produced it.
+    qgLeft: ["adds_wrapper", "section-bloods", "section-devices"],
+    qgRight: ["carried_forward_card", "scraped_risks_wrapper", "quick_notes_wrapper"],
     qgBottom: ["section-category"]
   };
   function moveIntoQuickGrid() {
@@ -2219,10 +2043,6 @@
         section.style.display = "none";
         section.setAttribute("data-hidden-by-quick-review", "true");
       }
-    });
-    QUICK_REVIEW_ONLY_SECTIONS.forEach((id) => {
-      const section = $(id);
-      if (section) section.style.display = "block";
     });
     moveIntoQuickGrid();
     watchAddsCalculator();
@@ -2273,10 +2093,6 @@
       section.style.display = "";
       section.removeAttribute("data-hidden-by-quick-review");
     });
-    QUICK_REVIEW_ONLY_SECTIONS.forEach((id) => {
-      const section = $(id);
-      if (section) section.style.display = "none";
-    });
     const bloodsQuick = $("bloods_quick_controls");
     if (bloodsQuick) bloodsQuick.style.display = "none";
     document.querySelectorAll(".nav-item").forEach((item) => {
@@ -2285,6 +2101,7 @@
     });
     const depthFull = document.querySelector('input[name="reviewDepth"][value="full"]');
     if (depthFull) depthFull.checked = true;
+    renderScrapedIssuesList();
     showToast("Full review mode restored", 2e3);
   }
   function showQuickReviewPrompt(categoryText, hoursOnWard, previousRisks = []) {
@@ -2482,10 +2299,6 @@
     issue.resolvedByUser = issue.resolved;
     renderScrapedIssuesList();
   }
-  function deleteActiveIssue(id) {
-    activeIssues = activeIssues.filter((i) => i.id !== id);
-    renderScrapedIssuesList();
-  }
   function editActiveIssueText(id, newText) {
     const issue = activeIssues.find((i) => i.id === id);
     if (issue) issue.text = newText;
@@ -2493,6 +2306,9 @@
   }
   function getUnresolvedActiveIssues() {
     return activeIssues.filter((i) => !i.resolved);
+  }
+  function getManualIssuesForNote() {
+    return activeIssues.filter((i) => i.source === "manual" && !i.resolved).map((i) => i.text);
   }
   function getVisibleActiveIssues() {
     return activeIssues.filter((i) => !i.resolved || i.resolvedByUser);
@@ -2521,26 +2337,29 @@
     const issues = getVisibleActiveIssues();
     const count = $("issues_count");
     const openCount = issues.filter((i) => !i.resolved).length;
-    if (count) count.textContent = openCount ? `(${openCount})` : "";
+    const doneCount = issues.length - openCount;
+    if (count) {
+      const parts = [];
+      if (openCount) parts.push(`${openCount} open`);
+      if (doneCount) parts.push(`${doneCount} resolved`);
+      count.textContent = parts.length ? `(${parts.join(" \xB7 ")})` : "";
+    }
     if (issues.length === 0) {
-      list.innerHTML = "";
+      list.innerHTML = document.body.classList.contains("quick-review-active") ? `<div class="issues-empty">Add issues from your review below</div>` : "";
       return;
     }
-    const BIN_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
     list.innerHTML = issues.map((issue) => `
         <div class="scraped-issue-row${issue.resolved ? " resolved" : ""}" data-id="${issue.id}">
-            <input type="checkbox" class="scraped-issue-resolve" data-id="${issue.id}"${issue.resolved ? " checked" : ""} title="Mark as resolved">
             <span class="scraped-issue-text" data-id="${issue.id}" title="Click to edit">${issue.text}</span>
             ${issue.severity === "info" ? '<span class="scraped-issue-note-tag">note</span>' : ""}
-            <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}" title="Edit">&#9998;</button>
-            <button type="button" class="scraped-issue-delete" data-id="${issue.id}" title="Delete">${BIN_ICON}</button>
+            <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}"
+                title="Edit" aria-label="Edit">&#9998;</button>
+            <button type="button" class="scraped-issue-resolve" data-id="${issue.id}"
+                title="${issue.resolved ? "Put it back on the list" : "Dealt with - keeps it here but leaves it out of the note and the handover line"}">${issue.resolved ? "undo" : "resolve"}</button>
         </div>
     `).join("");
-    list.querySelectorAll(".scraped-issue-resolve").forEach((cb) => {
-      cb.addEventListener("change", (e) => toggleActiveIssueResolved(e.target.dataset.id));
-    });
-    list.querySelectorAll(".scraped-issue-delete").forEach((btn) => {
-      btn.addEventListener("click", (e) => deleteActiveIssue(e.currentTarget.dataset.id));
+    list.querySelectorAll(".scraped-issue-resolve").forEach((btn) => {
+      btn.addEventListener("click", (e) => toggleActiveIssueResolved(e.currentTarget.dataset.id));
     });
     const startEdit = (span) => {
       const id = span.dataset.id;
@@ -2643,12 +2462,11 @@
       const group = $(id);
       state[id] = group?.querySelector(".select-btn.active")?.dataset.value || "";
     });
-    state.pics_manual = PICS_ITEMS.filter((item) => $(`toggle_${item.id}`)?.dataset.manual === "true").map((item) => item.id);
     state["reviewType"] = document.querySelector('input[name="reviewType"]:checked')?.value || "post";
     state["clinicianRole"] = document.querySelector('input[name="clinicianRole"]:checked')?.value || "ALERT CNS";
     state["reviewModeType"] = document.querySelector('input[name="reviewModeType"]:checked')?.value || "physical";
     state.activeIssues = activeIssues;
-    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods", "chk_pics_action"].forEach((id) => {
+    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
       const el = $(id);
       if (el) state[id] = el.checked;
     });
@@ -2712,12 +2530,6 @@
         if (id === "renal_dialysis") $("dialysis_type_wrapper").style.display = state[id] ? "block" : "none";
       }
     });
-    if (Array.isArray(state.pics_manual)) {
-      state.pics_manual.forEach((id) => {
-        const el = $(`toggle_${id}`);
-        if (el) el.dataset.manual = "true";
-      });
-    }
     if (state["comorbs_gate"] === void 0) {
       const anyComorb = toggleInputs.filter((k) => k.startsWith("comorb_") && state[k]).length > 0;
       if (anyComorb) {
@@ -2757,7 +2569,7 @@
       _activeIssueCounter = activeIssues.reduce((max, i) => Math.max(max, i.createdAt || 0), 0);
       renderScrapedIssuesList();
     }
-    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods", "chk_pics_action"].forEach((id) => {
+    ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
       const el = $(id);
       if (el && state[id] !== void 0) el.checked = state[id];
     });
@@ -2801,7 +2613,7 @@
   }
 
   // src/js/summary.js
-  function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys) {
+  function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, manualIssues = []) {
     const sum = $("summary");
     window.devicesModifiedSinceLastSummary = false;
     const lines = [];
@@ -2819,7 +2631,13 @@
     } else {
       lines.push(`${role} ${reviewName} - ${methodName}`);
     }
-    lines.push(`Patient: ${s.ptName || "--"} | URN: ...${s.ptMrn || ""} | Location: ${s.ptWard || "--"}, Room: ${s.ptBed || "--"}`);
+    const idParts = [];
+    if (s.ptName) idParts.push(`Patient: ${s.ptName}`);
+    if (s.ptMrn) idParts.push(`URN: ...${s.ptMrn}`);
+    const ward = wardLabel(s);
+    if (ward) idParts.push(`Location: ${ward}${s.ptBed ? `, Room: ${s.ptBed}` : ""}`);
+    else if (s.ptBed) idParts.push(`Room: ${s.ptBed}`);
+    if (idParts.length) lines.push(idParts.join(" | "));
     let demo = [];
     if (s.ptAge) demo.push(`Age: ${s.ptAge}`);
     if (s.ptWeight) demo.push(`Weight: ${s.ptWeight}kg`);
@@ -2833,7 +2651,7 @@
     pushBlank();
     if (wardTimeTxt && s.reviewType !== "pre") lines.push(`Time since stepdown: ${wardTimeTxt}`);
     if (s.icuLos) lines.push(`ICU LOS: ${s.icuLos} days`);
-    lines.push(`Reason for ICU Admission: ${s.ptAdmissionReason || "--"}`);
+    if (s.ptAdmissionReason) lines.push(`Reason for ICU Admission: ${s.ptAdmissionReason}`);
     if (s.reviewType === "pre" && s.icuSummary) {
       pushBlank();
       lines.push(`ICU Course Summary: ${s.icuSummary}`);
@@ -2850,9 +2668,6 @@
       pushBlank();
     } else {
       lines.push(`ALERT Nursing Review Category - ${cat.text}`);
-      if (cat.downgradedFrom) {
-        lines.push(`Category manually set to ${cat.text} by clinician - ${cat.downgradeReason} (auto-calculated: ${cat.downgradedFrom})`);
-      }
       if (s.stepdown_suitable === true && s.reviewType === "pre") {
         lines.push("Patient is suitable for ward stepdown.");
       }
@@ -2900,9 +2715,11 @@
       lines.push(`GOC: ${s.goc_note}`);
       pushBlank();
     }
+    const aeHeaderAt = lines.length;
     lines.push("A-E ASSESSMENT:");
-    if (s.chk_use_mods) addLine(`MODS: ${s.mods_score} ${s.mods_details ? `(${s.mods_details})` : ""}`);
-    else addLine(`ADDS: ${s.adds}`);
+    if (s.chk_use_mods) {
+      if (s.mods_score) addLine(`MODS: ${s.mods_score}${s.mods_details ? ` (${s.mods_details})` : ""}`);
+    } else if (s.adds) addLine(`ADDS: ${s.adds}`);
     if (s.airway_a) addLine(`A: ${s.airway_a}`);
     else if (s.a_comment) addLine(`A:`);
     if (s.a_comment) addLine(`  - ${s.a_comment}`);
@@ -2942,6 +2759,7 @@
     if (e.length) addLine(`E: ${e.join(", ")}`);
     else if (s.e_comment) addLine(`E:`);
     if (s.e_comment) addLine(`  - ${s.e_comment}`);
+    if (lines.length === aeHeaderAt + 1) lines.length = aeHeaderAt;
     pushBlank();
     if (s.ae_mobility) addLine(`Mobility: ${s.ae_mobility}`);
     let bowelTxt = "";
@@ -2985,16 +2803,9 @@
     if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ""}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
-    const pics = evaluatePicsScore(s);
-    if (pics.score > 0 || s.pics) {
-      const contributors = pics.tickedItems.map((i) => i.short).join(", ");
-      let picsLine = `Post ICU Syndrome: ${pics.bandLabel} - PICS score ${pics.score} (Dhanju 2026, local score)`;
-      if (contributors) picsLine += `: ${contributors}`;
-      if (s.pics && s.pics !== pics.status) {
-        picsLine += `. Clinician assessment: ${s.pics === "positive" ? "Positive" : "Negative"}`;
-      }
-      if (s.pics_note) picsLine += ` - ${s.pics_note}`;
-      addLine(picsLine);
+    if (s.pics) {
+      const picsStatus = s.pics === "positive" ? "Positive" : "Negative";
+      addLine(`Post ICU Syndrome: ${picsStatus}${s.pics_note ? ` - ${s.pics_note}` : ""}`);
     }
     if (s.sleep_quality === true) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ""}`);
     else if (s.sleep_quality === false) addLine(`Sleep: No sleep issues identified`);
@@ -3038,6 +2849,21 @@
     if (s.new_bloods_ordered === "not_required") addLine("New bloods not required");
     if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
     pushBlank();
+    const ownWords = [];
+    const seenOwn = /* @__PURE__ */ new Set();
+    const pushOwn = (t) => {
+      const txt = (t || "").trim().replace(/^[-•]\s*/, "");
+      if (txt && !seenOwn.has(txt.toLowerCase())) {
+        seenOwn.add(txt.toLowerCase());
+        ownWords.push(txt);
+      }
+    };
+    manualIssues.forEach(pushOwn);
+    (s.quickNotes || "").split("\n").forEach(pushOwn);
+    if (ownWords.length) {
+      ownWords.forEach((t) => lines.push(`- ${t}`));
+      pushBlank();
+    }
     const hasAnyDevices = Object.values(s.devices || {}).some((arr) => arr.length);
     if (hasAnyDevices) {
       lines.push("LINES, DRAINS, DEVICES & WOUNDS:");
@@ -3049,14 +2875,7 @@
             const deviceDate = /* @__PURE__ */ new Date(item.insertionDate + "T00:00:00");
             const dwellDays = Math.floor((/* @__PURE__ */ new Date() - deviceDate) / (1e3 * 60 * 60 * 24));
             if (item.details) deviceLine += ` - ${item.details}`;
-            const threshold = k === "PIVC" ? 5 : 7;
-            if (k === "PIVC") {
-              if (dwellDays >= 5) deviceLine += ` - ${dwellDays}d long dwell`;
-              else deviceLine += ` - ${dwellDays}d dwell`;
-            } else {
-              if (dwellDays >= 7) deviceLine += ` - ${dwellDays}d long dwell`;
-              else deviceLine += ` - ${dwellDays}d dwell`;
-            }
+            deviceLine += ` - ${dwellDays}d dwell`;
             const bd = new Date(item.insertionDate);
             deviceLine += `, inserted ${bd.getDate()}/${bd.getMonth() + 1}/${bd.getFullYear().toString().slice(-2)}`;
           } else {
@@ -3100,9 +2919,6 @@
     if (s.chk_medical_rounding) {
       lines.push("- Patient added to ALERT medical rounding list for further review.");
     }
-    if (pics.action && s.chk_pics_action !== false) {
-      lines.push(`- ${pics.action}`);
-    }
     if (!s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.stepdown_suitable !== false) {
       lines.push("- Please contact ALERT if further support required between reviews.");
     }
@@ -3126,7 +2942,7 @@
   function generateHandoverLine(s, activeIssuesList = [], cat = null, red = [], amber = []) {
     const now = /* @__PURE__ */ new Date();
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
-    const initials = s.reviewerInitials || "--";
+    const initials = (s.reviewerInitials || "").toUpperCase() || "--";
     const time = s.reviewTime || nowTimeStr();
     const parts = [`${dateStr} ${time} ${initials}.`];
     parts.push(s.reviewModeType === "chart" ? "CHART R/V." : "PHYSICAL R/V.");
@@ -3159,36 +2975,9 @@
   }
 
   // src/js/main.js
-  var PRIVACY_IDLE_MS = 10 * 60 * 1e3;
-  function setupPrivacyScreen() {
-    const screen = $("privacyScreen");
-    if (!screen) return;
-    let timer;
-    const hide = () => {
-      screen.hidden = true;
-      arm();
-    };
-    const show = () => {
-      screen.hidden = false;
-    };
-    function arm() {
-      clearTimeout(timer);
-      timer = setTimeout(show, PRIVACY_IDLE_MS);
-    }
-    ["pointerdown", "keydown", "input", "change"].forEach((evt) => {
-      document.addEventListener(evt, () => {
-        if (screen.hidden) arm();
-      }, true);
-    });
-    $("btnResumeFromPrivacy")?.addEventListener("click", hide);
-    screen.addEventListener("click", hide);
-    arm();
-  }
   function initialize() {
     updateLastSaved();
     disableAutofill();
-    setupPrivacyScreen();
-    buildPicsPanel();
     document.querySelectorAll(".quick-select, .select-btn, .detail-toggle, .accordion, .trend-btn").forEach((btn) => {
       btn.setAttribute("tabindex", "-1");
     });
@@ -3246,7 +3035,8 @@
         window._lastRed || [],
         window._lastAmber || [],
         window._lastSuppressed || [],
-        window._lastActiveComorbsKeys || []
+        window._lastActiveComorbsKeys || [],
+        getManualIssuesForNote()
       );
       summaryEl.style.height = "auto";
       summaryEl.style.height = summaryEl.scrollHeight + "px";
@@ -3851,9 +3641,6 @@
         if (el.id.startsWith("toggle_comorb_")) {
           syncComorbsToPMH();
         }
-        if (el.id.startsWith("toggle_pics_p")) {
-          el.dataset.manual = "true";
-        }
         saveState(true);
         computeAll();
         checkBloodRanges();
@@ -3968,13 +3755,6 @@
       const yes = document.querySelector('#seg_infection_downtrend .seg-btn[data-value="true"]');
       if (yes && !yes.classList.contains("active")) yes.click();
     });
-    document.addEventListener("click", (e) => {
-      const sug = e.target?.closest?.("[data-pics-suggest]");
-      if (!sug) return;
-      e.preventDefault();
-      $(`toggle_${sug.dataset.picsSuggest}`)?.click();
-    });
-    $("chk_pics_action")?.addEventListener("change", compute);
     $("chk_use_mods")?.addEventListener("change", () => {
       $("mods_inputs").style.display = $("chk_use_mods").checked ? "block" : "none";
       compute();
@@ -4087,6 +3867,7 @@
         showToast("Summary is empty", 1500);
         return;
       }
+      markCopiedOnExit();
       navigator.clipboard.writeText(text).then(() => showToast("\u2713 Copied to clipboard", 1500));
     });
     $("btnQuickReview")?.addEventListener("click", enableQuickReviewMode);
@@ -4113,6 +3894,9 @@
     };
     $("btnBloodsDetailsToggle")?.addEventListener("click", toggleBloodsDetails);
     $("qrBackdrop")?.addEventListener("click", closeQuickOverlays);
+    document.querySelectorAll("[data-qr-close]").forEach((btn) => {
+      btn.addEventListener("click", closeQuickOverlays);
+    });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && document.querySelector(".qr-expanded")) closeQuickOverlays();
     });

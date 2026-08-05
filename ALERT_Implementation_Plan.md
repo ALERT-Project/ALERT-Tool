@@ -1,6 +1,7 @@
 # ALERT Tool — Implementation Plan
 
 **Date:** 1 August 2026
+**Author:** Casey Bond, ALERT Clinical Nurse Specialist, Fiona Stanley Hospital, SMHS
 **Companion to:** `ALERT_Risk_Rule_Decisions.md` (the *what* and *why*; this is the *how* and *when*)
 
 Seven batches, ordered so that nothing which changes clinical behaviour ships before there is
@@ -172,26 +173,11 @@ effect rather than as separate work.
 
 ---
 
-## Batch 5.5 — Cumulative PICS Risk Score
+## Batch 5.5 — PICS score (built and reverted)
 
-**Shipped August 2026**, out of sequence: it arrived as a separate piece of work
-(Dhanju's masters project) rather than out of this plan, and it depends on nothing here.
-
-The pure rule engine Batch 0 called for already exists, so the score went in as
-`evaluatePicsScore()` in `rules.js` with fixtures alongside it — no golden master needed,
-because it adds a rule rather than moving one. See §8 of the decisions doc for the model.
-
-| Change | File |
-|---|---|
-| `PICS_ITEMS` / `PICS_BANDS` tables, 11 toggles registered | `config.js` |
-| `evaluatePicsScore()`, band → amber / check item / nothing | `rules.js` |
-| Scored panel generated from the item table | `index.html`, `ui.js` |
-| `pics_manual` overrides persisted | `state.js` |
-| Score line + band action in the note | `summary.js` |
-| Previous-review band scraped back | `importer.js` |
-
-**Verify:** 13 rule fixtures and 6 interface tests; a patient with no PICS input generates the
-same note as before. **Outstanding:** clinical sign-off, on the same footing as Batch 2.
+Built 2 August 2026, removed 5 August. See §8 of the decisions doc for the evidence and the
+reasoning. PICS stays as the single existing question; the follow-up leaflet is carried as an
+open item rather than a tool change.
 
 ---
 

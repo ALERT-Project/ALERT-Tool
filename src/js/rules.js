@@ -1,5 +1,12 @@
+/* =========================================
+   ALERT Nursing Risk Assessment Tool
+   Clinical rule engine (pure — no DOM, no clock, no side effects)
+   Copyright © 2025-2026 Casey Bond
+   MIT License - https://opensource.org/licenses/MIT
+   ========================================= */
+
 import { num, sentenceCase, joinGrammatically } from './utils.js';
-import { comorbMap, toggleInputs, normalRanges, GATE_LINKED_BLOODS, BLOOD_LABELS, PICS_ITEMS, PICS_BANDS } from './config.js';
+import { comorbMap, toggleInputs, normalRanges, GATE_LINKED_BLOODS, BLOOD_LABELS } from './config.js';
 import { computeTrend } from './trends.js';
 
 // The clinical rules, with no interface attached.
@@ -39,61 +46,6 @@ export function calculateWardTime(dateStr, timeStr, isPre, now = new Date()) {
         return { hours: diffHours, text: `${halfDays} days` };
     }
     return { hours: diffHours, text: `${Math.round(diffHours / 24)} days` };
-}
-
-// The cumulative PICS risk score (Dhanju, 2026). Pure like everything else here: the items,
-// their points and their derivations all live in PICS_ITEMS, so this function only adds up
-// what that table says.
-//
-// Where the tool already holds an answer the item is ticked for the clinician rather than
-// asked twice - but every derivation describes the current review, while several instrument
-// items ask about the whole admission. So an auto-tick is a starting point, not a verdict:
-// the moment the clinician touches an item its id lands in `s.pics_manual` and the stored
-// value wins from then on, in both directions.
-export function evaluatePicsScore(s) {
-    const overridden = new Set(Array.isArray(s.pics_manual) ? s.pics_manual : []);
-
-    const items = PICS_ITEMS.map(item => {
-        const derived = item.derive ? !!item.derive(s) : false;
-        const isOverridden = overridden.has(item.id);
-        // Until the clinician touches it, a derived item follows its field and nothing else -
-        // including back down. Reading the stored tick as well would strand the derivation: an
-        // ICU LOS corrected from 7 to 2 would leave "LOS >3 days" scoring on a value that is no
-        // longer on the form, because the previous render is what wrote that tick.
-        const ticked = isOverridden || !item.derive
-            ? s[item.id] === true
-            : derived;
-        return {
-            ...item,
-            ticked,
-            // Only claim an item was auto-ticked when the derivation is what put it there.
-            auto: ticked && derived && !isOverridden
-        };
-    });
-
-    // A suggestion is offered only while the item is still untouched and unticked. Once the
-    // clinician has answered it - either way - re-asking is noise.
-    const suggestions = PICS_ITEMS
-        .filter(item => item.suggest && item.suggest(s) && !overridden.has(item.id) && s[item.id] !== true)
-        .map(item => ({ id: item.id, reason: item.suggestReason }));
-
-    const ticked = items.filter(i => i.ticked);
-    const score = ticked.reduce((sum, i) => sum + i.points, 0);
-    const band = score >= 6 ? 'high' : (score >= 3 ? 'moderate' : 'low');
-
-    return {
-        score,
-        band,
-        bandLabel: PICS_BANDS[band].label,
-        action: PICS_BANDS[band].action,
-        items,
-        tickedItems: ticked,
-        suggestions,
-        // The binary the tool asked before this score existed, now derived from it. Anything
-        // downstream that only wants positive/negative - the summary's previous-review datum,
-        // the importer - keeps working without knowing the score exists.
-        status: score >= 3 ? 'positive' : 'negative'
-    };
 }
 
 // An after-hours stepdown is derived from the dates rather than asked about, unless the
@@ -563,26 +515,12 @@ export function evaluateRisks(s, ctx = {}) {
 
     if (s.neuro_psych) add(amber, 'Psychological concern', 'neuro_section', 'amber', s.neuro_psych_note);
 
-    // --- PICS ---
-    // The score never reaches red. It describes recovery trajectory over weeks, not the risk
-    // of coming back to ICU in the next 24-48 hours, and a CAT 1 minted by a long stay and a
-    // frailty tick would say something about this patient that isn't true.
-    //
-    // High is one amber. Moderate is a check item - visible in the Review List and carried in
-    // the handover line, but it scores nothing, because "deliver the education bundle" is a
-    // task rather than a concern.
-    const pics = evaluatePicsScore(s);
-    const picsSummary = pics.tickedItems.map(i => i.short).join(', ');
-    if (pics.band === 'high') {
-        add(amber, `PICS high risk - score ${pics.score}${picsSummary ? ` (${picsSummary})` : ''}`, 'seg_pics', 'amber', s.pics_note);
-    } else if (pics.band === 'moderate') {
-        addCheck(`PICS moderate risk - score ${pics.score}${picsSummary ? ` (${picsSummary})` : ''}`, 'pics_score');
-    } else if (s.pics === 'positive') {
-        // Scores below 3 with the status still set positive: either a session saved before the
-        // score existed, or a clinician overruling it. Both are answered the way they were
-        // before, so neither silently loses its flag.
-        add(amber, 'Post ICU Syndrome Positive', 'seg_pics', 'amber', s.pics_note);
-    }
+    // PICS is one question because that is how it is actually used: new hallucinations or
+    // delirium on the ward, positive, refer to OT, pastoral care and psychology. A scored
+    // eleven-item version was built and removed in August 2026 - delirium is the predictor the
+    // literature supports, this control already captures it, and the other ten items only
+    // added ticks in front of the same referral.
+    if (s.pics === 'positive') add(amber, 'Post ICU Syndrome Positive', 'seg_pics', 'amber', s.pics_note);
 
     // --- Comorbidities ---
     const activeComorbsKeys = toggleInputs.filter(key => key.startsWith('comorb_') && s[key]);
@@ -675,14 +613,23 @@ export function evaluateRisks(s, ctx = {}) {
     if (redCount > 0) autoCat = { id: 'red', text: 'CAT 1' };
     else if (amberCount > 0) autoCat = { id: 'amber', text: 'CAT 2' };
 
-    // A CAT 3 selection is a genuine downgrade, not another flag: it wins over the computed
-    // category. The flags are still counted, listed and carried into the summary - the
-    // clinician overrules the conclusion, not the evidence. A reason is mandatory, so an
-    // unexplained downgrade simply doesn't apply.
+    // A manual selection is clinician-directed and wins over the computed category in either
+    // direction - selecting CAT 2 on a patient scoring CAT 1 makes them CAT 2. The flags are
+    // still counted, listed and carried into the summary: the clinician overrules the
+    // conclusion, not the evidence. A reason is asked for on a downgrade but never gates it -
+    // an override that silently didn't apply is worse than an unexplained one.
+    const OVERRIDE_CATS = {
+        red: { id: 'red', text: 'CAT 1' },
+        amber: { id: 'amber', text: 'CAT 2' },
+        green: { id: 'green', text: 'CAT 3' }
+    };
     let cat = autoCat;
     const downgradeReason = (s.overrideNote || '').trim();
-    if (s.override === 'green' && downgradeReason) {
-        cat = { id: 'green', text: 'CAT 3', downgradedFrom: autoCat.text, downgradeReason };
+    const chosenCat = OVERRIDE_CATS[s.override];
+    if (chosenCat) {
+        cat = chosenCat.id === autoCat.id
+            ? autoCat
+            : { ...chosenCat, downgradedFrom: autoCat.text, downgradeReason };
     }
 
     return {
@@ -706,7 +653,6 @@ export function evaluateRisks(s, ctx = {}) {
         activeComorbsKeys,
         countComorbs,
         downtrendSuggestion,
-        bloodsReviewed,
-        pics
+        bloodsReviewed
     };
 }
