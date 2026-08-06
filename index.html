@@ -203,10 +203,13 @@
                     </div>
                 </div>
 
+                <!-- Deliberately starts unset. A pre-ticked default was being posted to DMR
+                     unnoticed, and a chart review recorded as a physical one is a clinical
+                     claim nobody made. Generating the note prompts for it if it is still blank. -->
                 <div class="rs-field" id="reviewModeTypeWrapper">
                     <label>Review Method</label>
                     <div class="radio-segmented-group">
-                        <label><input type="radio" name="reviewModeType" value="physical" checked> Physical r/v</label>
+                        <label><input type="radio" name="reviewModeType" value="physical"> Physical r/v</label>
                         <label><input type="radio" name="reviewModeType" value="chart"> Chart review</label>
                     </div>
                 </div>
@@ -253,11 +256,11 @@
                     <!-- Compact Age risk mitigator — shown by JS when age >= 75 -->
                     <div id="age_risk_wrapper" style="display:none; margin-top: 6px;">
                         <div id="btn_age_mitigated" class="age-mitigate-btn">
-                            Click here to mitigate age risk for good baseline
+                            Older but good baseline?
                         </div>
 
                         <div id="age_mitigate_reason_wrapper" style="display:none; margin-top: 6px;">
-                            <input type="text" id="age_mitigate_reason" placeholder="Reason (e.g. runner)" style="font-size:var(--fs-hint); padding:6px 10px; width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:4px; background:var(--input-bg); color:var(--text);" />
+                            <input type="text" id="age_mitigate_reason" placeholder="Reason" style="font-size:var(--fs-hint); padding:6px 10px; width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:4px; background:var(--input-bg); color:var(--text);" />
                         </div>
                     </div>
 
@@ -316,7 +319,7 @@
                         </div>
                         <div id="los_mitigate_reason_wrapper" style="display:none; margin-top:6px;">
                             <input type="text" id="los_mitigate_reason"
-                                placeholder="Optional detail (e.g. mobilising, eating)" class="mitigate-reason-input" />
+                                placeholder="Reason" class="mitigate-reason-input" />
                         </div>
                     </div>
 
@@ -1401,11 +1404,11 @@
                                 <button type="button" class="btn small quick-select" data-stack="true"
                                     data-target="ae_mobility" data-value="Independent">Independent</button>
                                 <button type="button" class="btn small quick-select" data-stack="true"
-                                    data-target="ae_mobility" data-value="Standby Assist">Standby Assist</button>
+                                    data-target="ae_mobility" data-value="Standby assist">Standby assist</button>
                                 <button type="button" class="btn small quick-select" data-stack="true"
-                                    data-target="ae_mobility" data-value="1x Assist">1x Assist</button>
+                                    data-target="ae_mobility" data-value="1x assist">1x assist</button>
                                 <button type="button" class="btn small quick-select" data-stack="true"
-                                    data-target="ae_mobility" data-value="2x Assist">2x Assist</button>
+                                    data-target="ae_mobility" data-value="2x assist">2x assist</button>
                                 <button type="button" class="btn small quick-select" data-stack="true"
                                     data-target="ae_mobility" data-value="Hoist">Hoist</button>
                                 <button type="button" class="btn small quick-select" data-stack="true"
@@ -1709,12 +1712,12 @@
                     <div class="input-box blood-item"><label for="bl_inr">INR <span id="prev_bl_inr"
                                 class="prev-datum"></span></label><input id="bl_inr" type="number" step="0.1" />
                         <div class="trend-buttons" id="bl_inr_trend"></div><span class="range-subtext">(0.9-1.2)</span>
-                        <input id="inr_target" type="text" class="target-input" placeholder="target e.g. 2-3" />
+                        <input id="inr_target" type="text" class="target-input" placeholder="target 2-3" />
                     </div>
                     <div class="input-box blood-item"><label for="bl_aptt">APTT <span id="prev_bl_aptt"
                                 class="prev-datum"></span></label><input id="bl_aptt" type="number" />
                         <div class="trend-buttons" id="bl_aptt_trend"></div><span class="range-subtext">(25-38)</span>
-                        <input id="aptt_target" type="text" class="target-input" placeholder="target e.g. 60-90" />
+                        <input id="aptt_target" type="text" class="target-input" placeholder="target 60-90" />
                     </div>
                 </div>
 
@@ -1871,7 +1874,7 @@
                     <div id="override_downgrade_warn" style="display:none;"></div>
                     <label for="overrideNote"><span id="override_reason_label">Reason for override</span></label>
                     <input id="overrideNote" type="text" autocomplete="off" />
-                    <div id="override_reason_required" style="display:none;">Please record why - the category is
+                    <div id="override_reason_required" style="display:none;">Reason required - the category is
                         already set to your selection.</div>
                 </div>
             </div>
@@ -1942,7 +1945,7 @@
                     <label for="chk_discharge_pending_bloods" class="action-btn-label">Discharge from ALERT post ICU rounding list - pending next blood results?</label>
                     
                     <div id="discharge_pending_bloods_note_wrapper" style="display:none; margin-top: 4px; margin-bottom: 8px;">
-                        <input type="text" id="discharge_pending_bloods_note" placeholder="Please enter any specific bloods being followed here" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 4px; font-size:var(--fs-sm);" />
+                        <input type="text" id="discharge_pending_bloods_note" placeholder="Bloods being followed" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 4px; font-size:var(--fs-sm);" />
                     </div>
                 </div>
 
@@ -1995,7 +1998,7 @@
                 <div style="margin-bottom:12px;">
                     <button id="btn_generate_summary" class="btn"
                         style="width:100%; padding:14px; font-size:var(--fs-base); font-weight:var(--fw-semibold); background:var(--input-bg); color:var(--accent); border:1px dashed var(--accent); border-radius:8px; cursor:pointer; transition:all 0.2s ease;">
-                        ✨ Click here to generate DMR summary
+                        ✨ Generate DMR summary
                     </button>
                 </div>
 
@@ -2069,6 +2072,20 @@
             <div class="modal-confirm-actions">
                 <button id="btn_discharge_confirm_yes" class="btn small btn-confirm-yes">Yes, criteria met</button>
                 <button id="btn_discharge_confirm_no" class="btn small">No, continue reviews</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Asked on the way into the DMR note, not on the way into the review: at the point of
+         generating, the clinician knows how they reviewed the patient. Only appears when the
+         Review Method strip is still blank, so choosing it up front skips this entirely. -->
+    <div id="reviewMethodPrompt" class="modal-overlay">
+        <div class="modal-content modal-confirm">
+            <div class="modal-confirm-icon">🩺</div>
+            <h3 class="modal-confirm-title">How did you review this patient?</h3>
+            <div class="modal-confirm-actions">
+                <button id="btn_method_physical" class="btn small btn-confirm-yes">Physical r/v</button>
+                <button id="btn_method_chart" class="btn small">Chart review</button>
             </div>
         </div>
     </div>

@@ -161,7 +161,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (s.b_comment) addLine(`  - ${s.b_comment}`);
 
     let c = [];
-    if (s.c_hr) c.push(`HR ${s.c_hr} ${s.c_hr_rhythm ? `(${s.c_hr_rhythm})` : ''}`);
+    if (s.c_hr) c.push(`HR ${s.c_hr}${s.c_hr_rhythm ? ` (${s.c_hr_rhythm})` : ''}`);
     if (s.c_nibp) c.push(`NIBP ${s.c_nibp}`);
     if (s.c_cr) c.push(`CR ${s.c_cr}`);
     if (s.c_perf) c.push(`Perf ${s.c_perf}`);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadTool, tick, type, click } from './harness.js';
+import { loadTool, tick, type, click, generateNote } from './harness.js';
 
 // Interface tests, against the real index.html and the real built bundle.
 //
@@ -204,7 +204,7 @@ test('the generated note carries no characters the DMR cannot render', async () 
     type(window, 'bl_cr_review', '180');
     await tick(window);
 
-    click(window, '#btn_generate_summary');
+    generateNote(window);
     await tick(window);
 
     const note = document.getElementById('summary').value;
@@ -219,7 +219,7 @@ test('the note states no review-hours commitment and keeps one risk list', async
     type(window, 'ptName', 'ABC');
     type(window, 'icuLos', '6');
     await tick(window);
-    click(window, '#btn_generate_summary');
+    generateNote(window);
     await tick(window);
 
     const note = document.getElementById('summary').value;
@@ -321,7 +321,7 @@ test('a manual category selection is not annotated in the DMR note', async () =>
     click(window, '#override_amber');
     await tick(window);
 
-    click(window, '#btn_generate_summary');
+    generateNote(window);
     await tick(window);
     const note = document.getElementById('summary').value;
     assert.ok(note.includes('ALERT Nursing Review Category - CAT 2'), 'the clinician\'s choice is the category');
@@ -345,7 +345,7 @@ test('the device dwell line reports days without calling them long', async () =>
     assert.ok(!/long dwell/i.test(shown), 'no "long"/"very long" wording on screen');
 
     type(window, 'ptName', 'ABC');
-    click(window, '#btn_generate_summary');
+    generateNote(window);
     await tick(window);
     const note = document.getElementById('summary').value;
     assert.match(note, /12d dwell/);
@@ -375,7 +375,7 @@ test('a note with no ward or bed prints no location and no dashes', async () => 
     type(window, 'ptName', 'ABC');
     type(window, 'icuLos', '6');
     await tick(window);
-    click(window, '#btn_generate_summary');
+    generateNote(window);
     await tick(window);
 
     const note = document.getElementById('summary').value;
@@ -394,7 +394,7 @@ test('the note names the ward the clinician typed, not the word "Other"', async 
     type(window, 'ptWardOther', 'Short Stay Unit');
     type(window, 'ptBed', '4A');
     await tick(window);
-    click(window, '#btn_generate_summary');
+    generateNote(window);
     await tick(window);
 
     const note = document.getElementById('summary').value;
@@ -509,7 +509,7 @@ test('what the clinician writes down reaches the DMR note as plain bullets', asy
     click(window, '#btnAddIssue');
     await tick(window);
 
-    click(window, '#btn_generate_summary');
+    generateNote(window);
     await tick(window);
     let note = document.getElementById('summary').value;
 
@@ -530,7 +530,7 @@ test('what the clinician writes down reaches the DMR note as plain bullets', asy
     // Resolving an entry takes it out, the same way it leaves the handover line.
     click(window, '#scraped_issues_list .scraped-issue-row .scraped-issue-resolve');
     await tick(window);
-    click(window, '#btn_generate_summary');
+    generateNote(window);
     await tick(window);
     note = document.getElementById('summary').value;
     assert.ok(!/Mobilising with 1 assist/.test(note), 'resolved entries drop out');
@@ -564,5 +564,109 @@ test('an issue row explains its own controls', async () => {
     await tick(window);
     assert.equal(document.querySelector('.scraped-issue-resolve').textContent, 'undo');
     assert.match(document.getElementById('issues_count').textContent, /1 resolved/);
+    close();
+});
+
+test('the note cannot be generated until the review method is answered', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    await tick(window);
+
+    // Nothing is pre-ticked, so the strip starts genuinely unanswered.
+    assert.equal(document.querySelector('input[name="reviewModeType"]:checked'), null,
+        'no review method is assumed on the clinician\'s behalf');
+
+    click(window, '#btn_generate_summary');
+    await tick(window);
+    assert.equal(document.getElementById('summary').value, '', 'no note until the question is answered');
+    assert.equal(document.getElementById('reviewMethodPrompt').style.display, 'flex', 'the question is asked instead');
+
+    // Answering it resumes the click that raised it - the button does not need pressing twice.
+    click(window, '#btn_method_chart');
+    await tick(window);
+    assert.equal(document.getElementById('reviewMethodPrompt').style.display, 'none');
+    const note = document.getElementById('summary').value;
+    assert.ok(note.length > 0, 'the note generates once the method is known');
+    assert.match(note, /Chart review/, 'and it records the method that was chosen');
+    close();
+});
+
+test('a review method already chosen on the strip is not asked about again', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    click(window, 'input[name="reviewModeType"][value="physical"]');
+    await tick(window);
+
+    click(window, '#btn_generate_summary');
+    await tick(window);
+    assert.notEqual(document.getElementById('reviewMethodPrompt').style.display, 'flex', 'no interruption');
+    assert.match(document.getElementById('summary').value, /Physical review/);
+    close();
+});
+
+test('the review method does not carry over to the next patient', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, 'input[name="reviewModeType"][value="chart"]');
+    type(window, 'ptName', 'ABC');
+    await tick(window);
+    assert.equal(document.querySelector('input[name="reviewModeType"]:checked').value, 'chart');
+
+    click(window, '#clearDataBtnTop');
+    click(window, '#confirmClearData');
+    await tick(window);
+
+    assert.equal(document.querySelector('input[name="reviewModeType"]:checked'), null,
+        'the next patient starts with the question open, not the last answer');
+    close();
+});
+
+test('the heart rate reads as a sentence with and without a rhythm', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'c_hr', '88');
+    type(window, 'c_nibp', '120/70');
+    await tick(window);
+    generateNote(window);
+    await tick(window);
+
+    assert.match(document.getElementById('summary').value, /C: HR 88, NIBP 120\/70/, 'no gap before the comma');
+
+    type(window, 'c_hr_rhythm', 'AF');
+    await tick(window);
+    generateNote(window);
+    await tick(window);
+    assert.match(document.getElementById('summary').value, /C: HR 88 \(AF\), NIBP 120\/70/, 'the rhythm keeps its space');
+    close();
+});
+
+test('a half-typed stepdown date does not raise the quick review prompt', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    // What a date input reports part-way through typing the year "2026".
+    type(window, 'stepdownDate', '0202-01-01');
+    await tick(window);
+    assert.notEqual(document.getElementById('quickReviewPrompt').style.display, 'flex',
+        'a year that cannot be real is a typo in progress, not a long-stay patient');
+
+    // A real stepdown two days ago still offers it.
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+    type(window, 'stepdownDate', twoDaysAgo);
+    await tick(window);
+    assert.equal(document.getElementById('quickReviewPrompt').style.display, 'flex', 'the real offer still works');
+    close();
+});
+
+test('mobility levels read as prose, and a scraped one is not stacked twice', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, '.quick-select[data-target="ae_mobility"][data-value="1x assist"]');
+    await tick(window);
+    assert.equal(document.getElementById('ae_mobility').value, '1x assist', 'lower case mid-sentence');
+
+    // A note imported from before this change carries the old capitalisation. Clicking the
+    // button for what is already recorded must not record it a second time.
+    type(window, 'ae_mobility', '1x Assist');
+    click(window, '.quick-select[data-target="ae_mobility"][data-value="1x assist"]');
+    await tick(window);
+    assert.equal(document.getElementById('ae_mobility').value, '1x Assist', 'the scraped entry stands alone');
     close();
 });

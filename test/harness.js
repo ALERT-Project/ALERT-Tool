@@ -62,3 +62,14 @@ export function click(window, selectorOrEl) {
     el.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
     return el;
 }
+
+// Generating the note asks how the patient was reviewed if that has not been answered yet, so
+// a test that just clicks the button gets the prompt instead of a note. Answers it the way a
+// clinician would and lets the click carry on. Pass 'chart' where the method is the point.
+export function generateNote(window, method = 'physical') {
+    click(window, '#btn_generate_summary');
+    const prompt = window.document.getElementById('reviewMethodPrompt');
+    if (prompt && prompt.style.display === 'flex') {
+        click(window, method === 'chart' ? '#btn_method_chart' : '#btn_method_physical');
+    }
+}

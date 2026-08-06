@@ -1738,7 +1738,7 @@
     const badge = $("manual_edit_badge");
     if (badge) badge.style.display = "none";
     const btnGen = $("btn_generate_summary");
-    if (btnGen) btnGen.innerHTML = "\u2728 Click here to generate DMR summary";
+    if (btnGen) btnGen.innerHTML = "\u2728 Generate DMR summary";
     const summaryEl = $("summary");
     if (summaryEl) {
       summaryEl.value = "";
@@ -1757,6 +1757,7 @@
     if (tb) tb.value = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
     const p = document.querySelector('input[value="post"]');
     if (p) p.checked = true;
+    document.querySelectorAll('input[name="reviewModeType"]').forEach((r) => r.checked = false);
     updateWardOptions();
     updateReviewTypeVisibility();
     const listEl = $("flagList");
@@ -2071,6 +2072,10 @@
     if (s.reviewType === "pre") return;
     if (isQuickReviewMode) return;
     if (quickReviewDismissedBySession) return;
+    if (document.activeElement === $("stepdownDate")) return;
+    const stepdownYear = parseInt(s.stepdownDate.slice(0, 4), 10);
+    if (!(stepdownYear >= 2020)) return;
+    if (timeData.hours < 0) return;
     if (timeData.hours > 24) {
       showQuickReviewPrompt($("catText")?.textContent || "", timeData.hours);
     }
@@ -2166,7 +2171,7 @@
     if (reasonWrapper) reasonWrapper.style.display = isMitigated ? "block" : "none";
     if (clickBox) {
       clickBox.className = isMitigated ? "age-mitigate-btn mitigated" : "age-mitigate-btn";
-      clickBox.innerHTML = isMitigated ? "\u2713 Recovering appropriately" : "Long stay but recovering well?";
+      clickBox.innerHTML = isMitigated ? "\u2713 Deconditioning flag removed - still in note" : "Long stay but recovering well?";
     }
   }
   function updateAgeMitigationUI() {
@@ -2203,7 +2208,7 @@
         if (clickBox) {
           clickBox.removeAttribute("style");
           clickBox.className = "age-mitigate-btn mitigated";
-          clickBox.innerHTML = "\u2713 Mitigated for good baseline";
+          clickBox.innerHTML = "\u2713 Age flag removed - still in note";
         }
       } else {
         if (colWrapper) {
@@ -2220,7 +2225,7 @@
         if (clickBox) {
           clickBox.removeAttribute("style");
           clickBox.className = "age-mitigate-btn";
-          clickBox.innerHTML = "Click here to mitigate age risk for good baseline";
+          clickBox.innerHTML = "Older but good baseline?";
         }
       }
     } else {
@@ -2247,7 +2252,7 @@
       if (clickBox) {
         clickBox.removeAttribute("style");
         clickBox.className = "age-mitigate-btn";
-        clickBox.innerHTML = "Click here to mitigate age risk for good baseline";
+        clickBox.innerHTML = "Older but good baseline?";
       }
     }
   }
@@ -2464,7 +2469,7 @@
     });
     state["reviewType"] = document.querySelector('input[name="reviewType"]:checked')?.value || "post";
     state["clinicianRole"] = document.querySelector('input[name="clinicianRole"]:checked')?.value || "ALERT CNS";
-    state["reviewModeType"] = document.querySelector('input[name="reviewModeType"]:checked')?.value || "physical";
+    state["reviewModeType"] = document.querySelector('input[name="reviewModeType"]:checked')?.value || "";
     state.activeIssues = activeIssues;
     ["chk_medical_rounding", "chk_discharge_alert", "chk_continue_alert", "chk_use_mods", "chk_bloods_nil_sig", "chk_discharge_pending_bloods"].forEach((id) => {
       const el = $(id);
@@ -2733,7 +2738,7 @@
     else if (s.b_comment) addLine(`B:`);
     if (s.b_comment) addLine(`  - ${s.b_comment}`);
     let c = [];
-    if (s.c_hr) c.push(`HR ${s.c_hr} ${s.c_hr_rhythm ? `(${s.c_hr_rhythm})` : ""}`);
+    if (s.c_hr) c.push(`HR ${s.c_hr}${s.c_hr_rhythm ? ` (${s.c_hr_rhythm})` : ""}`);
     if (s.c_nibp) c.push(`NIBP ${s.c_nibp}`);
     if (s.c_cr) c.push(`CR ${s.c_cr}`);
     if (s.c_perf) c.push(`Perf ${s.c_perf}`);
@@ -3022,7 +3027,34 @@
       });
     };
     window.refreshAddsOverrideUI = refreshAddsOverrideUI;
+    const getReviewMethod = () => document.querySelector('input[name="reviewModeType"]:checked')?.value || "";
+    const setReviewMethod = (value) => {
+      const radio = document.querySelector(`input[name="reviewModeType"][value="${value}"]`);
+      if (!radio) return;
+      radio.checked = true;
+      radio.dispatchEvent(new Event("change"));
+    };
+    const hideReviewMethodPrompt = () => {
+      const modal = $("reviewMethodPrompt");
+      if (modal) modal.style.display = "none";
+    };
+    let pendingAfterReviewMethod = null;
+    const chooseReviewMethod = (value) => {
+      setReviewMethod(value);
+      hideReviewMethodPrompt();
+      const resume = pendingAfterReviewMethod;
+      pendingAfterReviewMethod = null;
+      if (resume) resume();
+    };
+    $("btn_method_physical")?.addEventListener("click", () => chooseReviewMethod("physical"));
+    $("btn_method_chart")?.addEventListener("click", () => chooseReviewMethod("chart"));
     function triggerGenerate() {
+      if (!getReviewMethod()) {
+        pendingAfterReviewMethod = triggerGenerate;
+        const modal = $("reviewMethodPrompt");
+        if (modal) modal.style.display = "flex";
+        return;
+      }
       const summaryEl = $("summary");
       const actions = $("summary_actions");
       syncComorbsToPMH();
@@ -3042,7 +3074,7 @@
       summaryEl.style.height = summaryEl.scrollHeight + "px";
       if (actions) actions.style.display = "block";
       const btn = $("btn_generate_summary");
-      if (btn) btn.innerHTML = '\u{1F504} Click again to regenerate DMR summary <span style="font-size:0.9em; font-weight:normal; opacity:0.9;">(will overwrite any manual edits)</span>';
+      if (btn) btn.innerHTML = '\u{1F504} Regenerate DMR summary <span style="font-size:0.9em; font-weight:normal; opacity:0.9;">(overwrites manual edits)</span>';
       const handoverEl = $("handoverLine");
       if (handoverEl) handoverEl.value = generateHandoverLine(
         window._lastState || getState(),
@@ -3512,6 +3544,7 @@
         });
       });
     }
+    const alreadyStacked = (current, val) => current.toLowerCase().includes(val.toLowerCase());
     document.querySelectorAll(".quick-select").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -3521,7 +3554,7 @@
           if (target) {
             if (btn.dataset.stack === "true") {
               const current = target.value;
-              if (!current.includes(btn.dataset.value)) target.value = current ? `${current}, ${btn.dataset.value}` : btn.dataset.value;
+              if (!alreadyStacked(current, btn.dataset.value)) target.value = current ? `${current}, ${btn.dataset.value}` : btn.dataset.value;
             } else {
               target.value = btn.dataset.value;
             }
@@ -3535,7 +3568,7 @@
           if (target) {
             const val = btn.dataset.value;
             if (btn.dataset.stack === "true") {
-              if (!target.value.includes(val)) target.value = target.value ? `${target.value}, ${val}` : val;
+              if (!alreadyStacked(target.value, val)) target.value = target.value ? `${target.value}, ${val}` : val;
             } else {
               target.value = val;
             }

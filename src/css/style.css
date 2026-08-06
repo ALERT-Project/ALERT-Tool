@@ -1923,6 +1923,16 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
     box-sizing: border-box;
 }
 
+/* The gates grid is three cards wide, so a drawer inside one card has roughly a third of
+   the page to work with. The global 12-column spans are sized against the full page: a
+   col-3 field lands at ~70px here, which clips a number input and its label (HFNP was the
+   worst of it). Re-span against the card instead. */
+.risk-nested-panel .grid > * { min-width: 0; }
+.risk-nested-panel .grid > .col-3 { grid-column: span 6; }
+.risk-nested-panel .grid > .col-6 { grid-column: span 12; }
+/* NIV carries three fields that do read on one row - short numbers, short labels. */
+.risk-nested-panel .grid > .nivOnly { grid-column: span 4; }
+
 /* Subtle active outline highlight when a trigger is positive */
 .risk-gates-grid .input-box:has(.seg-btn.active[data-value="true"]),
 .risk-gates-grid .input-box:has(.seg-btn.active[data-value="positive"]),

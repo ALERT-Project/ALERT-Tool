@@ -74,7 +74,46 @@ function initialize() {
     // plugins/adds_calc.js pings this after each recalculation.
     window.refreshAddsOverrideUI = refreshAddsOverrideUI;
 
+    // The review method shapes what the note claims was done, and a wrong one is only
+    // discoverable after it has been pasted into DMR. Rather than pre-tick a default, the
+    // note refuses to generate until the question has been answered - once per patient,
+    // and not at all if it was answered on the strip up front.
+    const getReviewMethod = () => document.querySelector('input[name="reviewModeType"]:checked')?.value || '';
+
+    const setReviewMethod = (value) => {
+        const radio = document.querySelector(`input[name="reviewModeType"][value="${value}"]`);
+        if (!radio) return;
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change'));
+    };
+
+    const hideReviewMethodPrompt = () => {
+        const modal = $('reviewMethodPrompt');
+        if (modal) modal.style.display = 'none';
+    };
+
+    // Set while the prompt is open so answering it resumes the click that raised it.
+    let pendingAfterReviewMethod = null;
+
+    const chooseReviewMethod = (value) => {
+        setReviewMethod(value);
+        hideReviewMethodPrompt();
+        const resume = pendingAfterReviewMethod;
+        pendingAfterReviewMethod = null;
+        if (resume) resume();
+    };
+
+    $('btn_method_physical')?.addEventListener('click', () => chooseReviewMethod('physical'));
+    $('btn_method_chart')?.addEventListener('click', () => chooseReviewMethod('chart'));
+
     function triggerGenerate() {
+        if (!getReviewMethod()) {
+            pendingAfterReviewMethod = triggerGenerate;
+            const modal = $('reviewMethodPrompt');
+            if (modal) modal.style.display = 'flex';
+            return;
+        }
+
         const summaryEl = $('summary');
         const actions = $('summary_actions');
 
@@ -99,7 +138,7 @@ function initialize() {
 
         if (actions) actions.style.display = 'block';
         const btn = $('btn_generate_summary');
-        if (btn) btn.innerHTML = '🔄 Click again to regenerate DMR summary <span style="font-size:0.9em; font-weight:normal; opacity:0.9;">(will overwrite any manual edits)</span>';
+        if (btn) btn.innerHTML = '🔄 Regenerate DMR summary <span style="font-size:0.9em; font-weight:normal; opacity:0.9;">(overwrites manual edits)</span>';
 
         const handoverEl = $('handoverLine');
         // Same computed risks the DMR note uses, so the line reads identically in either mode.
@@ -634,6 +673,11 @@ function initialize() {
         });
     }
 
+    // Case-insensitive, because a value scraped out of a previous note carries that note's
+    // capitalisation. "1x Assist" imported from an older note is the same entry as today's
+    // "1x assist" button, and stacking it again would read as two mobility levels.
+    const alreadyStacked = (current, val) => current.toLowerCase().includes(val.toLowerCase());
+
     document.querySelectorAll('.quick-select').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -643,7 +687,7 @@ function initialize() {
                 if (target) {
                     if (btn.dataset.stack === "true") {
                         const current = target.value;
-                        if (!current.includes(btn.dataset.value)) target.value = current ? `${current}, ${btn.dataset.value}` : btn.dataset.value;
+                        if (!alreadyStacked(current, btn.dataset.value)) target.value = current ? `${current}, ${btn.dataset.value}` : btn.dataset.value;
                     } else { target.value = btn.dataset.value; }
                     target.dispatchEvent(new Event('input'));
                 }
@@ -655,7 +699,7 @@ function initialize() {
                 if (target) {
                     const val = btn.dataset.value;
                     if (btn.dataset.stack === "true") {
-                        if (!target.value.includes(val)) target.value = target.value ? `${target.value}, ${val}` : val;
+                        if (!alreadyStacked(target.value, val)) target.value = target.value ? `${target.value}, ${val}` : val;
                     } else { target.value = val; }
                     target.dispatchEvent(new Event('input'));
                     if (targetId === 'lactate_trend') {

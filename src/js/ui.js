@@ -507,7 +507,7 @@ export function clearData() {
     const badge = $('manual_edit_badge');
     if (badge) badge.style.display = 'none';
     const btnGen = $('btn_generate_summary');
-    if (btnGen) btnGen.innerHTML = '✨ Click here to generate DMR summary';
+    if (btnGen) btnGen.innerHTML = '✨ Generate DMR summary';
     const summaryEl = $('summary');
     if (summaryEl) { summaryEl.value = ''; summaryEl.style.height = ''; }
     const handoverEl = $('handoverLine');
@@ -523,6 +523,9 @@ export function clearData() {
     const tb = $('reviewTime'); if (tb) tb.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
     const p = document.querySelector('input[value="post"]'); if (p) p.checked = true;
+    // Radios survive the checkbox sweep above, so the last patient's review method used to
+    // carry silently into the next one. New patient, unanswered question.
+    document.querySelectorAll('input[name="reviewModeType"]').forEach(r => r.checked = false);
     updateWardOptions();
     updateReviewTypeVisibility();
     const listEl = $('flagList'); if (listEl) listEl.innerHTML = '';
@@ -948,6 +951,15 @@ export function maybeOfferQuickReview(timeData, s) {
     if (s.reviewType === 'pre') return;
     if (isQuickReviewMode) return;
     if (quickReviewDismissedBySession) return;
+    // Never interrupt the field being typed into. A date input emits a valid value for every
+    // keystroke of the year - 0002, 0020, 0202 on the way to 2026 - and each of those reads as
+    // long past stepdown, so the modal used to appear mid-entry and take the focus with it.
+    if (document.activeElement === $('stepdownDate')) return;
+    // Same artefact, arriving another way (paste, a stale import): a stepdown in the future or
+    // before this tool existed is a typo, not a long-stay patient.
+    const stepdownYear = parseInt(s.stepdownDate.slice(0, 4), 10);
+    if (!(stepdownYear >= 2020)) return;
+    if (timeData.hours < 0) return;
     if (timeData.hours > 24) {
         showQuickReviewPrompt($('catText')?.textContent || '', timeData.hours);
     }
@@ -1109,8 +1121,12 @@ export function updateLosMitigationUI() {
     if (reasonWrapper) reasonWrapper.style.display = isMitigated ? 'block' : 'none';
     if (clickBox) {
         clickBox.className = isMitigated ? 'age-mitigate-btn mitigated' : 'age-mitigate-btn';
+        // The confirmation names the effect, not just the judgement: this control drops a
+        // scored flag, and the moment anyone wonders what it did is straight after clicking it.
+        // "Still in note" because mitigating is not the same as deleting - the risk prints
+        // either way, marked as mitigated, with whatever reason was given.
         clickBox.innerHTML = isMitigated
-            ? '✓ Recovering appropriately'
+            ? '✓ Deconditioning flag removed - still in note'
             : 'Long stay but recovering well?';
     }
 }
@@ -1160,7 +1176,7 @@ export function updateAgeMitigationUI() {
             if (clickBox) {
                 clickBox.removeAttribute('style');
                 clickBox.className = 'age-mitigate-btn mitigated';
-                clickBox.innerHTML = '✓ Mitigated for good baseline';
+                clickBox.innerHTML = '✓ Age flag removed - still in note';
             }
         } else {
             // Unmitigated — amber highlight on the card
@@ -1180,7 +1196,7 @@ export function updateAgeMitigationUI() {
             if (clickBox) {
                 clickBox.removeAttribute('style');
                 clickBox.className = 'age-mitigate-btn';
-                clickBox.innerHTML = 'Click here to mitigate age risk for good baseline';
+                clickBox.innerHTML = 'Older but good baseline?';
             }
         }
     } else {
@@ -1208,7 +1224,7 @@ export function updateAgeMitigationUI() {
         if (clickBox) {
             clickBox.removeAttribute('style');
             clickBox.className = 'age-mitigate-btn';
-            clickBox.innerHTML = 'Click here to mitigate age risk for good baseline';
+            clickBox.innerHTML = 'Older but good baseline?';
         }
     }
 }

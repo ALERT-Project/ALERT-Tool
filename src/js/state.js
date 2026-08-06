@@ -258,7 +258,9 @@ export function getState() {
 
     state['reviewType'] = document.querySelector('input[name="reviewType"]:checked')?.value || 'post';
     state['clinicianRole'] = document.querySelector('input[name="clinicianRole"]:checked')?.value || 'ALERT CNS';
-    state['reviewModeType'] = document.querySelector('input[name="reviewModeType"]:checked')?.value || 'physical';
+    // Empty, not 'physical', when nothing is ticked: defaulting here would restore as a real
+    // answer and satisfy the prompt on the generate button without anyone having chosen.
+    state['reviewModeType'] = document.querySelector('input[name="reviewModeType"]:checked')?.value || '';
     state.activeIssues = activeIssues;
 
     ['chk_medical_rounding', 'chk_discharge_alert', 'chk_continue_alert', 'chk_use_mods', 'chk_bloods_nil_sig', 'chk_discharge_pending_bloods'].forEach(id => {
