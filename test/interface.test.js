@@ -300,16 +300,24 @@ test('a note written with blank identifiers does not import its own dashes', asy
     close();
 });
 
-test('2L nasal prongs scores nothing on the ADDS calculator', async () => {
+test('2L nasal prongs scores on the ADDS calculator', async () => {
     const { window, document, close } = await loadTool();
     click(window, '#btnAddsOverride');   // no-op if absent; the calculator lives in the page
+    click(window, '.o2-chip[data-val="RA"]');
+    await tick(window);
+    assert.equal(String(document.getElementById('score_o2').innerText), '0', 'room air scores nothing');
+
+    click(window, '.o2-chip[data-val="1LNP"]');
+    await tick(window);
+    assert.equal(String(document.getElementById('score_o2').innerText), '0', '1L stays at nothing');
+
     click(window, '.o2-chip[data-val="2LNP"]');
     await tick(window);
-    assert.equal(String(document.getElementById('score_o2').innerText), '0', '2L is ward-normal');
+    assert.equal(String(document.getElementById('score_o2').innerText), '1', '2L scores 1');
 
     click(window, '.o2-chip[data-val="3LNP"]');
     await tick(window);
-    assert.equal(String(document.getElementById('score_o2').innerText), '1', '3L still scores');
+    assert.equal(String(document.getElementById('score_o2').innerText), '1', 'and so does 3L');
     close();
 });
 
@@ -668,5 +676,29 @@ test('mobility levels read as prose, and a scraped one is not stacked twice', as
     click(window, '.quick-select[data-target="ae_mobility"][data-value="1x assist"]');
     await tick(window);
     assert.equal(document.getElementById('ae_mobility').value, '1x Assist', 'the scraped entry stands alone');
+    close();
+});
+
+test('a score with no A-E findings prints as a bare score, not under a heading', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'adds', '2');
+    await tick(window);
+    generateNote(window);
+    await tick(window);
+
+    let note = document.getElementById('summary').value;
+    assert.match(note, /ADDS: 2/, 'the score is there');
+    assert.ok(!/A-E ASSESSMENT:/.test(note), 'with no heading announcing an assessment that was not done');
+
+    // Record something under A-E and the heading comes back.
+    type(window, 'b_rr', '18');
+    await tick(window);
+    generateNote(window);
+    await tick(window);
+    note = document.getElementById('summary').value;
+    assert.match(note, /A-E ASSESSMENT:/, 'the heading returns once there is an assessment');
+    assert.match(note, /ADDS: 2/);
+    assert.match(note, /B: RR 18/);
     close();
 });

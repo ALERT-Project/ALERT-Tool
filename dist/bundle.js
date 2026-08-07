@@ -2725,6 +2725,7 @@
     if (s.chk_use_mods) {
       if (s.mods_score) addLine(`MODS: ${s.mods_score}${s.mods_details ? ` (${s.mods_details})` : ""}`);
     } else if (s.adds) addLine(`ADDS: ${s.adds}`);
+    const aeDetailAt = lines.length;
     if (s.airway_a) addLine(`A: ${s.airway_a}`);
     else if (s.a_comment) addLine(`A:`);
     if (s.a_comment) addLine(`  - ${s.a_comment}`);
@@ -2765,6 +2766,7 @@
     else if (s.e_comment) addLine(`E:`);
     if (s.e_comment) addLine(`  - ${s.e_comment}`);
     if (lines.length === aeHeaderAt + 1) lines.length = aeHeaderAt;
+    else if (lines.length === aeDetailAt) lines.splice(aeHeaderAt, 1);
     pushBlank();
     if (s.ae_mobility) addLine(`Mobility: ${s.ae_mobility}`);
     let bowelTxt = "";

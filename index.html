@@ -225,11 +225,13 @@
                 <!-- Every note is signed by whoever wrote it, so this is the one strip field
                      that can't be left blank. It sits first and stays outlined until it's
                      filled - it was being read as optional metadata and skipped. Capped at
-                     three characters like #ptName: this tool holds initials, never names. -->
+                     three characters like #ptName: this tool holds initials, never names.
+                     No placeholder: a sample set of initials sitting in the box reads as a
+                     name already filled in, and every reviewer saw the same one. -->
                 <div class="rs-field rs-field-reviewer">
                     <label for="reviewerInitials">Reviewer <span class="rs-required">required</span></label>
                     <input id="reviewerInitials" type="text" maxlength="3" autocomplete="off"
-                        placeholder="CB" style="text-transform:uppercase" />
+                        style="text-transform:uppercase" />
                 </div>
 
                 <div class="rs-field" id="reviewTimeWrapper">

@@ -145,6 +145,8 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     lines.push('A-E ASSESSMENT:');
     if (s.chk_use_mods) { if (s.mods_score) addLine(`MODS: ${s.mods_score}${s.mods_details ? ` (${s.mods_details})` : ''}`); }
     else if (s.adds) addLine(`ADDS: ${s.adds}`);
+    // Where the A-E lines start, so a note carrying only a score can drop the heading below.
+    const aeDetailAt = lines.length;
 
     if (s.airway_a) addLine(`A: ${s.airway_a}`);
     else if (s.a_comment) addLine(`A:`);
@@ -192,6 +194,9 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
     // Nothing was recorded under A-E, so take the header back off.
     if (lines.length === aeHeaderAt + 1) lines.length = aeHeaderAt;
+    // A score on its own - the usual shape of a Quick Review - needs no heading announcing an
+    // assessment that isn't there. The score line stands by itself.
+    else if (lines.length === aeDetailAt) lines.splice(aeHeaderAt, 1);
 
     pushBlank();
 

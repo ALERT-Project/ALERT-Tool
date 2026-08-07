@@ -467,11 +467,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (rawStr === 'ra') return { s: 0, m: false };
 
             if (mode === 'std') {
-                // Up to 2L NP is ward-normal and scores nothing - the same line the risk
-                // rules draw, which only start flagging nasal prongs at 3L.
+                // 2L NP scores. This is deliberately a lower bar than the risk rules, which
+                // only start flagging nasal prongs at 3L: the score describes what the patient
+                // is on right now, the risk rule describes what is worth escalating.
                 if (n > 10) return { s: 3, m: false };
                 if (n >= 5) return { s: 2, m: false };
-                if (n >= 3) return { s: 1, m: false };
+                if (n >= 2) return { s: 1, m: false };
                 return { s: 0, m: false };
             } else {
                 if (n > 40) return { s: 3, m: false };
