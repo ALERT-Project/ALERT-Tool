@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateRisks } from '../src/js/rules.js';
+import { evaluateRisks, calculateWardTime } from '../src/js/rules.js';
 
 // Synthetic patients only. Every number here is invented - these fixtures exist to pin the
 // rules down, not to describe anyone, and nothing patient-identifiable belongs in this file.
@@ -287,6 +287,22 @@ test('known CKD suppresses the renal gate unless something acute overrides it', 
 test('dialysis type reaches the rules', () => {
     const r = evaluate({ renal: true, renal_dialysis: true, dialysis_type: 'new' });
     assert.ok(r.amber.concat(r.red).some(f => f.includes('acute dialysis')));
+});
+
+// --- Time since stepdown --------------------------------------------------------------------
+
+test('time since stepdown is singular at exactly one', () => {
+    const at = (date, time) => calculateWardTime(date, time, false, NOW).text;
+    assert.equal(at('2026-08-05', '09:00'), '1 hour');
+    assert.equal(at('2026-08-05', '05:00'), '5 hours');
+    assert.equal(at('2026-08-04', '10:00'), '1 day');
+    assert.equal(at('2026-08-02', '10:00'), '3 days');
+});
+
+test('half days keep their plural', () => {
+    const at = (date, time) => calculateWardTime(date, time, false, NOW).text;
+    assert.equal(at('2026-08-04', '22:00'), '0.5 days');
+    assert.equal(at('2026-08-03', '22:00'), '1.5 days');
 });
 
 // --- After hours ----------------------------------------------------------------------------

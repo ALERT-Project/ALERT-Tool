@@ -20,6 +20,10 @@ import { computeTrend } from './trends.js';
 // computeAll() in logic.js owns everything this deliberately does not do: reading the form,
 // painting flags, filling fields, and staging issues into the Review List.
 
+// "1 days" and "1 hours" appeared in the note whenever the rounding landed on exactly one.
+// 0.5 keeps its plural, which is correct - only one is singular.
+const unit = (n, word) => `${n} ${n === 1 ? word : `${word}s`}`;
+
 export function calculateWardTime(dateStr, timeStr, isPre, now = new Date()) {
     if (isPre) return { hours: 0, text: '(Pre-Stepdown)' };
     if (!dateStr) return { hours: 0, text: '' };
@@ -40,12 +44,12 @@ export function calculateWardTime(dateStr, timeStr, isPre, now = new Date()) {
 
     if (diffHours < 0) return { hours: diffHours, text: "(Planned Stepdown)" };
 
-    if (diffHours < 12) return { hours: diffHours, text: `${Math.round(diffHours)} hours` };
+    if (diffHours < 12) return { hours: diffHours, text: unit(Math.round(diffHours), 'hour') };
     if (diffHours <= 48) {
         const halfDays = Math.round((diffHours / 24) * 2) / 2;
-        return { hours: diffHours, text: `${halfDays} days` };
+        return { hours: diffHours, text: unit(halfDays, 'day') };
     }
-    return { hours: diffHours, text: `${Math.round(diffHours / 24)} days` };
+    return { hours: diffHours, text: unit(Math.round(diffHours / 24), 'day') };
 }
 
 // An after-hours stepdown is derived from the dates rather than asked about, unless the

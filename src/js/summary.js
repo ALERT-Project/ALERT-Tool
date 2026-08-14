@@ -413,7 +413,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 // One terse line for the handover spreadsheet, identical in full and Quick Review since both
 // modes feed the same computed risks:
 //   "30/7 05:30 CB. Physical r/v. ADDS 4. Bloods: Cr 180, Mg 0.4. CAT 1 - Renal concern,
-//    Infection risk (improving). Continue ALERT."
+//    Infection risk (improving)."
 // Time and initials lead, then the score, then what was actually found.
 
 // Risk wording is written for the DMR note, which is wordier than a spreadsheet cell needs.
@@ -476,7 +476,9 @@ export function generateHandoverLine(s, activeIssuesList = [], cat = null, red =
     if (s.stepdown_suitable === false) parts.push('Not suitable for stepdown.');
     else if (s.chk_discharge_alert) parts.push('D/C from ALERT.');
     else if (s.chk_discharge_pending_bloods) parts.push('D/C pending bloods.');
-    else if (s.chk_continue_alert) parts.push('Continue ALERT.');
+    // Continuing ALERT is not stated: a patient still on this sheet is still being reviewed,
+    // because discharging them moves them to a different sheet. Only the exceptions are worth
+    // a cell. The checkbox itself stays - it still drives the REDCap outcome.
     if (s.chk_medical_rounding) parts.push('+ Medical rounding.');
 
     // Same ASCII flattening as the note: this line is pasted into the handover spreadsheet and

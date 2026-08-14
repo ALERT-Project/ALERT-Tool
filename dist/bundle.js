@@ -472,6 +472,7 @@
   }
 
   // src/js/rules.js
+  var unit = (n, word) => `${n} ${n === 1 ? word : `${word}s`}`;
   function calculateWardTime(dateStr, timeStr, isPre, now = /* @__PURE__ */ new Date()) {
     if (isPre) return { hours: 0, text: "(Pre-Stepdown)" };
     if (!dateStr) return { hours: 0, text: "" };
@@ -488,12 +489,12 @@
     const stepObj = new Date(y, m - 1, d, h, min);
     const diffHours = (now - stepObj) / 36e5;
     if (diffHours < 0) return { hours: diffHours, text: "(Planned Stepdown)" };
-    if (diffHours < 12) return { hours: diffHours, text: `${Math.round(diffHours)} hours` };
+    if (diffHours < 12) return { hours: diffHours, text: unit(Math.round(diffHours), "hour") };
     if (diffHours <= 48) {
       const halfDays = Math.round(diffHours / 24 * 2) / 2;
-      return { hours: diffHours, text: `${halfDays} days` };
+      return { hours: diffHours, text: unit(halfDays, "day") };
     }
-    return { hours: diffHours, text: `${Math.round(diffHours / 24)} days` };
+    return { hours: diffHours, text: unit(Math.round(diffHours / 24), "day") };
   }
   function deriveAfterHours(s, timeData, isPre) {
     if (isPre || !s.stepdownDate) return null;
@@ -2976,7 +2977,6 @@
     if (s.stepdown_suitable === false) parts.push("Not suitable for stepdown.");
     else if (s.chk_discharge_alert) parts.push("D/C from ALERT.");
     else if (s.chk_discharge_pending_bloods) parts.push("D/C pending bloods.");
-    else if (s.chk_continue_alert) parts.push("Continue ALERT.");
     if (s.chk_medical_rounding) parts.push("+ Medical rounding.");
     return toDmrSafeText(parts.join(" ")).replace(/\s{2,}/g, " ");
   }
