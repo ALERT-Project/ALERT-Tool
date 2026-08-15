@@ -29,7 +29,7 @@ export function applyAppIcons() {
     $('linkAppleIcon')?.setAttribute('href', 'assets/icons/test-180.png');
     $('linkManifest')?.setAttribute('href', 'manifest-test.json');
     $('metaThemeColor')?.setAttribute('content', '#f59e0b');
-    $('metaAppTitle')?.setAttribute('content', 'ALERT TEST');
+    $('metaAppTitle')?.setAttribute('content', 'A! Test');
 
     // Standalone mode hides the URL bar, so the tab title is one of the few remaining
     // places the pilot can say what it is.

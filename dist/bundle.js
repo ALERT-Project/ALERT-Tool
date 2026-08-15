@@ -1267,7 +1267,7 @@
     $("linkAppleIcon")?.setAttribute("href", "assets/icons/test-180.png");
     $("linkManifest")?.setAttribute("href", "manifest-test.json");
     $("metaThemeColor")?.setAttribute("content", "#f59e0b");
-    $("metaAppTitle")?.setAttribute("content", "ALERT TEST");
+    $("metaAppTitle")?.setAttribute("content", "A! Test");
     document.title = "ALERT Tool - PILOT";
   }
   function checkBloodRanges() {

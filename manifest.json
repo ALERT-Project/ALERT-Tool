@@ -1,6 +1,6 @@
 {
   "name": "ALERT Nursing Risk Assessment Tool",
-  "short_name": "ALERT",
+  "short_name": "A! Tool",
   "description": "ICU stepdown risk assessment for the ALERT nursing outreach team.",
   "start_url": "./",
   "scope": "./",

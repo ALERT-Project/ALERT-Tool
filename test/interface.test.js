@@ -734,6 +734,8 @@ test('the live tool keeps the teal icon', async () => {
     assert.equal(document.getElementById('linkManifest').getAttribute('href'), 'manifest.json');
     assert.match(document.getElementById('linkAppleIcon').getAttribute('href'), /alert-180\.png$/);
     assert.equal(document.getElementById('metaThemeColor').getAttribute('content'), '#0f766e');
+    assert.equal(document.getElementById('metaAppTitle').getAttribute('content'), 'A! Tool',
+        'the label sitting under the icon on a home screen');
     assert.ok(!/PILOT/.test(document.title), 'the live tool does not call itself a pilot');
     close();
 });
@@ -744,6 +746,8 @@ test('the pilot swaps to the amber TEST icon and says so in the title', async ()
     assert.match(document.getElementById('linkAppleIcon').getAttribute('href'), /test-180\.png$/);
     assert.match(document.getElementById('linkFavicon').getAttribute('href'), /test\.svg$/);
     assert.equal(document.getElementById('metaThemeColor').getAttribute('content'), '#f59e0b');
+    assert.equal(document.getElementById('metaAppTitle').getAttribute('content'), 'A! Test',
+        'the label sitting under the icon on a home screen');
     assert.match(document.title, /PILOT/, 'standalone mode hides the URL bar, so the title has to say it');
     close();
 });

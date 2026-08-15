@@ -1,6 +1,6 @@
 {
   "name": "ALERT Tool — PILOT",
-  "short_name": "ALERT TEST",
+  "short_name": "A! Test",
   "description": "Pilot build of the ALERT tool. Not the version to document from.",
   "start_url": "./",
   "scope": "./",
