@@ -11,8 +11,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>ALERT Nursing Risk Assessment Tool</title>
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90' font-weight='bold' fill='%23ef4444'>!</text></svg>">
+
+    <!-- The live tool and the pilot page are the same origin and are served the same bytes
+         (the pilot is this commit pushed to a second repo), so they can only be told apart
+         by path. These tags are the live tool's set; applyAppIcons() in ui.js swaps them
+         for the amber TEST set when the path says pilot. Defaulting to the live tool means
+         that if a browser ever ignores the swap, the version everyone uses is still right. -->
+    <link rel="icon" id="linkFavicon" href="assets/icons/alert.svg">
+    <link rel="apple-touch-icon" id="linkAppleIcon" sizes="180x180" href="assets/icons/alert-180.png">
+    <link rel="manifest" id="linkManifest" href="manifest.json">
+    <meta name="theme-color" id="metaThemeColor" content="#0f766e">
+    <meta name="apple-mobile-web-app-title" id="metaAppTitle" content="ALERT">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- "default", not "black-translucent": translucent lets the page run under the status
+         bar, which would put the clock on top of the sidebar. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
     <link rel="stylesheet" href="src/css/style.css">
     <script>
         window.onerror = function (m, u, l, c, e) { console.error("GLOBAL ERROR: " + m + " line: " + l, e); };

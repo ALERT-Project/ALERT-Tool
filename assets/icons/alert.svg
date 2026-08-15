@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Full-bleed square on purpose. Both platforms that use this apply their own mask:
+       iOS rounds an apple-touch-icon into a squircle, and Android crops a maskable icon
+       to whatever shape the launcher uses. Rounding the corners here would show as a
+       double bevel on iOS. The glyphs sit inside the centre 80% so nothing important is
+       lost to a circular crop. -->
+  <rect width="512" height="512" fill="#0f766e"/>
+  <text x="256" y="348" text-anchor="middle" letter-spacing="10"
+        font-family="Helvetica, Arial, sans-serif" font-size="255" font-weight="bold">
+    <tspan fill="#ffffff">A</tspan><tspan fill="#ef4444">!</tspan>
+  </text>
+</svg>

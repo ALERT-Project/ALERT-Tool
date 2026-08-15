@@ -9,10 +9,12 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // markup and the same code the ward gets - not a reconstruction of it. jsdom has no layout
 // engine, so anything about how the page *looks* is out of scope here; what it can prove is
 // that the wiring is connected and the behaviour fires.
-export async function loadTool() {
+// `url` matters for anything that reads location: the live tool and the pilot are the same
+// origin serving the same bytes, so the path is what tells them apart.
+export async function loadTool({ url = 'http://localhost/' } = {}) {
     const html = readFileSync(resolve(root, 'index.html'), 'utf8');
     const dom = new JSDOM(html, {
-        url: 'http://localhost/',
+        url,
         runScripts: 'dangerously',
         pretendToBeVisual: true
     });

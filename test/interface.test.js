@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadTool, tick, type, click, generateNote } from './harness.js';
+import { iconSetForPath } from '../src/js/utils.js';
 
 // Interface tests, against the real index.html and the real built bundle.
 //
@@ -700,5 +701,49 @@ test('a score with no A-E findings prints as a bare score, not under a heading',
     assert.match(note, /A-E ASSESSMENT:/, 'the heading returns once there is an assessment');
     assert.match(note, /ADDS: 2/);
     assert.match(note, /B: RR 18/);
+    close();
+});
+
+// --- Home screen icons ------------------------------------------------------
+//
+// The live tool and the pilot are the same origin serving the same commit, so the icon a
+// saved shortcut gets is decided at runtime from the path. These tests hold that apart:
+// the static tags in index.html must be the live tool's, and only the pilot path may
+// change them.
+
+test('the path picks the icon set, and anything unrecognised gets the live tool', () => {
+    assert.equal(iconSetForPath('/alert-tool-testing/'), 'test');
+    assert.equal(iconSetForPath('/alert-tool-testing/index.html'), 'test');
+    assert.equal(iconSetForPath('/ALERT-Tool/'), 'alert');
+    assert.equal(iconSetForPath('/'), 'alert', 'a local file or preview server is not the pilot');
+});
+
+test('the page ships installable as a web app', async () => {
+    const { document, close } = await loadTool();
+    assert.ok(document.querySelector('link[rel="manifest"]'), 'has a manifest');
+    assert.ok(document.querySelector('link[rel="apple-touch-icon"]'), 'iOS ignores manifest icons');
+    assert.ok(document.querySelector('meta[name="theme-color"]'), 'has a theme colour');
+    // iOS will not take an SVG or a data: URI here, which is why the PNGs are committed.
+    const apple = document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href');
+    assert.match(apple, /\.png$/, 'apple-touch-icon must be a real PNG file');
+    close();
+});
+
+test('the live tool keeps the teal icon', async () => {
+    const { document, close } = await loadTool({ url: 'https://alert-project.github.io/ALERT-Tool/' });
+    assert.equal(document.getElementById('linkManifest').getAttribute('href'), 'manifest.json');
+    assert.match(document.getElementById('linkAppleIcon').getAttribute('href'), /alert-180\.png$/);
+    assert.equal(document.getElementById('metaThemeColor').getAttribute('content'), '#0f766e');
+    assert.ok(!/PILOT/.test(document.title), 'the live tool does not call itself a pilot');
+    close();
+});
+
+test('the pilot swaps to the amber TEST icon and says so in the title', async () => {
+    const { document, close } = await loadTool({ url: 'https://alert-project.github.io/alert-tool-testing/' });
+    assert.equal(document.getElementById('linkManifest').getAttribute('href'), 'manifest-test.json');
+    assert.match(document.getElementById('linkAppleIcon').getAttribute('href'), /test-180\.png$/);
+    assert.match(document.getElementById('linkFavicon').getAttribute('href'), /test\.svg$/);
+    assert.equal(document.getElementById('metaThemeColor').getAttribute('content'), '#f59e0b');
+    assert.match(document.title, /PILOT/, 'standalone mode hides the URL bar, so the title has to say it');
     close();
 });

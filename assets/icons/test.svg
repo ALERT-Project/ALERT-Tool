@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- See alert.svg for why this is full-bleed and unrounded.
+       The band stops at y=340 rather than sitting on the bottom edge: a circular launcher
+       crop only keeps the centre 80%, and a word any lower would lose its outer letters. -->
+  <rect width="512" height="512" fill="#f59e0b"/>
+  <rect y="340" width="512" height="172" fill="#0f172a"/>
+  <text x="256" y="238" text-anchor="middle" letter-spacing="8" fill="#0f172a"
+        font-family="Helvetica, Arial, sans-serif" font-size="190" font-weight="bold">A!</text>
+  <text x="256" y="424" text-anchor="middle" letter-spacing="12" fill="#ffffff"
+        font-family="Helvetica, Arial, sans-serif" font-size="68" font-weight="bold">TEST</text>
+</svg>

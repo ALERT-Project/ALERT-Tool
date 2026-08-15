@@ -12,6 +12,9 @@
     const x = parseFloat(v);
     return isNaN(x) ? null : x;
   };
+  function iconSetForPath(pathname = location.pathname) {
+    return /alert-tool-testing/i.test(pathname) ? "test" : "alert";
+  }
   function nowTimeStr() {
     return (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
@@ -1258,6 +1261,15 @@
   }
 
   // src/js/ui.js
+  function applyAppIcons() {
+    if (iconSetForPath() !== "test") return;
+    $("linkFavicon")?.setAttribute("href", "assets/icons/test.svg");
+    $("linkAppleIcon")?.setAttribute("href", "assets/icons/test-180.png");
+    $("linkManifest")?.setAttribute("href", "manifest-test.json");
+    $("metaThemeColor")?.setAttribute("content", "#f59e0b");
+    $("metaAppTitle")?.setAttribute("content", "ALERT TEST");
+    document.title = "ALERT Tool - PILOT";
+  }
   function checkBloodRanges() {
     for (const [key, range] of Object.entries(normalRanges)) {
       const id = `bl_${key}`;
@@ -2983,6 +2995,7 @@
 
   // src/js/main.js
   function initialize() {
+    applyAppIcons();
     updateLastSaved();
     disableAutofill();
     document.querySelectorAll(".quick-select, .select-btn, .detail-toggle, .accordion, .trend-btn").forEach((btn) => {

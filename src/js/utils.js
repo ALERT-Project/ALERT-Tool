@@ -20,6 +20,14 @@ export const num = v => {
     return isNaN(x) ? null : x;
 };
 
+// Which home-screen icon set this deployment should wear. The live tool and the pilot are
+// the same origin serving the same commit, so the path is the only thing that separates
+// them: /ALERT-Tool/ against /alert-tool-testing/. Anything unrecognised - a local file,
+// a preview server - gets the live set, so only the pilot ever has to be detected.
+export function iconSetForPath(pathname = location.pathname) {
+    return /alert-tool-testing/i.test(pathname) ? 'test' : 'alert';
+}
+
 export function nowTimeStr() { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 
 export function todayDateStr() { const d = new Date(); return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`; }

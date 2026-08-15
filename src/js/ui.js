@@ -5,7 +5,7 @@
    MIT License - https://opensource.org/licenses/MIT
    ========================================= */
 
-import { $, debounce, showToast, disableAutofill } from './utils.js';
+import { $, debounce, showToast, disableAutofill, iconSetForPath } from './utils.js';
 import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
 import { normalRanges, comorbMap, toggleInputs, staticInputs, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY } from './config.js';
 import {
@@ -16,6 +16,25 @@ import {
     clearActiveIssues, renderScrapedIssuesList
 } from './state.js';
 import { computeAll } from './logic.js';
+
+// index.html carries the live tool's icons statically; this only has to undo them on the
+// pilot. Chrome and Edge fetch the manifest when the user asks to install, long after
+// this has run, so the swap is in place by then. iOS reads the apple-touch-icon link from
+// the live DOM at the moment Add to Home Screen is tapped, which is also after this - but
+// that is convention rather than anything specified, so it needs checking on a real iPad.
+export function applyAppIcons() {
+    if (iconSetForPath() !== 'test') return;
+
+    $('linkFavicon')?.setAttribute('href', 'assets/icons/test.svg');
+    $('linkAppleIcon')?.setAttribute('href', 'assets/icons/test-180.png');
+    $('linkManifest')?.setAttribute('href', 'manifest-test.json');
+    $('metaThemeColor')?.setAttribute('content', '#f59e0b');
+    $('metaAppTitle')?.setAttribute('content', 'ALERT TEST');
+
+    // Standalone mode hides the URL bar, so the tab title is one of the few remaining
+    // places the pilot can say what it is.
+    document.title = 'ALERT Tool - PILOT';
+}
 
 export function checkBloodRanges() {
     for (const [key, range] of Object.entries(normalRanges)) {

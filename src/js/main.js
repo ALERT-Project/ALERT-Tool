@@ -22,10 +22,13 @@ import {
     enableQuickReviewMode, exitQuickReviewMode, showQuickReviewPrompt, openMobileNav, closeMobileNav,
     handleSegmentClick, toggleBowelDate, updateAgeMitigationUI, updateLosMitigationUI, openAccordion, closeAccordion,
     setBloodsOverlay, closeQuickOverlays, toggleAddsOverride, refreshAddsOverrideUI, setPanelOpen,
-    markCopiedOnExit
+    markCopiedOnExit, applyAppIcons
 } from './ui.js';
 
 function initialize() {
+    // Before anything else: on the pilot this repaints the tab and the install icons, and
+    // the sooner it runs the shorter the flash of the live tool's teal favicon.
+    applyAppIcons();
     updateLastSaved();
     disableAutofill();
 
