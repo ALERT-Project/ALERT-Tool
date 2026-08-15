@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadTool, tick, type, click, generateNote } from './harness.js';
 import { iconSetForPath } from '../src/js/utils.js';
+import { readFileSync } from 'node:fs';
 
 // Interface tests, against the real index.html and the real built bundle.
 //
@@ -750,4 +751,14 @@ test('the pilot swaps to the amber TEST icon and says so in the title', async ()
         'the label sitting under the icon on a home screen');
     assert.match(document.title, /PILOT/, 'standalone mode hides the URL bar, so the title has to say it');
     close();
+});
+
+test('the version in the footer matches the one in the file banner', () => {
+    // Two hand-maintained strings that mean the same thing. They went out of step once and
+    // stayed that way through several releases, because only one of them is on screen.
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const stamps = [...html.matchAll(/ALERT (?:Nursing Risk Assessment )?Tool\s+(A[\d.]+)\s+\(([^)]+)\)/g)]
+        .map(m => `${m[1]} (${m[2]})`);
+    assert.equal(stamps.length, 2, 'banner comment and page footer');
+    assert.equal(stamps[0], stamps[1], 'version and date must agree');
 });
