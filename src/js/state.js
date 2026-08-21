@@ -35,7 +35,27 @@ export let activeIssues = [];
 const toastedRiskKeys = new Set();
 let _activeIssueCounter = 0;
 
-export function addActiveIssue({ text, source, severity, key }) {
+// Which list an entry belongs on. Three values, two of them visible:
+//
+//   'risks'   - what could send this patient back to ICU. The computed flags, the risks
+//               carried over from the previous note, and anything the clinician adds as one.
+//   'factors' - how the patient is rather than what might return them: mobility, diet,
+//               psych, the context that travels between reviews without ever being a risk.
+//   'checks'  - things to look at that are neither. Clotting against a documented target,
+//               a MODS parameter to confirm, an electrolyte low enough to replace. These
+//               never sit in either list; they get their own compact strip.
+//
+// The risks/factors seam is not new. The Excel handover line has always excluded severity
+// 'info' entries and included the rest, so this makes an existing distinction visible rather
+// than inventing one.
+// A fourth value, 'bloods', is assigned explicitly by the rules for out-of-range results.
+// Those render nowhere - they exist only so the Excel handover line can name which bloods
+// were abnormal - so nothing defaults into it.
+function defaultListFor(source, severity) {
+    return severity === 'info' ? 'factors' : 'risks';
+}
+
+export function addActiveIssue({ text, source, severity, key, list }) {
     // A tick the clinician made still counts as a match, so a risk that is still firing
     // updates that entry instead of reappearing as a second, unticked copy. Entries retired
     // by reconcileAutoIssues() are not matched, so a genuine recurrence still arrives as new.
@@ -43,20 +63,50 @@ export function addActiveIssue({ text, source, severity, key }) {
     if (existing) {
         existing.text = text;
         existing.severity = severity;
+        // Only an explicit assignment moves an entry between lists. A clinician who dragged a
+        // scraped line into the other list should not have it moved back by a re-import.
+        if (list) existing.list = list;
         return { issue: existing, isNew: false };
     }
-    const issue = { id: `ai_${++_activeIssueCounter}`, text, source, severity, key, resolved: false, createdAt: _activeIssueCounter };
+    const issue = {
+        id: `ai_${++_activeIssueCounter}`, text, source, severity, key,
+        list: list || defaultListFor(source, severity),
+        resolved: false, createdAt: _activeIssueCounter
+    };
     activeIssues.push(issue);
     return { issue, isNew: true };
 }
 
-export function addManualIssue(text) {
-    return addActiveIssue({ text, source: 'manual', severity: 'amber', key: `manual_${_activeIssueCounter + 1}` });
+// The add row under each list passes its own list, so what the clinician types lands where
+// they typed it rather than being guessed at from the wording.
+export function addManualIssue(text, list = 'risks') {
+    return addActiveIssue({
+        text, source: 'manual', list,
+        severity: list === 'factors' ? 'info' : 'amber',
+        key: `manual_${_activeIssueCounter + 1}`
+    });
 }
 
-// Resolving an entry marks it dealt with without removing it: it stays visible (struck
-// through), drops out of the note and the handover line, and can be undone. This is the only
-// control on a row that changes what the outputs say.
+export function getIssuesForList(list) {
+    return activeIssues.filter(i => i.list === list && (!i.resolved || i.resolvedByUser));
+}
+
+// Checks never carry a resolved state worth showing - they either apply to today's numbers or
+// they don't - so this is the live set only.
+export function getActiveChecks() {
+    return activeIssues.filter(i => i.list === 'checks' && !i.resolved);
+}
+
+// Deleting an entry marks it gone without removing it: it stays visible (struck through),
+// drops out of the note and the handover line, and can be undone. This is the only control on
+// a row that changes what the outputs say.
+//
+// The control says "delete", the flag is still called `resolved`. The word on screen changed
+// because most of what sits on these lists now arrived from the previous note, and "resolved"
+// asserts a clinical claim - that something was dealt with - which is not what a clinician
+// means when they clear a line that simply doesn't apply to this patient today. The flag kept
+// its name because it is what a restored session is holding; renaming it would silently drop
+// the state of every list a clinician had already pruned.
 export function toggleActiveIssueResolved(id) {
     const issue = activeIssues.find(i => i.id === id);
     if (!issue) return;
@@ -83,35 +133,35 @@ export function editActiveIssueText(id, newText) {
 
 export function getUnresolvedActiveIssues() { return activeIssues.filter(i => !i.resolved); }
 
-// What the Review List is still holding when the note is generated. Everything on that list
-// that the note doesn't already state, in the wording the list shows it in - if a clinician
-// left an entry standing rather than resolving it, they meant it to be recorded.
+// What the two lists are still holding when the note is generated, each feeding its own
+// section. If a clinician left an entry standing rather than deleting it, they meant it to be
+// recorded.
 //
-// This used to be manual entries only. Everything the importer carried over from the previous
-// note - source 'scraped': the previous risks that didn't land on a gate, plus the mobility
-// and diet lines - sat on the list looking exactly like a manual entry, resolved or not, and
-// went nowhere. In Quick Review that list is most of the review, so most of the review was
-// being dropped between the screen and the note.
-//
-// Two things stay out, because the note already says them somewhere better:
-//  - 'auto' entries are the computed risks. IDENTIFIED ICU READMISSION RISK FACTORS prints
-//    them verbatim, and that section is where a readmission risk belongs.
-//  - out-of-range blood results (source 'bloods', keyed bl_*). The Bloods line already prints
-//    the value; "Abnormal K 6.1" underneath it adds nothing. The target and MODS checks
-//    (chk_*, mod_*) are not stated anywhere else, so those do come through.
-//  - list entries that mirror an assessment field the note prints in its own section. The
-//    importer fills ae_mobility/ae_diet *and* stages a list row for the same text, so once
-//    the list reached the note these arrived twice - "Mobility: assist x1" under the
-//    assessment and again as a bullet below it.
+// One exclusion, in both: entries that mirror an assessment field the note already prints in
+// its own words. The importer fills ae_mobility/ae_diet *and* stages a list row carrying the
+// same text, so without this "Mobility: assist x1" arrives under the assessment and again
+// below it.
 const MIRRORS_AN_ASSESSMENT_FIELD = new Set(['ae_mobility', 'ae_diet']);
 
-export function getIssuesForNote() {
+export function getFactorsForNote() {
     return activeIssues
-        .filter(i => !i.resolved)
-        .filter(i => i.source !== 'auto')
-        .filter(i => !(i.source === 'bloods' && String(i.key || '').startsWith('bl_')))
+        .filter(i => i.list === 'factors' && !i.resolved)
         .filter(i => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key))
         .map(i => i.text);
+}
+
+// Computed risks are excluded here and supplied by the caller from the rules' own red/amber/
+// suppressed lists instead, so a risk that is still firing is stated in today's wording rather
+// than in whatever wording it was carried over with.
+export function getRisksForNote() {
+    return activeIssues
+        .filter(i => i.list === 'risks' && !i.resolved)
+        .filter(i => i.source !== 'auto')
+        .map(i => i.text);
+}
+
+export function getChecksForNote() {
+    return getActiveChecks().map(i => i.text);
 }
 
 // What the list shows: everything live, plus anything the clinician ticked off themselves.
@@ -142,45 +192,62 @@ export function maybeToastNewRisk(key, text) {
     toastedRiskKeys.add(key);
 }
 
-export function renderScrapedIssuesList() {
-    const list = $('scraped_issues_list');
+// The two lists and the checks strip, repainted together. computeAll() calls this constantly,
+// so it bails out of any list that has an inline edit open rather than destroying it.
+const LIST_UI = {
+    factors: {
+        container: 'patient_factors_list', count: 'factors_count', input: 'manualFactorInput',
+        empty: 'Mobility, diet, psych - how the patient is today'
+    },
+    risks: {
+        container: 'scraped_issues_list', count: 'issues_count', input: 'manualIssueInput',
+        empty: 'What could send this patient back to ICU'
+    }
+};
+
+function renderOneList(listName) {
+    const ui = LIST_UI[listName];
+    const list = $(ui.container);
     if (!list) return;
-    // computeAll re-renders this list constantly; don't destroy an in-progress inline edit.
     if (list.querySelector('.scraped-issue-edit')) return;
-    const issues = getVisibleActiveIssues();
-    const count = $('issues_count');
+
+    const issues = getIssuesForList(listName);
+    const count = $(ui.count);
     const openCount = issues.filter(i => !i.resolved).length;
-    const doneCount = issues.length - openCount;
+    const goneCount = issues.length - openCount;
     // Says what the two states are, so a struck-through line isn't a mystery.
     if (count) {
         const parts = [];
         if (openCount) parts.push(`${openCount} open`);
-        if (doneCount) parts.push(`${doneCount} resolved`);
+        if (goneCount) parts.push(`${goneCount} deleted`);
         count.textContent = parts.length ? `(${parts.join(' · ')})` : '';
     }
-    // In Full Review an empty list stays empty - it is one quiet card among many, and the add
-    // row underneath already says what it's for. In Quick Review the same card is the largest
-    // thing on the page and it grows to fill the column, so blank reads as broken rather than
-    // as "nothing yet"; there it says what to do with itself.
+
     if (issues.length === 0) {
+        // In Full Review an empty list stays empty - it is one quiet card among several, and
+        // the add row underneath already says what it's for. In Quick Review these cards are
+        // the largest thing on the page and they stretch to fill the column, so blank reads as
+        // broken rather than as "nothing yet"; there each one says what belongs in it, which
+        // is also what tells the two lists apart.
         list.innerHTML = document.body.classList.contains('quick-review-active')
-            ? `<div class="issues-empty">Add issues from your review below</div>`
+            ? `<div class="issues-empty">${ui.empty}</div>`
             : '';
         return;
     }
-    // Two controls, each saying what it does. Delete is gone: it and resolve were the same
-    // act from the reader's side - the entry leaves the note and the handover line either way
-    // - except resolve is reversible and leaves a record on screen of what was considered.
-    // Correcting a wrong entry is what edit is for, and the pencil is what says so; the text
-    // has always been click-to-edit, but nothing on the row admitted it.
+
+    // Two controls, each saying what it does. "Delete" rather than "resolve": most of what
+    // sits here arrived from the previous note, and resolved asserts a clinical claim - that
+    // something was dealt with - which is not what clearing an inapplicable line means. It is
+    // still reversible, which is why the row stays struck through and the button says undo.
+    // Correcting a wrong entry is what edit is for, and the pencil is what says so.
     list.innerHTML = issues.map(issue => `
         <div class="scraped-issue-row${issue.resolved ? ' resolved' : ''}" data-id="${issue.id}">
             <span class="scraped-issue-text" data-id="${issue.id}" title="Click to edit">${issue.text}</span>
-            ${issue.severity === 'info' ? '<span class="scraped-issue-note-tag">note</span>' : ''}
+            ${issue.carried > 1 ? `<span class="scraped-issue-carried" title="On this list for ${issue.carried} reviews">carried ${issue.carried}</span>` : ''}
             <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}"
                 title="Edit" aria-label="Edit">&#9998;</button>
             <button type="button" class="scraped-issue-resolve" data-id="${issue.id}"
-                title="${issue.resolved ? 'Put it back on the list' : 'Dealt with - keeps it here but leaves it out of the note and the handover line'}">${issue.resolved ? 'undo' : 'resolve'}</button>
+                title="${issue.resolved ? 'Put it back on the list' : "Doesn't apply today - keeps it here but leaves it out of the note and the handover line"}">${issue.resolved ? 'undo' : 'delete'}</button>
         </div>
     `).join('');
 
@@ -203,8 +270,8 @@ export function renderScrapedIssuesList() {
             if (committed) return;
             committed = true;
             const newText = input.value.trim() || issue.text;
-            // Drop the input first: renderScrapedIssuesList() bails out while an edit field is
-            // still in the list, which would otherwise leave the row stuck in edit state.
+            // Drop the input first: the render bails out while an edit field is still in the
+            // list, which would otherwise leave the row stuck in edit state.
             input.remove();
             // Re-render either way - cancelling has to put the span back too.
             if (save) editActiveIssueText(id, newText);
@@ -212,7 +279,7 @@ export function renderScrapedIssuesList() {
         };
         input.addEventListener('blur', () => finish(true));
         input.addEventListener('keydown', ev => {
-            if (ev.key === 'Enter') { finish(true); $('manualIssueInput')?.focus(); }
+            if (ev.key === 'Enter') { finish(true); $(ui.input)?.focus(); }
             else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
         });
     };
@@ -226,6 +293,25 @@ export function renderScrapedIssuesList() {
             if (span) startEdit(span);
         });
     });
+}
+
+// Checks are the tool's own reading of today's numbers, not a list the clinician curates, so
+// they get no controls and no delete - they apply or they don't, and they change the moment
+// the value does.
+function renderChecksStrip() {
+    const strip = $('bloods_checks_strip');
+    if (!strip) return;
+    const checks = getActiveChecks();
+    if (!checks.length) { strip.hidden = true; strip.innerHTML = ''; return; }
+    strip.hidden = false;
+    strip.innerHTML = `<span class="checks-strip-label">Check</span>` +
+        checks.map(c => `<span class="checks-strip-item">${c.text}</span>`).join('');
+}
+
+export function renderScrapedIssuesList() {
+    renderOneList('factors');
+    renderOneList('risks');
+    renderChecksStrip();
 }
 
 export function saveState(instantly = false) {

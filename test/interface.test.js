@@ -443,7 +443,9 @@ test('Quick Review fills the empty write-up panel with a prompt', async () => {
 
     click(window, 'input[name="reviewDepth"][value="quick"]');
     await tick(window);
-    assert.match(list.textContent, /Add issues from your review/, 'Quick Review says what to do with it');
+    assert.match(list.textContent, /send this patient back to ICU/, 'Quick Review says what to do with it');
+    assert.match(document.getElementById('patient_factors_list').textContent, /how the patient is today/,
+        'and the other list says what makes it different');
 
     click(window, 'input[name="reviewDepth"][value="full"]');
     await tick(window);
@@ -559,19 +561,22 @@ test('what the clinician writes down reaches the DMR note as plain bullets', asy
     await tick(window);
     let note = document.getElementById('summary').value;
 
-    // Review List entries and Quick Notes both used to stop at the handover line or go
-    // nowhere at all. They are bullets under the score and the bloods now, with no heading.
+    // Both lists reach the note, each under its own heading, and both headings are ones the
+    // importer can read straight back next review.
     assert.match(note, /- Mobilising with 1 assist/);
     assert.match(note, /- Family updated re GOC/);
     assert.match(note, /- Reviewed with bedside nurse/, 'Quick Notes reaches the note');
     assert.match(note, /- Plan discussed with team/, 'one bullet per line');
 
-    // They must land before the risk section, not inside it - that section says what drove
-    // the category, and a typed item is not a readmission risk factor.
+    // A typed risk belongs under the risk heading so it survives into tomorrow's note. Quick
+    // Notes describe the patient, so they land under patient factors.
+    const factorsAt = note.indexOf('PATIENT FACTORS:');
     const risksAt = note.indexOf('IDENTIFIED ICU READMISSION RISK FACTORS');
-    assert.ok(note.indexOf('- Mobilising with 1 assist') < risksAt, 'bulleted above the risk section');
+    assert.ok(factorsAt > -1 && factorsAt < risksAt, 'patient factors come first');
+    assert.ok(note.indexOf('- Reviewed with bedside nurse') > factorsAt, 'Quick Notes are patient factors');
     assert.ok(note.indexOf('- Reviewed with bedside nurse') < risksAt);
-    assert.ok(note.indexOf('- Mobilising with 1 assist') > note.indexOf('ADDS: 2'), 'and below the score');
+    assert.ok(note.indexOf('- Mobilising with 1 assist') > risksAt, 'a typed risk sits under the risk heading');
+    assert.ok(factorsAt > note.indexOf('ADDS: 2'), 'and both sit below the score');
 
     // Resolving an entry takes it out, the same way it leaves the handover line.
     click(window, '#scraped_issues_list .scraped-issue-row .scraped-issue-resolve');
@@ -710,9 +715,11 @@ test('the note states each finding once, in the place that belongs to it', async
     const risksAt = note.indexOf('IDENTIFIED ICU READMISSION RISK FACTORS');
     assert.ok(note.indexOf('Low platelets Plts 12') > risksAt, 'in the risk section');
 
-    // A clotting check is stated nowhere else, so it comes through as a bullet.
-    assert.match(note, /- INR 3\.2 - target not documented/, 'a check the note has no other home for');
-    assert.ok(note.indexOf('- INR 3.2 - target not documented') < risksAt, 'above the risk section');
+    // A clotting check is not a readmission risk and not a patient factor, so it gets its own
+    // line rather than a place among the risks.
+    assert.match(note, /^Checks: .*INR 3\.2 - target not documented/m, 'checks get their own line');
+    assert.ok(note.indexOf('Checks:') < risksAt, 'above the risk section');
+    assert.ok(!/- INR 3\.2 - target not documented/.test(note), 'and not bulleted as a risk');
     close();
 });
 
@@ -723,9 +730,11 @@ test('an issue row explains its own controls', async () => {
     await tick(window);
 
     const row = document.querySelector('#scraped_issues_list .scraped-issue-row');
-    assert.equal(row.querySelector('.scraped-issue-resolve').textContent, 'resolve', 'a word, not a bare checkbox');
+    // "Delete" rather than "resolve": most of what sits here arrived from the previous note,
+    // and resolved asserts a clinical claim - that something was dealt with - which is not
+    // what clearing an inapplicable line means. Still reversible, hence the strikethrough.
+    assert.equal(row.querySelector('.scraped-issue-resolve').textContent, 'delete', 'a word, not a bare checkbox');
     assert.ok(row.querySelector('.scraped-issue-edit-btn'), 'a pencil says the row can be edited');
-    assert.equal(row.querySelector('.scraped-issue-delete'), null, 'delete is gone - resolve does the same job, reversibly');
     assert.match(document.getElementById('issues_count').textContent, /1 open/);
 
     // The pencil opens the same inline editor the text does.
@@ -741,7 +750,9 @@ test('an issue row explains its own controls', async () => {
     click(window, '#scraped_issues_list .scraped-issue-resolve');
     await tick(window);
     assert.equal(document.querySelector('.scraped-issue-resolve').textContent, 'undo');
-    assert.match(document.getElementById('issues_count').textContent, /1 resolved/);
+    assert.ok(document.querySelector('.scraped-issue-row').classList.contains('resolved'),
+        'deleting strikes the row through rather than removing it');
+    assert.match(document.getElementById('issues_count').textContent, /1 deleted/);
     close();
 });
 

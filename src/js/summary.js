@@ -8,7 +8,7 @@
 import { $, nowTimeStr, todayDateStr, formatDateDDMMYYYY, num, toDmrSafeText, wardLabel } from './utils.js';
 import { comorbMap } from './config.js';
 
-export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, listIssues = []) {
+export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, lists = {}) {
 
     const sum = $('summary');
 
@@ -263,7 +263,10 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
     pushBlank();
 
-    const blMap = { 'lac_review': 'Lac', 'hb': 'Hb', 'wcc': 'WCC', 'cr_review': 'Cr', 'egfr': 'eGFR', 'k': 'K', 'na': 'Na', 'mg': 'Mg', 'phos': 'PO4', 'plts': 'Plts', 'alb': 'Alb', 'neut': 'Neut', 'lymph': 'Lymph', 'bili': 'Bili', 'alt': 'ALT', 'inr': 'INR', 'aptt': 'APTT' };
+    // CRP was missing from this map entirely, so however high it was it never reached the note -
+    // it could open the infection gate and be quoted inside "Infection risk - CRP 250", but the
+    // value itself was never written down. It sits beside WCC, where it is read.
+    const blMap = { 'lac_review': 'Lac', 'hb': 'Hb', 'wcc': 'WCC', 'crp': 'CRP', 'cr_review': 'Cr', 'egfr': 'eGFR', 'k': 'K', 'na': 'Na', 'mg': 'Mg', 'phos': 'PO4', 'plts': 'Plts', 'alb': 'Alb', 'neut': 'Neut', 'lymph': 'Lymph', 'bili': 'Bili', 'alt': 'ALT', 'inr': 'INR', 'aptt': 'APTT' };
     if (s.chk_bloods_nil_sig || s.bloods_status === 'nil_sig') {
         addLine('Bloods: Checked, nil significant');
     } else if (s.bloods_status === 'improving') {
@@ -303,22 +306,12 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
     pushBlank();
 
-    // What the Review List is still holding, and the Quick Notes box, as plain bullets under
-    // the score and the bloods. No heading: these aren't a category of finding, they're the
-    // things worth listing. Deliberately not in the risk factors section, which states what
-    // drove the category and nothing else - a carried-over item or a typed observation didn't.
-    // See getIssuesForNote() for which list entries arrive here and which the note says
-    // elsewhere.
-    const ownWords = [];
-    const seenOwn = new Set();
-    const pushOwn = (t) => {
-        const txt = (t || '').trim().replace(/^[-•]\s*/, '');
-        if (txt && !seenOwn.has(txt.toLowerCase())) { seenOwn.add(txt.toLowerCase()); ownWords.push(txt); }
-    };
-    listIssues.forEach(pushOwn);
-    (s.quickNotes || '').split('\n').forEach(pushOwn);
-    if (ownWords.length) {
-        ownWords.forEach(t => lines.push(`- ${t}`));
+    // The tool's own reading of today's numbers. Not risks - a clotting result sitting where
+    // the team wants it, an electrolyte low enough to replace - so they get their own line
+    // rather than a place among the readmission risks.
+    const checks = lists.checks || [];
+    if (checks.length) {
+        addLine(`Checks: ${checks.join('; ')}`);
         pushBlank();
     }
 
@@ -359,14 +352,43 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (s.context_other_note) lines.push(`Other: ${s.context_other_note}`);
     pushBlank();
 
+    // Two headed sections, both written so the importer can read them straight back next
+    // review. That round trip is the point: a risk confirmed today has to still be here
+    // tomorrow, whether it came from a gate, from the previous note, or from the clinician.
+    //
+    // Deduplication is by text within each section, and the Quick Notes box empties into
+    // patient factors - it is where clinicians write the things that describe the patient.
+    const sectionLines = (items) => {
+        const out = [];
+        const seen = new Set();
+        items.forEach(t => {
+            const txt = (t || '').trim().replace(/^[-•]\s*/, '');
+            if (txt && !seen.has(txt.toLowerCase())) { seen.add(txt.toLowerCase()); out.push(txt); }
+        });
+        return out;
+    };
+
+    const factorLines = sectionLines([
+        ...(lists.factors || []),
+        ...(s.quickNotes || '').split('\n')
+    ]);
+    if (factorLines.length) {
+        lines.push('PATIENT FACTORS:');
+        factorLines.forEach(t => lines.push(`- ${t}`));
+        pushBlank();
+    }
+
     lines.push('IDENTIFIED ICU READMISSION RISK FACTORS:');
     // One list, not two. Risks that were considered and discounted stay in it and carry their
     // reason inline - "(mitigated: ...)" - so the note says what didn't count and why without
-    // splitting the reader's attention across two sections. Only computed risks appear here:
-    // this section says what drove the category, so a typed item like "family updated re GOC"
-    // would read as a readmission risk factor. Those are bulleted after the bloods instead.
-    const risks = [...red, ...amber, ...suppressed];
-    if (risks.length) { risks.forEach(r => lines.push(`- ${r}`)); }
+    // splitting the reader's attention across two sections, and so the importer can bring
+    // them back next review still marked as mitigated rather than as live again.
+    //
+    // Computed risks come first, in the rules' own wording, because they are what drove the
+    // category. Carried and typed risks follow: they belong under this heading so they survive
+    // into the next note, which they did not when they were loose bullets further up.
+    const riskLines = sectionLines([...red, ...amber, ...suppressed, ...(lists.risks || [])]);
+    if (riskLines.length) { riskLines.forEach(r => lines.push(`- ${r}`)); }
     else { lines.push('- None identified'); }
     pushBlank();
 

@@ -831,6 +831,48 @@ body.quick-review-active #alert_actions_section { margin-top: 12px; padding-top:
 }
 /* Resolving an entry means "dealt with", not "gone" - it stays readable and reversible. */
 .scraped-issue-row.resolved .scraped-issue-text { text-decoration: line-through; color: var(--muted); }
+/* How long a line has been riding along. A list that only ever grows stops being read, and by
+   day five a carried entry nobody has pruned looks exactly like one raised this morning. Shown
+   from the second review onward, quietly - it is a reason to look, not a warning. */
+.scraped-issue-carried {
+  flex: none;
+  font-size: var(--fs-hint);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+/* The tool's reading of today's numbers, above the risks it isn't. No controls: these apply
+   or they don't, and they change the moment the value does. */
+.checks-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+.checks-strip-label {
+  font-size: var(--fs-hint);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+.checks-strip-item {
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
 .scraped-issue-row.resolved .scraped-issue-note-tag { opacity: 0.6; }
 
 /* Grid Spans */

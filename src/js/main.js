@@ -11,7 +11,8 @@ import { ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs } from './co
 import {
     getState, saveState, loadState, restoreState, previousCategoryData, updateLastSaved,
     isQuickReviewMode, setQuickReviewDismissed, addActiveIssue, addManualIssue,
-    getUnresolvedActiveIssues, getIssuesForNote, renderScrapedIssuesList
+    getUnresolvedActiveIssues, getFactorsForNote, getRisksForNote, getChecksForNote,
+    renderScrapedIssuesList
 } from './state.js';
 import { computeAll } from './logic.js';
 import { generateSummary, generateHandoverLine } from './summary.js';
@@ -133,7 +134,7 @@ function initialize() {
             window._lastAmber || [],
             window._lastSuppressed || [],
             window._lastActiveComorbsKeys || [],
-            getIssuesForNote()
+            { factors: getFactorsForNote(), risks: getRisksForNote(), checks: getChecksForNote() }
         );
 
         summaryEl.style.height = 'auto';
@@ -166,22 +167,27 @@ function initialize() {
         navigator.clipboard.writeText(text).then(() => showToast('Handover line copied', 1500));
     });
 
-    // Add-issue row: Enter commits and keeps focus, so several issues can be typed in a row.
-    const commitManualIssue = () => {
-        const input = $('manualIssueInput');
-        const val = input?.value.trim();
-        if (!val) return;
-        addManualIssue(val);
-        input.value = '';
-        renderScrapedIssuesList();
-        input.focus();
+    // One add row per list, each committing into its own. Enter commits and keeps focus, so
+    // several entries can be typed in a row without reaching for the mouse.
+    const wireAddRow = (inputId, buttonId, list) => {
+        const commit = () => {
+            const input = $(inputId);
+            const val = input?.value.trim();
+            if (!val) return;
+            addManualIssue(val, list);
+            input.value = '';
+            renderScrapedIssuesList();
+            input.focus();
+        };
+        $(inputId)?.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            commit();
+        });
+        $(buttonId)?.addEventListener('click', commit);
     };
-    $('manualIssueInput')?.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        commitManualIssue();
-    });
-    $('btnAddIssue')?.addEventListener('click', commitManualIssue);
+    wireAddRow('manualIssueInput', 'btnAddIssue', 'risks');
+    wireAddRow('manualFactorInput', 'btnAddFactor', 'factors');
 
     const summaryInputEl = $('summary');
     if (summaryInputEl) {

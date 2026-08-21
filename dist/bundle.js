@@ -542,7 +542,7 @@
     const checkKeys = [];
     const addCheck = (txt, key) => {
       checkKeys.push(key);
-      issues.push({ text: txt, source: "bloods", severity: "info", key });
+      issues.push({ text: txt, source: "bloods", severity: "info", key, list: "checks" });
     };
     const modsText = s.chk_use_mods && s.mods_details ? s.mods_details.toLowerCase() : "";
     const isModified = (param) => modsText !== "" && MOD_PATTERNS[param].test(modsText);
@@ -565,7 +565,7 @@
         if (val < range.low || val > range.high) {
           const label = BLOOD_LABELS[key] || key.replace(/_review$/, "").toUpperCase();
           bloodIssueKeys.push(bid);
-          issues.push({ text: `Abnormal ${label} ${val}`, source: "bloods", severity: "info", key: bid });
+          issues.push({ text: `Abnormal ${label} ${val}`, source: "bloods", severity: "info", key: bid, list: "bloods" });
         }
       });
     }
@@ -746,6 +746,7 @@
     const phosAbnormal = phos !== null && phos < 0.32;
     const naAbnormal = na !== null && (na < 125 || na > 155);
     if (bloodsReviewed) {
+      if (k !== null && k >= 3 && k < normalRanges.k.low) addCheck(`K+ ${k} - consider replacement`, "chk_k");
       if (mg !== null && mg >= normalRanges.mg.low && mg < 1) addCheck(`Mg ${mg} - consider replacement`, "chk_mg");
       if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - replacement indicated`, "chk_phos");
     }
@@ -2016,7 +2017,7 @@
     // buttons no longer appear here - they moved inside #section-category, which is the whole
     // bottom band, so the call is made next to the flags that produced it.
     qgLeft: ["adds_wrapper", "section-bloods", "section-devices"],
-    qgRight: ["carried_forward_card", "scraped_risks_wrapper", "quick_notes_wrapper"],
+    qgRight: ["carried_forward_card", "patient_factors_wrapper", "scraped_risks_wrapper", "quick_notes_wrapper"],
     qgBottom: ["section-category"]
   };
   function moveIntoQuickGrid() {
@@ -2301,19 +2302,44 @@
   var activeIssues = [];
   var toastedRiskKeys = /* @__PURE__ */ new Set();
   var _activeIssueCounter = 0;
-  function addActiveIssue({ text, source, severity, key }) {
+  function defaultListFor(source, severity) {
+    return severity === "info" ? "factors" : "risks";
+  }
+  function addActiveIssue({ text, source, severity, key, list }) {
     const existing = activeIssues.find((i) => i.key === key && (!i.resolved || i.resolvedByUser));
     if (existing) {
       existing.text = text;
       existing.severity = severity;
+      if (list) existing.list = list;
       return { issue: existing, isNew: false };
     }
-    const issue = { id: `ai_${++_activeIssueCounter}`, text, source, severity, key, resolved: false, createdAt: _activeIssueCounter };
+    const issue = {
+      id: `ai_${++_activeIssueCounter}`,
+      text,
+      source,
+      severity,
+      key,
+      list: list || defaultListFor(source, severity),
+      resolved: false,
+      createdAt: _activeIssueCounter
+    };
     activeIssues.push(issue);
     return { issue, isNew: true };
   }
-  function addManualIssue(text) {
-    return addActiveIssue({ text, source: "manual", severity: "amber", key: `manual_${_activeIssueCounter + 1}` });
+  function addManualIssue(text, list = "risks") {
+    return addActiveIssue({
+      text,
+      source: "manual",
+      list,
+      severity: list === "factors" ? "info" : "amber",
+      key: `manual_${_activeIssueCounter + 1}`
+    });
+  }
+  function getIssuesForList(list) {
+    return activeIssues.filter((i) => i.list === list && (!i.resolved || i.resolvedByUser));
+  }
+  function getActiveChecks() {
+    return activeIssues.filter((i) => i.list === "checks" && !i.resolved);
   }
   function toggleActiveIssueResolved(id) {
     const issue = activeIssues.find((i) => i.id === id);
@@ -2331,11 +2357,14 @@
     return activeIssues.filter((i) => !i.resolved);
   }
   var MIRRORS_AN_ASSESSMENT_FIELD = /* @__PURE__ */ new Set(["ae_mobility", "ae_diet"]);
-  function getIssuesForNote() {
-    return activeIssues.filter((i) => !i.resolved).filter((i) => i.source !== "auto").filter((i) => !(i.source === "bloods" && String(i.key || "").startsWith("bl_"))).filter((i) => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key)).map((i) => i.text);
+  function getFactorsForNote() {
+    return activeIssues.filter((i) => i.list === "factors" && !i.resolved).filter((i) => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key)).map((i) => i.text);
   }
-  function getVisibleActiveIssues() {
-    return activeIssues.filter((i) => !i.resolved || i.resolvedByUser);
+  function getRisksForNote() {
+    return activeIssues.filter((i) => i.list === "risks" && !i.resolved).filter((i) => i.source !== "auto").map((i) => i.text);
+  }
+  function getChecksForNote() {
+    return getActiveChecks().map((i) => i.text);
   }
   function clearActiveIssues() {
     activeIssues = [];
@@ -2354,32 +2383,47 @@
   function maybeToastNewRisk(key, text) {
     toastedRiskKeys.add(key);
   }
-  function renderScrapedIssuesList() {
-    const list = $("scraped_issues_list");
+  var LIST_UI = {
+    factors: {
+      container: "patient_factors_list",
+      count: "factors_count",
+      input: "manualFactorInput",
+      empty: "Mobility, diet, psych - how the patient is today"
+    },
+    risks: {
+      container: "scraped_issues_list",
+      count: "issues_count",
+      input: "manualIssueInput",
+      empty: "What could send this patient back to ICU"
+    }
+  };
+  function renderOneList(listName) {
+    const ui = LIST_UI[listName];
+    const list = $(ui.container);
     if (!list) return;
     if (list.querySelector(".scraped-issue-edit")) return;
-    const issues = getVisibleActiveIssues();
-    const count = $("issues_count");
+    const issues = getIssuesForList(listName);
+    const count = $(ui.count);
     const openCount = issues.filter((i) => !i.resolved).length;
-    const doneCount = issues.length - openCount;
+    const goneCount = issues.length - openCount;
     if (count) {
       const parts = [];
       if (openCount) parts.push(`${openCount} open`);
-      if (doneCount) parts.push(`${doneCount} resolved`);
+      if (goneCount) parts.push(`${goneCount} deleted`);
       count.textContent = parts.length ? `(${parts.join(" \xB7 ")})` : "";
     }
     if (issues.length === 0) {
-      list.innerHTML = document.body.classList.contains("quick-review-active") ? `<div class="issues-empty">Add issues from your review below</div>` : "";
+      list.innerHTML = document.body.classList.contains("quick-review-active") ? `<div class="issues-empty">${ui.empty}</div>` : "";
       return;
     }
     list.innerHTML = issues.map((issue) => `
         <div class="scraped-issue-row${issue.resolved ? " resolved" : ""}" data-id="${issue.id}">
             <span class="scraped-issue-text" data-id="${issue.id}" title="Click to edit">${issue.text}</span>
-            ${issue.severity === "info" ? '<span class="scraped-issue-note-tag">note</span>' : ""}
+            ${issue.carried > 1 ? `<span class="scraped-issue-carried" title="On this list for ${issue.carried} reviews">carried ${issue.carried}</span>` : ""}
             <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}"
                 title="Edit" aria-label="Edit">&#9998;</button>
             <button type="button" class="scraped-issue-resolve" data-id="${issue.id}"
-                title="${issue.resolved ? "Put it back on the list" : "Dealt with - keeps it here but leaves it out of the note and the handover line"}">${issue.resolved ? "undo" : "resolve"}</button>
+                title="${issue.resolved ? "Put it back on the list" : "Doesn't apply today - keeps it here but leaves it out of the note and the handover line"}">${issue.resolved ? "undo" : "delete"}</button>
         </div>
     `).join("");
     list.querySelectorAll(".scraped-issue-resolve").forEach((btn) => {
@@ -2409,7 +2453,7 @@
       input.addEventListener("keydown", (ev) => {
         if (ev.key === "Enter") {
           finish(true);
-          $("manualIssueInput")?.focus();
+          $(ui.input)?.focus();
         } else if (ev.key === "Escape") {
           ev.preventDefault();
           finish(false);
@@ -2425,6 +2469,23 @@
         if (span) startEdit(span);
       });
     });
+  }
+  function renderChecksStrip() {
+    const strip = $("bloods_checks_strip");
+    if (!strip) return;
+    const checks = getActiveChecks();
+    if (!checks.length) {
+      strip.hidden = true;
+      strip.innerHTML = "";
+      return;
+    }
+    strip.hidden = false;
+    strip.innerHTML = `<span class="checks-strip-label">Check</span>` + checks.map((c) => `<span class="checks-strip-item">${c.text}</span>`).join("");
+  }
+  function renderScrapedIssuesList() {
+    renderOneList("factors");
+    renderOneList("risks");
+    renderChecksStrip();
   }
   function saveState(instantly = false) {
     const state = getState();
@@ -2637,7 +2698,7 @@
   }
 
   // src/js/summary.js
-  function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, listIssues = []) {
+  function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, lists = {}) {
     const sum = $("summary");
     window.devicesModifiedSinceLastSummary = false;
     const lines = [];
@@ -2841,7 +2902,7 @@
     if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
     if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
     pushBlank();
-    const blMap = { "lac_review": "Lac", "hb": "Hb", "wcc": "WCC", "cr_review": "Cr", "egfr": "eGFR", "k": "K", "na": "Na", "mg": "Mg", "phos": "PO4", "plts": "Plts", "alb": "Alb", "neut": "Neut", "lymph": "Lymph", "bili": "Bili", "alt": "ALT", "inr": "INR", "aptt": "APTT" };
+    const blMap = { "lac_review": "Lac", "hb": "Hb", "wcc": "WCC", "crp": "CRP", "cr_review": "Cr", "egfr": "eGFR", "k": "K", "na": "Na", "mg": "Mg", "phos": "PO4", "plts": "Plts", "alb": "Alb", "neut": "Neut", "lymph": "Lymph", "bili": "Bili", "alt": "ALT", "inr": "INR", "aptt": "APTT" };
     if (s.chk_bloods_nil_sig || s.bloods_status === "nil_sig") {
       addLine("Bloods: Checked, nil significant");
     } else if (s.bloods_status === "improving") {
@@ -2875,19 +2936,9 @@
     if (s.new_bloods_ordered === "not_required") addLine("New bloods not required");
     if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
     pushBlank();
-    const ownWords = [];
-    const seenOwn = /* @__PURE__ */ new Set();
-    const pushOwn = (t) => {
-      const txt = (t || "").trim().replace(/^[-•]\s*/, "");
-      if (txt && !seenOwn.has(txt.toLowerCase())) {
-        seenOwn.add(txt.toLowerCase());
-        ownWords.push(txt);
-      }
-    };
-    listIssues.forEach(pushOwn);
-    (s.quickNotes || "").split("\n").forEach(pushOwn);
-    if (ownWords.length) {
-      ownWords.forEach((t) => lines.push(`- ${t}`));
+    const checks = lists.checks || [];
+    if (checks.length) {
+      addLine(`Checks: ${checks.join("; ")}`);
       pushBlank();
     }
     const hasAnyDevices = Object.values(s.devices || {}).some((arr) => arr.length);
@@ -2918,10 +2969,31 @@
     pushBlank();
     if (s.context_other_note) lines.push(`Other: ${s.context_other_note}`);
     pushBlank();
+    const sectionLines = (items) => {
+      const out = [];
+      const seen = /* @__PURE__ */ new Set();
+      items.forEach((t) => {
+        const txt = (t || "").trim().replace(/^[-•]\s*/, "");
+        if (txt && !seen.has(txt.toLowerCase())) {
+          seen.add(txt.toLowerCase());
+          out.push(txt);
+        }
+      });
+      return out;
+    };
+    const factorLines = sectionLines([
+      ...lists.factors || [],
+      ...(s.quickNotes || "").split("\n")
+    ]);
+    if (factorLines.length) {
+      lines.push("PATIENT FACTORS:");
+      factorLines.forEach((t) => lines.push(`- ${t}`));
+      pushBlank();
+    }
     lines.push("IDENTIFIED ICU READMISSION RISK FACTORS:");
-    const risks = [...red, ...amber, ...suppressed];
-    if (risks.length) {
-      risks.forEach((r) => lines.push(`- ${r}`));
+    const riskLines = sectionLines([...red, ...amber, ...suppressed, ...lists.risks || []]);
+    if (riskLines.length) {
+      riskLines.forEach((r) => lines.push(`- ${r}`));
     } else {
       lines.push("- None identified");
     }
@@ -3089,7 +3161,7 @@
         window._lastAmber || [],
         window._lastSuppressed || [],
         window._lastActiveComorbsKeys || [],
-        getIssuesForNote()
+        { factors: getFactorsForNote(), risks: getRisksForNote(), checks: getChecksForNote() }
       );
       summaryEl.style.height = "auto";
       summaryEl.style.height = summaryEl.scrollHeight + "px";
@@ -3117,21 +3189,25 @@
       }
       navigator.clipboard.writeText(text).then(() => showToast("Handover line copied", 1500));
     });
-    const commitManualIssue = () => {
-      const input = $("manualIssueInput");
-      const val = input?.value.trim();
-      if (!val) return;
-      addManualIssue(val);
-      input.value = "";
-      renderScrapedIssuesList();
-      input.focus();
+    const wireAddRow = (inputId, buttonId, list) => {
+      const commit = () => {
+        const input = $(inputId);
+        const val = input?.value.trim();
+        if (!val) return;
+        addManualIssue(val, list);
+        input.value = "";
+        renderScrapedIssuesList();
+        input.focus();
+      };
+      $(inputId)?.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        commit();
+      });
+      $(buttonId)?.addEventListener("click", commit);
     };
-    $("manualIssueInput")?.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter") return;
-      e.preventDefault();
-      commitManualIssue();
-    });
-    $("btnAddIssue")?.addEventListener("click", commitManualIssue);
+    wireAddRow("manualIssueInput", "btnAddIssue", "risks");
+    wireAddRow("manualFactorInput", "btnAddFactor", "factors");
     const summaryInputEl = $("summary");
     if (summaryInputEl) {
       summaryInputEl.addEventListener("input", () => {

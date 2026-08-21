@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Context worth carrying into the note, but not a risk: 'Mobility: Independent'
                 // is good news, and as an amber issue it used to read as a concern.
                 if (mobMatch[1].trim() && window.addActiveIssue) {
-                    window.addActiveIssue({ text: `Mobility: ${mobMatch[1].trim()}`, source: 'scraped', severity: 'info', key: 'ae_mobility' });
+                    window.addActiveIssue({ text: `Mobility: ${mobMatch[1].trim()}`, source: 'scraped', severity: 'info', key: 'ae_mobility', list: 'factors' });
                 }
             }
 
@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dietMatch) {
                 setVal('ae_diet', dietMatch[1]);
                 if (dietMatch[1].trim() && window.addActiveIssue) {
-                    window.addActiveIssue({ text: `Diet: ${dietMatch[1].trim()}`, source: 'scraped', severity: 'info', key: 'ae_diet' });
+                    window.addActiveIssue({ text: `Diet: ${dietMatch[1].trim()}`, source: 'scraped', severity: 'info', key: 'ae_diet', list: 'factors' });
                 }
             }
 
@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Anything that didn't land on a gate still needs to be seen, so it stays
                     // in the issues list under the previous note's own wording.
                     if (!carried && !SELF_DERIVED_RISK.test(lower) && window.addActiveIssue) {
-                        window.addActiveIssue({ text: rawTxt, source: 'scraped', severity: 'amber', key: `scraped_risk_${idx}_${rawTxt.slice(0, 20)}` });
+                        window.addActiveIssue({ text: rawTxt, source: 'scraped', severity: 'amber', key: `scraped_risk_${idx}_${rawTxt.slice(0, 20)}`, list: 'risks' });
                     }
                 });
                 if (window.renderScrapedIssuesList) window.renderScrapedIssuesList();

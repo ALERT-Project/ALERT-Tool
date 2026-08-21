@@ -884,7 +884,7 @@ const QUICK_GRID_LAYOUT = {
     // buttons no longer appear here - they moved inside #section-category, which is the whole
     // bottom band, so the call is made next to the flags that produced it.
     qgLeft: ['adds_wrapper', 'section-bloods', 'section-devices'],
-    qgRight: ['carried_forward_card', 'scraped_risks_wrapper', 'quick_notes_wrapper'],
+    qgRight: ['carried_forward_card', 'patient_factors_wrapper', 'scraped_risks_wrapper', 'quick_notes_wrapper'],
     qgBottom: ['section-category']
 };
 

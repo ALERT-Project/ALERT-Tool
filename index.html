@@ -1034,13 +1034,34 @@
             </div>
         </div>
 
+        <!-- Two lists, not one. The old single Review List mixed "assist x1 with frame" with
+             "high K+ 6.4" and asked the reader to sort them out; and it sat under a second
+             card that showed the same carried gates over again. These are the seam the Excel
+             handover line has always used - context excluded, risks included - made visible.
+             Each takes its own typed entries, so what the clinician writes lands where they
+             wrote it rather than being guessed at from the wording. -->
+        <div id="patient_factors_wrapper" class="card" style="margin-top:20px;">
+            <h2 class="card-title">Patient Factors <span id="factors_count" class="issues-count"></span></h2>
+            <div id="patient_factors_list"></div>
+            <div class="issue-add-row">
+                <input id="manualFactorInput" type="text" placeholder="Add a patient factor and press Enter…"
+                    autocomplete="off" aria-label="Add a patient factor" />
+                <button type="button" id="btnAddFactor" class="btn small" title="Add to patient factors">+</button>
+            </div>
+        </div>
+
         <div id="scraped_risks_wrapper" class="card" style="margin-top:20px;">
-            <h2 class="card-title">Review List <span id="issues_count" class="issues-count"></span></h2>
+            <h2 class="card-title">Readmission Risks <span id="issues_count" class="issues-count"></span></h2>
+            <!-- The tool's own reading of today's numbers - a clotting result against its
+                 documented target, a MODS parameter to confirm, an electrolyte low enough to
+                 replace. Not a curated list, so no controls: they apply or they don't, and
+                 they change the moment the value does. -->
+            <div id="bloods_checks_strip" class="checks-strip" hidden></div>
             <div id="scraped_issues_list"></div>
             <div class="issue-add-row">
-                <input id="manualIssueInput" type="text" placeholder="Add an issue or note and press Enter…"
-                    autocomplete="off" aria-label="Add an issue or note" />
-                <button type="button" id="btnAddIssue" class="btn small" title="Add to list">+</button>
+                <input id="manualIssueInput" type="text" placeholder="Add a readmission risk and press Enter…"
+                    autocomplete="off" aria-label="Add a readmission risk" />
+                <button type="button" id="btnAddIssue" class="btn small" title="Add to readmission risks">+</button>
             </div>
         </div>
 

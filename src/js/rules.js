@@ -116,7 +116,7 @@ export function evaluateRisks(s, ctx = {}) {
     const checkKeys = [];
     const addCheck = (txt, key) => {
         checkKeys.push(key);
-        issues.push({ text: txt, source: 'bloods', severity: 'info', key });
+        issues.push({ text: txt, source: 'bloods', severity: 'info', key, list: 'checks' });
     };
 
     // A sanctioned score modification means the treating team has accepted a parameter that
@@ -148,7 +148,12 @@ export function evaluateRisks(s, ctx = {}) {
             if (val < range.low || val > range.high) {
                 const label = BLOOD_LABELS[key] || key.replace(/_review$/, '').toUpperCase();
                 bloodIssueKeys.push(bid);
-                issues.push({ text: `Abnormal ${label} ${val}`, source: 'bloods', severity: 'info', key: bid });
+                // list 'bloods' renders nowhere. These exist for the Excel handover line, which
+                // builds its "Bloods: K 6.4, Mg 0.68" summary from them. As list rows they were
+                // noise: the value is already in the grid, highlighted, and on the note's bloods
+                // line, and out-of-range is not the same as worth flagging - only the severe
+                // ones become readmission risks, and they do that through the rules below.
+                issues.push({ text: `Abnormal ${label} ${val}`, source: 'bloods', severity: 'info', key: bid, list: 'bloods' });
             }
         });
     }
@@ -335,6 +340,11 @@ export function evaluateRisks(s, ctx = {}) {
     const naAbnormal = na !== null && (na < 125 || na > 155);
 
     if (bloodsReviewed) {
+        // The gentle end of each: low enough to act on, not low enough to be a readmission
+        // risk. Potassium joins magnesium and phosphate here - between the risk threshold of
+        // 3.0 and the bottom of the reference range there was previously nothing at all, so a
+        // K of 3.2 produced no prompt of any kind.
+        if (k !== null && k >= 3.0 && k < normalRanges.k.low) addCheck(`K+ ${k} - consider replacement`, 'chk_k');
         if (mg !== null && mg >= normalRanges.mg.low && mg < 1.0) addCheck(`Mg ${mg} - consider replacement`, 'chk_mg');
         if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - replacement indicated`, 'chk_phos');
     }
