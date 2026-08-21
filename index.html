@@ -1729,12 +1729,16 @@
                     <div class="input-box blood-item"><label for="bl_inr">INR <span id="prev_bl_inr"
                                 class="prev-datum"></span></label><input id="bl_inr" type="number" step="0.1" />
                         <div class="trend-buttons" id="bl_inr_trend"></div><span class="range-subtext">(0.9-1.2)</span>
-                        <input id="inr_target" type="text" class="target-input" placeholder="target 2-3" />
+                        <!-- No sample value in the placeholder. "target 2-3" was being read as the target this
+                             patient is on, rather than as an example of what to type. -->
+                        <input id="inr_target" type="text" class="target-input" placeholder="target"
+                            aria-label="INR target" />
                     </div>
                     <div class="input-box blood-item"><label for="bl_aptt">APTT <span id="prev_bl_aptt"
                                 class="prev-datum"></span></label><input id="bl_aptt" type="number" />
                         <div class="trend-buttons" id="bl_aptt_trend"></div><span class="range-subtext">(25-38)</span>
-                        <input id="aptt_target" type="text" class="target-input" placeholder="target 60-90" />
+                        <input id="aptt_target" type="text" class="target-input" placeholder="target"
+                            aria-label="APTT target" />
                     </div>
                 </div>
 
@@ -1784,6 +1788,11 @@
                     </div>
                 </div>
             </div>
+            <!-- The same way out, repeated at the end of the panel. The bloods grid is longer
+                 than the overlay on a laptop, so once you have scrolled to the bottom of it the
+                 corner ✕ is the only exit and it is a scroll back up away. The ADDS calculator
+                 has offered close top and bottom since May; this is that, for bloods. -->
+            <button type="button" class="qr-overlay-close-bottom" data-qr-close>&times; Close bloods</button>
         </div>
 
         <div class="accordion-wrapper" id="section-devices" data-accordion-id="devices" style="margin-top:20px;">

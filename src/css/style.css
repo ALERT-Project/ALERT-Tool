@@ -528,6 +528,26 @@ body.quick-review-active #section-bloods.qr-expanded #btnBloodsDetailsToggle::af
 }
 .qr-expanded > .qr-overlay-close:hover,
 .qr-expanded > .qr-overlay-close:focus-visible { color: var(--ink); border-color: var(--accent); }
+/* Second way out, at the end of the panel. The corner ✕ is sticky and so never scrolls off,
+   but it is still at the top of a card the length of the bloods grid - having reached the
+   bottom of the grid, the exit should be right there. Full width and labelled rather than a
+   bare glyph: at the end of a long panel it reads as the end of the card, not as decoration. */
+.qr-overlay-close-bottom { display: none; }
+.qr-expanded > .qr-overlay-close-bottom {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.qr-expanded > .qr-overlay-close-bottom:hover,
+.qr-expanded > .qr-overlay-close-bottom:focus-visible { color: var(--ink); border-color: var(--accent); }
 /* Keep the card's own heading clear of it. */
 .qr-expanded > .accordion, .qr-expanded .gate-trigger-area > .question-label { padding-right: 44px; }
 /* Same treatment for the ADDS calculator, which is also too wide for the rail. */

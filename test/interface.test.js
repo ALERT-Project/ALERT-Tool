@@ -506,6 +506,42 @@ test('a floating Quick Review card can be closed from its own corner', async () 
     close();
 });
 
+test('the floating bloods card can also be closed from the bottom', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window);
+
+    click(window, '#btnBloodsDetailsToggle');
+    await tick(window);
+    const bloods = document.getElementById('section-bloods');
+    assert.ok(bloods.classList.contains('qr-expanded'), 'the card floats over the page');
+
+    // The corner ✕ is sticky, so it never scrolls off - but it is still at the top of a card
+    // longer than the overlay. Having scrolled to the end of the bloods grid, the way out
+    // should be right there, the way the ADDS calculator has offered it since May.
+    const bottom = document.querySelector('#section-bloods .qr-overlay-close-bottom');
+    assert.ok(bottom, 'there is a close at the bottom too');
+    assert.equal(bloods.lastElementChild, bottom, 'and it is the last thing in the card');
+
+    click(window, bottom);
+    await tick(window);
+    assert.ok(!bloods.classList.contains('qr-expanded'), 'it closes the card');
+    assert.ok(document.getElementById('qrBackdrop').hidden, 'and takes the backdrop with it');
+    close();
+});
+
+test('a clotting target box suggests no target of its own', async () => {
+    const { window, document, close } = await loadTool();
+    // "target 2-3" and "target 60-90" read as this patient's target rather than as an example
+    // of what to type, which is a clinical claim the tool has no basis for making.
+    for (const id of ['inr_target', 'aptt_target']) {
+        const el = document.getElementById(id);
+        assert.equal(el.placeholder, 'target', `${id} names the field without naming a range`);
+        assert.ok(/target/i.test(el.getAttribute('aria-label') || ''), `${id} still says what it is`);
+    }
+    close();
+});
+
 test('what the clinician writes down reaches the DMR note as plain bullets', async () => {
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
