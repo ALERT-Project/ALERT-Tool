@@ -83,12 +83,35 @@ export function editActiveIssueText(id, newText) {
 
 export function getUnresolvedActiveIssues() { return activeIssues.filter(i => !i.resolved); }
 
-// What the clinician typed into the Review List themselves. Until now this reached the Excel
-// handover line and nothing else, so an observation made during a Quick Review never got into
-// the record. The auto and bloods entries are excluded: those are the tool's own findings and
-// the note already states them from the rules, in the rules' own wording.
-export function getManualIssuesForNote() {
-    return activeIssues.filter(i => i.source === 'manual' && !i.resolved).map(i => i.text);
+// What the Review List is still holding when the note is generated. Everything on that list
+// that the note doesn't already state, in the wording the list shows it in - if a clinician
+// left an entry standing rather than resolving it, they meant it to be recorded.
+//
+// This used to be manual entries only. Everything the importer carried over from the previous
+// note - source 'scraped': the previous risks that didn't land on a gate, plus the mobility
+// and diet lines - sat on the list looking exactly like a manual entry, resolved or not, and
+// went nowhere. In Quick Review that list is most of the review, so most of the review was
+// being dropped between the screen and the note.
+//
+// Two things stay out, because the note already says them somewhere better:
+//  - 'auto' entries are the computed risks. IDENTIFIED ICU READMISSION RISK FACTORS prints
+//    them verbatim, and that section is where a readmission risk belongs.
+//  - out-of-range blood results (source 'bloods', keyed bl_*). The Bloods line already prints
+//    the value; "Abnormal K 6.1" underneath it adds nothing. The target and MODS checks
+//    (chk_*, mod_*) are not stated anywhere else, so those do come through.
+//  - list entries that mirror an assessment field the note prints in its own section. The
+//    importer fills ae_mobility/ae_diet *and* stages a list row for the same text, so once
+//    the list reached the note these arrived twice - "Mobility: assist x1" under the
+//    assessment and again as a bullet below it.
+const MIRRORS_AN_ASSESSMENT_FIELD = new Set(['ae_mobility', 'ae_diet']);
+
+export function getIssuesForNote() {
+    return activeIssues
+        .filter(i => !i.resolved)
+        .filter(i => i.source !== 'auto')
+        .filter(i => !(i.source === 'bloods' && String(i.key || '').startsWith('bl_')))
+        .filter(i => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key))
+        .map(i => i.text);
 }
 
 // What the list shows: everything live, plus anything the clinician ticked off themselves.

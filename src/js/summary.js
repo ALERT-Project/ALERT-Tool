@@ -8,7 +8,7 @@
 import { $, nowTimeStr, todayDateStr, formatDateDDMMYYYY, num, toDmrSafeText, wardLabel } from './utils.js';
 import { comorbMap } from './config.js';
 
-export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, manualIssues = []) {
+export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, listIssues = []) {
 
     const sum = $('summary');
 
@@ -303,17 +303,19 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     if (s.elec_replace_note) addLine(`Electrolyte Plan: ${s.elec_replace_note}`);
     pushBlank();
 
-    // What the clinician wrote down themselves - the Review List entries they typed, and the
-    // Quick Notes box - as plain bullets under the score and the bloods. No heading: these
-    // aren't a category of finding, they're the things worth listing. Deliberately not in the
-    // risk factors section, which states what drove the category and nothing else.
+    // What the Review List is still holding, and the Quick Notes box, as plain bullets under
+    // the score and the bloods. No heading: these aren't a category of finding, they're the
+    // things worth listing. Deliberately not in the risk factors section, which states what
+    // drove the category and nothing else - a carried-over item or a typed observation didn't.
+    // See getIssuesForNote() for which list entries arrive here and which the note says
+    // elsewhere.
     const ownWords = [];
     const seenOwn = new Set();
     const pushOwn = (t) => {
         const txt = (t || '').trim().replace(/^[-•]\s*/, '');
         if (txt && !seenOwn.has(txt.toLowerCase())) { seenOwn.add(txt.toLowerCase()); ownWords.push(txt); }
     };
-    manualIssues.forEach(pushOwn);
+    listIssues.forEach(pushOwn);
     (s.quickNotes || '').split('\n').forEach(pushOwn);
     if (ownWords.length) {
         ownWords.forEach(t => lines.push(`- ${t}`));

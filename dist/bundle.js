@@ -2325,8 +2325,9 @@
   function getUnresolvedActiveIssues() {
     return activeIssues.filter((i) => !i.resolved);
   }
-  function getManualIssuesForNote() {
-    return activeIssues.filter((i) => i.source === "manual" && !i.resolved).map((i) => i.text);
+  var MIRRORS_AN_ASSESSMENT_FIELD = /* @__PURE__ */ new Set(["ae_mobility", "ae_diet"]);
+  function getIssuesForNote() {
+    return activeIssues.filter((i) => !i.resolved).filter((i) => i.source !== "auto").filter((i) => !(i.source === "bloods" && String(i.key || "").startsWith("bl_"))).filter((i) => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key)).map((i) => i.text);
   }
   function getVisibleActiveIssues() {
     return activeIssues.filter((i) => !i.resolved || i.resolvedByUser);
@@ -2631,7 +2632,7 @@
   }
 
   // src/js/summary.js
-  function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, manualIssues = []) {
+  function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, listIssues = []) {
     const sum = $("summary");
     window.devicesModifiedSinceLastSummary = false;
     const lines = [];
@@ -2878,7 +2879,7 @@
         ownWords.push(txt);
       }
     };
-    manualIssues.forEach(pushOwn);
+    listIssues.forEach(pushOwn);
     (s.quickNotes || "").split("\n").forEach(pushOwn);
     if (ownWords.length) {
       ownWords.forEach((t) => lines.push(`- ${t}`));
@@ -3083,7 +3084,7 @@
         window._lastAmber || [],
         window._lastSuppressed || [],
         window._lastActiveComorbsKeys || [],
-        getManualIssuesForNote()
+        getIssuesForNote()
       );
       summaryEl.style.height = "auto";
       summaryEl.style.height = summaryEl.scrollHeight + "px";

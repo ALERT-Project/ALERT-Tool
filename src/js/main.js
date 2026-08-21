@@ -11,7 +11,7 @@ import { ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs } from './co
 import {
     getState, saveState, loadState, restoreState, previousCategoryData, updateLastSaved,
     isQuickReviewMode, setQuickReviewDismissed, addActiveIssue, addManualIssue,
-    getUnresolvedActiveIssues, getManualIssuesForNote, renderScrapedIssuesList
+    getUnresolvedActiveIssues, getIssuesForNote, renderScrapedIssuesList
 } from './state.js';
 import { computeAll } from './logic.js';
 import { generateSummary, generateHandoverLine } from './summary.js';
@@ -133,7 +133,7 @@ function initialize() {
             window._lastAmber || [],
             window._lastSuppressed || [],
             window._lastActiveComorbsKeys || [],
-            getManualIssuesForNote()
+            getIssuesForNote()
         );
 
         summaryEl.style.height = 'auto';

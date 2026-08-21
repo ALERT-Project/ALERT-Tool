@@ -584,6 +584,99 @@ test('what the clinician writes down reaches the DMR note as plain bullets', asy
     close();
 });
 
+test('everything left standing on the Review List reaches the note, not just typed entries', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'adds', '2');
+    await tick(window);
+
+    // Exactly what the importer stages from a previous note: a risk that didn't land on a
+    // gate, and the mobility line. Both sat on the list looking like a manual entry and went
+    // nowhere - in Quick Review that list is most of the review.
+    window.addActiveIssue({ text: 'Awaiting dietitian review', source: 'scraped', severity: 'amber', key: 'scraped_risk_0' });
+    window.addActiveIssue({ text: 'Family requesting GOC discussion', source: 'scraped', severity: 'amber', key: 'scraped_risk_1' });
+    window.renderScrapedIssuesList();
+    await tick(window);
+
+    generateNote(window);
+    await tick(window);
+    let note = document.getElementById('summary').value;
+    assert.match(note, /- Awaiting dietitian review/, 'a carried-over risk reaches the note');
+    assert.match(note, /- Family requesting GOC discussion/, 'so does a carried-over observation');
+
+    // Resolve means the same thing for a carried-over entry as for a typed one.
+    click(window, '#scraped_issues_list .scraped-issue-row .scraped-issue-resolve');
+    await tick(window);
+    generateNote(window);
+    await tick(window);
+    note = document.getElementById('summary').value;
+    assert.ok(!/dietitian/.test(note), 'resolving takes it back out');
+    assert.match(note, /Family requesting GOC discussion/, 'the rest stay');
+    close();
+});
+
+test('a list entry mirroring an assessment field is stated once, not twice', async () => {
+    const { window, document, close } = await loadTool();
+    // The importer fills ae_mobility/ae_diet *and* stages a list row carrying the same text.
+    // Once the list started reaching the note, both arrived - the assessment line and a
+    // bullet repeating it a few lines below.
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: ABC | URN: ...123',
+        'ICU Discharge Date: 18/08/2026',
+        'Mobility: assist x1 with frame',
+        'Diet: full ward diet',
+        '',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        '- Awaiting dietitian review',
+        '',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n');
+    click(window, '#runImport');
+    await tick(window, 900);
+
+    generateNote(window);
+    await tick(window);
+    const note = document.getElementById('summary').value;
+
+    assert.equal((note.match(/assist x1 with frame/g) || []).length, 1, 'mobility stated once');
+    assert.equal((note.match(/full ward diet/g) || []).length, 1, 'diet stated once');
+    assert.match(note, /^Mobility: assist x1 with frame$/m, 'and it is the assessment line that says it');
+    assert.match(note, /- Awaiting dietitian review/, 'a genuine carried risk still comes through');
+    close();
+});
+
+test('the note states each finding once, in the place that belongs to it', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'adds', '2');
+    type(window, 'bl_k', '6.4');    // out of range: a check, and it drives a computed risk
+    type(window, 'bl_plts', '12');  // a computed amber risk
+    type(window, 'bl_inr', '3.2');  // a check with no target documented
+    await tick(window);
+
+    generateNote(window);
+    await tick(window);
+    const note = document.getElementById('summary').value;
+
+    // The value is already on the Bloods line; "Abnormal K+ 6.4" bulleted under it says
+    // nothing the reader doesn't have.
+    assert.match(note, /Bloods.*K 6\.4/, 'the value is on the bloods line');
+    assert.ok(!/Abnormal K/.test(note), 'and not repeated as a bullet');
+
+    // A computed risk belongs in the risk section, stated once.
+    assert.equal((note.match(/Low platelets Plts 12/g) || []).length, 1, 'stated once');
+    const risksAt = note.indexOf('IDENTIFIED ICU READMISSION RISK FACTORS');
+    assert.ok(note.indexOf('Low platelets Plts 12') > risksAt, 'in the risk section');
+
+    // A clotting check is stated nowhere else, so it comes through as a bullet.
+    assert.match(note, /- INR 3\.2 - target not documented/, 'a check the note has no other home for');
+    assert.ok(note.indexOf('- INR 3.2 - target not documented') < risksAt, 'above the risk section');
+    close();
+});
+
 test('an issue row explains its own controls', async () => {
     const { window, document, close } = await loadTool();
     type(window, 'manualIssueInput', 'Awaiting speech path review');
