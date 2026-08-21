@@ -151,6 +151,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (wrapper) {
                 wrapper.classList.add('carried-forward');
                 wrapper.dataset.carriedFrom = rawTxt.replace(/^[^-]*-\s*/, '').trim() || rawTxt;
+                // The previous note's whole line, kept intact. Quick Review hands the gates
+                // back and puts their risks on the list instead, and it has to do that in the
+                // wording the last reviewer used - carriedFrom is only the detail after the
+                // dash, which reads as a fragment on its own.
+                wrapper.dataset.carriedRaw = rawTxt;
                 if (note) wrapper.dataset.carriedNote = note;
             }
         });

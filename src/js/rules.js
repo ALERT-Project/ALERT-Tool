@@ -6,7 +6,7 @@
    ========================================= */
 
 import { num, sentenceCase, joinGrammatically } from './utils.js';
-import { comorbMap, toggleInputs, normalRanges, GATE_LINKED_BLOODS, BLOOD_LABELS } from './config.js';
+import { comorbMap, toggleInputs, normalRanges, GATE_LINKED_BLOODS, BLOOD_LABELS, QUICK_REVIEW_SCORING_IDS} from './config.js';
 import { computeTrend } from './trends.js';
 
 // The clinical rules, with no interface attached.
@@ -101,12 +101,19 @@ export function evaluateRisks(s, ctx = {}) {
     // the same sequence the old interleaved code produced.
     const issues = [];
 
+    // In Quick Review only what the tool read off a measured number counts toward the category.
+    // A rule outside the allowlist still stages its issue - the clinician should see it on the
+    // list - but it does not push the patient up a category on its own, because in Quick Review
+    // choosing the category is the clinician's job rather than a correction of the tool's.
+    const countsTowardCategory = (id) =>
+        !ctx.quickReview || !id || QUICK_REVIEW_SCORING_IDS.includes(id);
+
     const add = (list, txt, id, type, noteValue = null) => {
         let finalTxt = txt;
         if (noteValue && noteValue.trim()) finalTxt = `${txt} (${noteValue.trim()})`;
-        list.push(finalTxt);
+        if (countsTowardCategory(id)) list.push(finalTxt);
         if (id) {
-            flagged[type].push(id);
+            if (countsTowardCategory(id)) flagged[type].push(id);
             riskEntries.push({ text: finalTxt, id, type });
             issues.push({ text: finalTxt, source: 'auto', severity: type, key: id });
         }

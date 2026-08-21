@@ -494,12 +494,13 @@ export function clearData() {
     // the importer leaves on a gate: it also flags the wrapper carried-forward, which paints
     // the "↻ Carried forward - confirm or clear" badge and the outline, and stashes the
     // previous note's own wording in dataset.carriedFrom. None of it was cleared, so a new
-    // patient's form opened still wearing the last patient's badges - and renderCarriedForward()
-    // replayed that patient's concerns, verbatim, into "From the last review". The gate answers
-    // and the names went; the clinical detail behind them stayed on screen.
+    // patient's form opened still wearing the last patient's badges, with the previous
+    // patient's concerns replayed verbatim beside them. The gate answers and the names went;
+    // the clinical detail behind them stayed on screen.
     document.querySelectorAll('.input-box.carried-forward').forEach(w => {
         w.classList.remove('carried-forward');
         delete w.dataset.carriedFrom;
+        delete w.dataset.carriedRaw;
         delete w.dataset.carriedNote;
     });
     // New patient, so any arrow the last clinician set by hand is no longer theirs to keep.
@@ -583,15 +584,32 @@ export function clearData() {
 
 // Keeps the Select Category card honest about what the tool calculated versus what the
 // clinician chose, and shows the CAT 3 downgrade as pending until a reason is typed.
+//
+// In Quick Review none of that applies. The tool has only read the score, the bloods and the
+// two demographic facts; it has not been told whether there is a respiratory concern or how
+// the patient is mobilising, so it is in no position to treat the clinician's decision as a
+// correction of its own. There is nothing being overridden, so there is no downgrade, no
+// warning and no reason to demand - the buttons simply record the call.
 export function refreshCategorySelect(autoCat, override, reason, redCount, amberCount) {
     const hint = $('override_auto_hint');
-    if (hint) hint.textContent = `Auto-calculated: ${autoCat.text}`;
-
     const chosen = (override && override !== 'none') ? override : null;
     ['red', 'amber', 'green'].forEach(c => $(`override_${c}`)?.classList.toggle('active', c === chosen));
 
     const clearBtn = $('override_clear');
     if (clearBtn) clearBtn.style.display = chosen ? '' : 'none';
+
+    if (isQuickReviewMode) {
+        if (hint) hint.textContent = `Tool has: ${autoCat.text} from the score and bloods`;
+        const box = $('override_reason_box');
+        if (box) { box.style.display = 'none'; box.classList.remove('reason-missing'); }
+        const warn = $('override_downgrade_warn');
+        if (warn) warn.style.display = 'none';
+        const required = $('override_reason_required');
+        if (required) required.style.display = 'none';
+        return;
+    }
+
+    if (hint) hint.textContent = `Auto-calculated: ${autoCat.text}`;
 
     const box = $('override_reason_box');
     if (box) box.style.display = chosen ? 'block' : 'none';
@@ -691,70 +709,17 @@ export function toggleAddsOverride() {
     refreshAddsOverrideUI();
 }
 
-// Gates the importer answered from the previous note. The concern carried over; the values
-// behind it did not, so this asks the one question that makes them today's data. Deliberately
-// unobtrusive: no modal, no repeat prompting, and ignoring it leaves the risk flagged as it is.
-export function renderCarriedForward() {
-    const card = $('carried_forward_card');
-    const list = $('carried_forward_list');
-    if (!card || !list) return;
-
-    const wrappers = [...document.querySelectorAll('.input-box.carried-forward')];
-    if (!wrappers.length) {
-        card.style.display = 'none';
-        list.innerHTML = '';
-        return;
-    }
-
-    list.innerHTML = wrappers.map(w => {
-        // The question label carries a "(Prev: ...)" span; the row states that separately.
-        const labelEl = w.querySelector('.question-label')?.cloneNode(true);
-        labelEl?.querySelector('.prev-datum')?.remove();
-        const label = (labelEl?.textContent || 'Concern').replace(/\?$/, '').trim();
-        const was = w.dataset.carriedFrom || '';
-        return `
-            <div class="cf-row" data-wrapper="${w.id}">
-                <div class="cf-row-text">
-                    <div class="cf-row-title">${label}</div>
-                    ${was ? `<div class="cf-row-was">was: ${was}</div>` : ''}
-                </div>
-                <div class="cf-row-actions">
-                    <button type="button" class="btn small cf-chip" data-action="resolved" data-wrapper="${w.id}">Resolved</button>
-                    <button type="button" class="btn small cf-chip" data-action="present" data-wrapper="${w.id}">Still present</button>
-                    <button type="button" class="btn small cf-chip" data-action="improving" data-wrapper="${w.id}">Improving</button>
-                </div>
-            </div>`;
-    }).join('');
-
-    list.querySelectorAll('.cf-chip').forEach(btn => {
-        btn.addEventListener('click', () => answerCarriedForward(btn.dataset.wrapper, btn.dataset.action));
-    });
-    card.style.display = 'block';
-}
-
-function answerCarriedForward(wrapperId, action) {
-    const wrapper = $(wrapperId);
-    if (!wrapper) return;
-    const group = wrapper.querySelector('.segmented-group');
-
-    if (action === 'resolved') {
-        // Answering No runs the app's own handler, which closes the drawer and recomputes.
-        group?.querySelector('.seg-btn[data-value="false"]')?.click();
-    } else if (action === 'improving') {
-        const noteEl = wrapper.dataset.carriedNote ? $(wrapper.dataset.carriedNote) : null;
-        // "Improving" is the clinician's assessment today, so it belongs in today's note.
-        if (noteEl && !/improving/i.test(noteEl.value)) {
-            noteEl.value = noteEl.value.trim() ? `${noteEl.value.trim()}, improving` : 'improving';
-            noteEl.dispatchEvent(new Event('input'));
-        }
-    }
-
-    wrapper.classList.remove('carried-forward');
-    delete wrapper.dataset.carriedFrom;
-    delete wrapper.dataset.carriedNote;
-    renderCarriedForward();
-    computeAll();
-}
+// "From the last review" used to be rendered here: a card that listed the same carried gates
+// already outlined and badged in place further down the page. Every carried concern therefore
+// appeared twice, in two different shapes, and nothing on either copy said which was which.
+//
+// The badge on the gate is the prompt now, and it sits where the question actually gets
+// answered. Quick Review doesn't use gates at all - it releases them onto the risks list on
+// the way in - so there is nothing left for a summary card to summarise.
+//
+// answerCarriedForward() went with it. Its "Improving" chip appended ", improving" to the
+// gate's note field, which is the one thing here worth not losing: it is still what a
+// clinician types, just typed rather than chipped.
 
 // Risks flagged since Quick Review started. Shown in place, not as a mode switch: the
 // clinician stays in Quick Review and decides whether the full assessment is warranted.
@@ -884,7 +849,7 @@ const QUICK_GRID_LAYOUT = {
     // buttons no longer appear here - they moved inside #section-category, which is the whole
     // bottom band, so the call is made next to the flags that produced it.
     qgLeft: ['adds_wrapper', 'section-bloods', 'section-devices'],
-    qgRight: ['carried_forward_card', 'patient_factors_wrapper', 'scraped_risks_wrapper', 'quick_notes_wrapper'],
+    qgRight: ['patient_factors_wrapper', 'scraped_risks_wrapper', 'quick_notes_wrapper'],
     qgBottom: ['section-category']
 };
 
@@ -918,12 +883,45 @@ function restoreFromQuickGrid() {
     });
 }
 
+// Quick Review does not use the gates. The importer answers them on the way in, because a Full
+// Review is completed by considering each one - but a Quick Review is a list, not a
+// questionnaire, and a gate silently set to Yes on the strength of yesterday's note is a
+// finding nobody made today. So on the way in, every gate the import answered is handed back:
+// the answer is cleared, the carried marks come off, and the risk it was carrying goes onto
+// the readmission risks list in the previous reviewer's own wording, where it can be edited or
+// deleted like anything else on that list.
+//
+// Nothing is lost by this. The line is on the list, the list is in the note, and the note is
+// what the next review reads.
+function releaseCarriedGatesToList() {
+    document.querySelectorAll('.input-box.carried-forward').forEach((wrapper, idx) => {
+        const raw = wrapper.dataset.carriedRaw || wrapper.dataset.carriedFrom;
+        const group = wrapper.querySelector('.segmented-group');
+
+        group?.querySelectorAll('.seg-btn.active').forEach(btn => btn.classList.remove('active'));
+        if (group) delete group.dataset.value;
+
+        wrapper.classList.remove('carried-forward');
+        delete wrapper.dataset.carriedFrom;
+        delete wrapper.dataset.carriedRaw;
+        delete wrapper.dataset.carriedNote;
+
+        if (raw && window.addActiveIssue) {
+            window.addActiveIssue({
+                text: raw, source: 'scraped', severity: 'amber', list: 'risks',
+                key: `released_gate_${idx}_${raw.slice(0, 20)}`
+            });
+        }
+    });
+}
+
 export function enableQuickReviewMode() {
     setQuickReviewMode(true);
     setInitialQuickReviewRisks({ red: [], amber: [] });
     setQuickReviewBaselineCaptured(false);
     clearNewRiskAlert();
 
+    releaseCarriedGatesToList();
     computeAll();
 
     document.body.classList.add('quick-review-active');

@@ -304,6 +304,7 @@ function initialize() {
         if (!box) return;
         box.classList.remove('carried-forward');
         delete box.dataset.carriedFrom;
+        delete box.dataset.carriedRaw;
     });
 
     syncSegments('seg_renal_chronic', 'seg_renal_chronic_bloods', 'renal');

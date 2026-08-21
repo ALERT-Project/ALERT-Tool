@@ -111,3 +111,26 @@ export const selectInputs = [
 ];
 
 export const deviceTypes = ['CVC', 'PICC', 'Other CVAD', 'PIVC', 'Arterial Line', 'Enteral Tube', 'IDC', 'Pacing Wire', 'Drain', 'Wound', 'Vascath', 'Tracheostomy', 'Other Device'];
+
+// What still counts toward the category in Quick Review.
+//
+// Quick Review has no gates, so most rules have nothing to fire on: the clinician has not been
+// asked whether there is a respiratory concern, and yesterday's answer is not today's finding.
+// What remains is what the tool can read for itself off numbers that were measured - the
+// score, the bloods, and the two demographic facts.
+//
+// Age and ICU length of stay are in here deliberately. They are as concrete as any blood
+// result, they are already on the form, and they carry the same weight in a Quick Review as
+// they do in a Full one - an 82-year-old with a twelve-day stay must not compute CAT 3 in one
+// mode and CAT 2 in the other.
+//
+// Everything else waits for a Full Review, or for the clinician to select the category
+// themselves, which in Quick Review is the point rather than an override.
+export const QUICK_REVIEW_SCORING_IDS = [
+    'adds',                 // ADDS / MODS
+    'ptAge', 'icuLos',      // demographics
+    'bl_plts', 'bl_lac_review', 'bl_cr_review', 'bl_crp', 'e_bsl',
+    'electrolyteConcern',   // fires from K/Na/Mg/PO4 numbers when no gate is set
+    'seg_infection',        // fires from WCC/CRP/NLR/temperature when no gate is set
+    'override_red', 'override_amber'
+];

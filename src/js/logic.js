@@ -14,7 +14,7 @@ import {
 } from './state.js';
 import {
     updateSidebarRiskBadges, maybeOfferQuickReview, refreshCategorySelect, showNewRiskAlert,
-    renderCarriedForward, updateAgeMitigationUI, updateLosMitigationUI
+    updateAgeMitigationUI, updateLosMitigationUI
 } from './ui.js';
 import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
 import { applyTrendArrows } from './trends.js';
@@ -39,7 +39,8 @@ export function computeAll() {
         const ahGroup = document.querySelector('#seg_after_hours');
         const result = evaluateRisks(s, {
             prevBloods: window.prevBloods || {},
-            afterHoursManual: ahGroup ? ahGroup.dataset.manual === 'true' : false
+            afterHoursManual: ahGroup ? ahGroup.dataset.manual === 'true' : false,
+            quickReview: isQuickReviewMode
         });
 
         // The rules report what after-hours should be; applying it to the control and to the
@@ -83,7 +84,6 @@ export function computeAll() {
 
         reconcileAutoIssues(new Set(result.issueKeys));
         renderScrapedIssuesList();
-        renderCarriedForward();
         maybeOfferQuickReview(timeData, s);
 
         if (isQuickReviewMode) {
@@ -261,7 +261,46 @@ function autofillDerivedFields(s) {
 }
 
 // Read-outs that describe the assessment without being part of it.
+// The Quick Review decision strip and the discharge question under it. Both are prompts and
+// neither ticks anything: the discharge checkboxes stay where they are, in the plan, and the
+// clinician is the one who reaches for them.
+function renderQuickReviewDecision(s, result) {
+    const prompt = $('qr_category_prompt');
+    if (prompt) prompt.hidden = !isQuickReviewMode;
+
+    const discharge = $('qr_discharge_prompt');
+    if (!discharge) return;
+
+    const chosen = (s.override && s.override !== 'none') ? s.override : null;
+    // Nothing to ask until the category has been chosen - the question's answer depends on it,
+    // and asking early invites the reflex "yes" this tool exists to slow down.
+    if (!isQuickReviewMode || !chosen) { discharge.hidden = true; discharge.innerHTML = ''; return; }
+
+    // Time on the list is time since stepdown: patients join at stepdown, so the tool already
+    // knows it and can put the number in the question.
+    const onList = result.timeData?.text || '';
+    const already = s.chk_discharge_alert || s.chk_discharge_pending_bloods;
+
+    let question;
+    if (already) {
+        question = 'Discharge from the ALERT list is recorded in the plan below.';
+    } else if (chosen === 'green') {
+        question = `${onList} on the list at CAT 3 - can this patient be discharged from ALERT?`;
+    } else if (chosen === 'amber') {
+        question = `${onList} on the list at CAT 2 - continue reviews, or discharge pending bloods?`;
+    } else {
+        question = `${onList} on the list at CAT 1 - continuing review. Discharge is not in question today.`;
+    }
+
+    discharge.hidden = false;
+    discharge.className = `qr-discharge-prompt${already ? ' answered' : ''}`;
+    discharge.innerHTML = `<span class="qr-discharge-text">${question}</span>` +
+        (already || chosen === 'red' ? '' : '<span class="qr-discharge-hint">Set it in the plan below</span>');
+}
+
 function renderDerivedDisplays(s, result) {
+    renderQuickReviewDecision(s, result);
+
     // Driven from here rather than only from the debounced compute() in main.js: the segmented
     // buttons call computeAll() directly, so a mitigator whose visibility depends on a gate -
     // the LOS one hides once immobility is recorded - was never refreshed when that gate was

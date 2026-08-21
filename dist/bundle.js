@@ -416,6 +416,24 @@
     "dialysis_type"
   ];
   var deviceTypes = ["CVC", "PICC", "Other CVAD", "PIVC", "Arterial Line", "Enteral Tube", "IDC", "Pacing Wire", "Drain", "Wound", "Vascath", "Tracheostomy", "Other Device"];
+  var QUICK_REVIEW_SCORING_IDS = [
+    "adds",
+    // ADDS / MODS
+    "ptAge",
+    "icuLos",
+    // demographics
+    "bl_plts",
+    "bl_lac_review",
+    "bl_cr_review",
+    "bl_crp",
+    "e_bsl",
+    "electrolyteConcern",
+    // fires from K/Na/Mg/PO4 numbers when no gate is set
+    "seg_infection",
+    // fires from WCC/CRP/NLR/temperature when no gate is set
+    "override_red",
+    "override_amber"
+  ];
 
   // src/js/trends.js
   var TREND_RULES = {
@@ -529,12 +547,13 @@
     const flagged = { red: [], amber: [] };
     const riskEntries = [];
     const issues = [];
+    const countsTowardCategory = (id) => !ctx.quickReview || !id || QUICK_REVIEW_SCORING_IDS.includes(id);
     const add = (list, txt, id, type, noteValue = null) => {
       let finalTxt = txt;
       if (noteValue && noteValue.trim()) finalTxt = `${txt} (${noteValue.trim()})`;
-      list.push(finalTxt);
+      if (countsTowardCategory(id)) list.push(finalTxt);
       if (id) {
-        flagged[type].push(id);
+        if (countsTowardCategory(id)) flagged[type].push(id);
         riskEntries.push({ text: finalTxt, id, type });
         issues.push({ text: finalTxt, source: "auto", severity: type, key: id });
       }
@@ -988,7 +1007,8 @@
       const ahGroup = document.querySelector("#seg_after_hours");
       const result = evaluateRisks(s, {
         prevBloods: window.prevBloods || {},
-        afterHoursManual: ahGroup ? ahGroup.dataset.manual === "true" : false
+        afterHoursManual: ahGroup ? ahGroup.dataset.manual === "true" : false,
+        quickReview: isQuickReviewMode
       });
       if (result.afterHoursDerived !== null) {
         s.after_hours = result.afterHoursDerived;
@@ -1052,7 +1072,6 @@
       updateSidebarRiskBadges(redCount, amberCount);
       reconcileAutoIssues(new Set(result.issueKeys));
       renderScrapedIssuesList();
-      renderCarriedForward();
       maybeOfferQuickReview(timeData, s);
       if (isQuickReviewMode) {
         if (!quickReviewBaselineCaptured) {
@@ -1185,7 +1204,35 @@
       }
     }
   }
+  function renderQuickReviewDecision(s, result) {
+    const prompt = $("qr_category_prompt");
+    if (prompt) prompt.hidden = !isQuickReviewMode;
+    const discharge = $("qr_discharge_prompt");
+    if (!discharge) return;
+    const chosen = s.override && s.override !== "none" ? s.override : null;
+    if (!isQuickReviewMode || !chosen) {
+      discharge.hidden = true;
+      discharge.innerHTML = "";
+      return;
+    }
+    const onList = result.timeData?.text || "";
+    const already = s.chk_discharge_alert || s.chk_discharge_pending_bloods;
+    let question;
+    if (already) {
+      question = "Discharge from the ALERT list is recorded in the plan below.";
+    } else if (chosen === "green") {
+      question = `${onList} on the list at CAT 3 - can this patient be discharged from ALERT?`;
+    } else if (chosen === "amber") {
+      question = `${onList} on the list at CAT 2 - continue reviews, or discharge pending bloods?`;
+    } else {
+      question = `${onList} on the list at CAT 1 - continuing review. Discharge is not in question today.`;
+    }
+    discharge.hidden = false;
+    discharge.className = `qr-discharge-prompt${already ? " answered" : ""}`;
+    discharge.innerHTML = `<span class="qr-discharge-text">${question}</span>` + (already || chosen === "red" ? "" : '<span class="qr-discharge-hint">Set it in the plan below</span>');
+  }
   function renderDerivedDisplays(s, result) {
+    renderQuickReviewDecision(s, result);
     updateAgeMitigationUI();
     updateLosMitigationUI();
     const pmhSubtitle = $("pmh_subtitle");
@@ -1703,6 +1750,7 @@
     document.querySelectorAll(".input-box.carried-forward").forEach((w) => {
       w.classList.remove("carried-forward");
       delete w.dataset.carriedFrom;
+      delete w.dataset.carriedRaw;
       delete w.dataset.carriedNote;
     });
     document.querySelectorAll(".trend-buttons").forEach((g) => delete g.dataset.manual);
@@ -1799,11 +1847,24 @@
   }
   function refreshCategorySelect(autoCat, override, reason, redCount, amberCount) {
     const hint = $("override_auto_hint");
-    if (hint) hint.textContent = `Auto-calculated: ${autoCat.text}`;
     const chosen = override && override !== "none" ? override : null;
     ["red", "amber", "green"].forEach((c) => $(`override_${c}`)?.classList.toggle("active", c === chosen));
     const clearBtn = $("override_clear");
     if (clearBtn) clearBtn.style.display = chosen ? "" : "none";
+    if (isQuickReviewMode) {
+      if (hint) hint.textContent = `Tool has: ${autoCat.text} from the score and bloods`;
+      const box2 = $("override_reason_box");
+      if (box2) {
+        box2.style.display = "none";
+        box2.classList.remove("reason-missing");
+      }
+      const warn2 = $("override_downgrade_warn");
+      if (warn2) warn2.style.display = "none";
+      const required2 = $("override_reason_required");
+      if (required2) required2.style.display = "none";
+      return;
+    }
+    if (hint) hint.textContent = `Auto-calculated: ${autoCat.text}`;
     const box = $("override_reason_box");
     if (box) box.style.display = chosen ? "block" : "none";
     const warn = $("override_downgrade_warn");
@@ -1886,58 +1947,6 @@
     }
     refreshAddsOverrideUI();
   }
-  function renderCarriedForward() {
-    const card = $("carried_forward_card");
-    const list = $("carried_forward_list");
-    if (!card || !list) return;
-    const wrappers = [...document.querySelectorAll(".input-box.carried-forward")];
-    if (!wrappers.length) {
-      card.style.display = "none";
-      list.innerHTML = "";
-      return;
-    }
-    list.innerHTML = wrappers.map((w) => {
-      const labelEl = w.querySelector(".question-label")?.cloneNode(true);
-      labelEl?.querySelector(".prev-datum")?.remove();
-      const label = (labelEl?.textContent || "Concern").replace(/\?$/, "").trim();
-      const was = w.dataset.carriedFrom || "";
-      return `
-            <div class="cf-row" data-wrapper="${w.id}">
-                <div class="cf-row-text">
-                    <div class="cf-row-title">${label}</div>
-                    ${was ? `<div class="cf-row-was">was: ${was}</div>` : ""}
-                </div>
-                <div class="cf-row-actions">
-                    <button type="button" class="btn small cf-chip" data-action="resolved" data-wrapper="${w.id}">Resolved</button>
-                    <button type="button" class="btn small cf-chip" data-action="present" data-wrapper="${w.id}">Still present</button>
-                    <button type="button" class="btn small cf-chip" data-action="improving" data-wrapper="${w.id}">Improving</button>
-                </div>
-            </div>`;
-    }).join("");
-    list.querySelectorAll(".cf-chip").forEach((btn) => {
-      btn.addEventListener("click", () => answerCarriedForward(btn.dataset.wrapper, btn.dataset.action));
-    });
-    card.style.display = "block";
-  }
-  function answerCarriedForward(wrapperId, action) {
-    const wrapper = $(wrapperId);
-    if (!wrapper) return;
-    const group = wrapper.querySelector(".segmented-group");
-    if (action === "resolved") {
-      group?.querySelector('.seg-btn[data-value="false"]')?.click();
-    } else if (action === "improving") {
-      const noteEl = wrapper.dataset.carriedNote ? $(wrapper.dataset.carriedNote) : null;
-      if (noteEl && !/improving/i.test(noteEl.value)) {
-        noteEl.value = noteEl.value.trim() ? `${noteEl.value.trim()}, improving` : "improving";
-        noteEl.dispatchEvent(new Event("input"));
-      }
-    }
-    wrapper.classList.remove("carried-forward");
-    delete wrapper.dataset.carriedFrom;
-    delete wrapper.dataset.carriedNote;
-    renderCarriedForward();
-    computeAll();
-  }
   var newRiskLog = [];
   function showNewRiskAlert(newRed = [], newAmber = []) {
     const seen = new Set(newRiskLog.map((r) => r.text));
@@ -2017,7 +2026,7 @@
     // buttons no longer appear here - they moved inside #section-category, which is the whole
     // bottom band, so the call is made next to the flags that produced it.
     qgLeft: ["adds_wrapper", "section-bloods", "section-devices"],
-    qgRight: ["carried_forward_card", "patient_factors_wrapper", "scraped_risks_wrapper", "quick_notes_wrapper"],
+    qgRight: ["patient_factors_wrapper", "scraped_risks_wrapper", "quick_notes_wrapper"],
     qgBottom: ["section-category"]
   };
   function moveIntoQuickGrid() {
@@ -2046,11 +2055,33 @@
       delete el.dataset.qrMoved;
     });
   }
+  function releaseCarriedGatesToList() {
+    document.querySelectorAll(".input-box.carried-forward").forEach((wrapper, idx) => {
+      const raw = wrapper.dataset.carriedRaw || wrapper.dataset.carriedFrom;
+      const group = wrapper.querySelector(".segmented-group");
+      group?.querySelectorAll(".seg-btn.active").forEach((btn) => btn.classList.remove("active"));
+      if (group) delete group.dataset.value;
+      wrapper.classList.remove("carried-forward");
+      delete wrapper.dataset.carriedFrom;
+      delete wrapper.dataset.carriedRaw;
+      delete wrapper.dataset.carriedNote;
+      if (raw && window.addActiveIssue) {
+        window.addActiveIssue({
+          text: raw,
+          source: "scraped",
+          severity: "amber",
+          list: "risks",
+          key: `released_gate_${idx}_${raw.slice(0, 20)}`
+        });
+      }
+    });
+  }
   function enableQuickReviewMode() {
     setQuickReviewMode(true);
     setInitialQuickReviewRisks({ red: [], amber: [] });
     setQuickReviewBaselineCaptured(false);
     clearNewRiskAlert();
+    releaseCarriedGatesToList();
     computeAll();
     document.body.classList.add("quick-review-active");
     const banner = $("quickReviewBanner");
@@ -3309,6 +3340,7 @@
       if (!box) return;
       box.classList.remove("carried-forward");
       delete box.dataset.carriedFrom;
+      delete box.dataset.carriedRaw;
     });
     syncSegments("seg_renal_chronic", "seg_renal_chronic_bloods", "renal");
     syncSegments("seg_infection_downtrend", "seg_infection_downtrend_bloods", "infection");

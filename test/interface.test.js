@@ -620,6 +620,124 @@ test('everything left standing on the Review List reaches the note, not just typ
     close();
 });
 
+// --- Quick Review: a list, not a questionnaire ---------------------------------------------
+
+const gatedNote = [
+    'ALERT CNS post ICU review - Physical review',
+    'Patient: ABC | URN: ...123',
+    'ICU Discharge Date: 18/08/2026',
+    '',
+    'IDENTIFIED ICU READMISSION RISK FACTORS:',
+    '- Respiratory concern - on oxygen, weaning slowly',
+    '- Delirium / neuro concern - intermittently confused',
+    '- Awaiting dietitian review',
+    '',
+    'PLAN:',
+    '- ALERT nursing post ICU reviews continue.'
+].join('\n');
+
+test('Quick Review hands the carried gates back and puts their risks on the list', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = gatedNote;
+    click(window, '#runImport');
+    await tick(window, 900);
+    assert.ok(document.querySelectorAll('.input-box.carried-forward').length >= 2,
+        'Full Review keeps the gates, which is how a Full Review is completed');
+
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window, 700);
+
+    // A gate silently set to Yes on the strength of yesterday's note is a finding nobody made
+    // today. Quick Review has no gates, so the risk goes on the list instead - in the previous
+    // reviewer's own wording, where it can be edited or deleted like anything else.
+    assert.equal(document.querySelectorAll('.input-box.carried-forward').length, 0,
+        'no gate is left answered on yesterday\'s evidence');
+    assert.equal(document.querySelector('#seg_resp_concern .seg-btn.active'), null);
+    const risks = document.getElementById('scraped_issues_list').textContent;
+    assert.match(risks, /Respiratory concern - on oxygen, weaning slowly/, 'nothing is lost by it');
+    assert.match(risks, /Delirium \/ neuro concern - intermittently confused/);
+    close();
+});
+
+test('Quick Review scores what was measured, and nothing more', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = gatedNote;
+    click(window, '#runImport');
+    await tick(window, 900);
+    type(window, 'ptAge', '82');
+    type(window, 'icuLos', '9');
+    await tick(window);
+    const fullCat = document.getElementById('catText').textContent;
+
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window, 700);
+
+    // The gate-driven concerns stop counting - the clinician was never asked about them - but
+    // age and ICU stay must not. They are as concrete as any blood result, and an 82-year-old
+    // with a nine-day stay cannot score one way in Quick Review and another in Full.
+    assert.match(document.getElementById('redFlagList').textContent + document.getElementById('amberFlagList').textContent,
+        /Age 82/, 'age still counts');
+    assert.match(document.getElementById('amberFlagList').textContent, /9-day ICU stay/, 'so does ICU stay');
+    assert.ok(!/Respiratory concern/.test(document.getElementById('amberFlagList').textContent),
+        'an unanswered gate does not');
+    assert.notEqual(document.getElementById('catText').textContent, fullCat,
+        'so the category is not simply what Full Review computed');
+    close();
+});
+
+test('choosing the category in Quick Review is a decision, not an override', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'stepdownDate', '2026-08-18');
+    type(window, 'adds', '5');   // computes CAT 1
+    await tick(window);
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window, 700);
+
+    assert.ok(!document.getElementById('qr_category_prompt').hidden, 'the strip hands the call over');
+    assert.ok(document.getElementById('qr_discharge_prompt').hidden,
+        'and nothing is asked about discharge until the category is chosen');
+
+    click(window, '#override_green');
+    await tick(window);
+
+    // Selecting CAT 3 over a computed CAT 1 is the steepest downgrade there is. In Full Review
+    // that demands a typed reason; in Quick Review the tool has only seen the score and the
+    // bloods, so there is nothing for the clinician to be overriding.
+    assert.equal(document.getElementById('catText').textContent, 'CAT 3');
+    assert.equal(document.getElementById('override_reason_box').style.display, 'none',
+        'no reason is demanded');
+    assert.equal(document.getElementById('override_downgrade_warn').style.display, 'none',
+        'and no downgrade warning is raised');
+    assert.match(document.getElementById('override_auto_hint').textContent, /score and bloods/,
+        'the hint says what the tool actually looked at');
+
+    // Time on the list is time since stepdown - patients join the list at stepdown - so the
+    // question can carry the number rather than leaving it to be worked out.
+    const discharge = document.getElementById('qr_discharge_prompt');
+    assert.ok(!discharge.hidden, 'now the discharge question is asked');
+    assert.match(discharge.textContent, /on the list at CAT 3/);
+    assert.match(discharge.textContent, /can this patient be discharged/);
+    assert.equal(document.getElementById('chk_discharge_alert').checked, false,
+        'it asks and ticks nothing');
+    close();
+});
+
+test('Full Review still demands a reason for a downgrade', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'adds', '5');
+    await tick(window);
+    click(window, '#override_green');
+    await tick(window);
+    assert.equal(document.getElementById('override_reason_box').style.display, 'block',
+        'the override framing is intact where the tool considered every gate');
+    assert.equal(document.getElementById('qr_category_prompt').hidden, true);
+    close();
+});
+
 // --- Round trip: what one note says, the next one has to be able to read back -------------
 
 const noteWith = (opts = {}) => [
@@ -756,15 +874,13 @@ test('clearing for the next patient takes the carried-forward marks with it', as
     await tick(window, 900);
 
     // The gate answers and the (Prev: ...) text were already cleared; the carried-forward
-    // marks were not. That left the "↻ Carried forward" badge and outline on a new patient's
-    // form, and - because renderCarriedForward() reads dataset.carriedFrom - replayed the
-    // previous patient's own wording into "From the last review".
+    // marks were not. That left the "Carried forward" badge and outline on a new patient's
+    // form with the previous patient's own wording still stashed behind it.
     assert.equal(document.querySelectorAll('.input-box.carried-forward').length, 0,
         'no gate still wears the last patient\'s badge');
-    const stale = [...document.querySelectorAll('[data-carried-from]')];
-    assert.equal(stale.length, 0, 'and none is still holding their clinical detail');
-    assert.equal(document.getElementById('carried_forward_card').style.display, 'none',
-        '"From the last review" has nothing left to show');
+    assert.equal(document.querySelectorAll('[data-carried-from]').length, 0,
+        'and none is still holding their clinical detail');
+    assert.equal(document.querySelectorAll('[data-carried-raw]').length, 0);
     assert.equal(document.getElementById('ptName').value, '', 'the rest of the reset still works');
     close();
 });

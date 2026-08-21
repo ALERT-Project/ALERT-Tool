@@ -1020,12 +1020,10 @@
             </div>
         </div>
 
-        <!-- Populated from the gates the importer carried forward. Optional by design: nothing
-             here blocks, and anything left unanswered simply stays a carried-forward concern. -->
-        <div id="carried_forward_card" class="card" style="margin-top:20px; display:none;">
-            <h2 class="card-title">From the last review</h2>
-            <div id="carried_forward_list"></div>
-        </div>
+        <!-- "From the last review" stood here: a card listing the same carried gates that were
+             already outlined and badged in place further down, so every carried concern was on
+             screen twice and neither copy said which was which. The badge on the gate is the
+             prompt; it is where the question actually gets answered. -->
 
         <div id="quick_notes_wrapper" class="card" style="margin-top:20px;">
             <h2 class="card-title">Quick Notes</h2>
@@ -1905,6 +1903,15 @@
             <!-- The clinician's own call, sitting directly under the evidence for the
                  calculated one. Phrased as a statement rather than "Select Category": these
                  buttons record what the reviewer thinks, they don't correct the tool. -->
+            <!-- Quick Review only. The lists above are the review; this says so, and then hands
+                 the decision over. Full Review keeps its own framing, where the buttons really
+                 are an override of a category the tool worked out from every gate. -->
+            <div id="qr_category_prompt" hidden>
+                <div class="qr-cat-step">You've confirmed the risks above</div>
+                <div class="qr-cat-arrow" aria-hidden="true">&#8595;</div>
+                <div class="qr-cat-step qr-cat-step-decide">Now you decide the category</div>
+            </div>
+
             <div id="override_card">
                 <div class="override-head">
                     <div class="section-title" style="margin:0;">Override category using the buttons below:</div>
@@ -1925,6 +1932,12 @@
                         already set to your selection.</div>
                 </div>
             </div>
+
+            <!-- Asked once the category is chosen, because the answer depends on it. Time on
+                 the list is time since stepdown - patients join at stepdown - so the tool
+                 already knows it and can put the number in the question rather than leaving
+                 the clinician to work it out. A prompt, never an action: it ticks nothing. -->
+            <div id="qr_discharge_prompt" hidden></div>
 
             <!-- The follow-up plan, including the 24/48/72h review ladder. computeAll() has
                  been writing this HTML on every keystroke since February 2026, when the
