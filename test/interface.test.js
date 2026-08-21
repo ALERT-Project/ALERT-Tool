@@ -620,6 +620,59 @@ test('everything left standing on the Review List reaches the note, not just typ
     close();
 });
 
+test('a carried line nobody has looked at raises one quiet nudge', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: ABC | URN: ...123',
+        'ICU Discharge Date: 18/08/2026',
+        '',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        '- Awaiting dietitian review',
+        '',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n');
+    click(window, '#runImport');
+    await tick(window, 900);
+
+    // A carried line reaching today's note unlooked-at is the tool asserting a risk nobody
+    // re-assessed. Not blocked - plenty of carried lines are still true - but said once, in
+    // the single notice region rather than as a banner of its own.
+    const region = document.getElementById('noticeRegion');
+    assert.ok(!region.hidden, 'the nudge is raised');
+    assert.match(region.textContent, /carried from the last note/);
+    assert.match(region.textContent, /edit or delete/);
+
+    // Acting on the line is what counts as having reviewed it.
+    click(window, '#scraped_issues_list .scraped-issue-resolve');
+    await tick(window);
+    assert.ok(!/carried from the last note/.test(region.textContent),
+        'and it goes as soon as the last one has been dealt with');
+    close();
+});
+
+test('Psychosocial is formatted like the A-E sections it sits among', async () => {
+    const { window, document, close } = await loadTool();
+    // It used to wear a bordered box of its own with a larger accent heading - the only
+    // section in the panel not built like the others, which made it read as bolted on.
+    const headings = [...document.querySelectorAll('.ae-section-heading')].map(h => h.textContent.trim());
+    assert.deepEqual(headings, ['A: Airway', 'B: Breathing', 'C: Circulation', 'D: Disability',
+        'E: Exposure', 'Psychosocial & Recovery'], 'one heading style for all six');
+
+    const psych = [...document.querySelectorAll('.ae-section-heading')]
+        .find(h => /Psychosocial/.test(h.textContent));
+    assert.ok(psych.closest('.ae-section-card'), 'in the same card the others use');
+
+    // The controls inside it are untouched.
+    click(window, '#seg_pics .seg-btn[data-value="positive"]');
+    await tick(window);
+    assert.equal(document.querySelector('#seg_pics .seg-btn.active').dataset.value, 'positive');
+    assert.equal(document.getElementById('pics_wrapper').style.display, 'block');
+    close();
+});
+
 // --- Quick Review: a list, not a questionnaire ---------------------------------------------
 
 const gatedNote = [

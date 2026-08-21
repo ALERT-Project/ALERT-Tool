@@ -28,6 +28,7 @@ export const NOTICE_PRIORITY = {
     NEW_RISK: 10,
     HANDOVER: 20,
     DISCHARGE: 30,
+    SCRAPED_REVIEW: 40,
     COMPLETENESS: 90
 };
 

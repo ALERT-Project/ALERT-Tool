@@ -10,8 +10,7 @@ import { normalRanges } from './config.js';
 import {
     getState, isQuickReviewMode, initialQuickReviewRisks, quickReviewBaselineCaptured,
     setQuickReviewBaselineCaptured,
-    addActiveIssue, maybeToastNewRisk, reconcileAutoIssues, renderScrapedIssuesList
-} from './state.js';
+    addActiveIssue, maybeToastNewRisk, reconcileAutoIssues, renderScrapedIssuesList, getUnreviewedScrapedCount} from './state.js';
 import {
     updateSidebarRiskBadges, maybeOfferQuickReview, refreshCategorySelect, showNewRiskAlert,
     updateAgeMitigationUI, updateLosMitigationUI
@@ -381,6 +380,22 @@ export function checkCompleteness(s, comorbCount) {
     // The completeness notice is easy to scroll past, so the reviewer field also marks itself.
     $('reviewerInitials')?.closest('.rs-field-reviewer')
         ?.classList.toggle('reviewer-missing', !s.reviewerInitials);
+
+    // Carried lines nobody has looked at yet. Below the discharge prompt and well below a new
+    // red flag: it is a housekeeping reminder, not a finding, and it disappears the moment the
+    // last carried line has been edited or deleted. Deliberately no action button - the work is
+    // on the lists themselves, and a button here would only take the clinician somewhere they
+    // are already looking.
+    const unreviewed = getUnreviewedScrapedCount();
+    if (unreviewed) {
+        setNotice('scraped-review', {
+            priority: NOTICE_PRIORITY.SCRAPED_REVIEW,
+            tone: 'info',
+            html: `<div class="notice-title">${unreviewed} ${unreviewed === 1 ? 'line' : 'lines'} carried from the last note - edit or delete as appropriate for today's review</div>`
+        });
+    } else {
+        clearNotice('scraped-review');
+    }
 
     // Lowest priority of any notice: worth saying, never worth saying over a new red flag.
     if (missing.length) {

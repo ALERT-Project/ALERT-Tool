@@ -117,7 +117,14 @@ export function getActiveChecks() {
 export function toggleActiveIssueResolved(id) {
     const issue = activeIssues.find(i => i.id === id);
     if (!issue) return;
+    // Acting on a line is what counts as having reviewed it. See getUnreviewedScrapedCount().
+    issue.touched = true;
     issue.resolved = !issue.resolved;
+    // The nudge counting untouched lines is raised from computeAll, and deleting a row is one
+    // of the few things that changes the outputs without touching a form field - so without
+    // this the last line could be dealt with and the nudge would sit there until the next
+    // keystroke happened to clear it.
+    window.compute?.();
     // Distinguishes a clinician's tick from reconcileAutoIssues() retiring a stale auto risk,
     // which should still disappear silently.
     issue.resolvedByUser = issue.resolved;
@@ -134,8 +141,19 @@ export function deleteActiveIssue(id) {
 
 export function editActiveIssueText(id, newText) {
     const issue = activeIssues.find(i => i.id === id);
-    if (issue) issue.text = newText;
+    if (issue) { issue.text = newText; issue.touched = true; }
     renderScrapedIssuesList();
+    window.compute?.();
+}
+
+// Lines carried in from the previous note that the clinician has not yet edited or deleted.
+//
+// A scraped line reaching today's note unlooked-at is the tool asserting a risk nobody
+// re-assessed, which is the failure this whole round trip could quietly become. It is not
+// blocked - blocking would be worse, and plenty of carried lines are still true - but it is
+// worth one quiet line saying the list wants a pass.
+export function getUnreviewedScrapedCount() {
+    return activeIssues.filter(i => i.source === 'scraped' && !i.touched && !i.resolved).length;
 }
 
 export function getUnresolvedActiveIssues() { return activeIssues.filter(i => !i.resolved); }

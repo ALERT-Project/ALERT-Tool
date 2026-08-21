@@ -124,6 +124,7 @@
     NEW_RISK: 10,
     HANDOVER: 20,
     DISCHARGE: 30,
+    SCRAPED_REVIEW: 40,
     COMPLETENESS: 90
   };
   function setNotice(id, { priority = 50, tone = "info", html = "", actions = [] }) {
@@ -1297,6 +1298,16 @@
     if (!s.ptWard) missing.push("Ward");
     if (!s.reviewerInitials) missing.push("Reviewer");
     $("reviewerInitials")?.closest(".rs-field-reviewer")?.classList.toggle("reviewer-missing", !s.reviewerInitials);
+    const unreviewed = getUnreviewedScrapedCount();
+    if (unreviewed) {
+      setNotice("scraped-review", {
+        priority: NOTICE_PRIORITY.SCRAPED_REVIEW,
+        tone: "info",
+        html: `<div class="notice-title">${unreviewed} ${unreviewed === 1 ? "line" : "lines"} carried from the last note - edit or delete as appropriate for today's review</div>`
+      });
+    } else {
+      clearNotice("scraped-review");
+    }
     if (missing.length) {
       setNotice("completeness", {
         priority: NOTICE_PRIORITY.COMPLETENESS,
@@ -2382,14 +2393,23 @@
   function toggleActiveIssueResolved(id) {
     const issue = activeIssues.find((i) => i.id === id);
     if (!issue) return;
+    issue.touched = true;
     issue.resolved = !issue.resolved;
+    window.compute?.();
     issue.resolvedByUser = issue.resolved;
     renderScrapedIssuesList();
   }
   function editActiveIssueText(id, newText) {
     const issue = activeIssues.find((i) => i.id === id);
-    if (issue) issue.text = newText;
+    if (issue) {
+      issue.text = newText;
+      issue.touched = true;
+    }
     renderScrapedIssuesList();
+    window.compute?.();
+  }
+  function getUnreviewedScrapedCount() {
+    return activeIssues.filter((i) => i.source === "scraped" && !i.touched && !i.resolved).length;
   }
   function getUnresolvedActiveIssues() {
     return activeIssues.filter((i) => !i.resolved);

@@ -1565,17 +1565,19 @@
                         </div>
                     </div>
 
-                    <div class="col-12"
-                        style="margin-top:24px; padding:16px; background:var(--bg); border:1px solid var(--line); border-radius:8px; margin-bottom:24px;">
-                        <div class="section-title" style="margin-bottom:12px;">Psychosocial &
-                            Recovery</div>
+                    <!-- Formatted like A through E, because it is one of them. It used to wear a
+                         bordered box of its own with a larger accent heading, which made the only
+                         section not built like the others look bolted on to the end of the panel. -->
+                    <div class="col-12" style="margin-top:12px; border-top:2px solid var(--line); padding-top:12px;">
+                        <div class="ae-section-card" style="background:#f8fafc;">
+                        <label class="ae-section-heading">Psychosocial &amp; Recovery</label>
 
                         <div class="grid" style="row-gap:12px;">
                             <div class="col-6">
                                 <div
                                     style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
                                     <label class="question-label"
-                                        style="font-size:var(--fs-base); margin-bottom:4px; display:block; color:var(--accent);">PICS? <span id="prev_pics_status" class="prev-datum"></span></label>
+                                        style="font-size:var(--fs-sm); margin-bottom:4px; display:block;">PICS? <span id="prev_pics_status" class="prev-datum"></span></label>
                                     <div class="segmented-group" id="seg_pics">
                                         <button type="button" class="seg-btn" data-value="positive">Positive</button>
                                         <button type="button" class="seg-btn" data-value="negative">Negative</button>
@@ -1591,7 +1593,7 @@
                                 <div
                                     style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
                                     <label class="question-label"
-                                        style="font-size:var(--fs-base); margin-bottom:4px; display:block; color:var(--accent);">Poor
+                                        style="font-size:var(--fs-sm); margin-bottom:4px; display:block;">Poor
                                         sleep? <span id="prev_sleep" class="prev-datum"></span></label>
                                     <div class="segmented-group" id="seg_sleep_quality">
                                         <button type="button" class="seg-btn" data-value="true">Yes</button>
@@ -1608,7 +1610,7 @@
                                 <div
                                     style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
                                     <label class="question-label"
-                                        style="font-size:var(--fs-base); margin-bottom:4px; display:block; color:var(--accent);">Any
+                                        style="font-size:var(--fs-sm); margin-bottom:4px; display:block;">Any
                                         psychological concerns? <span id="prev_psych" class="prev-datum"></span></label>
                                     <div class="segmented-group" id="seg_neuro_psych">
                                         <button type="button" class="seg-btn" data-value="true">Yes</button>
@@ -1620,6 +1622,7 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
                         </div>
                     </div>
 
