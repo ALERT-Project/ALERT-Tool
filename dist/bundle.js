@@ -1699,6 +1699,11 @@
       sc.style.display = "none";
     }
     document.querySelectorAll(".prev-datum").forEach((el) => el.textContent = "");
+    document.querySelectorAll(".input-box.carried-forward").forEach((w) => {
+      w.classList.remove("carried-forward");
+      delete w.dataset.carriedFrom;
+      delete w.dataset.carriedNote;
+    });
     document.querySelectorAll(".trend-buttons").forEach((g) => delete g.dataset.manual);
     window.prevBloods = {};
     const pb = $("prevRisksBox");

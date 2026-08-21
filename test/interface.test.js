@@ -615,6 +615,45 @@ test('everything left standing on the Review List reaches the note, not just typ
     close();
 });
 
+test('clearing for the next patient takes the carried-forward marks with it', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: ABC | URN: ...123',
+        'ICU Discharge Date: 18/08/2026',
+        '',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        '- Respiratory concern - on oxygen, weaning slowly',
+        '- Electrolyte concern - low K+ 2.9',
+        '',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n');
+    click(window, '#runImport');
+    await tick(window, 900);
+    assert.ok(document.querySelectorAll('.input-box.carried-forward').length >= 2,
+        'the import marks the gates it answered');
+
+    click(window, '#clearDataBtnTop');
+    await tick(window);
+    click(window, '#confirmClearData');
+    await tick(window, 900);
+
+    // The gate answers and the (Prev: ...) text were already cleared; the carried-forward
+    // marks were not. That left the "↻ Carried forward" badge and outline on a new patient's
+    // form, and - because renderCarriedForward() reads dataset.carriedFrom - replayed the
+    // previous patient's own wording into "From the last review".
+    assert.equal(document.querySelectorAll('.input-box.carried-forward').length, 0,
+        'no gate still wears the last patient\'s badge');
+    const stale = [...document.querySelectorAll('[data-carried-from]')];
+    assert.equal(stale.length, 0, 'and none is still holding their clinical detail');
+    assert.equal(document.getElementById('carried_forward_card').style.display, 'none',
+        '"From the last review" has nothing left to show');
+    assert.equal(document.getElementById('ptName').value, '', 'the rest of the reset still works');
+    close();
+});
+
 test('a list entry mirroring an assessment field is stated once, not twice', async () => {
     const { window, document, close } = await loadTool();
     // The importer fills ae_mobility/ae_diet *and* stages a list row carrying the same text.

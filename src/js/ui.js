@@ -490,6 +490,18 @@ export function clearData() {
     const sc = $('selected_comorbs_display');
     if (sc) { sc.innerHTML = ''; sc.style.display = 'none'; }
     document.querySelectorAll('.prev-datum').forEach(el => el.textContent = '');
+    // The same act, one layer deeper. The "(Prev: ...)" text cleared above is only half of what
+    // the importer leaves on a gate: it also flags the wrapper carried-forward, which paints
+    // the "↻ Carried forward - confirm or clear" badge and the outline, and stashes the
+    // previous note's own wording in dataset.carriedFrom. None of it was cleared, so a new
+    // patient's form opened still wearing the last patient's badges - and renderCarriedForward()
+    // replayed that patient's concerns, verbatim, into "From the last review". The gate answers
+    // and the names went; the clinical detail behind them stayed on screen.
+    document.querySelectorAll('.input-box.carried-forward').forEach(w => {
+        w.classList.remove('carried-forward');
+        delete w.dataset.carriedFrom;
+        delete w.dataset.carriedNote;
+    });
     // New patient, so any arrow the last clinician set by hand is no longer theirs to keep.
     document.querySelectorAll('.trend-buttons').forEach(g => delete g.dataset.manual);
     window.prevBloods = {};
