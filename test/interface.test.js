@@ -713,6 +713,48 @@ test('Quick Review hands the carried gates back and puts their risks on the list
     close();
 });
 
+test('releasing a gate does not carry yesterday\'s numbers into today\'s note', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: ABC | URN: ...123',
+        'ICU Discharge Date: 18/08/2026',
+        '',
+        'Bloods (taken 20/08/2026 06:00): WCC 16, CRP 180',
+        '',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        '- Infection risk - WCC 16, CRP 180',
+        '- Awaiting dietitian review',
+        '',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n');
+    click(window, '#runImport');
+    await tick(window, 900);
+
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window, 700);
+    // Today's markers have halved - which is usually the whole story of the review.
+    type(window, 'bl_wcc', '9');
+    type(window, 'bl_crp', '60');
+    await tick(window);
+
+    // "Infection risk" matched the infection gate on the way in, so the importer's own filter
+    // never saw it - the gate was carrying it. Releasing that gate must not smuggle it onto
+    // the list in yesterday's numbers.
+    const risks = document.getElementById('scraped_issues_list').textContent;
+    assert.ok(!/WCC 16/.test(risks), "yesterday's markers do not become today's risk");
+    assert.match(risks, /Awaiting dietitian review/, 'a genuine carried risk still travels');
+
+    generateNote(window);
+    await tick(window);
+    const note = document.getElementById('summary').value;
+    assert.ok(!/Infection risk - WCC 16/.test(note), 'and the note does not assert it');
+    assert.match(note, /WCC 9 \(16\)/, 'it states the trend instead');
+    close();
+});
+
 test('Quick Review scores what was measured, and nothing more', async () => {
     const { window, document, close } = await loadTool();
     click(window, '#btnOpenImport');

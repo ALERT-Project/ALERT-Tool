@@ -134,3 +134,23 @@ export const QUICK_REVIEW_SCORING_IDS = [
     'seg_infection',        // fires from WCC/CRP/NLR/temperature when no gate is set
     'override_red', 'override_amber'
 ];
+
+
+// Risk lines the tool works out for itself every review, from data that is also carried
+// forward. They must never become text entries on a list: the rules are about to produce
+// their own copy from today's numbers, and the pair compounds at every subsequent review.
+//
+// Two groups. The first is derived from the patient's own dates and numbers - age, ICU length
+// of stay, the stepdown time. The second is derived from the bloods and the score, which are
+// re-evaluated on the spot against today's values; carrying "Infection risk - WCC 16, CRP 180"
+// across would state yesterday's markers as today's finding, which is worse than losing it -
+// the numbers have usually moved, and often that is the whole story of the review.
+//
+// Gate-shaped concerns are deliberately absent. In Full Review the gate carries them; in Quick
+// Review nothing else would raise them at all, so they do need to travel as text.
+export const SELF_DERIVED_RISK = new RegExp([
+    'prolonged icu stay', 'deconditioning risk', 'after-hours', '^age \\d',
+    '^(elevated )?(adds|mods) \\d', '^lactate \\d', '^(low|high) bsl',
+    '^low platelets', '^electrolyte concern', '^infection risk',
+    '^worsening cr', '^rising crp'
+].join('|'), 'i');

@@ -435,6 +435,20 @@
     "override_red",
     "override_amber"
   ];
+  var SELF_DERIVED_RISK = new RegExp([
+    "prolonged icu stay",
+    "deconditioning risk",
+    "after-hours",
+    "^age \\d",
+    "^(elevated )?(adds|mods) \\d",
+    "^lactate \\d",
+    "^(low|high) bsl",
+    "^low platelets",
+    "^electrolyte concern",
+    "^infection risk",
+    "^worsening cr",
+    "^rising crp"
+  ].join("|"), "i");
 
   // src/js/trends.js
   var TREND_RULES = {
@@ -2076,7 +2090,7 @@
       delete wrapper.dataset.carriedFrom;
       delete wrapper.dataset.carriedRaw;
       delete wrapper.dataset.carriedNote;
-      if (raw && window.addActiveIssue) {
+      if (raw && !SELF_DERIVED_RISK.test(raw) && window.addActiveIssue) {
         window.addActiveIssue({
           text: raw,
           source: "scraped",
@@ -3171,6 +3185,7 @@
     window.showQuickReviewPrompt = showQuickReviewPrompt;
     window.previousCategoryData = previousCategoryData;
     window.addActiveIssue = addActiveIssue;
+    window.SELF_DERIVED_RISK = SELF_DERIVED_RISK;
     window.renderScrapedIssuesList = renderScrapedIssuesList;
     window.flagPreviousRecommendation = (detail) => {
       setNotice("handover", {

@@ -7,7 +7,7 @@
 
 import { $, debounce, showToast, disableAutofill } from './utils.js';
 import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
-import { ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs } from './config.js';
+import { ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs, SELF_DERIVED_RISK} from './config.js';
 import {
     getState, saveState, loadState, restoreState, previousCategoryData, updateLastSaved,
     isQuickReviewMode, setQuickReviewDismissed, addActiveIssue, addManualIssue,
@@ -61,6 +61,9 @@ function initialize() {
     window.previousCategoryData = previousCategoryData;
     // Used by plugins/importer.js to stage scraped issues.
     window.addActiveIssue = addActiveIssue;
+    // The importer is a plain script rather than a module, so the pattern it shares with the
+    // Quick Review gate release reaches it this way.
+    window.SELF_DERIVED_RISK = SELF_DERIVED_RISK;
     window.renderScrapedIssuesList = renderScrapedIssuesList;
 
     // Deliberately narrow: the importer can raise a prompt about what the previous review

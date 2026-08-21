@@ -97,21 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // "deconditioning risk" covers the combined line's long-stay half, which the tool recomputes
     // from the ICU LOS it has already scraped. When that line also names immobility it is folded
     // into the gate above and never reaches this test.
-    // Risk lines the tool works out for itself every review, from data this same import also
-    // carries forward. Scraping them as text would put a second copy on the list beside the
-    // one the rules are about to produce, and that pair compounds every review.
-    //
-    // Two groups. The first is derived from the patient's own dates and numbers - age, ICU
-    // length of stay, the stepdown time. The second is derived from the bloods and the score,
-    // which are scraped into their own fields and re-evaluated on the spot. Gate-shaped
-    // concerns are deliberately absent: in Full Review the gate carries them, and in Quick
-    // Review nothing else will raise them, so they do need to come across as text.
-    const SELF_DERIVED_RISK = new RegExp([
-        'prolonged icu stay', 'deconditioning risk', 'after-hours', '^age \\d',
-        '^(elevated )?(adds|mods) \\d', '^lactate \\d', '^(low|high) bsl',
-        '^low platelets', '^electrolyte concern', '^infection risk',
-        '^worsening cr', '^rising crp'
-    ].join('|'), 'i');
+    // Defined in config.js and shared with the Quick Review gate release, which stages
+    // carried risks by another route and has to apply exactly the same rule.
+    const SELF_DERIVED_RISK = window.SELF_DERIVED_RISK;
 
     // "- Awaiting dietitian review (carried 3)" -> text plus the count to continue from, and
     // "(mitigated: known CKD...)" -> a risk that was considered and discounted, which has to

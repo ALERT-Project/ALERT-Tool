@@ -7,7 +7,7 @@
 
 import { $, debounce, showToast, disableAutofill, iconSetForPath } from './utils.js';
 import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
-import { normalRanges, comorbMap, toggleInputs, staticInputs, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY } from './config.js';
+import { normalRanges, comorbMap, toggleInputs, staticInputs, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY, SELF_DERIVED_RISK} from './config.js';
 import {
     getState, saveState, pushUndo, isQuickReviewMode, setQuickReviewMode, initialQuickReviewRisks,
     setInitialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured,
@@ -906,7 +906,12 @@ function releaseCarriedGatesToList() {
         delete wrapper.dataset.carriedRaw;
         delete wrapper.dataset.carriedNote;
 
-        if (raw && window.addActiveIssue) {
+        // The same filter the importer applies when it stages a risk as text. Without it this
+        // route smuggles the excluded ones through: a risk that matched a gate was never
+        // filtered on the way in, because the gate was carrying it, and releasing the gate
+        // would put "Infection risk - WCC 16, CRP 180" on the list in yesterday's numbers
+        // while today's bloods say the markers have halved.
+        if (raw && !SELF_DERIVED_RISK.test(raw) && window.addActiveIssue) {
             window.addActiveIssue({
                 text: raw, source: 'scraped', severity: 'amber', list: 'risks',
                 key: `released_gate_${idx}_${raw.slice(0, 20)}`
