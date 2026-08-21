@@ -354,6 +354,17 @@ export function evaluateRisks(s, ctx = {}) {
         if (k !== null && k >= 3.0 && k < normalRanges.k.low) addCheck(`K+ ${k} - consider replacement`, 'chk_k');
         if (mg !== null && mg >= normalRanges.mg.low && mg < 1.0) addCheck(`Mg ${mg} - consider replacement`, 'chk_mg');
         if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - replacement indicated`, 'chk_phos');
+        // Sodium is worth naming and not worth prompting on. Between the risk thresholds and
+        // the reference range there was nothing at all, yet a sodium in that band is often a
+        // diagnosis in its own right rather than a number to top up - and correcting it is the
+        // treating team's call, not ALERT's. So it is stated, with who owns it, and no action
+        // is suggested. The other three say "consider replacement"; this one deliberately
+        // does not.
+        if (na !== null && na >= 125 && na < normalRanges.na.low) {
+            addCheck(`Na ${na} - hyponatraemia; correction directed by the treating team`, 'chk_na');
+        } else if (na !== null && na > normalRanges.na.high && na <= 155) {
+            addCheck(`Na ${na} - hypernatraemia; correction directed by the treating team`, 'chk_na');
+        }
     }
 
     if (s.electrolyte_gate === true || (k && (k < 3.0 || k > 6.0)) || naAbnormal || mgAbnormal || phosAbnormal) {

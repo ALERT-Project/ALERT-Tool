@@ -513,6 +513,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 .forEach((l, idx) => {
                     const line = readCarriedLine(l.substring(1).trim());
                     if (!line.text) return;
+                    // Regenerated from its own field every review - the setPrev/setVal passes
+                    // above have already read it into one - so it must not also become text.
+                    if (window.FIELD_BACKED_FACTOR?.test(line.text)) return;
                     window.addActiveIssue({
                         text: line.text, source: 'scraped', severity: 'info',
                         key: `scraped_factor_${idx}_${line.text.slice(0, 20)}`, list: 'factors',

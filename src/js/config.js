@@ -154,3 +154,10 @@ export const SELF_DERIVED_RISK = new RegExp([
     '^low platelets', '^electrolyte concern', '^infection risk',
     '^worsening cr', '^rising crp'
 ].join('|'), 'i');
+
+
+// Patient-factor lines the note writes from an assessment field every review. The importer
+// reads them back into those fields, so staging them as list text too would print today's
+// answer beside yesterday's - "Mobility: assist x2" under "Mobility: assist x1 with frame" -
+// the moment the clinician updated one. Same principle as SELF_DERIVED_RISK, one section over.
+export const FIELD_BACKED_FACTOR = /^(mobility|diet|nutrition|post icu syndrome|sleep|psychological issues)\s*:/i;

@@ -449,6 +449,7 @@
     "^worsening cr",
     "^rising crp"
   ].join("|"), "i");
+  var FIELD_BACKED_FACTOR = /^(mobility|diet|nutrition|post icu syndrome|sleep|psychological issues)\s*:/i;
 
   // src/js/trends.js
   var TREND_RULES = {
@@ -783,6 +784,11 @@
       if (k !== null && k >= 3 && k < normalRanges.k.low) addCheck(`K+ ${k} - consider replacement`, "chk_k");
       if (mg !== null && mg >= normalRanges.mg.low && mg < 1) addCheck(`Mg ${mg} - consider replacement`, "chk_mg");
       if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - replacement indicated`, "chk_phos");
+      if (na !== null && na >= 125 && na < normalRanges.na.low) {
+        addCheck(`Na ${na} - hyponatraemia; correction directed by the treating team`, "chk_na");
+      } else if (na !== null && na > normalRanges.na.high && na <= 155) {
+        addCheck(`Na ${na} - hypernatraemia; correction directed by the treating team`, "chk_na");
+      }
     }
     if (s.electrolyte_gate === true || k && (k < 3 || k > 6) || naAbnormal || mgAbnormal || phosAbnormal) {
       let msg = "Electrolyte concern";
@@ -2924,7 +2930,6 @@
     if (lines.length === aeHeaderAt + 1) lines.length = aeHeaderAt;
     else if (lines.length === aeDetailAt) lines.splice(aeHeaderAt, 1);
     pushBlank();
-    if (s.ae_mobility) addLine(`Mobility: ${s.ae_mobility}`);
     let bowelTxt = "";
     if (s.bowel_mode === "btn_bo") bowelTxt = "BO";
     else if (s.bowel_mode === "btn_bno") bowelTxt = "BNO";
@@ -2963,17 +2968,8 @@
       }
     }
     if (bowelTxt) addLine(`Bowels: ${bowelTxt}`);
-    if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ""}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
-    if (s.pics) {
-      const picsStatus = s.pics === "positive" ? "Positive" : "Negative";
-      addLine(`Post ICU Syndrome: ${picsStatus}${s.pics_note ? ` - ${s.pics_note}` : ""}`);
-    }
-    if (s.sleep_quality === true) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ""}`);
-    else if (s.sleep_quality === false) addLine(`Sleep: No sleep issues identified`);
-    if (s.neuro_psych === true) addLine(`Psychological issues: ${s.neuro_psych_note || "Concerns identified"}`);
-    else if (s.neuro_psych === false) addLine(`Psychological issues: Nil identified`);
     if (s.anticoag_note) addLine(`Anticoagulation: ${s.anticoag_note}`);
     if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
     if (s.infusions_note) addLine(`Infusions: ${s.infusions_note}`);
@@ -3057,7 +3053,21 @@
       });
       return out;
     };
+    const buildPatientFactors = () => {
+      const out = [];
+      if (s.ae_mobility) out.push(`Mobility: ${s.ae_mobility}`);
+      if (s.ae_diet) out.push(`Diet: ${s.ae_diet}`);
+      if (s.nutrition_adequate === false) out.push(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ""}`);
+      else if (s.nutrition_adequate === true) out.push("Nutrition: Adequate");
+      if (s.pics) out.push(`Post ICU Syndrome: ${s.pics === "positive" ? "Positive" : "Negative"}${s.pics_note ? ` - ${s.pics_note}` : ""}`);
+      if (s.sleep_quality === true) out.push(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ""}`);
+      else if (s.sleep_quality === false) out.push("Sleep: No sleep issues identified");
+      if (s.neuro_psych === true) out.push(`Psychological issues: ${s.neuro_psych_note || "Concerns identified"}`);
+      else if (s.neuro_psych === false) out.push("Psychological issues: Nil identified");
+      return out;
+    };
     const factorLines = sectionLines([
+      ...buildPatientFactors(),
       ...lists.factors || [],
       ...(s.quickNotes || "").split("\n")
     ]);
@@ -3186,6 +3196,7 @@
     window.previousCategoryData = previousCategoryData;
     window.addActiveIssue = addActiveIssue;
     window.SELF_DERIVED_RISK = SELF_DERIVED_RISK;
+    window.FIELD_BACKED_FACTOR = FIELD_BACKED_FACTOR;
     window.renderScrapedIssuesList = renderScrapedIssuesList;
     window.flagPreviousRecommendation = (detail) => {
       setNotice("handover", {

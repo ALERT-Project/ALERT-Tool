@@ -200,7 +200,10 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
     pushBlank();
 
-    if (s.ae_mobility) addLine(`Mobility: ${s.ae_mobility}`);
+    // Mobility, diet and the psychosocial answers used to print here, scattered through the
+    // assessment. They are now gathered under PATIENT FACTORS - see buildPatientFactors() -
+    // because that is what they are, and because one headed section is something the next
+    // import can read back whole.
 
     let bowelTxt = '';
     if (s.bowel_mode === 'btn_bo') bowelTxt = 'BO';
@@ -244,18 +247,9 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
     if (bowelTxt) addLine(`Bowels: ${bowelTxt}`);
 
-    if (s.ae_diet) addLine(`Diet: ${s.ae_diet}`);
     if (s.nutrition_adequate === false) addLine(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
     else if (s.nutrition_adequate === true) addLine(`Nutrition: Adequate`);
 
-    if (s.pics) {
-        const picsStatus = s.pics === 'positive' ? 'Positive' : 'Negative';
-        addLine(`Post ICU Syndrome: ${picsStatus}${s.pics_note ? ` - ${s.pics_note}` : ''}`);
-    }
-    if (s.sleep_quality === true) addLine(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ''}`);
-    else if (s.sleep_quality === false) addLine(`Sleep: No sleep issues identified`);
-    if (s.neuro_psych === true) addLine(`Psychological issues: ${s.neuro_psych_note || 'Concerns identified'}`);
-    else if (s.neuro_psych === false) addLine(`Psychological issues: Nil identified`);
 
     if (s.anticoag_note) addLine(`Anticoagulation: ${s.anticoag_note}`);
     if (s.vte_prophylaxis_note) addLine(`VTE Prophylaxis: ${s.vte_prophylaxis_note}`);
@@ -368,7 +362,25 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         return out;
     };
 
+    // The assessment answers that describe the patient rather than the review, in a fixed
+    // order so the section reads the same way every day. Written as "Field: value" because
+    // that is the shape the importer already reads them back into their own fields from.
+    const buildPatientFactors = () => {
+        const out = [];
+        if (s.ae_mobility) out.push(`Mobility: ${s.ae_mobility}`);
+        if (s.ae_diet) out.push(`Diet: ${s.ae_diet}`);
+        if (s.nutrition_adequate === false) out.push(`Nutrition: Inadequate${s.nutrition_context_note ? ` - ${s.nutrition_context_note}` : ''}`);
+        else if (s.nutrition_adequate === true) out.push('Nutrition: Adequate');
+        if (s.pics) out.push(`Post ICU Syndrome: ${s.pics === 'positive' ? 'Positive' : 'Negative'}${s.pics_note ? ` - ${s.pics_note}` : ''}`);
+        if (s.sleep_quality === true) out.push(`Sleep: Poor${s.sleep_quality_note ? ` - ${s.sleep_quality_note}` : ''}`);
+        else if (s.sleep_quality === false) out.push('Sleep: No sleep issues identified');
+        if (s.neuro_psych === true) out.push(`Psychological issues: ${s.neuro_psych_note || 'Concerns identified'}`);
+        else if (s.neuro_psych === false) out.push('Psychological issues: Nil identified');
+        return out;
+    };
+
     const factorLines = sectionLines([
+        ...buildPatientFactors(),
         ...(lists.factors || []),
         ...(s.quickNotes || '').split('\n')
     ]);

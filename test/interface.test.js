@@ -620,6 +620,42 @@ test('everything left standing on the Review List reaches the note, not just typ
     close();
 });
 
+test('an updated assessment answer replaces the carried one rather than joining it', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: ABC | URN: ...123',
+        'ICU Discharge Date: 18/08/2026',
+        '',
+        'PATIENT FACTORS:',
+        '- Mobility: assist x1 with frame',
+        '- Son visiting daily',
+        '',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        '- None identified',
+        '',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n');
+    click(window, '#runImport');
+    await tick(window, 900);
+
+    // The patient has improved. The note writes mobility from its own field, so yesterday's
+    // wording must not survive as a text entry and print underneath today's answer.
+    type(window, 'ae_mobility', 'independent with frame');
+    await tick(window);
+    generateNote(window);
+    await tick(window);
+    const note = document.getElementById('summary').value;
+
+    assert.match(note, /- Mobility: independent with frame/, "today's answer is the one stated");
+    assert.ok(!/assist x1 with frame/.test(note), 'and yesterday\'s is not stated beside it');
+    assert.match(note, /- Son visiting daily \(carried 2\)/,
+        'a factor with no field of its own still carries across');
+    close();
+});
+
 test('a carried line nobody has looked at raises one quiet nudge', async () => {
     const { window, document, close } = await loadTool();
     click(window, '#btnOpenImport');
@@ -1008,7 +1044,13 @@ test('a list entry mirroring an assessment field is stated once, not twice', asy
 
     assert.equal((note.match(/assist x1 with frame/g) || []).length, 1, 'mobility stated once');
     assert.equal((note.match(/full ward diet/g) || []).length, 1, 'diet stated once');
-    assert.match(note, /^Mobility: assist x1 with frame$/m, 'and it is the assessment line that says it');
+    // Both now live under PATIENT FACTORS rather than scattered through the assessment, and
+    // the note writes them from their own fields - so a carried copy must not print beside
+    // today's answer when the clinician updates one.
+    const factorsAt = note.indexOf('PATIENT FACTORS:');
+    assert.ok(factorsAt > -1 && note.indexOf('- Mobility: assist x1 with frame') > factorsAt,
+        'mobility sits in the patient factors section');
+    assert.ok(note.indexOf('- Diet: full ward diet') > factorsAt);
     assert.match(note, /- Awaiting dietitian review/, 'a genuine carried risk still comes through');
     close();
 });
