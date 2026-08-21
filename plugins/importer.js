@@ -97,7 +97,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // "deconditioning risk" covers the combined line's long-stay half, which the tool recomputes
     // from the ICU LOS it has already scraped. When that line also names immobility it is folded
     // into the gate above and never reaches this test.
-    const SELF_DERIVED_RISK = /prolonged icu stay|deconditioning risk|after-hours|^age \d/;
+    // Risk lines the tool works out for itself every review, from data this same import also
+    // carries forward. Scraping them as text would put a second copy on the list beside the
+    // one the rules are about to produce, and that pair compounds every review.
+    //
+    // Two groups. The first is derived from the patient's own dates and numbers - age, ICU
+    // length of stay, the stepdown time. The second is derived from the bloods and the score,
+    // which are scraped into their own fields and re-evaluated on the spot. Gate-shaped
+    // concerns are deliberately absent: in Full Review the gate carries them, and in Quick
+    // Review nothing else will raise them, so they do need to come across as text.
+    const SELF_DERIVED_RISK = new RegExp([
+        'prolonged icu stay', 'deconditioning risk', 'after-hours', '^age \\d',
+        '^(elevated )?(adds|mods) \\d', '^lactate \\d', '^(low|high) bsl',
+        '^low platelets', '^electrolyte concern', '^infection risk',
+        '^worsening cr', '^rising crp'
+    ].join('|'), 'i');
+
+    // "- Awaiting dietitian review (carried 3)" -> text plus the count to continue from, and
+    // "(mitigated: known CKD...)" -> a risk that was considered and discounted, which has to
+    // come back saying so rather than as a live risk.
+    function readCarriedLine(rawTxt) {
+        let text = rawTxt;
+        let carried = 1;
+        const m = text.match(/\s*\(carried (\d+)\)\s*$/i);
+        if (m) {
+            carried = parseInt(m[1], 10) || 1;
+            text = text.slice(0, m.index).trim();
+        }
+        return { text, carried: carried + 1, mitigated: /\(mitigated:/i.test(text) };
+    }
 
     // Returns true when the line was folded into a gate, so the caller can skip staging it as
     // a separate issue - the gate produces its own issue with the tool's own wording.
@@ -361,7 +389,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- 4. BLOODS ---
-        const bloodsBlock = text.match(/Bloods:\s*([\s\S]*?)(?:LINES, DRAINS|DEVICES:|IDENTIFIED ICU READMISSION|IDENTIFIED RISK FACTORS|Other:|PLAN:|A-E ASSESSMENT|Psychosocial|PICS|$)/i);
+        // The heading is "Bloods (taken 20/08/2026 06:00):" whenever a collection time was
+        // recorded, and this pattern only ever matched a bare "Bloods:". So every note that
+        // carried a collection time - which is the ones written since it was added - had its
+        // bloods dropped on import in silence, taking the previous values, the trend arrows
+        // and every trend-based rule with them. The bracket is optional and non-capturing so
+        // both shapes land in the same group.
+        const bloodsBlock = text.match(/Bloods\s*(?:\([^)]*\))?:\s*([\s\S]*?)(?:LINES, DRAINS|DEVICES:|IDENTIFIED ICU READMISSION|IDENTIFIED RISK FACTORS|PATIENT FACTORS|Checks:|Other:|PLAN:|A-E ASSESSMENT|Psychosocial|PICS|$)/i);
         if (bloodsBlock) {
             openAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
             const bText = bloodsBlock[1];
@@ -435,6 +469,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (lower.includes('vaso') || lower.includes('pressor')) setRiskText('prev_risk_pressors', rawTxt);
                     if (lower.includes('immobility')) setRiskText('prev_risk_immob', rawTxt);
 
+                    // A risk the previous reviewer considered and discounted comes back saying
+                    // so, and nothing else. Carrying it to a gate would set that gate to Yes and
+                    // turn a discounted risk into a live one - the mitigation destroyed by the
+                    // act of reading it - and the self-derived filter below would swallow the
+                    // ones whose wording it recognises. Neither applies to a mitigated line.
+                    const mitigatedLine = readCarriedLine(rawTxt);
+                    if (mitigatedLine.mitigated) {
+                        if (window.addActiveIssue) {
+                            window.addActiveIssue({
+                                text: mitigatedLine.text, source: 'scraped', severity: 'amber',
+                                key: `scraped_risk_${idx}_${mitigatedLine.text.slice(0, 20)}`,
+                                list: 'risks', carried: mitigatedLine.carried, mitigated: true
+                            });
+                        }
+                        return;
+                    }
+
                     // --- CARRY THE RISK INTO TODAY'S ASSESSMENT ---
                     // Staging the text alone left the gates unanswered, so a note full of risks
                     // still computed CAT 3. The gate is set to Yes and marked carried-forward:
@@ -444,11 +495,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Anything that didn't land on a gate still needs to be seen, so it stays
                     // in the issues list under the previous note's own wording.
                     if (!carried && !SELF_DERIVED_RISK.test(lower) && window.addActiveIssue) {
-                        window.addActiveIssue({ text: rawTxt, source: 'scraped', severity: 'amber', key: `scraped_risk_${idx}_${rawTxt.slice(0, 20)}`, list: 'risks' });
+                        const line = readCarriedLine(rawTxt);
+                        window.addActiveIssue({
+                            text: line.text, source: 'scraped', severity: 'amber',
+                            key: `scraped_risk_${idx}_${line.text.slice(0, 20)}`, list: 'risks',
+                            carried: line.carried, mitigated: line.mitigated
+                        });
                     }
                 });
                 if (window.renderScrapedIssuesList) window.renderScrapedIssuesList();
             }
+        }
+
+        // --- 5b. PATIENT FACTORS ---
+        // The other half of the round trip. Everything the previous reviewer put in the patient
+        // factors list comes back into it, so a note that has been through several reviews
+        // still carries the context that has been travelling with the patient rather than
+        // starting again from whatever this import happens to recognise.
+        const factorsSection = text.match(/PATIENT FACTORS:([\s\S]*?)(?:IDENTIFIED|PLAN:)/i);
+        if (factorsSection && factorsSection[1] && window.addActiveIssue) {
+            factorsSection[1].split('\n')
+                .map(l => l.trim())
+                .filter(l => l.startsWith('-'))
+                .forEach((l, idx) => {
+                    const line = readCarriedLine(l.substring(1).trim());
+                    if (!line.text) return;
+                    window.addActiveIssue({
+                        text: line.text, source: 'scraped', severity: 'info',
+                        key: `scraped_factor_${idx}_${line.text.slice(0, 20)}`, list: 'factors',
+                        carried: line.carried
+                    });
+                });
+            if (window.renderScrapedIssuesList) window.renderScrapedIssuesList();
         }
 
         // --- 6. DEVICES ---

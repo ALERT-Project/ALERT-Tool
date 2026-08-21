@@ -2305,7 +2305,7 @@
   function defaultListFor(source, severity) {
     return severity === "info" ? "factors" : "risks";
   }
-  function addActiveIssue({ text, source, severity, key, list }) {
+  function addActiveIssue({ text, source, severity, key, list, carried, mitigated }) {
     const existing = activeIssues.find((i) => i.key === key && (!i.resolved || i.resolvedByUser));
     if (existing) {
       existing.text = text;
@@ -2320,6 +2320,13 @@
       severity,
       key,
       list: list || defaultListFor(source, severity),
+      // 1 means raised this review. The importer passes a higher number when it reads a
+      // "(carried N)" back off the previous note.
+      carried: carried || 1,
+      // A risk the previous note recorded as considered and discounted. It comes back
+      // carrying its reason rather than as a live risk, so the mitigation isn't silently
+      // lost the moment the note is re-imported.
+      mitigated: !!mitigated,
       resolved: false,
       createdAt: _activeIssueCounter
     };
@@ -2357,11 +2364,14 @@
     return activeIssues.filter((i) => !i.resolved);
   }
   var MIRRORS_AN_ASSESSMENT_FIELD = /* @__PURE__ */ new Set(["ae_mobility", "ae_diet"]);
+  function withCarry(issue) {
+    return issue.carried > 1 ? `${issue.text} (carried ${issue.carried})` : issue.text;
+  }
   function getFactorsForNote() {
-    return activeIssues.filter((i) => i.list === "factors" && !i.resolved).filter((i) => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key)).map((i) => i.text);
+    return activeIssues.filter((i) => i.list === "factors" && !i.resolved).filter((i) => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key)).map(withCarry);
   }
   function getRisksForNote() {
-    return activeIssues.filter((i) => i.list === "risks" && !i.resolved).filter((i) => i.source !== "auto").map((i) => i.text);
+    return activeIssues.filter((i) => i.list === "risks" && !i.resolved).filter((i) => i.source !== "auto").map(withCarry);
   }
   function getChecksForNote() {
     return getActiveChecks().map((i) => i.text);
@@ -2419,6 +2429,7 @@
     list.innerHTML = issues.map((issue) => `
         <div class="scraped-issue-row${issue.resolved ? " resolved" : ""}" data-id="${issue.id}">
             <span class="scraped-issue-text" data-id="${issue.id}" title="Click to edit">${issue.text}</span>
+            ${issue.mitigated ? '<span class="scraped-issue-note-tag" title="Considered and discounted last review">mitigated</span>' : ""}
             ${issue.carried > 1 ? `<span class="scraped-issue-carried" title="On this list for ${issue.carried} reviews">carried ${issue.carried}</span>` : ""}
             <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}"
                 title="Edit" aria-label="Edit">&#9998;</button>

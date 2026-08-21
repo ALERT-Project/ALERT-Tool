@@ -620,6 +620,116 @@ test('everything left standing on the Review List reaches the note, not just typ
     close();
 });
 
+// --- Round trip: what one note says, the next one has to be able to read back -------------
+
+const noteWith = (opts = {}) => [
+    'ALERT CNS post ICU review - Physical review',
+    'Patient: ABC | URN: ...123',
+    'ICU Discharge Date: 18/08/2026',
+    '',
+    opts.bloods || 'Bloods (taken 20/08/2026 06:00): Hb 98, WCC 14.2, Cr 145, Mg 0.65',
+    '',
+    'PATIENT FACTORS:',
+    ...(opts.factors || ['- Son visiting daily']),
+    '',
+    'IDENTIFIED ICU READMISSION RISK FACTORS:',
+    ...(opts.risks || ['- Awaiting dietitian review']),
+    '',
+    'PLAN:',
+    '- ALERT nursing post ICU reviews continue.'
+].join('\n');
+
+const importNote = async (window, document, text) => {
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = text;
+    click(window, '#runImport');
+    await tick(window, 900);
+};
+
+test('both list sections survive the trip out to the note and back', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, noteWith());
+
+    const factors = document.getElementById('patient_factors_list').textContent;
+    const risks = document.getElementById('scraped_issues_list').textContent;
+    assert.match(factors, /Son visiting daily/, 'patient factors come back into their own list');
+    assert.match(risks, /Awaiting dietitian review/, 'and risks into theirs');
+    assert.ok(!/Son visiting daily/.test(risks), 'neither lands in the other');
+
+    // A line that has been riding along says so, so a list that only grows can still be pruned.
+    generateNote(window);
+    await tick(window);
+    const note = document.getElementById('summary').value;
+    assert.match(note, /- Son visiting daily \(carried 2\)/, 'the count continues in the note');
+    assert.match(note, /- Awaiting dietitian review \(carried 2\)/);
+    close();
+});
+
+test('a mitigated risk comes back mitigated, not live', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, noteWith({
+        risks: ['- Renal concern (mitigated: known CKD and Cr/urine output around baseline)']
+    }));
+
+    // Carrying it to a gate would set that gate to Yes and turn a risk the previous reviewer
+    // discounted into a live one - the mitigation destroyed by the act of reading the note.
+    assert.equal(document.querySelector('#seg_renal .seg-btn.active'), null,
+        'a mitigated line must not answer its gate');
+    const row = document.querySelector('#scraped_issues_list .scraped-issue-row');
+    assert.match(row.textContent, /mitigated: known CKD/, 'it keeps its reason');
+    assert.match(row.textContent, /mitigated/, 'and is marked as discounted');
+
+    generateNote(window);
+    await tick(window);
+    assert.match(document.getElementById('summary').value, /mitigated: known CKD/,
+        'and it is still mitigated in the next note');
+    close();
+});
+
+test('bloods import whether or not the note recorded when they were taken', async () => {
+    // The note writes "Bloods (taken 20/08/2026 06:00):" whenever a collection time was
+    // recorded, and the importer only ever matched a bare "Bloods:". Every note carrying a
+    // time therefore lost its bloods in silence - previous values, trend arrows and every
+    // trend-based rule with them.
+    for (const bloods of ['Bloods (taken 20/08/2026 06:00): Hb 98, WCC 14.2, Cr 145',
+                          'Bloods: Hb 98, WCC 14.2, Cr 145']) {
+        const { window, document, close } = await loadTool();
+        await importNote(window, document, noteWith({ bloods }));
+        assert.equal(window.prevBloods.hb, '98', `previous Hb read from "${bloods.slice(0, 24)}..."`);
+        assert.equal(window.prevBloods.cr_review, '145');
+        assert.match(document.getElementById('prev_bl_hb').textContent, /98/, 'and shown on the field');
+        close();
+    }
+});
+
+test('a risk the tool works out for itself does not also arrive as text', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, noteWith({
+        risks: [
+            '- Low platelets Plts 12',
+            '- Lactate 4.5',
+            '- Age 82, increased risk of complications',
+            '- Awaiting dietitian review'
+        ]
+    }));
+    // These are re-evaluated every review from fields this same import fills, so scraping them
+    // as text would put a second copy beside the one the rules are about to produce - and that
+    // pair compounds at every subsequent review.
+    type(window, 'ptAge', '82');
+    type(window, 'bl_plts', '12');
+    type(window, 'bl_lac_review', '4.5');
+    await tick(window);
+
+    generateNote(window);
+    await tick(window);
+    const note = document.getElementById('summary').value;
+    assert.equal((note.match(/Low platelets/g) || []).length, 1, 'platelets stated once');
+    assert.equal((note.match(/Lactate 4\.5/g) || []).length, 1, 'lactate stated once');
+    assert.equal((note.match(/Age 82/g) || []).length, 1, 'age stated once');
+    assert.match(note, /Awaiting dietitian review/, 'a genuine carried risk still comes across');
+    close();
+});
+
 test('clearing for the next patient takes the carried-forward marks with it', async () => {
     const { window, document, close } = await loadTool();
     click(window, '#btnOpenImport');

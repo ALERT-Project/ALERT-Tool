@@ -55,7 +55,7 @@ function defaultListFor(source, severity) {
     return severity === 'info' ? 'factors' : 'risks';
 }
 
-export function addActiveIssue({ text, source, severity, key, list }) {
+export function addActiveIssue({ text, source, severity, key, list, carried, mitigated }) {
     // A tick the clinician made still counts as a match, so a risk that is still firing
     // updates that entry instead of reappearing as a second, unticked copy. Entries retired
     // by reconcileAutoIssues() are not matched, so a genuine recurrence still arrives as new.
@@ -71,6 +71,13 @@ export function addActiveIssue({ text, source, severity, key, list }) {
     const issue = {
         id: `ai_${++_activeIssueCounter}`, text, source, severity, key,
         list: list || defaultListFor(source, severity),
+        // 1 means raised this review. The importer passes a higher number when it reads a
+        // "(carried N)" back off the previous note.
+        carried: carried || 1,
+        // A risk the previous note recorded as considered and discounted. It comes back
+        // carrying its reason rather than as a live risk, so the mitigation isn't silently
+        // lost the moment the note is re-imported.
+        mitigated: !!mitigated,
         resolved: false, createdAt: _activeIssueCounter
     };
     activeIssues.push(issue);
@@ -143,11 +150,18 @@ export function getUnresolvedActiveIssues() { return activeIssues.filter(i => !i
 // below it.
 const MIRRORS_AN_ASSESSMENT_FIELD = new Set(['ae_mobility', 'ae_diet']);
 
+// How long a line has been riding along, written into the note so the next import can read it
+// back and keep counting. A list that only grows stops being read; by day five a line nobody
+// has pruned looks exactly like one raised this morning, and this is what tells them apart.
+function withCarry(issue) {
+    return issue.carried > 1 ? `${issue.text} (carried ${issue.carried})` : issue.text;
+}
+
 export function getFactorsForNote() {
     return activeIssues
         .filter(i => i.list === 'factors' && !i.resolved)
         .filter(i => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key))
-        .map(i => i.text);
+        .map(withCarry);
 }
 
 // Computed risks are excluded here and supplied by the caller from the rules' own red/amber/
@@ -157,7 +171,7 @@ export function getRisksForNote() {
     return activeIssues
         .filter(i => i.list === 'risks' && !i.resolved)
         .filter(i => i.source !== 'auto')
-        .map(i => i.text);
+        .map(withCarry);
 }
 
 export function getChecksForNote() {
@@ -243,6 +257,7 @@ function renderOneList(listName) {
     list.innerHTML = issues.map(issue => `
         <div class="scraped-issue-row${issue.resolved ? ' resolved' : ''}" data-id="${issue.id}">
             <span class="scraped-issue-text" data-id="${issue.id}" title="Click to edit">${issue.text}</span>
+            ${issue.mitigated ? '<span class="scraped-issue-note-tag" title="Considered and discounted last review">mitigated</span>' : ''}
             ${issue.carried > 1 ? `<span class="scraped-issue-carried" title="On this list for ${issue.carried} reviews">carried ${issue.carried}</span>` : ''}
             <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}"
                 title="Edit" aria-label="Edit">&#9998;</button>
