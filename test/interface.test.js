@@ -834,6 +834,93 @@ test('Quick Review scores what was measured, and what was left standing', async 
     close();
 });
 
+test('a carried blood concern keeps its concern and loses its numbers', async () => {
+    const carried = [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: ABC | URN: ...123',
+        'ICU Discharge Date: 18/08/2026',
+        '',
+        'Bloods (taken 20/08/2026 06:00): K 2.9',
+        '',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        '- Electrolyte concern - low K+ 2.9',
+        '',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n');
+
+    // Today's bloods not entered yet. The concern has to survive: dropping it outright meant a
+    // carried electrolyte concern simply disappeared - off the list, out of the note and out of
+    // the category - which is the way a category gets missed.
+    {
+        const { window, document, close } = await loadTool();
+        click(window, '#btnOpenImport');
+        document.getElementById('importText').value = carried;
+        click(window, '#runImport');
+        await tick(window, 900);
+        click(window, 'input[name="reviewDepth"][value="quick"]');
+        await tick(window, 700);
+
+        const risks = document.getElementById('scraped_issues_list').textContent;
+        assert.match(risks, /Electrolyte concern/, 'the concern carries');
+        assert.ok(!/2\.9/.test(risks), "yesterday's number does not");
+        assert.equal(document.getElementById('catText').textContent, 'CAT 2', 'and it still scores');
+        close();
+    }
+
+    // Today's bloods entered and still low: today's finding stands on its own, in today's
+    // numbers, and the carried copy must not say it again in last review's words.
+    {
+        const { window, document, close } = await loadTool();
+        click(window, '#btnOpenImport');
+        document.getElementById('importText').value = carried;
+        click(window, '#runImport');
+        await tick(window, 900);
+        click(window, 'input[name="reviewDepth"][value="quick"]');
+        await tick(window, 700);
+        type(window, 'bl_k', '2.8');
+        await tick(window);
+
+        generateNote(window);
+        await tick(window);
+        const note = document.getElementById('summary').value;
+        assert.match(note, /Electrolyte concern - low K\+ 2\.8/, "today's finding is stated");
+        assert.equal((note.match(/Electrolyte concern/g) || []).length, 1, 'and only once');
+        close();
+    }
+});
+
+test('temperature is one ladder, and says what raised it', async () => {
+    const read = async (t) => {
+        const { window, document, close } = await loadTool();
+        type(window, 'ptName', 'ABC');
+        type(window, 'stepdownDate', '2026-08-20');
+        type(window, 'adds', '1');
+        await tick(window);
+        type(window, 'e_temp', String(t));
+        await tick(window);
+        const out = {
+            cat: document.getElementById('catText').textContent,
+            flags: (document.getElementById('redFlagList').textContent + ' ' +
+                    document.getElementById('amberFlagList').textContent).replace(/\s+/g, ' ').trim()
+        };
+        close();
+        return out;
+    };
+
+    // 38.5 exactly used to fall through the febrile rule, which tested >, and came out amber
+    // through the infection gate instead - as a bare "Infection risk" with no reason attached
+    // and the temperature mentioned nowhere at all.
+    assert.equal((await read(37.9)).cat, 'CAT 3', 'below 38 is nothing');
+    const low = await read(38.2);
+    assert.equal(low.cat, 'CAT 2', 'a low-grade fever is amber');
+    assert.match(low.flags, /Temp 38\.2/, 'and says so rather than raising a bare infection risk');
+    assert.equal((await read(38.5)).cat, 'CAT 1', '38.5 is febrile, not a gap');
+    assert.match((await read(38.5)).flags, /Febrile 38\.5/);
+    assert.equal((await read(35.5)).cat, 'CAT 1', 'and the bottom rung is inclusive too');
+    assert.equal((await read(35.6)).cat, 'CAT 3');
+});
+
 test('a released gate keeps its own weight, not a guessed one', async () => {
     const { window, document, close } = await loadTool();
     click(window, '#btnOpenImport');

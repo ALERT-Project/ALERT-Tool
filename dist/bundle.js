@@ -465,6 +465,15 @@
     "^rising crp"
   ].join("|"), "i");
   var FIELD_BACKED_FACTOR = /^(mobility|diet|nutrition|post icu syndrome|sleep|psychological issues)\s*:/i;
+  var GATE_RISK_ID = {
+    seg_resp_concern: "seg_resp_concern",
+    seg_neuro_gate: "neuroConcern",
+    seg_renal: "seg_renal",
+    seg_infection: "seg_infection",
+    seg_electrolyte_gate: "electrolyteConcern",
+    seg_pressors: "seg_pressors",
+    seg_immobility: "seg_immobility"
+  };
 
   // src/js/trends.js
   var TREND_RULES = {
@@ -688,8 +697,8 @@
     if (spo2 && spo2 < 88) addVital(red, `Hypoxia SpO2 ${spo2}%`, "b_spo2", "red", "spo2");
     const temp = num(s.e_temp);
     if (temp) {
-      if (temp > 38.5) addVital(red, `Febrile ${temp}`, "e_temp", "red", "temp");
-      else if (temp < 35.5) addVital(red, `Temp low ${temp}`, "e_temp", "red", "temp");
+      if (temp >= 38.5) addVital(red, `Febrile ${temp}`, "e_temp", "red", "temp");
+      else if (temp <= 35.5) addVital(red, `Temp low ${temp}`, "e_temp", "red", "temp");
     }
     const oxygen = { parts: [], red: false, id: null };
     if (s.oxMod === "NP") {
@@ -886,7 +895,7 @@
     }
     const wcc = num(s.bl_wcc) ?? num(s.wcc);
     const crp = num(s.bl_crp) ?? num(s.crp);
-    const autoTrigger = bloodsReviewed && (wcc && (wcc > 15 || wcc < 2) || crp && crp > 100 || nlrVal > 10) || temp && temp > 38;
+    const autoTrigger = bloodsReviewed && (wcc && (wcc > 15 || wcc < 2) || crp && crp > 100 || nlrVal > 10) || temp && temp >= 38;
     let downtrendSuggestion = null;
     if (autoTrigger || s.infection === true) {
       const markers = [];
@@ -895,6 +904,7 @@
       if (crp > 100) markers.push(`CRP ${crp}`);
       else if (crp > 50) markers.push(`CRP ${crp}`);
       if (nlrVal > 10) markers.push(`NLR ${nlrVal.toFixed(1)}`);
+      if (temp && temp >= 38 && temp < 38.5) markers.push(`Temp ${temp}`);
       let msg = "Infection risk";
       if (markers.length) msg += ` - ${joinGrammatically(markers)}`;
       const addsVerified = adds !== null && adds < 4;
@@ -1002,6 +1012,8 @@
       }
     }
     (ctx.listRisks || []).forEach((entry) => {
+      const alreadyRaised = entry.gateId && (flagged.red.includes(entry.gateId) || flagged.amber.includes(entry.gateId));
+      if (alreadyRaised) return;
       const isRed = entry.severity === "red";
       (isRed ? red : amber).push(entry.text);
       if (entry.gateId) flagged[isRed ? "red" : "amber"].push(entry.gateId);
@@ -2125,16 +2137,18 @@
       delete wrapper.dataset.carriedFrom;
       delete wrapper.dataset.carriedRaw;
       delete wrapper.dataset.carriedNote;
-      if (raw && !SELF_DERIVED_RISK.test(raw) && window.addActiveIssue) {
-        const wasScoring = (window._lastRiskEntries || []).find((e) => e.id === group?.id);
+      if (raw && window.addActiveIssue) {
+        const riskId = GATE_RISK_ID[group?.id] || group?.id || null;
+        const wasScoring = (window._lastRiskEntries || []).find((e) => e.id === riskId);
+        const text = SELF_DERIVED_RISK.test(raw) ? raw.split(/\s+-\s+/)[0].trim() : raw;
         window.addActiveIssue({
-          text: raw,
+          text,
           source: "scraped",
           list: "risks",
           severity: wasScoring?.type || "amber",
           scoresAs: wasScoring?.type || "amber",
-          gateId: group?.id || null,
-          key: `released_gate_${idx}_${raw.slice(0, 20)}`
+          gateId: riskId,
+          key: `released_gate_${idx}_${text.slice(0, 20)}`
         });
       }
     });

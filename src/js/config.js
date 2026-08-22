@@ -170,3 +170,18 @@ export const SELF_DERIVED_RISK = new RegExp([
 // answer beside yesterday's - "Mobility: assist x2" under "Mobility: assist x1 with frame" -
 // the moment the clinician updated one. Same principle as SELF_DERIVED_RISK, one section over.
 export const FIELD_BACKED_FACTOR = /^(mobility|diet|nutrition|post icu syndrome|sleep|psychological issues)\s*:/i;
+
+
+// The gate control a carried risk was folded into -> the id the rules use for the risk that
+// gate produces. They are not the same string for every gate, and releasing a gate needs both:
+// the rule id to look up what the gate was scoring, and to recognise when today's data has
+// re-derived the same concern and should supersede the carried one.
+export const GATE_RISK_ID = {
+    seg_resp_concern: 'seg_resp_concern',
+    seg_neuro_gate: 'neuroConcern',
+    seg_renal: 'seg_renal',
+    seg_infection: 'seg_infection',
+    seg_electrolyte_gate: 'electrolyteConcern',
+    seg_pressors: 'seg_pressors',
+    seg_immobility: 'seg_immobility'
+};

@@ -7,7 +7,7 @@
 
 import { $, debounce, showToast, disableAutofill, iconSetForPath } from './utils.js';
 import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
-import { normalRanges, comorbMap, toggleInputs, staticInputs, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY, SELF_DERIVED_RISK} from './config.js';
+import { normalRanges, comorbMap, toggleInputs, staticInputs, ACCORDION_KEY, STORAGE_KEY, UNDO_KEY, SELF_DERIVED_RISK, GATE_RISK_ID} from './config.js';
 import {
     getState, saveState, pushUndo, isQuickReviewMode, setQuickReviewMode, initialQuickReviewRisks,
     setInitialQuickReviewRisks, quickReviewBaselineCaptured, setQuickReviewBaselineCaptured,
@@ -911,18 +911,28 @@ function releaseCarriedGatesToList() {
         // filtered on the way in, because the gate was carrying it, and releasing the gate
         // would put "Infection risk - WCC 16, CRP 180" on the list in yesterday's numbers
         // while today's bloods say the markers have halved.
-        if (raw && !SELF_DERIVED_RISK.test(raw) && window.addActiveIssue) {
+        if (raw && window.addActiveIssue) {
+            const riskId = GATE_RISK_ID[group?.id] || group?.id || null;
             // What this gate was scoring a moment ago, before it was cleared. Taken from the
             // last evaluation rather than assumed, because a gate's weight depends on its
             // details - a renal concern with anuria is red where the same gate is otherwise
             // amber - and guessing amber would quietly undercall exactly those patients.
-            const wasScoring = (window._lastRiskEntries || []).find(e => e.id === group?.id);
+            const wasScoring = (window._lastRiskEntries || []).find(e => e.id === riskId);
+
+            // A risk the tool re-derives from bloods keeps its concern and loses its numbers.
+            // "Infection risk - WCC 16, CRP 180" must not state yesterday's markers as today's
+            // finding; "Infection risk" carried forward is true and is the thing that matters.
+            // Dropping the line outright, which is what this used to do, was worse than either:
+            // a carried electrolyte concern simply disappeared - off the list, out of the note
+            // and out of the category - whenever today's bloods had not been entered yet.
+            const text = SELF_DERIVED_RISK.test(raw) ? raw.split(/\s+-\s+/)[0].trim() : raw;
+
             window.addActiveIssue({
-                text: raw, source: 'scraped', list: 'risks',
+                text, source: 'scraped', list: 'risks',
                 severity: wasScoring?.type || 'amber',
                 scoresAs: wasScoring?.type || 'amber',
-                gateId: group?.id || null,
-                key: `released_gate_${idx}_${raw.slice(0, 20)}`
+                gateId: riskId,
+                key: `released_gate_${idx}_${text.slice(0, 20)}`
             });
         }
     });

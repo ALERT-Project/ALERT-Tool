@@ -254,10 +254,22 @@ export function evaluateRisks(s, ctx = {}) {
     const spo2 = num(s.b_spo2 ? String(s.b_spo2).replace('%', '') : '');
     if (spo2 && spo2 < 88) addVital(red, `Hypoxia SpO2 ${spo2}%`, 'b_spo2', 'red', 'spo2');
 
+    // Temperature was being judged by two rules with two different thresholds, and neither
+    // said so. 38.5 exactly fell through the febrile rule (it tested >) and came out amber via
+    // the infection gate instead, which triggers above 38 - so the reader saw "Infection risk"
+    // with no reason attached and no temperature mentioned anywhere.
+    //
+    // One ladder now, with the boundaries inclusive and the fever named at every rung:
+    //   38.0 - 38.4  amber, through the infection gate, with the temperature stated
+    //   38.5 and up  red, febrile
+    //   35.5 and below  red
+    // The infection gate keeps ownership of the low-grade range because a fever there is an
+    // infection marker rather than an unstable vital sign, and it belongs beside the WCC and
+    // the CRP that are read with it.
     const temp = num(s.e_temp);
     if (temp) {
-        if (temp > 38.5) addVital(red, `Febrile ${temp}`, 'e_temp', 'red', 'temp');
-        else if (temp < 35.5) addVital(red, `Temp low ${temp}`, 'e_temp', 'red', 'temp');
+        if (temp >= 38.5) addVital(red, `Febrile ${temp}`, 'e_temp', 'red', 'temp');
+        else if (temp <= 35.5) addVital(red, `Temp low ${temp}`, 'e_temp', 'red', 'temp');
     }
 
     // --- Respiratory ---
@@ -475,7 +487,7 @@ export function evaluateRisks(s, ctx = {}) {
     // Any one marker can open the gate, because a clinician who records only a WCC, or only a
     // CRP, still needs the gate to respond to what they wrote.
     const autoTrigger = (bloodsReviewed && ((wcc && (wcc > 15 || wcc < 2)) || (crp && crp > 100) || (nlrVal > 10))) ||
-        (temp && temp > 38);
+        (temp && temp >= 38);
 
     let downtrendSuggestion = null;
     if (autoTrigger || s.infection === true) {
@@ -488,6 +500,9 @@ export function evaluateRisks(s, ctx = {}) {
         if (crp > 100) markers.push(`CRP ${crp}`);
         else if (crp > 50) markers.push(`CRP ${crp}`);
         if (nlrVal > 10) markers.push(`NLR ${nlrVal.toFixed(1)}`);
+        // The temperature that opened this gate, named. Without it a low-grade fever produced
+        // a bare "Infection risk" and the reader had no way to see what raised it.
+        if (temp && temp >= 38 && temp < 38.5) markers.push(`Temp ${temp}`);
 
         let msg = 'Infection risk';
         if (markers.length) msg += ` - ${joinGrammatically(markers)}`;
@@ -670,6 +685,12 @@ export function evaluateRisks(s, ctx = {}) {
     // the category and nothing else. Quick Review's scoring allowlist does not apply to them
     // either - the clinician confirming a carried risk is a stronger signal than any rule.
     (ctx.listRisks || []).forEach(entry => {
+        // Today's data supersedes yesterday's concern. If the rules have already raised this
+        // same gate's risk from what was measured today, that finding stands on its own and the
+        // carried copy would only say it twice - in last review's words.
+        const alreadyRaised = entry.gateId &&
+            (flagged.red.includes(entry.gateId) || flagged.amber.includes(entry.gateId));
+        if (alreadyRaised) return;
         const isRed = entry.severity === 'red';
         (isRed ? red : amber).push(entry.text);
         if (entry.gateId) flagged[isRed ? 'red' : 'amber'].push(entry.gateId);
