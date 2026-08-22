@@ -261,24 +261,36 @@ export function evaluateRisks(s, ctx = {}) {
     }
 
     // --- Respiratory ---
-    if (s.resp_concern === true) {
-        const parts = [];
-        let hasRed = false;
-        if (s.oxMod === 'NP') {
-            const flow = num(s.npFlow);
-            // Nasal prong flow is the whole scale: 4L+ is CAT 1, 3L is CAT 2, up to 2L is
-            // ward-normal and scores nothing.
-            if (flow >= 4) { parts.push(`Oxygen requirement - ${flow}LNP`); flagged.red.push('npFlow'); hasRed = true; }
-            else if (flow >= 3) { parts.push(`Oxygen requirement - ${flow}LNP`); flagged.amber.push('npFlow'); }
-        } else if (s.oxMod === 'HFNP') {
-            const fio2Val = num(s.hfnpFio2);
-            parts.push(fio2Val >= 60 ? `HFNP - high FiO2 ${s.hfnpFio2 || ''}%` : `HFNP - FiO2 ${s.hfnpFio2 || ''}%`);
-            flagged.red.push('oxMod'); hasRed = true;
-        } else if (s.oxMod === 'NIV') {
-            const fio2Val = num(s.nivFio2);
-            parts.push(fio2Val >= 60 ? `NIV - high FiO2 ${s.nivFio2 || ''}%` : `NIV - FiO2 ${s.nivFio2 || ''}%`);
-            flagged.red.push('oxMod'); hasRed = true;
-        }
+    // What the patient is actually on. Worked out before the gate and independently of it: a
+    // flow rate is a measurement, and 4L of oxygen is 4L whether or not anybody ticked
+    // "Respiratory Concern? Yes". This whole block used to sit inside that gate, so a patient
+    // recorded on 4LNP with the gate left unanswered scored nothing at all.
+    const oxygen = { parts: [], red: false, id: null };
+    if (s.oxMod === 'NP') {
+        const flow = num(s.npFlow);
+        // Nasal prong flow is the whole scale: 4L+ is CAT 1, 3L is CAT 2, up to 2L is
+        // ward-normal and scores nothing.
+        if (flow >= 4) { oxygen.parts.push(`Oxygen requirement - ${flow}LNP`); oxygen.red = true; oxygen.id = 'npFlow'; }
+        else if (flow >= 3) { oxygen.parts.push(`Oxygen requirement - ${flow}LNP`); oxygen.id = 'npFlow'; }
+    } else if (s.oxMod === 'HFNP') {
+        const fio2Val = num(s.hfnpFio2);
+        oxygen.parts.push(fio2Val >= 60 ? `HFNP - high FiO2 ${s.hfnpFio2 || ''}%` : `HFNP - FiO2 ${s.hfnpFio2 || ''}%`);
+        oxygen.red = true; oxygen.id = 'oxMod';
+    } else if (s.oxMod === 'NIV') {
+        const fio2Val = num(s.nivFio2);
+        oxygen.parts.push(fio2Val >= 60 ? `NIV - high FiO2 ${s.nivFio2 || ''}%` : `NIV - FiO2 ${s.nivFio2 || ''}%`);
+        oxygen.red = true; oxygen.id = 'oxMod';
+    }
+
+    // Quick Review does not consult gates - it releases them on the way in - so the subjective
+    // half of this section has nothing to read. What is left is the oxygen, which is measured,
+    // and it is raised on its own below.
+    const useRespGate = s.resp_concern === true && !ctx.quickReview;
+
+    if (useRespGate) {
+        const parts = [...oxygen.parts];
+        let hasRed = oxygen.red;
+        if (oxygen.id) flagged[oxygen.red ? 'red' : 'amber'].push(oxygen.id);
         if (s.resp_dyspnea === true) {
             const dysp = s.dyspneaConcern;
             if (dysp === 'severe' || dysp === 'moderate') { parts.push(`Dyspnea ${dysp}`); flagged.red.push('dyspneaConcern'); hasRed = true; }
@@ -306,6 +318,13 @@ export function evaluateRisks(s, ctx = {}) {
             const isLowFlowNP = (s.oxMod === 'NP' && (num(s.npFlow) || 0) < 3);
             if (!isLowFlowNP) add(amber, 'Respiratory concern', 'seg_resp_concern', 'amber', s.dyspneaConcern_note);
         }
+    }
+
+    // No gate in play, but a requirement recorded. It is stated on its own rather than as a
+    // "Respiratory concern", because nobody has said there is one - the oxygen is simply a
+    // fact about the patient, and it counts.
+    if (!useRespGate && oxygen.parts.length) {
+        add(oxygen.red ? red : amber, joinGrammatically(oxygen.parts), oxygen.id, oxygen.red ? 'red' : 'amber');
     }
 
     if (s.oxMod === 'Trache') {
@@ -580,8 +599,18 @@ export function evaluateRisks(s, ctx = {}) {
     if (lact > 4.0) add(red, `Lactate ${lact}`, 'bl_lac_review', 'red');
     else if (lact >= 2.0) add(amber, `Lactate ${lact}`, 'bl_lac_review', 'amber');
 
-    if (s.override === 'red') add(red, s.overrideNote || 'Clinician override: CAT 1', 'override_red', 'red');
-    if (s.override === 'amber') add(amber, s.overrideNote || 'Clinician override: CAT 2', 'override_amber', 'amber');
+    // An override with a reason contributes the clinician's own words, which read as a clinical
+    // finding because that is what they are. An override without one contributes nothing.
+    //
+    // It used to fall back to "Clinician override: CAT 1", which announced to every reader of
+    // the DMR that the category came out of a piece of software and had been argued with. The
+    // selection still stands - the category is taken from s.override further down, not from
+    // this list - it just no longer narrates itself into the record.
+    const overrideNote = (s.overrideNote || '').trim();
+    if (s.override === 'red' && overrideNote) add(red, overrideNote, 'override_red', 'red');
+    else if (s.override === 'red') flagged.red.push('override_red');
+    if (s.override === 'amber' && overrideNote) add(amber, overrideNote, 'override_amber', 'amber');
+    else if (s.override === 'amber') flagged.amber.push('override_amber');
 
     const age = num(s.ptAge);
     if (age >= 75) {
@@ -636,6 +665,16 @@ export function evaluateRisks(s, ctx = {}) {
     }
 
     // --- Category ---
+    // Risks released from a gate and left standing on the list. They bypass add() deliberately:
+    // the entry already exists on the list and in the note, so this contributes its weight to
+    // the category and nothing else. Quick Review's scoring allowlist does not apply to them
+    // either - the clinician confirming a carried risk is a stronger signal than any rule.
+    (ctx.listRisks || []).forEach(entry => {
+        const isRed = entry.severity === 'red';
+        (isRed ? red : amber).push(entry.text);
+        if (entry.gateId) flagged[isRed ? 'red' : 'amber'].push(entry.gateId);
+    });
+
     const uniqueRed = [...new Set(red)];
     const uniqueAmber = [...new Set(amber)];
     const redCount = uniqueRed.length;

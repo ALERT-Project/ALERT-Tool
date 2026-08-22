@@ -127,7 +127,16 @@ export const deviceTypes = ['CVC', 'PICC', 'Other CVAD', 'PIVC', 'Arterial Line'
 // Everything else waits for a Full Review, or for the clinician to select the category
 // themselves, which in Quick Review is the point rather than an override.
 export const QUICK_REVIEW_SCORING_IDS = [
-    'adds',                 // ADDS / MODS
+    'adds',                 // ADDS / MODS total
+    // The parameters the score is calculated from. Each carries its own threshold, and those
+    // thresholds are the safety net for exactly the cases the total misses - a single
+    // catastrophic parameter inside an otherwise unremarkable score, or a MODS in use. Leaving
+    // them out meant SpO2 84%, SBP 82 and HR 135 each computed CAT 3 in Quick Review and CAT 1
+    // in Full, which is the worst possible way for two modes to disagree.
+    'b_rr', 'b_spo2', 'c_hr', 'c_nibp', 'e_temp',
+    // Oxygen delivery: a flow rate and an FiO2 are measured numbers like any other, and a new
+    // tracheostomy is a recorded fact rather than a judgement.
+    'npFlow', 'oxMod', 'tracheStatus',
     'ptAge', 'icuLos',      // demographics
     'bl_plts', 'bl_lac_review', 'bl_cr_review', 'bl_crp', 'e_bsl',
     'electrolyteConcern',   // fires from K/Na/Mg/PO4 numbers when no gate is set

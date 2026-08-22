@@ -791,7 +791,7 @@ test('releasing a gate does not carry yesterday\'s numbers into today\'s note', 
     close();
 });
 
-test('Quick Review scores what was measured, and nothing more', async () => {
+test('Quick Review scores what was measured, and what was left standing', async () => {
     const { window, document, close } = await loadTool();
     click(window, '#btnOpenImport');
     document.getElementById('importText').value = gatedNote;
@@ -811,10 +811,59 @@ test('Quick Review scores what was measured, and nothing more', async () => {
     assert.match(document.getElementById('redFlagList').textContent + document.getElementById('amberFlagList').textContent,
         /Age 82/, 'age still counts');
     assert.match(document.getElementById('amberFlagList').textContent, /9-day ICU stay/, 'so does ICU stay');
-    assert.ok(!/Respiratory concern/.test(document.getElementById('amberFlagList').textContent),
-        'an unanswered gate does not');
-    assert.notEqual(document.getElementById('catText').textContent, fullCat,
-        'so the category is not simply what Full Review computed');
+
+    // A risk released from a gate and left standing scores what that gate was scoring. Leaving
+    // it there is an affirmative act - the clinician read it and did not delete it - and a real
+    // risk sitting in plain sight scoring nothing is how a category gets missed by someone
+    // working from the list rather than the gates.
+    const flags = document.getElementById('redFlagList').textContent +
+                  document.getElementById('amberFlagList').textContent;
+    assert.match(flags, /Respiratory concern - on oxygen, weaning slowly/,
+        'a carried risk left on the list carries its weight');
+
+    // Deleting it is what withdraws it.
+    const rows = [...document.querySelectorAll('#scraped_issues_list .scraped-issue-row')];
+    for (const row of rows) {
+        if (/Respiratory|Delirium/.test(row.textContent)) click(window, row.querySelector('.scraped-issue-resolve'));
+    }
+    await tick(window);
+    assert.ok(!/Respiratory concern/.test(
+        document.getElementById('redFlagList').textContent +
+        document.getElementById('amberFlagList').textContent),
+        'and deleting it takes the weight away again');
+    close();
+});
+
+test('a released gate keeps its own weight, not a guessed one', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: ABC | URN: ...123',
+        'ICU Discharge Date: 18/08/2026',
+        '',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        '- Renal concern - anuria',
+        '',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n');
+    click(window, '#runImport');
+    await tick(window, 900);
+    click(window, '#toggle_renal_anuria');
+    await tick(window);
+    assert.equal(document.getElementById('catText').textContent, 'CAT 1',
+        'anuria makes this gate red, not amber');
+
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window, 700);
+
+    // A gate's weight depends on its details - a renal concern with anuria is red where the
+    // same gate is otherwise amber - so assuming amber on release would quietly undercall
+    // exactly the patients who can least afford it.
+    assert.equal(document.getElementById('catText').textContent, 'CAT 1',
+        'the released risk carries red across, not amber');
+    assert.match(document.getElementById('redFlagList').textContent, /Renal concern - anuria/);
     close();
 });
 
@@ -827,9 +876,8 @@ test('choosing the category in Quick Review is a decision, not an override', asy
     click(window, 'input[name="reviewDepth"][value="quick"]');
     await tick(window, 700);
 
-    assert.ok(!document.getElementById('qr_category_prompt').hidden, 'the strip hands the call over');
     assert.ok(document.getElementById('qr_discharge_prompt').hidden,
-        'and nothing is asked about discharge until the category is chosen');
+        'nothing is asked about discharge until the category is chosen');
 
     click(window, '#override_green');
     await tick(window);
@@ -849,10 +897,77 @@ test('choosing the category in Quick Review is a decision, not an override', asy
     // question can carry the number rather than leaving it to be worked out.
     const discharge = document.getElementById('qr_discharge_prompt');
     assert.ok(!discharge.hidden, 'now the discharge question is asked');
-    assert.match(discharge.textContent, /on the list at CAT 3/);
+    assert.match(discharge.textContent, /on the list - CAT 3/);
     assert.match(discharge.textContent, /can this patient be discharged/);
     assert.equal(document.getElementById('chk_discharge_alert').checked, false,
         'it asks and ticks nothing');
+    close();
+});
+
+test('CAT 2 is not asked about discharge at all', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'stepdownDate', '2026-08-21');
+    await tick(window);
+    click(window, 'input[name="reviewDepth"][value="quick"]');
+    await tick(window, 700);
+
+    // "Continue reviews, or discharge pending bloods?" at a day and a half puts the second
+    // half of the sentence in the clinician's head. Discharge pending bloods should arrive as
+    // a decision, not as the answer to a leading question.
+    click(window, '#override_amber');
+    await tick(window);
+    assert.ok(document.getElementById('qr_discharge_prompt').hidden, 'CAT 2 says nothing');
+
+    // CAT 1 says what it says plainly.
+    click(window, '#override_red');
+    await tick(window);
+    const d = document.getElementById('qr_discharge_prompt');
+    assert.ok(!d.hidden);
+    assert.match(d.textContent, /CAT 1 - cannot be discharged today/);
+    close();
+});
+
+test('an override sets the category without saying so in the note', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'adds', '1');
+    await tick(window);
+
+    // Upgrading with no reason typed used to write "Clinician override: CAT 1" into the risk
+    // factors, announcing to every reader of the DMR that the category came out of a piece of
+    // software and had been argued with. The selection still has to stand.
+    click(window, '#override_red');
+    await tick(window);
+    assert.equal(document.getElementById('catText').textContent, 'CAT 1', 'the override stands');
+    generateNote(window);
+    await tick(window);
+    let note = document.getElementById('summary').value;
+    assert.match(note, /ALERT Nursing Review Category - CAT 1/);
+    assert.ok(!/Clinician override/i.test(note), 'and the note does not narrate itself');
+
+    // A typed reason is the clinician's own words and does belong in the record.
+    type(window, 'overrideNote', 'Deteriorating overnight per bedside nurse');
+    await tick(window);
+    generateNote(window);
+    await tick(window);
+    note = document.getElementById('summary').value;
+    assert.match(note, /- Deteriorating overnight per bedside nurse/);
+    assert.ok(!/Clinician override/i.test(note));
+    close();
+});
+
+test('an override to CAT 2 is equally silent', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'adds', '1');
+    await tick(window);
+    click(window, '#override_amber');
+    await tick(window);
+    assert.equal(document.getElementById('catText').textContent, 'CAT 2');
+    generateNote(window);
+    await tick(window);
+    assert.ok(!/Clinician override/i.test(document.getElementById('summary').value));
     close();
 });
 
@@ -865,7 +980,6 @@ test('Full Review still demands a reason for a downgrade', async () => {
     await tick(window);
     assert.equal(document.getElementById('override_reason_box').style.display, 'block',
         'the override framing is intact where the tool considered every gate');
-    assert.equal(document.getElementById('qr_category_prompt').hidden, true);
     close();
 });
 

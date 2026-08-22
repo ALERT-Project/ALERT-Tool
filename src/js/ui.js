@@ -912,8 +912,16 @@ function releaseCarriedGatesToList() {
         // would put "Infection risk - WCC 16, CRP 180" on the list in yesterday's numbers
         // while today's bloods say the markers have halved.
         if (raw && !SELF_DERIVED_RISK.test(raw) && window.addActiveIssue) {
+            // What this gate was scoring a moment ago, before it was cleared. Taken from the
+            // last evaluation rather than assumed, because a gate's weight depends on its
+            // details - a renal concern with anuria is red where the same gate is otherwise
+            // amber - and guessing amber would quietly undercall exactly those patients.
+            const wasScoring = (window._lastRiskEntries || []).find(e => e.id === group?.id);
             window.addActiveIssue({
-                text: raw, source: 'scraped', severity: 'amber', list: 'risks',
+                text: raw, source: 'scraped', list: 'risks',
+                severity: wasScoring?.type || 'amber',
+                scoresAs: wasScoring?.type || 'amber',
+                gateId: group?.id || null,
                 key: `released_gate_${idx}_${raw.slice(0, 20)}`
             });
         }

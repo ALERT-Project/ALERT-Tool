@@ -419,7 +419,22 @@
   var deviceTypes = ["CVC", "PICC", "Other CVAD", "PIVC", "Arterial Line", "Enteral Tube", "IDC", "Pacing Wire", "Drain", "Wound", "Vascath", "Tracheostomy", "Other Device"];
   var QUICK_REVIEW_SCORING_IDS = [
     "adds",
-    // ADDS / MODS
+    // ADDS / MODS total
+    // The parameters the score is calculated from. Each carries its own threshold, and those
+    // thresholds are the safety net for exactly the cases the total misses - a single
+    // catastrophic parameter inside an otherwise unremarkable score, or a MODS in use. Leaving
+    // them out meant SpO2 84%, SBP 82 and HR 135 each computed CAT 3 in Quick Review and CAT 1
+    // in Full, which is the worst possible way for two modes to disagree.
+    "b_rr",
+    "b_spo2",
+    "c_hr",
+    "c_nibp",
+    "e_temp",
+    // Oxygen delivery: a flow rate and an FiO2 are measured numbers like any other, and a new
+    // tracheostomy is a recorded fact rather than a judgement.
+    "npFlow",
+    "oxMod",
+    "tracheStatus",
     "ptAge",
     "icuLos",
     // demographics
@@ -676,30 +691,33 @@
       if (temp > 38.5) addVital(red, `Febrile ${temp}`, "e_temp", "red", "temp");
       else if (temp < 35.5) addVital(red, `Temp low ${temp}`, "e_temp", "red", "temp");
     }
-    if (s.resp_concern === true) {
-      const parts = [];
-      let hasRed = false;
-      if (s.oxMod === "NP") {
-        const flow = num(s.npFlow);
-        if (flow >= 4) {
-          parts.push(`Oxygen requirement - ${flow}LNP`);
-          flagged.red.push("npFlow");
-          hasRed = true;
-        } else if (flow >= 3) {
-          parts.push(`Oxygen requirement - ${flow}LNP`);
-          flagged.amber.push("npFlow");
-        }
-      } else if (s.oxMod === "HFNP") {
-        const fio2Val = num(s.hfnpFio2);
-        parts.push(fio2Val >= 60 ? `HFNP - high FiO2 ${s.hfnpFio2 || ""}%` : `HFNP - FiO2 ${s.hfnpFio2 || ""}%`);
-        flagged.red.push("oxMod");
-        hasRed = true;
-      } else if (s.oxMod === "NIV") {
-        const fio2Val = num(s.nivFio2);
-        parts.push(fio2Val >= 60 ? `NIV - high FiO2 ${s.nivFio2 || ""}%` : `NIV - FiO2 ${s.nivFio2 || ""}%`);
-        flagged.red.push("oxMod");
-        hasRed = true;
+    const oxygen = { parts: [], red: false, id: null };
+    if (s.oxMod === "NP") {
+      const flow = num(s.npFlow);
+      if (flow >= 4) {
+        oxygen.parts.push(`Oxygen requirement - ${flow}LNP`);
+        oxygen.red = true;
+        oxygen.id = "npFlow";
+      } else if (flow >= 3) {
+        oxygen.parts.push(`Oxygen requirement - ${flow}LNP`);
+        oxygen.id = "npFlow";
       }
+    } else if (s.oxMod === "HFNP") {
+      const fio2Val = num(s.hfnpFio2);
+      oxygen.parts.push(fio2Val >= 60 ? `HFNP - high FiO2 ${s.hfnpFio2 || ""}%` : `HFNP - FiO2 ${s.hfnpFio2 || ""}%`);
+      oxygen.red = true;
+      oxygen.id = "oxMod";
+    } else if (s.oxMod === "NIV") {
+      const fio2Val = num(s.nivFio2);
+      oxygen.parts.push(fio2Val >= 60 ? `NIV - high FiO2 ${s.nivFio2 || ""}%` : `NIV - FiO2 ${s.nivFio2 || ""}%`);
+      oxygen.red = true;
+      oxygen.id = "oxMod";
+    }
+    const useRespGate = s.resp_concern === true && !ctx.quickReview;
+    if (useRespGate) {
+      const parts = [...oxygen.parts];
+      let hasRed = oxygen.red;
+      if (oxygen.id) flagged[oxygen.red ? "red" : "amber"].push(oxygen.id);
       if (s.resp_dyspnea === true) {
         const dysp = s.dyspneaConcern;
         if (dysp === "severe" || dysp === "moderate") {
@@ -755,6 +773,9 @@
         const isLowFlowNP = s.oxMod === "NP" && (num(s.npFlow) || 0) < 3;
         if (!isLowFlowNP) add(amber, "Respiratory concern", "seg_resp_concern", "amber", s.dyspneaConcern_note);
       }
+    }
+    if (!useRespGate && oxygen.parts.length) {
+      add(oxygen.red ? red : amber, joinGrammatically(oxygen.parts), oxygen.id, oxygen.red ? "red" : "amber");
     }
     if (s.oxMod === "Trache") {
       const isLary = s.tracheType === "Laryngectomy";
@@ -943,8 +964,11 @@
     const lact = num(s.bl_lac_review);
     if (lact > 4) add(red, `Lactate ${lact}`, "bl_lac_review", "red");
     else if (lact >= 2) add(amber, `Lactate ${lact}`, "bl_lac_review", "amber");
-    if (s.override === "red") add(red, s.overrideNote || "Clinician override: CAT 1", "override_red", "red");
-    if (s.override === "amber") add(amber, s.overrideNote || "Clinician override: CAT 2", "override_amber", "amber");
+    const overrideNote = (s.overrideNote || "").trim();
+    if (s.override === "red" && overrideNote) add(red, overrideNote, "override_red", "red");
+    else if (s.override === "red") flagged.red.push("override_red");
+    if (s.override === "amber" && overrideNote) add(amber, overrideNote, "override_amber", "amber");
+    else if (s.override === "amber") flagged.amber.push("override_amber");
     const age = num(s.ptAge);
     if (age >= 75) {
       if (s.age_mitigated === true) {
@@ -977,6 +1001,11 @@
         suppressedRisks.push(`${label} (mitigated: no other risk factors identified)`);
       }
     }
+    (ctx.listRisks || []).forEach((entry) => {
+      const isRed = entry.severity === "red";
+      (isRed ? red : amber).push(entry.text);
+      if (entry.gateId) flagged[isRed ? "red" : "amber"].push(entry.gateId);
+    });
     const uniqueRed = [...new Set(red)];
     const uniqueAmber = [...new Set(amber)];
     const redCount = uniqueRed.length;
@@ -1029,7 +1058,8 @@
       const result = evaluateRisks(s, {
         prevBloods: window.prevBloods || {},
         afterHoursManual: ahGroup ? ahGroup.dataset.manual === "true" : false,
-        quickReview: isQuickReviewMode
+        quickReview: isQuickReviewMode,
+        listRisks: getScoringListRisks()
       });
       if (result.afterHoursDerived !== null) {
         s.after_hours = result.afterHoursDerived;
@@ -1161,12 +1191,9 @@
           disPrompt.style.display = "block";
           disPrompt.style.borderColor = `var(--${cat.id})`;
           if (cat.id === "green") disPrompt.style.borderColor = `var(--green)`;
-          let colorName = "Green";
-          if (cat.id === "amber") colorName = "Amber";
-          if (cat.id === "red") colorName = "Red";
           let hoursTxt = Math.round(hoursSinceStep) + " hours";
           disMsg.innerHTML = `
-                    <div class="discharge-prompt-title status ${cat.id}">${cat.text} ${colorName} - ${hoursTxt} on list</div>
+                    <div class="discharge-prompt-title status ${cat.id}">${cat.text} - ${hoursTxt} on list</div>
                     <div class="discharge-prompt-question">Can the patient be discharged?</div>
                 `;
         } else {
@@ -1185,7 +1212,7 @@
       } else if (s.chk_discharge_alert) {
         planHtml = `<div class="status" style="color:var(--blue-hint)">Discharge from ALERT nursing list.</div>`;
       } else if (s.chk_discharge_pending_bloods) {
-        planHtml = `<div class="status" style="color:#ea580c; font-weight: 700;">Yes - Pending Next Bloods</div>`;
+        planHtml = `<div class="status" style="color:#ea580c; font-weight: 700;">Discharge pending next bloods</div>`;
       } else {
         planHtml = `<div class="status ${cssClass}">At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.</div>`;
         planHtml += `<div style="margin-top:2px; font-weight:500; font-size: 0.9em; color:var(--text-light);">- Please contact ALERT if further support required between reviews.</div>`;
@@ -1194,6 +1221,7 @@
       const fu = $("followUpInstructions");
       if (fu) fu.innerHTML = planHtml;
       checkCompleteness(s, countComorbs);
+      window._lastRiskEntries = riskEntries;
       window._lastRed = uniqueRed;
       window._lastAmber = uniqueAmber;
       window._lastSuppressed = suppressedRisks;
@@ -1226,8 +1254,6 @@
     }
   }
   function renderQuickReviewDecision(s, result) {
-    const prompt = $("qr_category_prompt");
-    if (prompt) prompt.hidden = !isQuickReviewMode;
     const discharge = $("qr_discharge_prompt");
     if (!discharge) return;
     const chosen = s.override && s.override !== "none" ? s.override : null;
@@ -1238,15 +1264,18 @@
     }
     const onList = result.timeData?.text || "";
     const already = s.chk_discharge_alert || s.chk_discharge_pending_bloods;
-    let question;
+    let question = null;
     if (already) {
       question = "Discharge from the ALERT list is recorded in the plan below.";
     } else if (chosen === "green") {
-      question = `${onList} on the list at CAT 3 - can this patient be discharged from ALERT?`;
-    } else if (chosen === "amber") {
-      question = `${onList} on the list at CAT 2 - continue reviews, or discharge pending bloods?`;
-    } else {
-      question = `${onList} on the list at CAT 1 - continuing review. Discharge is not in question today.`;
+      question = `${onList} on the list - CAT 3 - can this patient be discharged from ALERT?`;
+    } else if (chosen === "red") {
+      question = `${onList} on the list - CAT 1 - cannot be discharged today.`;
+    }
+    if (!question) {
+      discharge.hidden = true;
+      discharge.innerHTML = "";
+      return;
     }
     discharge.hidden = false;
     discharge.className = `qr-discharge-prompt${already ? " answered" : ""}`;
@@ -2097,11 +2126,14 @@
       delete wrapper.dataset.carriedRaw;
       delete wrapper.dataset.carriedNote;
       if (raw && !SELF_DERIVED_RISK.test(raw) && window.addActiveIssue) {
+        const wasScoring = (window._lastRiskEntries || []).find((e) => e.id === group?.id);
         window.addActiveIssue({
           text: raw,
           source: "scraped",
-          severity: "amber",
           list: "risks",
+          severity: wasScoring?.type || "amber",
+          scoresAs: wasScoring?.type || "amber",
+          gateId: group?.id || null,
           key: `released_gate_${idx}_${raw.slice(0, 20)}`
         });
       }
@@ -2367,7 +2399,7 @@
   function defaultListFor(source, severity) {
     return severity === "info" ? "factors" : "risks";
   }
-  function addActiveIssue({ text, source, severity, key, list, carried, mitigated }) {
+  function addActiveIssue({ text, source, severity, key, list, carried, mitigated, scoresAs, gateId }) {
     const existing = activeIssues.find((i) => i.key === key && (!i.resolved || i.resolvedByUser));
     if (existing) {
       existing.text = text;
@@ -2389,6 +2421,10 @@
       // carrying its reason rather than as a live risk, so the mitigation isn't silently
       // lost the moment the note is re-imported.
       mitigated: !!mitigated,
+      // Set when this entry was released from a gate. It then scores what that gate was
+      // scoring, for as long as it is left standing. See getScoringListRisks().
+      scoresAs: scoresAs || null,
+      gateId: gateId || null,
       resolved: false,
       createdAt: _activeIssueCounter
     };
@@ -2442,7 +2478,10 @@
     return activeIssues.filter((i) => i.list === "factors" && !i.resolved).filter((i) => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key)).map(withCarry);
   }
   function getRisksForNote() {
-    return activeIssues.filter((i) => i.list === "risks" && !i.resolved).filter((i) => i.source !== "auto").map(withCarry);
+    return activeIssues.filter((i) => i.list === "risks" && !i.resolved).filter((i) => i.source !== "auto").filter((i) => !i.scoresAs).map(withCarry);
+  }
+  function getScoringListRisks() {
+    return activeIssues.filter((i) => i.scoresAs && !i.resolved).map((i) => ({ text: withCarry(i), severity: i.scoresAs, gateId: i.gateId }));
   }
   function getChecksForNote() {
     return getActiveChecks().map((i) => i.text);
@@ -2829,7 +2868,6 @@
       pushBlank();
       lines.push("Assessed as not presently suitable for ward stepdown.");
       lines.push(`Reason: ${s.unsuitable_note || "Clinical concerns (see notes)"}`);
-      lines.push("Plan: ICU Senior Review requested. Please contact ALERT for re-review when appropriate.");
       pushBlank();
       lines.push("--- FULL ASSESSMENT BELOW ---");
       pushBlank();
@@ -3086,12 +3124,12 @@
     pushBlank();
     lines.push("PLAN:");
     if (s.stepdown_suitable === false) {
-      lines.push(`- ICU Senior Review requested due to unsuitability for ward stepdown.`);
-      lines.push(`- Please re-contact ALERT for re-review when appropriate.`);
+      lines.push(`- ICU senior review requested - patient not currently suitable for ward stepdown.`);
+      lines.push(`- Please contact ALERT for review when appropriate.`);
     } else if (s.chk_discharge_alert) {
-      lines.push(`- Discharge from ALERT nursing list. Please re-contact ALERT if further support required.`);
+      lines.push(`- Discharged from the ALERT nursing list. Please contact ALERT if further support is required.`);
     } else if (s.chk_discharge_pending_bloods) {
-      let text = `- Pending discharge from ALERT post ICU list raised (ALERT will check next blood results, if no action required, no further note will be added and patient will be discharged)`;
+      let text = `- Discharge from the ALERT post ICU list is pending the next blood results. ALERT will review them; if no action is required the patient will be discharged and no further note added.`;
       if (s.discharge_pending_bloods_note && s.discharge_pending_bloods_note.trim()) {
         text += `
 - Specific bloods being followed: ${s.discharge_pending_bloods_note.trim()}`;
@@ -3104,7 +3142,7 @@
       lines.push("- Patient added to ALERT medical rounding list for further review.");
     }
     if (!s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.stepdown_suitable !== false) {
-      lines.push("- Please contact ALERT if further support required between reviews.");
+      lines.push("- Please contact ALERT if further support is required between reviews.");
     }
     if (sum) {
       sum.classList.add("script-updating");

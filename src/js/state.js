@@ -55,7 +55,7 @@ function defaultListFor(source, severity) {
     return severity === 'info' ? 'factors' : 'risks';
 }
 
-export function addActiveIssue({ text, source, severity, key, list, carried, mitigated }) {
+export function addActiveIssue({ text, source, severity, key, list, carried, mitigated, scoresAs, gateId }) {
     // A tick the clinician made still counts as a match, so a risk that is still firing
     // updates that entry instead of reappearing as a second, unticked copy. Entries retired
     // by reconcileAutoIssues() are not matched, so a genuine recurrence still arrives as new.
@@ -78,6 +78,10 @@ export function addActiveIssue({ text, source, severity, key, list, carried, mit
         // carrying its reason rather than as a live risk, so the mitigation isn't silently
         // lost the moment the note is re-imported.
         mitigated: !!mitigated,
+        // Set when this entry was released from a gate. It then scores what that gate was
+        // scoring, for as long as it is left standing. See getScoringListRisks().
+        scoresAs: scoresAs || null,
+        gateId: gateId || null,
         resolved: false, createdAt: _activeIssueCounter
     };
     activeIssues.push(issue);
@@ -189,7 +193,26 @@ export function getRisksForNote() {
     return activeIssues
         .filter(i => i.list === 'risks' && !i.resolved)
         .filter(i => i.source !== 'auto')
+        // Entries released from a gate reach the note through the computed risk list instead,
+        // because they score - see getScoringListRisks(). Letting them through here as well
+        // would print each of them twice.
+        .filter(i => !i.scoresAs)
         .map(withCarry);
+}
+
+// Risks that were released from a gate and have been left standing on the list.
+//
+// Leaving one there is an affirmative act: the clinician read it and did not delete it. So it
+// has to carry the weight the gate it came from was carrying, or the list becomes a place
+// where a real risk can sit in plain sight scoring nothing - which is precisely how a category
+// gets missed by someone working from the list rather than the gates.
+//
+// Deleting the entry is what withdraws it, and that is the whole contract: on the list, it
+// counts; struck through, it doesn't.
+export function getScoringListRisks() {
+    return activeIssues
+        .filter(i => i.scoresAs && !i.resolved)
+        .map(i => ({ text: withCarry(i), severity: i.scoresAs, gateId: i.gateId }));
 }
 
 export function getChecksForNote() {

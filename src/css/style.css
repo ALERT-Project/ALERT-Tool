@@ -2174,34 +2174,6 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 }
 
 
-/* --- Quick Review: the decision strip ------------------------------------------------------
-   Quick Review is a list, and the list is the review. This says so, and then hands the call
-   over - the arrow is the whole point, because what follows is not a correction of the tool's
-   arithmetic but the clinician's own decision. Full Review keeps its override framing, where
-   the tool really has considered every gate and has a view worth arguing with. */
-#qr_category_prompt {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  margin: 4px 0 14px;
-  text-align: center;
-}
-.qr-cat-step {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
-  color: var(--muted);
-}
-.qr-cat-step-decide {
-  font-size: var(--fs-lg);
-  color: var(--ink);
-}
-.qr-cat-arrow {
-  font-size: var(--fs-lg);
-  line-height: 1;
-  color: var(--quick);
-}
-
 /* The discharge question, asked once the category is chosen because its answer depends on
    the category. Quiet on purpose: it is a question, not a recommendation, and certainly not
    a one-click discharge. */

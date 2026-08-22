@@ -74,7 +74,6 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         pushBlank();
         lines.push('Assessed as not presently suitable for ward stepdown.');
         lines.push(`Reason: ${s.unsuitable_note || 'Clinical concerns (see notes)'}`);
-        lines.push('Plan: ICU Senior Review requested. Please contact ALERT for re-review when appropriate.');
         pushBlank();
         lines.push('--- FULL ASSESSMENT BELOW ---');
         pushBlank();
@@ -407,12 +406,12 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     lines.push('PLAN:');
 
     if (s.stepdown_suitable === false) {
-        lines.push(`- ICU Senior Review requested due to unsuitability for ward stepdown.`);
-        lines.push(`- Please re-contact ALERT for re-review when appropriate.`);
+        lines.push(`- ICU senior review requested - patient not currently suitable for ward stepdown.`);
+        lines.push(`- Please contact ALERT for review when appropriate.`);
     } else if (s.chk_discharge_alert) {
-        lines.push(`- Discharge from ALERT nursing list. Please re-contact ALERT if further support required.`);
+        lines.push(`- Discharged from the ALERT nursing list. Please contact ALERT if further support is required.`);
     } else if (s.chk_discharge_pending_bloods) {
-        let text = `- Pending discharge from ALERT post ICU list raised (ALERT will check next blood results, if no action required, no further note will be added and patient will be discharged)`;
+        let text = `- Discharge from the ALERT post ICU list is pending the next blood results. ALERT will review them; if no action is required the patient will be discharged and no further note added.`;
         if (s.discharge_pending_bloods_note && s.discharge_pending_bloods_note.trim()) {
             text += `\n- Specific bloods being followed: ${s.discharge_pending_bloods_note.trim()}`;
         }
@@ -430,7 +429,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     }
 
     if (!s.chk_discharge_alert && !s.chk_discharge_pending_bloods && s.stepdown_suitable !== false) {
-        lines.push('- Please contact ALERT if further support required between reviews.');
+        lines.push('- Please contact ALERT if further support is required between reviews.');
     }
 
     if (sum) {

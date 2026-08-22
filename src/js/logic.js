@@ -10,7 +10,7 @@ import { normalRanges } from './config.js';
 import {
     getState, isQuickReviewMode, initialQuickReviewRisks, quickReviewBaselineCaptured,
     setQuickReviewBaselineCaptured,
-    addActiveIssue, maybeToastNewRisk, reconcileAutoIssues, renderScrapedIssuesList, getUnreviewedScrapedCount} from './state.js';
+    addActiveIssue, maybeToastNewRisk, reconcileAutoIssues, renderScrapedIssuesList, getUnreviewedScrapedCount, getScoringListRisks} from './state.js';
 import {
     updateSidebarRiskBadges, maybeOfferQuickReview, refreshCategorySelect, showNewRiskAlert,
     updateAgeMitigationUI, updateLosMitigationUI
@@ -39,7 +39,8 @@ export function computeAll() {
         const result = evaluateRisks(s, {
             prevBloods: window.prevBloods || {},
             afterHoursManual: ahGroup ? ahGroup.dataset.manual === 'true' : false,
-            quickReview: isQuickReviewMode
+            quickReview: isQuickReviewMode,
+            listRisks: getScoringListRisks()
         });
 
         // The rules report what after-hours should be; applying it to the control and to the
@@ -181,17 +182,15 @@ export function computeAll() {
                 disPrompt.style.borderColor = `var(--${cat.id})`;
                 if (cat.id === 'green') disPrompt.style.borderColor = `var(--green)`;
 
-                let colorName = "Green";
-                if (cat.id === 'amber') colorName = "Amber";
-                if (cat.id === 'red') colorName = "Red";
-
+                // The colour name used to be printed beside the category - "CAT 3 Green" - which
+                // says the same thing twice, since CAT 3 is green.
                 let hoursTxt = Math.round(hoursSinceStep) + " hours";
 
                 // Styling lives in style.css now - the category colour is the only part that
                 // varies, so it is the only thing set from here. No pulse: it competed with
                 // every other thing on the page asking to be looked at.
                 disMsg.innerHTML = `
-                    <div class="discharge-prompt-title status ${cat.id}">${cat.text} ${colorName} - ${hoursTxt} on list</div>
+                    <div class="discharge-prompt-title status ${cat.id}">${cat.text} - ${hoursTxt} on list</div>
                     <div class="discharge-prompt-question">Can the patient be discharged?</div>
                 `;
             } else {
@@ -213,7 +212,7 @@ export function computeAll() {
         } else if (s.chk_discharge_alert) {
             planHtml = `<div class="status" style="color:var(--blue-hint)">Discharge from ALERT nursing list.</div>`;
         } else if (s.chk_discharge_pending_bloods) {
-            planHtml = `<div class="status" style="color:#ea580c; font-weight: 700;">Yes - Pending Next Bloods</div>`;
+            planHtml = `<div class="status" style="color:#ea580c; font-weight: 700;">Discharge pending next bloods</div>`;
         } else {
             planHtml = `<div class="status ${cssClass}">At least daily ALERT nursing reviews for up to ${h} post-ICU stepdown.</div>`;
             planHtml += `<div style="margin-top:2px; font-weight:500; font-size: 0.9em; color:var(--text-light);">- Please contact ALERT if further support required between reviews.</div>`;
@@ -223,6 +222,9 @@ export function computeAll() {
         const fu = $('followUpInstructions'); if (fu) fu.innerHTML = planHtml;
 
         checkCompleteness(s, countComorbs);
+        // What each gate was scoring, so that releasing one into the list can carry its
+        // weight across rather than guessing at it.
+        window._lastRiskEntries = riskEntries;
         window._lastRed = uniqueRed;
         window._lastAmber = uniqueAmber;
         window._lastSuppressed = suppressedRisks;
@@ -264,9 +266,6 @@ function autofillDerivedFields(s) {
 // neither ticks anything: the discharge checkboxes stay where they are, in the plan, and the
 // clinician is the one who reaches for them.
 function renderQuickReviewDecision(s, result) {
-    const prompt = $('qr_category_prompt');
-    if (prompt) prompt.hidden = !isQuickReviewMode;
-
     const discharge = $('qr_discharge_prompt');
     if (!discharge) return;
 
@@ -280,16 +279,19 @@ function renderQuickReviewDecision(s, result) {
     const onList = result.timeData?.text || '';
     const already = s.chk_discharge_alert || s.chk_discharge_pending_bloods;
 
-    let question;
+    // CAT 2 is deliberately silent. Asking "continue reviews, or discharge pending bloods?" at
+    // a day and a half puts the second half of that sentence in the clinician's head, which is
+    // leading - and discharge pending bloods is a decision that should arrive on its own.
+    let question = null;
     if (already) {
         question = 'Discharge from the ALERT list is recorded in the plan below.';
     } else if (chosen === 'green') {
-        question = `${onList} on the list at CAT 3 - can this patient be discharged from ALERT?`;
-    } else if (chosen === 'amber') {
-        question = `${onList} on the list at CAT 2 - continue reviews, or discharge pending bloods?`;
-    } else {
-        question = `${onList} on the list at CAT 1 - continuing review. Discharge is not in question today.`;
+        question = `${onList} on the list - CAT 3 - can this patient be discharged from ALERT?`;
+    } else if (chosen === 'red') {
+        question = `${onList} on the list - CAT 1 - cannot be discharged today.`;
     }
+
+    if (!question) { discharge.hidden = true; discharge.innerHTML = ''; return; }
 
     discharge.hidden = false;
     discharge.className = `qr-discharge-prompt${already ? ' answered' : ''}`;
