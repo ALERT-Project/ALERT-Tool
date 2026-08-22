@@ -2206,8 +2206,18 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
    content's minimum width, and a select full of ward names will happily push the pair wider
    than the slot it is meant to sit in. */
 .ward-bed-pair { display: flex; gap: 8px; align-items: flex-end; }
-.ward-bed-pair .wb-ward { flex: 3 1 0; min-width: 0; }
-.ward-bed-pair .wb-bed  { flex: 1 1 0; min-width: 0; }
+/* Bed is sized to what it has to hold and does not shrink: real labels are three characters -
+   "24B", "3-2", "A4" - and a clipped bed number is unusable, where a clipped ward name is not.
+   68px is three characters at the base size plus the 12px side padding and the border.
+   The ward takes whatever is left and truncates, which is safe: almost every ward here is
+   numbers and letters, and the few with long names are rare destinations. */
+.ward-bed-pair .wb-bed  { flex: 0 0 68px; }
+.ward-bed-pair .wb-ward { flex: 1 1 0; min-width: 0; }
 .ward-bed-pair select,
 .ward-bed-pair input { width: 100%; min-width: 0; }
-@media (max-width: 900px) { .ward-bed-pair { display: block; } .ward-bed-pair .wb-bed { margin-top: 12px; } }
+.ward-bed-pair .wb-ward select { text-overflow: ellipsis; }
+@media (max-width: 900px) {
+  .ward-bed-pair { display: block; }
+  .ward-bed-pair .wb-bed { margin-top: 12px; }
+  .ward-bed-pair .wb-bed input { width: 100%; }
+}
