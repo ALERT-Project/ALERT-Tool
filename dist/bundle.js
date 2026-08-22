@@ -589,12 +589,14 @@
     const riskEntries = [];
     const issues = [];
     const countsTowardCategory = (id) => !ctx.quickReview || !id || QUICK_REVIEW_SCORING_IDS.includes(id);
+    const deletedByClinician = (id) => !!id && !!ctx.deletedRiskKeys?.has(id);
     const add = (list, txt, id, type, noteValue = null) => {
       let finalTxt = txt;
       if (noteValue && noteValue.trim()) finalTxt = `${txt} (${noteValue.trim()})`;
-      if (countsTowardCategory(id)) list.push(finalTxt);
+      const scores = countsTowardCategory(id) && !deletedByClinician(id);
+      if (scores) list.push(finalTxt);
       if (id) {
-        if (countsTowardCategory(id)) flagged[type].push(id);
+        if (scores) flagged[type].push(id);
         riskEntries.push({ text: finalTxt, id, type });
         issues.push({ text: finalTxt, source: "auto", severity: type, key: id });
       }
@@ -1081,7 +1083,8 @@
         prevBloods: window.prevBloods || {},
         afterHoursManual: ahGroup ? ahGroup.dataset.manual === "true" : false,
         quickReview: isQuickReviewMode,
-        listRisks: getScoringListRisks()
+        listRisks: getScoringListRisks(),
+        deletedRiskKeys: getDeletedRiskKeys()
       });
       if (result.afterHoursDerived !== null) {
         s.after_hours = result.afterHoursDerived;
@@ -2504,6 +2507,9 @@
   function getRisksForNote() {
     return activeIssues.filter((i) => i.list === "risks" && !i.resolved).filter((i) => i.source !== "auto").filter((i) => !i.scoresAs).map(withCarry);
   }
+  function getDeletedRiskKeys() {
+    return new Set(activeIssues.filter((i) => i.source === "auto" && i.resolvedByUser).map((i) => i.key));
+  }
   function getScoringListRisks() {
     return activeIssues.filter((i) => i.scoresAs && !i.resolved).map((i) => ({ text: withCarry(i), severity: i.scoresAs, gateId: i.gateId }));
   }
@@ -2528,18 +2534,8 @@
     toastedRiskKeys.add(key);
   }
   var LIST_UI = {
-    factors: {
-      container: "patient_factors_list",
-      count: "factors_count",
-      input: "manualFactorInput",
-      empty: "Mobility, diet, psych - how the patient is today"
-    },
-    risks: {
-      container: "scraped_issues_list",
-      count: "issues_count",
-      input: "manualIssueInput",
-      empty: "What could send this patient back to ICU"
-    }
+    factors: { container: "patient_factors_list", count: "factors_count", input: "manualFactorInput" },
+    risks: { container: "scraped_issues_list", count: "issues_count", input: "manualIssueInput" }
   };
   function renderOneList(listName) {
     const ui = LIST_UI[listName];
@@ -2557,7 +2553,7 @@
       count.textContent = parts.length ? `(${parts.join(" \xB7 ")})` : "";
     }
     if (issues.length === 0) {
-      list.innerHTML = document.body.classList.contains("quick-review-active") ? `<div class="issues-empty">${ui.empty}</div>` : "";
+      list.innerHTML = "";
       return;
     }
     list.innerHTML = issues.map((issue) => `

@@ -10,7 +10,7 @@ import { normalRanges } from './config.js';
 import {
     getState, isQuickReviewMode, initialQuickReviewRisks, quickReviewBaselineCaptured,
     setQuickReviewBaselineCaptured,
-    addActiveIssue, maybeToastNewRisk, reconcileAutoIssues, renderScrapedIssuesList, getUnreviewedScrapedCount, getScoringListRisks} from './state.js';
+    addActiveIssue, maybeToastNewRisk, reconcileAutoIssues, renderScrapedIssuesList, getUnreviewedScrapedCount, getScoringListRisks, getDeletedRiskKeys} from './state.js';
 import {
     updateSidebarRiskBadges, maybeOfferQuickReview, refreshCategorySelect, showNewRiskAlert,
     updateAgeMitigationUI, updateLosMitigationUI
@@ -40,7 +40,8 @@ export function computeAll() {
             prevBloods: window.prevBloods || {},
             afterHoursManual: ahGroup ? ahGroup.dataset.manual === 'true' : false,
             quickReview: isQuickReviewMode,
-            listRisks: getScoringListRisks()
+            listRisks: getScoringListRisks(),
+            deletedRiskKeys: getDeletedRiskKeys()
         });
 
         // The rules report what after-hours should be; applying it to the control and to the

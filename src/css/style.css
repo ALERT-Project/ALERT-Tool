@@ -699,20 +699,6 @@ body.quick-review-active #scraped_risks_wrapper { display: flex; }
 #quickGrid #quick_notes_wrapper .card-title { color: var(--muted); font-size: var(--fs-sm); }
 body.quick-review-active #quickNotes { min-height: 110px; }
 
-/* Nothing staged yet. In Full Review an empty list is one quiet card among many and is left
-   blank on purpose (see renderScrapedIssuesList); here it is the biggest thing on the page,
-   so it says what to do with itself. */
-.issues-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 120px;
-  padding: 16px;
-  text-align: center;
-  font-size: var(--fs-sm);
-  color: var(--muted);
-}
 
 /* Bottom row: category KPIs and ALERT actions side by side rather than stacked. */
 body.quick-review-active #qgBottom .kpi { margin-bottom: 12px; }
@@ -746,7 +732,6 @@ body.quick-review-active #alert_actions_section { margin-top: 12px; padding-top:
   }
   #quickGrid #scraped_issues_list { overflow-y: visible; }
   #quickGrid #quick_notes_wrapper { margin-top: 0 !important; border-radius: 16px; }
-  .issues-empty { min-height: 0; }
 }
 
 /* Scraped Risks staging list */

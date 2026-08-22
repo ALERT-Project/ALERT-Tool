@@ -209,6 +209,13 @@ export function getRisksForNote() {
 //
 // Deleting the entry is what withdraws it, and that is the whole contract: on the list, it
 // counts; struck through, it doesn't.
+// Computed risks the clinician struck off the list. Only their own deletions count here -
+// reconcileAutoIssues() retires stale auto entries on its own, and those must not be read as
+// a decision to suppress the risk if it fires again.
+export function getDeletedRiskKeys() {
+    return new Set(activeIssues.filter(i => i.source === 'auto' && i.resolvedByUser).map(i => i.key));
+}
+
 export function getScoringListRisks() {
     return activeIssues
         .filter(i => i.scoresAs && !i.resolved)
@@ -250,14 +257,8 @@ export function maybeToastNewRisk(key, text) {
 // The two lists and the checks strip, repainted together. computeAll() calls this constantly,
 // so it bails out of any list that has an inline edit open rather than destroying it.
 const LIST_UI = {
-    factors: {
-        container: 'patient_factors_list', count: 'factors_count', input: 'manualFactorInput',
-        empty: 'Mobility, diet, psych - how the patient is today'
-    },
-    risks: {
-        container: 'scraped_issues_list', count: 'issues_count', input: 'manualIssueInput',
-        empty: 'What could send this patient back to ICU'
-    }
+    factors: { container: 'patient_factors_list', count: 'factors_count', input: 'manualFactorInput' },
+    risks: { container: 'scraped_issues_list', count: 'issues_count', input: 'manualIssueInput' }
 };
 
 function renderOneList(listName) {
@@ -279,14 +280,11 @@ function renderOneList(listName) {
     }
 
     if (issues.length === 0) {
-        // In Full Review an empty list stays empty - it is one quiet card among several, and
-        // the add row underneath already says what it's for. In Quick Review these cards are
-        // the largest thing on the page and they stretch to fill the column, so blank reads as
-        // broken rather than as "nothing yet"; there each one says what belongs in it, which
-        // is also what tells the two lists apart.
-        list.innerHTML = document.body.classList.contains('quick-review-active')
-            ? `<div class="issues-empty">${ui.empty}</div>`
-            : '';
+        // An empty list stays empty, in both modes. It used to explain itself in Quick Review,
+        // on the reasoning that a blank card reads as broken - but the card title and the add
+        // row beneath it already say what the list is for, so the sentence was a third thing
+        // saying the same thing in a mode built to have less on the page.
+        list.innerHTML = '';
         return;
     }
 

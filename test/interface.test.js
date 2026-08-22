@@ -436,20 +436,63 @@ test('the category buttons live inside the category card and still work', async 
     close();
 });
 
-test('Quick Review fills the empty write-up panel with a prompt', async () => {
-    const { window, document, close } = await loadTool();
-    const list = document.getElementById('scraped_issues_list');
-    assert.equal(list.innerHTML, '', 'Full Review leaves it blank');
+test('deleting a computed risk takes it out of the note and the category', async () => {
+    for (const quick of [true, false]) {
+        const { window, document, close } = await loadTool();
+        type(window, 'ptName', 'ABC');
+        type(window, 'stepdownDate', '2026-08-20');
+        type(window, 'adds', '1');
+        await tick(window);
+        if (quick) { click(window, 'input[name="reviewDepth"][value="quick"]'); await tick(window, 700); }
+        type(window, 'b_spo2', '84');
+        await tick(window);
+        assert.equal(document.getElementById('catText').textContent, 'CAT 1', 'the risk fires');
 
+        // The row says delete, so it has to leave the way every other row on that list does.
+        // The rule kept firing regardless, so a struck-through entry printed in the DMR
+        // anyway - which made the control a lie.
+        const row = () => document.querySelector('#scraped_issues_list .scraped-issue-row');
+        click(window, row().querySelector('.scraped-issue-resolve'));
+        await tick(window);
+        generateNote(window);
+        await tick(window);
+        let note = document.getElementById('summary').value;
+        assert.ok(!/Hypoxia/.test(note), `deleted risk leaves the note (${quick ? 'quick' : 'full'})`);
+        assert.equal(document.getElementById('catText').textContent, 'CAT 3',
+            'and stops driving the category - a note omitting a risk that set the category would be worse');
+
+        // The measurement behind it is untouched: this deletes a finding, not the data.
+        assert.match(note, /SpO2 84/, 'the observation still prints');
+
+        // And it is still a delete, not a deletion.
+        click(window, row().querySelector('.scraped-issue-resolve'));
+        await tick(window);
+        generateNote(window);
+        await tick(window);
+        assert.match(document.getElementById('summary').value, /Hypoxia/, 'undo brings it back');
+        assert.equal(document.getElementById('catText').textContent, 'CAT 1');
+        close();
+    }
+});
+
+test('an empty list stays empty, in both modes', async () => {
+    const { window, document, close } = await loadTool();
+    const risks = document.getElementById('scraped_issues_list');
+    const factors = document.getElementById('patient_factors_list');
+    assert.equal(risks.innerHTML, '', 'Full Review leaves them blank');
+    assert.equal(factors.innerHTML, '');
+
+    // Quick Review used to write a line into each empty card explaining what belonged in it.
+    // The card title and the add row beneath already say that, so it was a third voice saying
+    // the same thing in the mode built to have less on the page.
     click(window, 'input[name="reviewDepth"][value="quick"]');
     await tick(window);
-    assert.match(list.textContent, /send this patient back to ICU/, 'Quick Review says what to do with it');
-    assert.match(document.getElementById('patient_factors_list').textContent, /how the patient is today/,
-        'and the other list says what makes it different');
+    assert.equal(risks.innerHTML, '', 'and so does Quick Review');
+    assert.equal(factors.innerHTML, '');
 
     click(window, 'input[name="reviewDepth"][value="full"]');
     await tick(window);
-    assert.equal(list.innerHTML, '', 'and the prompt does not linger on the way back');
+    assert.equal(risks.innerHTML, '');
     close();
 });
 

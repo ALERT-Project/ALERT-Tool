@@ -108,12 +108,23 @@ export function evaluateRisks(s, ctx = {}) {
     const countsTowardCategory = (id) =>
         !ctx.quickReview || !id || QUICK_REVIEW_SCORING_IDS.includes(id);
 
+    // A computed risk the clinician struck off the list. The row said delete, so it has to
+    // leave the note and the category the way every other row on that list does - struck
+    // through it doesn't count. It was leaving neither: the rule kept firing, so the entry sat
+    // crossed out on screen and printed in the DMR anyway, which made the control a lie.
+    //
+    // The issue is still staged, so the row stays visible and the delete stays undoable, and
+    // the value behind it still prints wherever it belongs - a deleted "Hypoxia SpO2 84%" does
+    // not remove SpO2 84 from the observations.
+    const deletedByClinician = (id) => !!id && !!ctx.deletedRiskKeys?.has(id);
+
     const add = (list, txt, id, type, noteValue = null) => {
         let finalTxt = txt;
         if (noteValue && noteValue.trim()) finalTxt = `${txt} (${noteValue.trim()})`;
-        if (countsTowardCategory(id)) list.push(finalTxt);
+        const scores = countsTowardCategory(id) && !deletedByClinician(id);
+        if (scores) list.push(finalTxt);
         if (id) {
-            if (countsTowardCategory(id)) flagged[type].push(id);
+            if (scores) flagged[type].push(id);
             riskEntries.push({ text: finalTxt, id, type });
             issues.push({ text: finalTxt, source: 'auto', severity: type, key: id });
         }
