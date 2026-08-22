@@ -292,34 +292,41 @@
                     <input id="ptWeight" type="number" min="0" />
                 </div>
 
-                <!-- A standing fact about the patient, so it sits with age and weight rather
-                     than down in the obs. Post-ICU patients come back with respiratory failure
-                     more than anything else, and a saturation in the low 90s is tolerated as
-                     unremarkable when for most of them it is the first sign of the slide.
-                     Left unselected the tool reads against 94% anyway - not flagging at all is
-                     the failure being fixed - but the note stays silent, because a target
-                     nobody chose is not a target anybody documented. -->
-                <div class="col-6" id="spo2TargetWrapper">
-                    <label>SpO2 target <span class="rs-optional">assessed against 94% unless set</span></label>
-                    <div class="segmented-group" id="seg_spo2_target">
-                        <button type="button" class="seg-btn" data-value="94">&ge;94%</button>
-                        <button type="button" class="seg-btn" data-value="88_92">88-92% (COPD)</button>
-                    </div>
-                </div>
-
-                <!-- Grouped Ward & Stay Parameters -->
-                <div class="col-3">
-                    <label for="ptWard">Ward</label>
-                    <select id="ptWard">
-                        <option value="" selected disabled>Select Ward...</option>
+                <!-- A standing fact about the patient, so it belongs up here rather than down
+                     in the obs: post-ICU patients come back with respiratory failure more than
+                     with anything else, and a saturation in the low 90s reads as unremarkable
+                     when for many of them it is the first sign of the slide.
+                     A select rather than a pair of buttons - as a segmented group it was the
+                     loudest control in a card of quiet ones.
+                     Unset is a real option, not an empty one: the tool still reads against
+                     94%, because not flagging at all is the failure being fixed - but the note
+                     stays silent, since a target nobody chose is not a target anybody
+                     documented. -->
+                <div class="col-2" id="spo2TargetWrapper">
+                    <label for="spo2_target">SpO2 target</label>
+                    <select id="spo2_target">
+                        <option value="">Default &ge;94% unless set</option>
+                        <option value="94">&ge;94%</option>
+                        <option value="88_92">88-92% (COPD)</option>
                     </select>
                 </div>
-                <div class="col-1">
-                    <label for="ptBed">Bed</label>
-                    <!-- Text, not number: real bed/room labels are "24B", "3-2", "A4". A number
-                         input silently discards anything non-numeric, which is why scraped rooms
-                         never appeared and couldn't be typed back in. -->
-                    <input id="ptBed" type="text" maxlength="6" autocomplete="off" />
+
+                <!-- Ward and bed are one location, so they share one slot and the row stays six
+                     even boxes wide rather thanseven uneven ones. -->
+                <div class="col-2 ward-bed-pair">
+                    <div class="wb-ward">
+                        <label for="ptWard">Ward</label>
+                        <select id="ptWard">
+                            <option value="" selected disabled>Select Ward...</option>
+                        </select>
+                    </div>
+                    <div class="wb-bed">
+                        <label for="ptBed">Bed</label>
+                        <!-- Text, not number: real bed/room labels are "24B", "3-2", "A4". A
+                             number input silently discards anything non-numeric, which is why
+                             scraped rooms never appeared and couldn't be typed back in. -->
+                        <input id="ptBed" type="text" maxlength="6" autocomplete="off" />
+                    </div>
                 </div>
 
                 <div class="col-6" id="ptWardOtherWrapper" style="display:none;">

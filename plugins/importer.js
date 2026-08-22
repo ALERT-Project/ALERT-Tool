@@ -385,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // review and a COPD patient is silently re-assessed against 94% from day two on.
         const spo2TargetMatch = text.match(/SpO2 target:\s*(88\s*-\s*92|94)/i);
         if (spo2TargetMatch) {
-            clickSegment('seg_spo2_target', /94/.test(spo2TargetMatch[1]) ? '94' : '88_92');
+            setVal('spo2_target', /94/.test(spo2TargetMatch[1]) ? '94' : '88_92');
         }
 
         // --- 4. BLOODS ---

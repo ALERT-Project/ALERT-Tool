@@ -234,6 +234,7 @@
     "ptWeight",
     "ptWard",
     "ptBed",
+    "spo2_target",
     "ptWardOther",
     "ptAdmissionReason",
     "icuSummary",
@@ -373,8 +374,7 @@
     "resp_poor_swallow",
     "age_mitigated",
     "los_mitigated",
-    "frailty_known",
-    "spo2_target"
+    "frailty_known"
   ];
   var toggleInputs = [
     "comorb_copd",

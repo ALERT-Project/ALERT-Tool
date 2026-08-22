@@ -2201,12 +2201,13 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
 }
 
 
-/* Says what the tool is doing while the control is untouched, so an unset target does not
-   read as an unasked question. Sits inside the label, quietly. */
-.rs-optional {
-  font-size: var(--fs-hint);
-  font-weight: var(--fw-medium);
-  color: var(--muted);
-  text-transform: none;
-  letter-spacing: 0;
-}
+/* Ward and bed are one location, so they share one slot of the patient row and it stays six
+   even boxes wide. min-width:0 on both halves because a grid/flex child defaults to its
+   content's minimum width, and a select full of ward names will happily push the pair wider
+   than the slot it is meant to sit in. */
+.ward-bed-pair { display: flex; gap: 8px; align-items: flex-end; }
+.ward-bed-pair .wb-ward { flex: 3 1 0; min-width: 0; }
+.ward-bed-pair .wb-bed  { flex: 1 1 0; min-width: 0; }
+.ward-bed-pair select,
+.ward-bed-pair input { width: 100%; min-width: 0; }
+@media (max-width: 900px) { .ward-bed-pair { display: block; } .ward-bed-pair .wb-bed { margin-top: 12px; } }

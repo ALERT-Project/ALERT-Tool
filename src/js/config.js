@@ -62,7 +62,7 @@ export const comorbMap = {
 };
 
 export const staticInputs = [
-    'reviewTime', 'reviewerInitials', 'quickNotes', 'ptName', 'ptMrn', 'ptAge', 'ptWeight', 'ptWard', 'ptBed', 'ptWardOther', 'ptAdmissionReason', 'icuSummary', 'icuLos', 'stepdownDate', 'stepdownTime',
+    'reviewTime', 'reviewerInitials', 'quickNotes', 'ptName', 'ptMrn', 'ptAge', 'ptWeight', 'ptWard', 'ptBed', 'spo2_target', 'ptWardOther', 'ptAdmissionReason', 'icuSummary', 'icuLos', 'stepdownDate', 'stepdownTime',
     'npFlow', 'hfnpFio2', 'hfnpFlow', 'nivFio2', 'nivPeep', 'nivPs', 'override', 'overrideNote', 'addsManual', 'addsOverrideNote',
     'trache_details_note', 'mods_score', 'mods_details', 'airway_a', 'a_comment', 'b_rr', 'b_spo2', 'b_device', 'b_wob', 'b_cough', 'b_comment',
     'c_hr', 'c_hr_rhythm', 'c_nibp', 'c_cr', 'c_perf', 'c_comment', 'd_alert', 'd_pain', 'd_comment', 'e_temp', 'e_bsl', 'e_fluid', 'e_uop', 'e_comment', 'atoe_adds',
@@ -90,8 +90,7 @@ export const segmentedInputs = [
     'infection_downtrend', 'infection_downtrend_bloods',
     'sleep_quality', 'pain_control', 'neuro_psych', 'pics',
     'resp_dyspnea', 'resp_tachypnea', 'resp_rapid_wean', 'resp_poor_cough', 'resp_poor_swallow',
-    'age_mitigated', 'los_mitigated', 'frailty_known',
-    'spo2_target'
+    'age_mitigated', 'los_mitigated', 'frailty_known'
 ];
 
 export const toggleInputs = [

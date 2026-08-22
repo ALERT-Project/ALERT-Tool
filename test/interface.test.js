@@ -897,7 +897,7 @@ test('saturation is read against the target the patient is managed to', async ()
         type(window, 'stepdownDate', '2026-08-20');
         type(window, 'adds', '1');
         await tick(window);
-        if (target) { click(window, `#seg_spo2_target .seg-btn[data-value="${target}"]`); await tick(window); }
+        if (target) { type(window, 'spo2_target', target); await tick(window); }
         type(window, 'b_spo2', String(v));
         await tick(window);
         const out = {
@@ -955,7 +955,7 @@ test('an SpO2 target is only written down when it was actually chosen', async ()
         type(window, 'ptName', 'ABC');
         type(window, 'ptAge', '74');
         await tick(window);
-        click(window, '#seg_spo2_target .seg-btn[data-value="88_92"]');
+        type(window, 'spo2_target', '88_92');
         await tick(window);
         generateNote(window);
         await tick(window);
@@ -970,7 +970,7 @@ test('an SpO2 target is only written down when it was actually chosen', async ()
         document.getElementById('importText').value = note;
         click(window, '#runImport');
         await tick(window, 900);
-        assert.equal(document.querySelector('#seg_spo2_target .seg-btn.active')?.dataset.value, '88_92',
+        assert.equal(document.getElementById('spo2_target').value, '88_92',
             'and comes back, or a COPD patient is silently re-assessed against 94% from day two');
         close();
     }
