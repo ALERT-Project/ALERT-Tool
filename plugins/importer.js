@@ -381,6 +381,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (psychMatch) setPrev('prev_psych', psychMatch[1]);
         }
 
+        // The patient's own target, carried forward. Without this it resets to unset every
+        // review and a COPD patient is silently re-assessed against 94% from day two on.
+        const spo2TargetMatch = text.match(/SpO2 target:\s*(88\s*-\s*92|94)/i);
+        if (spo2TargetMatch) {
+            clickSegment('seg_spo2_target', /94/.test(spo2TargetMatch[1]) ? '94' : '88_92');
+        }
+
         // --- 4. BLOODS ---
         // The heading is "Bloods (taken 20/08/2026 06:00):" whenever a collection time was
         // recorded, and this pattern only ever matched a bare "Bloods:". So every note that

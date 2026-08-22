@@ -36,6 +36,14 @@ This is a point release on top of A9.0: Quick Review keeps its shape and changes
 * **The note no longer narrates itself.** An override with no typed reason used to write "Clinician override: CAT 1" into the risk factors. The selection still stands; it just no longer announces that the category came out of a piece of software. A typed reason is your own words and still belongs in the record.
 * **Plan wording throughout**: "re-contact ALERT for re-review", the missing "is" in "if further support required", and a comma-spliced pending-bloods line that left its whole meaning in a bracket. The not-suitable case stated its plan twice in different words; it now states it once.
 
+### 🫁 SpO2 target
+
+* **A new SpO2 target sits with age and weight in Patient Details** — `≥94%` or `88-92% (COPD)`. Post-ICU patients return with respiratory failure more than anything else, and a saturation in the low 90s gets tolerated as unremarkable when for many of them it is the first sign of the slide.
+* **Left unselected the tool reads against 94% anyway**, because not flagging at all is the failure being fixed. A wrongly flagged COPD patient is visible and self-correcting; silence corrects nothing.
+* **The target is only written into the note when it was actually chosen.** Printing the assumed 94% would put a target in the record nobody set, and the next reviewer would import it and inherit a wrong one on a COPD patient as though it had been documented. A chosen target does print, and does come back on import.
+* **Under 88% stays red for everyone, COPD included.** At 87 there is very little window before the dissociation curve steepens and small further falls in saturation mean large falls in PaO2.
+* Against a 94% target: **92-93 is a check**, named as the early sign without forcing a category; **88-91 is amber**. Against 88-92: those numbers are where the patient is meant to be and nothing fires, while **above 92 is a check** — a COPD patient sitting at 96 on oxygen is being given the exact harm the lower target exists to avoid.
+
 ### 🩸 Bloods
 
 * **Potassium gets a replacement prompt** between 3.0 and the reference range, alongside magnesium and phosphate. A K of 3.2 previously produced nothing.

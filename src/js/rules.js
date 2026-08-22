@@ -252,7 +252,29 @@ export function evaluateRisks(s, ctx = {}) {
     }
 
     const spo2 = num(s.b_spo2 ? String(s.b_spo2).replace('%', '') : '');
-    if (spo2 && spo2 < 88) addVital(red, `Hypoxia SpO2 ${spo2}%`, 'b_spo2', 'red', 'spo2');
+    // Saturation is read against the target the patient is actually being managed to. Below 88
+    // is red for everyone, COPD included: at 87 there is very little window left before the
+    // dissociation curve steepens and small further falls in saturation mean large falls in
+    // PaO2. What the target changes is the band above that.
+    //
+    //   target 94% (or unset)   92-93 is a check, 88-91 is amber, under 88 is red
+    //   target 88-92%           88-92 is where they are meant to be, so neither fires; above
+    //                           92 is a check, because a COPD patient sitting at 96 on oxygen
+    //                           is being given the exact harm the lower target exists to avoid
+    //
+    // Unset behaves as 94%. Not flagging at all is the failure this is here to fix, and a
+    // wrongly-flagged COPD patient is visible and self-correcting - the reviewer sees it, sets
+    // the target, and it goes away. Silence corrects nothing.
+    const spo2Target = s.spo2_target === '88_92' ? '88_92' : '94';
+    if (spo2) {
+        if (spo2 < 88) addVital(red, `Hypoxia SpO2 ${spo2}%`, 'b_spo2', 'red', 'spo2');
+        else if (spo2Target === '94') {
+            if (spo2 < 92) addVital(amber, `SpO2 ${spo2}% below target 94%`, 'b_spo2', 'amber', 'spo2');
+            else if (spo2 < 94) addCheck(`SpO2 ${spo2}% - below target 94%`, 'chk_spo2');
+        } else if (spo2 > 92) {
+            addCheck(`SpO2 ${spo2}% - above target 88-92%, review oxygen`, 'chk_spo2');
+        }
+    }
 
     // Temperature was being judged by two rules with two different thresholds, and neither
     // said so. 38.5 exactly fell through the febrile rule (it tested >) and came out amber via

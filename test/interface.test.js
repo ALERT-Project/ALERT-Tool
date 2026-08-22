@@ -890,6 +890,92 @@ test('a carried blood concern keeps its concern and loses its numbers', async ()
     }
 });
 
+test('saturation is read against the target the patient is managed to', async () => {
+    const read = async (target, v) => {
+        const { window, document, close } = await loadTool();
+        type(window, 'ptName', 'ABC');
+        type(window, 'stepdownDate', '2026-08-20');
+        type(window, 'adds', '1');
+        await tick(window);
+        if (target) { click(window, `#seg_spo2_target .seg-btn[data-value="${target}"]`); await tick(window); }
+        type(window, 'b_spo2', String(v));
+        await tick(window);
+        const out = {
+            cat: document.getElementById('catText').textContent,
+            said: (document.getElementById('redFlagList').textContent + ' ' +
+                   document.getElementById('amberFlagList').textContent + ' ' +
+                   document.getElementById('bloods_checks_strip').textContent).replace(/\s+/g, ' ').trim()
+        };
+        close();
+        return out;
+    };
+
+    // Unset reads against 94%. Not flagging at all is the failure being fixed, and a wrongly
+    // flagged COPD patient is visible and self-correcting where silence corrects nothing.
+    assert.equal((await read(null, 95)).cat, 'CAT 3');
+    assert.match((await read(null, 93)).said, /below target 94%/, '93 is the early sign, named');
+    assert.equal((await read(null, 93)).cat, 'CAT 3', 'but not yet a category');
+    assert.equal((await read(null, 91)).cat, 'CAT 2', 'further down it is');
+
+    // Under 88 is red for everyone, COPD included: at 87 there is very little window before
+    // the dissociation curve steepens and small further falls mean large falls in PaO2.
+    assert.equal((await read(null, 87)).cat, 'CAT 1');
+    assert.equal((await read('88_92', 87)).cat, 'CAT 1', 'a lower target does not make 87 safe');
+
+    // Inside the COPD target is where they are meant to be.
+    for (const v of [88, 90, 92]) {
+        assert.equal((await read('88_92', v)).cat, 'CAT 3', `${v} is at target`);
+        assert.equal((await read('88_92', v)).said, '', 'and says nothing');
+    }
+
+    // Above it is the harm the lower target exists to avoid.
+    const over = await read('88_92', 96);
+    assert.match(over.said, /above target 88-92%, review oxygen/);
+});
+
+test('an SpO2 target is only written down when it was actually chosen', async () => {
+    // Printing the assumed 94% would put a target in the record nobody set - and the next
+    // reviewer would import it and inherit a wrong one on a COPD patient as though it had
+    // been documented.
+    {
+        const { window, document, close } = await loadTool();
+        type(window, 'ptName', 'ABC');
+        type(window, 'b_spo2', '92');
+        await tick(window);
+        generateNote(window);
+        await tick(window);
+        assert.ok(!/SpO2 target/.test(document.getElementById('summary').value),
+            'unset writes nothing');
+        close();
+    }
+
+    let note;
+    {
+        const { window, document, close } = await loadTool();
+        type(window, 'ptName', 'ABC');
+        type(window, 'ptAge', '74');
+        await tick(window);
+        click(window, '#seg_spo2_target .seg-btn[data-value="88_92"]');
+        await tick(window);
+        generateNote(window);
+        await tick(window);
+        note = document.getElementById('summary').value;
+        assert.match(note, /SpO2 target: 88-92%/, 'a chosen target is written down');
+        close();
+    }
+
+    {
+        const { window, document, close } = await loadTool();
+        click(window, '#btnOpenImport');
+        document.getElementById('importText').value = note;
+        click(window, '#runImport');
+        await tick(window, 900);
+        assert.equal(document.querySelector('#seg_spo2_target .seg-btn.active')?.dataset.value, '88_92',
+            'and comes back, or a COPD patient is silently re-assessed against 94% from day two');
+        close();
+    }
+});
+
 test('temperature is one ladder, and says what raised it', async () => {
     const read = async (t) => {
         const { window, document, close } = await loadTool();

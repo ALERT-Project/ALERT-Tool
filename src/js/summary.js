@@ -48,6 +48,11 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     let demo = [];
     if (s.ptAge) demo.push(`Age: ${s.ptAge}`);
     if (s.ptWeight) demo.push(`Weight: ${s.ptWeight}kg`);
+    // Only what was actually chosen. The tool reads an unset target as 94%, but printing that
+    // would put a target in the record that nobody set - and on a COPD patient the next
+    // reviewer would import it and inherit a wrong one as though it had been documented.
+    if (s.spo2_target === '94') demo.push('SpO2 target: 94%');
+    else if (s.spo2_target === '88_92') demo.push('SpO2 target: 88-92%');
     if (demo.length) lines.push(demo.join(', '));
 
     lines.push(`Time of review: ${s.reviewTime || nowTimeStr()}`);

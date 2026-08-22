@@ -292,6 +292,21 @@
                     <input id="ptWeight" type="number" min="0" />
                 </div>
 
+                <!-- A standing fact about the patient, so it sits with age and weight rather
+                     than down in the obs. Post-ICU patients come back with respiratory failure
+                     more than anything else, and a saturation in the low 90s is tolerated as
+                     unremarkable when for most of them it is the first sign of the slide.
+                     Left unselected the tool reads against 94% anyway - not flagging at all is
+                     the failure being fixed - but the note stays silent, because a target
+                     nobody chose is not a target anybody documented. -->
+                <div class="col-6" id="spo2TargetWrapper">
+                    <label>SpO2 target <span class="rs-optional">assessed against 94% unless set</span></label>
+                    <div class="segmented-group" id="seg_spo2_target">
+                        <button type="button" class="seg-btn" data-value="94">&ge;94%</button>
+                        <button type="button" class="seg-btn" data-value="88_92">88-92% (COPD)</button>
+                    </div>
+                </div>
+
                 <!-- Grouped Ward & Stay Parameters -->
                 <div class="col-3">
                     <label for="ptWard">Ward</label>

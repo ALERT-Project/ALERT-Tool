@@ -2199,3 +2199,14 @@ hr { border: none; height: 1px; background-color: var(--line); margin: 24px 0 18
   font-size: var(--fs-xs);
   color: var(--muted);
 }
+
+
+/* Says what the tool is doing while the control is untouched, so an unset target does not
+   read as an unasked question. Sits inside the label, quietly. */
+.rs-optional {
+  font-size: var(--fs-hint);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+}

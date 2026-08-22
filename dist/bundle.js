@@ -373,7 +373,8 @@
     "resp_poor_swallow",
     "age_mitigated",
     "los_mitigated",
-    "frailty_known"
+    "frailty_known",
+    "spo2_target"
   ];
   var toggleInputs = [
     "comorb_copd",
@@ -694,7 +695,16 @@
       else if (rr < 8) addVital(red, `Bradypnea RR ${rr}`, "b_rr", "red", "rr");
     }
     const spo2 = num(s.b_spo2 ? String(s.b_spo2).replace("%", "") : "");
-    if (spo2 && spo2 < 88) addVital(red, `Hypoxia SpO2 ${spo2}%`, "b_spo2", "red", "spo2");
+    const spo2Target = s.spo2_target === "88_92" ? "88_92" : "94";
+    if (spo2) {
+      if (spo2 < 88) addVital(red, `Hypoxia SpO2 ${spo2}%`, "b_spo2", "red", "spo2");
+      else if (spo2Target === "94") {
+        if (spo2 < 92) addVital(amber, `SpO2 ${spo2}% below target 94%`, "b_spo2", "amber", "spo2");
+        else if (spo2 < 94) addCheck(`SpO2 ${spo2}% - below target 94%`, "chk_spo2");
+      } else if (spo2 > 92) {
+        addCheck(`SpO2 ${spo2}% - above target 88-92%, review oxygen`, "chk_spo2");
+      }
+    }
     const temp = num(s.e_temp);
     if (temp) {
       if (temp >= 38.5) addVital(red, `Febrile ${temp}`, "e_temp", "red", "temp");
@@ -2861,6 +2871,8 @@
     let demo = [];
     if (s.ptAge) demo.push(`Age: ${s.ptAge}`);
     if (s.ptWeight) demo.push(`Weight: ${s.ptWeight}kg`);
+    if (s.spo2_target === "94") demo.push("SpO2 target: 94%");
+    else if (s.spo2_target === "88_92") demo.push("SpO2 target: 88-92%");
     if (demo.length) lines.push(demo.join(", "));
     lines.push(`Time of review: ${s.reviewTime || nowTimeStr()}`);
     if (s.reviewType === "pre") {
