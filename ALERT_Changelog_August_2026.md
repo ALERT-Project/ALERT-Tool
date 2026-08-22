@@ -1,3 +1,57 @@
+# ALERT Tool Changelog: A9.1 (22 August 2026)
+
+This is a point release on top of A9.0: Quick Review keeps its shape and changes its model, from a shortened questionnaire to a list. It also carries a set of scoring fixes found while building it, several of which were under-calling patients.
+
+**Everyone needs to hard-refresh once** (Ctrl+Shift+R, or Cmd+Shift+R on a Mac) to pick this up.
+
+### ⚠️ Read this first: scoring corrections
+
+* **Every measured observation now scores in Quick Review.** The category was reading the ADDS total but not the parameters it is calculated from, so an SpO2 of 84, an SBP of 82, an HR of 135, an RR of 28 and a temperature of 39.1 each came out **CAT 3 in Quick Review and CAT 1 in Full Review**. Those thresholds are the safety net for exactly what a total misses - one catastrophic parameter inside an unremarkable score, or a MODS in use - and the net was off in the mode most likely to be used at speed.
+* **Oxygen no longer sits behind the respiratory gate.** A patient recorded on 4L nasal prongs scored nothing at all unless "Respiratory Concern?" had also been answered Yes. A flow rate is a measurement: 4L is 4L whether or not anybody called it a concern. The gate keeps the subjective half - dyspnoea, cough, swallow.
+* **Risks carried from the last note now score.** In Quick Review a carried risk sits on the list rather than in a gate, and while it is there it carries the weight the gate it came from was carrying - including red, where the detail made it red. Deleting it is what withdraws it. A risk sitting in plain sight scoring nothing is how a category gets missed by someone working from the list.
+* **Temperature is one ladder.** It was judged by two rules with two thresholds and neither said so: 38.5 exactly fell through the febrile rule and came out amber through the infection gate, as a bare "Infection risk" with no reason and no temperature stated. Now 38.0-38.4 is amber with the temperature named, 38.5 and above is febrile, 35.5 and below is red.
+* **CRP reaches the note.** It was missing from the bloods line entirely, so however high it went the value was never written down - it could open the infection gate and be quoted inside "Infection risk - CRP 250", but the number itself was nowhere.
+* **Bloods import from notes that recorded a collection time.** The note writes "Bloods (taken 20/08 06:00):" and the importer only ever matched a bare "Bloods:", so every note written since the collection time was added lost its bloods on import in silence - previous values, trend arrows and every trend-based rule with them.
+
+### 📋 Two lists instead of one
+
+* **Patient Factors and Readmission Risks** replace the single Review List. One list was holding "assist x1 with frame" and "high K+ 6.4" at once and asking the reader to sort them out. Each takes its own typed entries, so what you write lands where you wrote it.
+* **"From the last review" is gone.** It listed the same carried gates that were already outlined and badged in place further down, so every carried concern was on screen twice in two different shapes.
+* **Rows say "delete", not "resolve".** Most of what sits on these lists arrived from the previous note, and "resolved" asserts that something was dealt with, which is not what clearing an inapplicable line means. It is still reversible - the row strikes through and the button offers undo.
+* **Lines say how long they have been carried.** A list that only grows stops being read; by day five a line nobody has pruned looks exactly like one raised this morning.
+* **A quiet nudge** names how many carried lines have not been looked at, and clears as they are dealt with.
+
+### ⚡ Quick Review is a list, not a questionnaire
+
+* **Entering Quick Review hands the gates back.** A gate silently set to Yes on the strength of yesterday's note is a finding nobody made today. The risk goes onto the list in the previous reviewer's own wording, where it can be edited or deleted.
+* **A carried blood concern keeps its concern and loses its numbers.** "Infection risk - WCC 16, CRP 180" carries across as "Infection risk". If today's bloods raise the same concern, today's finding supersedes it rather than both being stated.
+* **The category is a decision, not an override.** No downgrade warning and no reason demanded - the tool has seen the score, the bloods and two demographic facts, and is in no position to treat your call as a correction of its own. Age and ICU length of stay keep counting in both modes.
+* **A discharge question** appears once the category is chosen, naming the time on the list. CAT 2 is deliberately silent: asking "continue, or discharge pending bloods?" at a day and a half puts the second half of the sentence in your head.
+
+### 📄 Note output
+
+* **PATIENT FACTORS is a new section.** Mobility, diet, nutrition and the psychosocial answers were printing scattered across three parts of the assessment. They are one thing, they now print as one, and - unlike loose lines - the next import can read the whole section back.
+* **Everything under the risk heading survives into the next note**, whether it came from a gate, from the previous note or from you. Risks the tool works out for itself are excluded, so they do not arrive as text beside the copy the rules are about to produce.
+* **Mitigated risks come back mitigated.** "Renal concern (mitigated: known CKD...)" was being matched on "renal", carried to the renal gate and set to Yes - so a risk the previous reviewer had discounted came back as a live one, the mitigation destroyed by the act of reading the note.
+* **The note no longer narrates itself.** An override with no typed reason used to write "Clinician override: CAT 1" into the risk factors. The selection still stands; it just no longer announces that the category came out of a piece of software. A typed reason is your own words and still belongs in the record.
+* **Plan wording throughout**: "re-contact ALERT for re-review", the missing "is" in "if further support required", and a comma-spliced pending-bloods line that left its whole meaning in a bracket. The not-suitable case stated its plan twice in different words; it now states it once.
+
+### 🩸 Bloods
+
+* **Potassium gets a replacement prompt** between 3.0 and the reference range, alongside magnesium and phosphate. A K of 3.2 previously produced nothing.
+* **Sodium is named** between the risk thresholds and the reference range, where it previously produced nothing. It is stated and not prompted on - a sodium in that band is often a diagnosis in its own right rather than a number to top up, and correcting it is the treating team's call.
+* **Out-of-range results no longer stage a list row.** The value is in the grid, highlighted, and on the note's bloods line; out-of-range is not the same as worth flagging. Only the severe ones become risks. The handover line still names them.
+* **The clotting target boxes no longer suggest a target.** "target 2-3" was being read as this patient's target rather than as an example of what to type.
+
+### 🧹 Fixes
+
+* **Clearing for the next patient takes the carried-forward marks with it.** The gate answers, the "(Prev: ...)" hints and the name were cleared, but not the carried-forward marks - so a new patient's form opened wearing the last patient's badges, with their clinical detail still behind them.
+* **The floating bloods card can be closed from the bottom** as well as the corner, the way the ADDS calculator has been since May.
+* **Psychosocial & Recovery is formatted like the A-E section it sits in**, rather than as a bordered box with its own heading size.
+* On screen, "CAT 3 Green" loses the redundant colour, and "Yes - Pending Next Bloods" - which answered a question that was not there - becomes "Discharge pending next bloods".
+
+---
+
 # ALERT Tool Changelog: A9.0 (15 August 2026)
 
 This release was piloted on the testing page before going out, and most of what follows came from people using it on the ward and telling us what got in the way. The headline is **Quick Review**: a stripped-back mode for day 2+ follow-ups, which are the bulk of the workload and were being done on a form built for first assessments. The rest is the accumulated set of fixes and wording changes raised during the pilot.
