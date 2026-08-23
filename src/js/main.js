@@ -102,17 +102,9 @@ function initialize() {
 
     // Set while the prompt is open so answering it resumes the click that raised it.
     let pendingAfterReviewMethod = null;
-    // The initials half is asked once per patient and then left alone. Unlike the method,
-    // "no answer" is a legitimate answer here, so there is no field to read it back from -
-    // without this the reviewer who chose not to sign would be asked again every time they
-    // regenerated the note.
-    let initialsPromptAnswered = false;
-    const resetInitialsPrompt = () => { initialsPromptAnswered = false; };
-
     // Whatever was typed into the prompt is written back to the strip field, so there is one
     // reviewer value and not two. Blank is honoured: it clears nothing and sets nothing.
     const commitPromptInitials = () => {
-        initialsPromptAnswered = true;
         const typed = ($('promptReviewerInitials')?.value || '').trim();
         const field = $('reviewerInitials');
         if (typed && field) {
@@ -121,7 +113,12 @@ function initialize() {
         }
     };
 
-    const needsInitials = () => !initialsPromptAnswered && !($('reviewerInitials')?.value || '').trim();
+    // An empty box is the whole test. This was once suppressed after the first time it was
+    // waved away, which made the prompt depend on state nothing on screen showed: skip signing
+    // one patient and the next patient got no prompt at all, unless Clear Data happened to
+    // have been pressed in between. Asking every time costs one press of Continue, and typing
+    // two letters ends it for good.
+    const needsInitials = () => !($('reviewerInitials')?.value || '').trim();
 
     // Shows only the halves still unanswered, and titles itself after whichever they are.
     const openReviewPrompt = (askMethod, askInitials) => {
@@ -153,6 +150,9 @@ function initialize() {
         if (askInitials) box?.focus();
     };
 
+    // Resumes the generate that raised the dialog, and tells it not to ask again: the questions
+    // have just been answered, and one of the answers is allowed to be "nothing", which is not
+    // something the fields themselves can record.
     const resumeAfterPrompt = () => {
         hideReviewMethodPrompt();
         const resume = pendingAfterReviewMethod;
@@ -172,15 +172,12 @@ function initialize() {
         commitPromptInitials();
         resumeAfterPrompt();
     });
-    // Importing a note means a different patient, and usually a different reviewer, so the
-    // question is worth asking again even if it was waved away on the last one.
-    $('runImport')?.addEventListener('click', resetInitialsPrompt);
 
-    function triggerGenerate() {
+    function triggerGenerate({ justAsked = false } = {}) {
         const askMethod = !getReviewMethod();
-        const askInitials = needsInitials();
+        const askInitials = !justAsked && needsInitials();
         if (askMethod || askInitials) {
-            pendingAfterReviewMethod = triggerGenerate;
+            pendingAfterReviewMethod = () => triggerGenerate({ justAsked: true });
             openReviewPrompt(askMethod, askInitials);
             return;
         }
@@ -226,7 +223,10 @@ function initialize() {
         saveState(true);
     }
 
-    $('btn_generate_summary')?.addEventListener('click', triggerGenerate);
+    // Wrapped rather than passed directly: triggerGenerate takes an options object, and handing
+    // it the click event would put the listener one stray property away from silently skipping
+    // the prompt.
+    $('btn_generate_summary')?.addEventListener('click', () => triggerGenerate());
 
     $('btnCopyHandoverLine')?.addEventListener('click', () => {
         const text = $('handoverLine')?.value;
@@ -1123,8 +1123,6 @@ function initialize() {
     $('confirmClearData')?.addEventListener('click', () => {
         hideClearDataModal();
         clearData();
-        // The next patient is a fresh chance to sign the note, even if this one was skipped.
-        resetInitialsPrompt();
     });
     $('btnQuickCopySummary')?.addEventListener('click', () => {
         const text = $('summary').value;

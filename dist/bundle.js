@@ -3279,12 +3279,7 @@
       if (modal) modal.style.display = "none";
     };
     let pendingAfterReviewMethod = null;
-    let initialsPromptAnswered = false;
-    const resetInitialsPrompt = () => {
-      initialsPromptAnswered = false;
-    };
     const commitPromptInitials = () => {
-      initialsPromptAnswered = true;
       const typed = ($("promptReviewerInitials")?.value || "").trim();
       const field = $("reviewerInitials");
       if (typed && field) {
@@ -3292,7 +3287,7 @@
         field.dispatchEvent(new Event("input", { bubbles: true }));
       }
     };
-    const needsInitials = () => !initialsPromptAnswered && !($("reviewerInitials")?.value || "").trim();
+    const needsInitials = () => !($("reviewerInitials")?.value || "").trim();
     const openReviewPrompt = (askMethod, askInitials) => {
       const modal = $("reviewMethodPrompt");
       if (!modal) return;
@@ -3333,12 +3328,11 @@
       commitPromptInitials();
       resumeAfterPrompt();
     });
-    $("runImport")?.addEventListener("click", resetInitialsPrompt);
-    function triggerGenerate() {
+    function triggerGenerate({ justAsked = false } = {}) {
       const askMethod = !getReviewMethod();
-      const askInitials = needsInitials();
+      const askInitials = !justAsked && needsInitials();
       if (askMethod || askInitials) {
-        pendingAfterReviewMethod = triggerGenerate;
+        pendingAfterReviewMethod = () => triggerGenerate({ justAsked: true });
         openReviewPrompt(askMethod, askInitials);
         return;
       }
@@ -3374,7 +3368,7 @@
       if (handoverActions) handoverActions.style.display = "block";
       saveState(true);
     }
-    $("btn_generate_summary")?.addEventListener("click", triggerGenerate);
+    $("btn_generate_summary")?.addEventListener("click", () => triggerGenerate());
     $("btnCopyHandoverLine")?.addEventListener("click", () => {
       const text = $("handoverLine")?.value;
       if (!text) {
@@ -4185,7 +4179,6 @@
     $("confirmClearData")?.addEventListener("click", () => {
       hideClearDataModal();
       clearData();
-      resetInitialsPrompt();
     });
     $("btnQuickCopySummary")?.addEventListener("click", () => {
       const text = $("summary").value;

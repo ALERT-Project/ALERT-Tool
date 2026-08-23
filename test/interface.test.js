@@ -1677,19 +1677,38 @@ test('the DMR prompt asks for initials without demanding them', async () => {
     }
 });
 
-test('the initials half of the prompt is asked once, not on every regenerate', async () => {
+test('an empty reviewer box is asked about every time, and Continue waves it past', async () => {
+    // This was once suppressed after the first refusal, which made the prompt depend on state
+    // nothing on screen showed: skipping the signature on one patient silenced it for the next
+    // one too, unless Clear Data happened to have been pressed in between.
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
     await tick(window);
 
     generateNote(window);              // answers method, declines to sign
     await tick(window);
+    assert.ok(document.getElementById('summary').value.length > 0, 'the note is written');
 
+    // A second patient in the same tab, without Clear Data in between.
+    type(window, 'ptName', 'DEF');
+    await tick(window);
+    click(window, '#btn_generate_summary');
+    assert.equal(document.getElementById('reviewMethodPrompt').style.display, 'flex',
+        'still asked, because the box is still empty');
+    assert.equal(document.getElementById('review_prompt_title').textContent, 'Sign this note?',
+        'and only about the signature, the method having been answered already');
+
+    click(window, '#btn_prompt_continue');
+    await tick(window);
+    assert.ok(document.getElementById('summary').value.length > 0, 'Continue writes the note');
+    assert.equal(document.getElementById('reviewerInitials').value, '', 'and signs nothing');
+
+    // Two letters end it for good.
+    type(window, 'reviewerInitials', 'CB');
+    await tick(window);
     click(window, '#btn_generate_summary');
     assert.notEqual(document.getElementById('reviewMethodPrompt').style.display, 'flex',
-        'a reviewer who chose not to sign is not asked again for the same patient');
-    await tick(window);
-    assert.ok(document.getElementById('summary').value.length > 0, 'and the note regenerates');
+        'nothing left to ask');
     close();
 });
 

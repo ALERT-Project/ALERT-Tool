@@ -294,14 +294,6 @@ header h1 .logo-em {
   text-transform: uppercase;
   letter-spacing: 1px;
 }
-.rs-required {
-  display: none;
-  margin-left: 4px;
-  color: var(--amber);
-  letter-spacing: 0;
-  text-transform: none;
-}
-.rs-field-reviewer.reviewer-missing .rs-required { display: inline; }
 
 /* The initials half of the DMR prompt. Centred like everything else in this dialog, and sized
    to what it holds - a full-width box for three characters read as a comment field. */
