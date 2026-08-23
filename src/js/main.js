@@ -102,23 +102,78 @@ function initialize() {
 
     // Set while the prompt is open so answering it resumes the click that raised it.
     let pendingAfterReviewMethod = null;
+    // The initials half is asked once per patient and then left alone. Unlike the method,
+    // "no answer" is a legitimate answer here, so there is no field to read it back from -
+    // without this the reviewer who chose not to sign would be asked again every time they
+    // regenerated the note.
+    let initialsPromptAnswered = false;
+    const resetInitialsPrompt = () => { initialsPromptAnswered = false; };
 
-    const chooseReviewMethod = (value) => {
-        setReviewMethod(value);
+    // Whatever was typed into the prompt is written back to the strip field, so there is one
+    // reviewer value and not two. Blank is honoured: it clears nothing and sets nothing.
+    const commitPromptInitials = () => {
+        initialsPromptAnswered = true;
+        const typed = ($('promptReviewerInitials')?.value || '').trim();
+        const field = $('reviewerInitials');
+        if (typed && field) {
+            field.value = typed;
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    };
+
+    const needsInitials = () => !initialsPromptAnswered && !($('reviewerInitials')?.value || '').trim();
+
+    // Shows only the halves still unanswered, and titles itself after whichever they are.
+    const openReviewPrompt = (askMethod, askInitials) => {
+        const modal = $('reviewMethodPrompt');
+        if (!modal) return;
+        const initialsBox = $('review_prompt_initials');
+        const methodActions = $('review_prompt_method_actions');
+        const continueActions = $('review_prompt_continue_actions');
+        const title = $('review_prompt_title');
+        if (initialsBox) initialsBox.style.display = askInitials ? 'block' : 'none';
+        if (methodActions) methodActions.style.display = askMethod ? 'flex' : 'none';
+        if (continueActions) continueActions.style.display = askMethod ? 'none' : 'flex';
+        if (title) {
+            title.textContent = askMethod
+                ? 'How did you review this patient?'
+                : 'Sign this note?';
+        }
+        const box = $('promptReviewerInitials');
+        if (box) box.value = ($('reviewerInitials')?.value || '');
+        modal.style.display = 'flex';
+        if (askInitials) box?.focus();
+    };
+
+    const resumeAfterPrompt = () => {
         hideReviewMethodPrompt();
         const resume = pendingAfterReviewMethod;
         pendingAfterReviewMethod = null;
         if (resume) resume();
     };
 
+    const chooseReviewMethod = (value) => {
+        setReviewMethod(value);
+        commitPromptInitials();
+        resumeAfterPrompt();
+    };
+
     $('btn_method_physical')?.addEventListener('click', () => chooseReviewMethod('physical'));
     $('btn_method_chart')?.addEventListener('click', () => chooseReviewMethod('chart'));
+    $('btn_prompt_continue')?.addEventListener('click', () => {
+        commitPromptInitials();
+        resumeAfterPrompt();
+    });
+    // Importing a note means a different patient, and usually a different reviewer, so the
+    // question is worth asking again even if it was waved away on the last one.
+    $('runImport')?.addEventListener('click', resetInitialsPrompt);
 
     function triggerGenerate() {
-        if (!getReviewMethod()) {
+        const askMethod = !getReviewMethod();
+        const askInitials = needsInitials();
+        if (askMethod || askInitials) {
             pendingAfterReviewMethod = triggerGenerate;
-            const modal = $('reviewMethodPrompt');
-            if (modal) modal.style.display = 'flex';
+            openReviewPrompt(askMethod, askInitials);
             return;
         }
 
@@ -1060,6 +1115,8 @@ function initialize() {
     $('confirmClearData')?.addEventListener('click', () => {
         hideClearDataModal();
         clearData();
+        // The next patient is a fresh chance to sign the note, even if this one was skipped.
+        resetInitialsPrompt();
     });
     $('btnQuickCopySummary')?.addEventListener('click', () => {
         const text = $('summary').value;

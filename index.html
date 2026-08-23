@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--
-  ALERT Nursing Risk Assessment Tool A9.1  (22 August 2026)
+  ALERT Nursing Risk Assessment Tool A9.2  (23 August 2026)
   Copyright © 2025-2026 Casey Bond
   Developed for ALERT at South Metropolitan Health Service, WA, Australia
   Licensed under MIT License
@@ -237,14 +237,16 @@
                     </div>
                 </div>
 
-                <!-- Every note is signed by whoever wrote it, so this is the one strip field
-                     that can't be left blank. It sits first and stays outlined until it's
-                     filled - it was being read as optional metadata and skipped. Capped at
-                     three characters like #ptName: this tool holds initials, never names.
-                     No placeholder: a sample set of initials sitting in the box reads as a
-                     name already filled in, and every reviewer saw the same one. -->
+                <!-- Notes should be signed by whoever wrote them, so this sits first and
+                     stays outlined until it's filled - it was being read as optional metadata
+                     and skipped. It is a reminder, not a gate: the note generates without it
+                     and the handover line simply omits the initials, because a reviewer who
+                     has decided not to sign shouldn't be locked out of writing the note.
+                     Capped at three characters like #ptName: this tool holds initials, never
+                     names. No placeholder: a sample set of initials sitting in the box reads
+                     as a name already filled in, and every reviewer saw the same one. -->
                 <div class="rs-field rs-field-reviewer">
-                    <label for="reviewerInitials">Reviewer <span class="rs-required">required</span></label>
+                    <label for="reviewerInitials">Reviewer <span class="rs-required">recommended</span></label>
                     <input id="reviewerInitials" type="text" maxlength="3" autocomplete="off"
                         style="text-transform:uppercase" />
                 </div>
@@ -298,16 +300,16 @@
                      when for many of them it is the first sign of the slide.
                      A select rather than a pair of buttons - as a segmented group it was the
                      loudest control in a card of quiet ones.
-                     Unset is a real option, not an empty one: the tool still reads against
-                     94%, because not flagging at all is the failure being fixed - but the note
-                     stays silent, since a target nobody chose is not a target anybody
-                     documented. -->
+                     Two options, not three: the default already reads against 94%, and an
+                     explicitly-chosen 94% prints nothing the default wouldn't, so a separate
+                     option only asked the reviewer to distinguish two identical states. The
+                     lower target is the one worth documenting, and the only one the note
+                     carries. -->
                 <div class="col-2" id="spo2TargetWrapper">
                     <label for="spo2_target">SpO2 target</label>
                     <select id="spo2_target">
-                        <option value="">Default &ge;94% unless set</option>
-                        <option value="94">&ge;94%</option>
-                        <option value="88_92">88-92% (COPD)</option>
+                        <option value="">Default: &ge;94%</option>
+                        <option value="88_92">88-92%</option>
                     </select>
                 </div>
 
@@ -2108,7 +2110,7 @@
             style="text-align:center; padding:32px 20px 20px 20px; font-size:var(--fs-hint); color:var(--muted); line-height:1.6; word-wrap:break-word; overflow-wrap:break-word;">
             <!-- Kept in step with the banner comment at the top of this file by a test; the
                  two drifted apart once already and nobody noticed until a release. -->
-            <div>ALERT Tool A9.1 (22 August 2026) © 2025-2026 Casey Bond</div>
+            <div>ALERT Tool A9.2 (23 August 2026) © 2025-2026 Casey Bond</div>
             <div>Developed for ALERT at South Metropolitan Health Service, WA, Australia</div>
             <div><a href="https://opensource.org/licenses/MIT" target="_blank"
                     style="color:var(--accent); text-decoration:none;">MIT License</a></div>
@@ -2155,15 +2157,29 @@
     </div>
 
     <!-- Asked on the way into the DMR note, not on the way into the review: at the point of
-         generating, the clinician knows how they reviewed the patient. Only appears when the
-         Review Method strip is still blank, so choosing it up front skips this entirely. -->
+         generating, the clinician knows how they reviewed the patient and who is signing it.
+         Only the parts still blank appear, so answering either up front skips that half, and
+         answering both skips the dialog entirely.
+         The initials are a reminder, never a gate - every button here generates the note
+         whether or not the box was filled, and an unsigned note simply leaves the initials
+         out of the handover line. Asked once per patient: a reviewer who has decided not to
+         sign should not be asked again on every regenerate. -->
     <div id="reviewMethodPrompt" class="modal-overlay">
         <div class="modal-content modal-confirm">
             <div class="modal-confirm-icon">🩺</div>
-            <h3 class="modal-confirm-title">How did you review this patient?</h3>
-            <div class="modal-confirm-actions">
+            <h3 id="review_prompt_title" class="modal-confirm-title">How did you review this patient?</h3>
+            <div id="review_prompt_initials" class="prompt-initials">
+                <label for="promptReviewerInitials">Your initials</label>
+                <input id="promptReviewerInitials" type="text" maxlength="3" autocomplete="off"
+                    style="text-transform:uppercase" />
+                <div class="prompt-initials-hint">Optional - left blank, the note is unsigned.</div>
+            </div>
+            <div class="modal-confirm-actions" id="review_prompt_method_actions">
                 <button id="btn_method_physical" class="btn small btn-confirm-yes">Physical r/v</button>
                 <button id="btn_method_chart" class="btn small">Chart review</button>
+            </div>
+            <div class="modal-confirm-actions" id="review_prompt_continue_actions">
+                <button id="btn_prompt_continue" class="btn small btn-confirm-yes">Continue</button>
             </div>
         </div>
     </div>

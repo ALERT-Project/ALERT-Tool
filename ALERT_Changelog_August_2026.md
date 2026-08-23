@@ -1,3 +1,27 @@
+# ALERT Tool Changelog: A9.2 (23 August 2026)
+
+A small point release on top of A9.1: three refinements from ward use, and one genuine
+disagreement inside the tool that is now settled.
+
+**Everyone needs to hard-refresh once** (Ctrl+Shift+R, or Cmd+Shift+R on a Mac) to pick this up.
+
+### 🫀 SpO2 target and the ADDS score no longer contradict each other
+
+* **The ADDS calculator scores on the standard scale, always.** A patient on an 88-92% target sitting at 90 - exactly where the treating team wants them - contributes **2** to the total, and will keep contributing 2 at every set of obs. That is what the ward's observation chart says, and the tool's number has to match the chart or the handover line ends up at odds with the obs. It has not been changed and will not be.
+* **The calculator now says so, and suggests the fix.** When the target is 88-92%, the saturation is inside it, and no MODS is recorded, a quiet line under the SpO2 box names the score and suggests the team be asked to document a modification. Most of these patients have no MODS, because it needs a consultant signature while the target itself is often only on the oxygen prescription or written in the notes. The recurring score is noise for the home team, and the pressure to answer it is pressure to give oxygen the patient should not have.
+* **The target is ours, for desat risk.** It governs how the A-E saturation is read and what reaches the readmission risks - not what the chart scores. Those two being different is the quirk; the tool now shows both instead of quietly picking one.
+
+### 🎯 The target itself is simpler
+
+* **Two options, not three:** `Default: ≥94%` and `88-92%`. An explicitly-chosen 94% read identically to the default and printed identically, so the third option only asked you to tell two identical states apart. "COPD" has come off the label - the target is the fact, whatever the diagnosis.
+* **Only 88-92% is written into the note.** It is the one that changes how the saturation should be read and the one that is easy to lose between notes. Notes carrying the old `SpO2 target: 94%` still import, and land on the default.
+
+### ✍️ Signing the note
+
+* **The DMR prompt now asks for your initials** if the Reviewer box is still empty when you press it, in the same dialog that asks how you reviewed the patient. Only the halves still unanswered appear, so filling both in up front skips it entirely.
+* **It is a reminder, not a gate.** Every button in that dialog writes the note whether or not you filled the box, and it is asked once per patient rather than on every regenerate. The field label now says *recommended* instead of *required*, which is what it always actually was.
+* **An unsigned note leaves the initials out of the handover line** rather than printing `--`. A column of stubs reads as a reviewer nobody can trace, rather than as a field left blank.
+
 # ALERT Tool Changelog: A9.1 (22 August 2026)
 
 This is a point release on top of A9.0: Quick Review keeps its shape and changes its model, from a shortened questionnaire to a list. It also carries a set of scoring fixes found while building it, several of which were under-calling patients.

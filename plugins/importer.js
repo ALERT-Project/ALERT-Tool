@@ -383,9 +383,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // The patient's own target, carried forward. Without this it resets to unset every
         // review and a COPD patient is silently re-assessed against 94% from day two on.
+        // 94% is still matched because notes written before the target became a two-way
+        // choice carry it, and it maps to the default rather than being ignored - the two
+        // now mean the same thing.
         const spo2TargetMatch = text.match(/SpO2 target:\s*(88\s*-\s*92|94)/i);
         if (spo2TargetMatch) {
-            setVal('spo2_target', /94/.test(spo2TargetMatch[1]) ? '94' : '88_92');
+            setVal('spo2_target', /94/.test(spo2TargetMatch[1]) ? '' : '88_92');
         }
 
         // --- 4. BLOODS ---

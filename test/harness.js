@@ -65,13 +65,26 @@ export function click(window, selectorOrEl) {
     return el;
 }
 
-// Generating the note asks how the patient was reviewed if that has not been answered yet, so
-// a test that just clicks the button gets the prompt instead of a note. Answers it the way a
-// clinician would and lets the click carry on. Pass 'chart' where the method is the point.
-export function generateNote(window, method = 'physical') {
+// Generating the note asks how the patient was reviewed, and who is signing it, if those have
+// not been answered yet - so a test that just clicks the button gets the prompt instead of a
+// note. Answers it the way a clinician would and lets the click carry on. Pass 'chart' where
+// the method is the point, and `initials` where the signature is; leaving initials undefined
+// dismisses that half unsigned, which is what most tests want.
+export function generateNote(window, method = 'physical', initials) {
     click(window, '#btn_generate_summary');
     const prompt = window.document.getElementById('reviewMethodPrompt');
-    if (prompt && prompt.style.display === 'flex') {
+    if (!prompt || prompt.style.display !== 'flex') return;
+
+    if (initials !== undefined) {
+        const box = window.document.getElementById('promptReviewerInitials');
+        if (box) box.value = initials;
+    }
+    // Only the halves still unanswered are on show, so the method buttons are not always the
+    // way out of this dialog.
+    const methodActions = window.document.getElementById('review_prompt_method_actions');
+    if (methodActions && methodActions.style.display === 'none') {
+        click(window, '#btn_prompt_continue');
+    } else {
         click(window, method === 'chart' ? '#btn_method_chart' : '#btn_method_physical');
     }
 }

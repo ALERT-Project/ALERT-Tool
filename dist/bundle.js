@@ -2867,8 +2867,7 @@
     let demo = [];
     if (s.ptAge) demo.push(`Age: ${s.ptAge}`);
     if (s.ptWeight) demo.push(`Weight: ${s.ptWeight}kg`);
-    if (s.spo2_target === "94") demo.push("SpO2 target: 94%");
-    else if (s.spo2_target === "88_92") demo.push("SpO2 target: 88-92%");
+    if (s.spo2_target === "88_92") demo.push("SpO2 target: 88-92%");
     if (demo.length) lines.push(demo.join(", "));
     lines.push(`Time of review: ${s.reviewTime || nowTimeStr()}`);
     if (s.reviewType === "pre") {
@@ -3186,9 +3185,9 @@
   function generateHandoverLine(s, activeIssuesList = [], cat = null, red = [], amber = []) {
     const now = /* @__PURE__ */ new Date();
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
-    const initials = (s.reviewerInitials || "").toUpperCase() || "--";
+    const initials = (s.reviewerInitials || "").toUpperCase();
     const time = s.reviewTime || nowTimeStr();
-    const parts = [`${dateStr} ${time} ${initials}.`];
+    const parts = [initials ? `${dateStr} ${time} ${initials}.` : `${dateStr} ${time}.`];
     parts.push(s.reviewModeType === "chart" ? "CHART R/V." : "PHYSICAL R/V.");
     parts.push(s.chk_use_mods ? `MODS ${s.mods_score || "--"}.` : `ADDS ${s.adds || "--"}.`);
     if (s.chk_bloods_nil_sig || s.bloods_status === "nil_sig") parts.push("Bloods nil sig.");
@@ -3280,20 +3279,62 @@
       if (modal) modal.style.display = "none";
     };
     let pendingAfterReviewMethod = null;
-    const chooseReviewMethod = (value) => {
-      setReviewMethod(value);
+    let initialsPromptAnswered = false;
+    const resetInitialsPrompt = () => {
+      initialsPromptAnswered = false;
+    };
+    const commitPromptInitials = () => {
+      initialsPromptAnswered = true;
+      const typed = ($("promptReviewerInitials")?.value || "").trim();
+      const field = $("reviewerInitials");
+      if (typed && field) {
+        field.value = typed;
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    };
+    const needsInitials = () => !initialsPromptAnswered && !($("reviewerInitials")?.value || "").trim();
+    const openReviewPrompt = (askMethod, askInitials) => {
+      const modal = $("reviewMethodPrompt");
+      if (!modal) return;
+      const initialsBox = $("review_prompt_initials");
+      const methodActions = $("review_prompt_method_actions");
+      const continueActions = $("review_prompt_continue_actions");
+      const title = $("review_prompt_title");
+      if (initialsBox) initialsBox.style.display = askInitials ? "block" : "none";
+      if (methodActions) methodActions.style.display = askMethod ? "flex" : "none";
+      if (continueActions) continueActions.style.display = askMethod ? "none" : "flex";
+      if (title) {
+        title.textContent = askMethod ? "How did you review this patient?" : "Sign this note?";
+      }
+      const box = $("promptReviewerInitials");
+      if (box) box.value = $("reviewerInitials")?.value || "";
+      modal.style.display = "flex";
+      if (askInitials) box?.focus();
+    };
+    const resumeAfterPrompt = () => {
       hideReviewMethodPrompt();
       const resume = pendingAfterReviewMethod;
       pendingAfterReviewMethod = null;
       if (resume) resume();
     };
+    const chooseReviewMethod = (value) => {
+      setReviewMethod(value);
+      commitPromptInitials();
+      resumeAfterPrompt();
+    };
     $("btn_method_physical")?.addEventListener("click", () => chooseReviewMethod("physical"));
     $("btn_method_chart")?.addEventListener("click", () => chooseReviewMethod("chart"));
+    $("btn_prompt_continue")?.addEventListener("click", () => {
+      commitPromptInitials();
+      resumeAfterPrompt();
+    });
+    $("runImport")?.addEventListener("click", resetInitialsPrompt);
     function triggerGenerate() {
-      if (!getReviewMethod()) {
+      const askMethod = !getReviewMethod();
+      const askInitials = needsInitials();
+      if (askMethod || askInitials) {
         pendingAfterReviewMethod = triggerGenerate;
-        const modal = $("reviewMethodPrompt");
-        if (modal) modal.style.display = "flex";
+        openReviewPrompt(askMethod, askInitials);
         return;
       }
       const summaryEl = $("summary");
@@ -4139,6 +4180,7 @@
     $("confirmClearData")?.addEventListener("click", () => {
       hideClearDataModal();
       clearData();
+      resetInitialsPrompt();
     });
     $("btnQuickCopySummary")?.addEventListener("click", () => {
       const text = $("summary").value;

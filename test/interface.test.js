@@ -1474,8 +1474,11 @@ test('the note cannot be generated until the review method is answered', async (
 });
 
 test('a review method already chosen on the strip is not asked about again', async () => {
+    // The prompt asks about the signature too, so with both answered up front there is
+    // nothing left to interrupt for.
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
+    type(window, 'reviewerInitials', 'CB');
     click(window, 'input[name="reviewModeType"][value="physical"]');
     await tick(window);
 
@@ -1633,4 +1636,148 @@ test('the version in the footer matches the one in the file banner', () => {
         .map(m => `${m[1]} (${m[2]})`);
     assert.equal(stamps.length, 2, 'banner comment and page footer');
     assert.equal(stamps[0], stamps[1], 'version and date must agree');
+});
+
+test('the DMR prompt asks for initials without demanding them', async () => {
+    // Signing the note is a reminder, not a gate. A reviewer who has decided not to sign has
+    // to be able to write the note anyway, or the tool stops being usable at the one moment
+    // it matters - and the handover line then carries no initials rather than a stub.
+    {
+        const { window, document, close } = await loadTool();
+        type(window, 'ptName', 'ABC');
+        await tick(window);
+        click(window, '#btn_generate_summary');
+        const prompt = document.getElementById('reviewMethodPrompt');
+        assert.equal(prompt.style.display, 'flex', 'the prompt is raised');
+        assert.notEqual(document.getElementById('review_prompt_initials').style.display, 'none',
+            'and asks for initials, because none were entered');
+
+        // Straight past it, unsigned.
+        click(window, '#btn_method_physical');
+        await tick(window);
+        assert.ok(document.getElementById('summary').value.length > 0, 'the note still generates');
+        const handover = document.getElementById('handoverLine').value;
+        assert.ok(!/--/.test(handover.split('.')[0]), `no stub initials: ${handover}`);
+        assert.match(handover, /^\d+\/\d+ \d{2}:\d{2}\. PHYSICAL R\/V\./, 'date, time, then straight on');
+        close();
+    }
+
+    // Answered, it signs the note and fills the strip field, so there is one reviewer value.
+    {
+        const { window, document, close } = await loadTool();
+        type(window, 'ptName', 'ABC');
+        await tick(window);
+        generateNote(window, 'physical', 'cb');
+        await tick(window);
+        assert.equal(document.getElementById('reviewerInitials').value, 'cb',
+            'written back to the strip, not held only in the dialog');
+        assert.match(document.getElementById('handoverLine').value, /^\d+\/\d+ \d{2}:\d{2} CB\./,
+            'and upper-cased into the handover line');
+        close();
+    }
+});
+
+test('the initials half of the prompt is asked once, not on every regenerate', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    await tick(window);
+
+    generateNote(window);              // answers method, declines to sign
+    await tick(window);
+
+    click(window, '#btn_generate_summary');
+    assert.notEqual(document.getElementById('reviewMethodPrompt').style.display, 'flex',
+        'a reviewer who chose not to sign is not asked again for the same patient');
+    await tick(window);
+    assert.ok(document.getElementById('summary').value.length > 0, 'and the note regenerates');
+    close();
+});
+
+test('with the method already chosen, the prompt asks only for the signature', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    click(window, 'input[name="reviewModeType"][value="chart"]');
+    await tick(window);
+
+    click(window, '#btn_generate_summary');
+    assert.equal(document.getElementById('reviewMethodPrompt').style.display, 'flex');
+    assert.equal(document.getElementById('review_prompt_method_actions').style.display, 'none',
+        'the answered half is not asked again');
+    assert.equal(document.getElementById('review_prompt_continue_actions').style.display, 'flex');
+
+    document.getElementById('promptReviewerInitials').value = 'jd';
+    click(window, '#btn_prompt_continue');
+    await tick(window);
+    assert.match(document.getElementById('handoverLine').value, /JD\. CHART R\/V\./,
+        'the method already chosen is kept, not overwritten by the dialog');
+    close();
+});
+
+test('the SpO2 target offers the default and the exception, and nothing in between', async () => {
+    // An explicitly-chosen 94% and the default read identically and print identically, so a
+    // third option only asked the reviewer to tell two identical states apart.
+    const { window, document, close } = await loadTool();
+    const opts = [...document.querySelectorAll('#spo2_target option')].map(o => o.value);
+    assert.deepEqual(opts, ['', '88_92']);
+
+    type(window, 'ptName', 'ABC');
+    await tick(window);
+    generateNote(window);
+    await tick(window);
+    assert.ok(!/SpO2 target/.test(document.getElementById('summary').value),
+        'the default is never written down');
+    close();
+});
+
+test('a note carrying the old 94% target imports as the default, not as nothing', async () => {
+    // Notes written before the target became a two-way choice are still being scraped, and
+    // 94% now means the same thing the default does.
+    const { window, document, close } = await loadTool();
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value =
+        'Age: 70\nSpO2 target: 94%\nTime of review: 09:00\n';
+    click(window, '#runImport');
+    await tick(window, 900);
+    assert.equal(document.getElementById('spo2_target').value, '',
+        'no option to select, and the default is the right landing place');
+    close();
+});
+
+test('a COPD patient at target still scores, and the calculator says so', async () => {
+    // The total has to match the ward's observation chart, so the scale never changes - but a
+    // patient sitting mid-target and scoring 2 at every set of obs is exactly the situation a
+    // MODS exists for, and most of these patients have not got one.
+    const { window, document, close } = await loadTool();
+    const hint = () => document.getElementById('calc_spo2_target_hint').textContent;
+    const setCalc = (v) => {
+        const el = document.getElementById('calc_spo2');
+        el.value = v;
+        el.dispatchEvent(new window.Event('input', { bubbles: true }));
+    };
+
+    setCalc('90');
+    await tick(window);
+    assert.equal(document.getElementById('adds').value, '2',
+        'the standard scale, whatever the target - the obs chart says 2 and so must this');
+    assert.equal(hint(), '', 'nothing to suggest until a lower target is set');
+
+    type(window, 'spo2_target', '88_92');
+    await tick(window);
+    assert.equal(document.getElementById('adds').value, '2', 'the score is unchanged by the target');
+    assert.match(hint(), /within the 88-92% target but still scores 2/);
+    assert.match(hint(), /MODS/, 'and names the paperwork that would stop it');
+
+    // Below the target it is scoring for the right reason, so there is nothing to suggest.
+    setCalc('86');
+    await tick(window);
+    assert.equal(hint(), '');
+
+    // Nor once the modification actually exists.
+    setCalc('90');
+    await tick(window);
+    assert.match(hint(), /MODS/);
+    click(window, '#chk_use_mods');
+    await tick(window);
+    assert.equal(hint(), '', 'no point suggesting what is already in place');
+    close();
 });

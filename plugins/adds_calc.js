@@ -107,6 +107,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     align-items: center;
                     justify-content: center;
                 }
+                .calc-target-hint {
+                    display: none;
+                    margin-top: 4px;
+                    font-size: var(--fs-xs);
+                    line-height: 1.35;
+                    color: #92400e;
+                }
                 .o2-mode-label {
                     display: inline-flex !important;
                     align-items: center !important;
@@ -220,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="quick-chip-group">
                             <button class="quick-calc" data-target="calc_spo2" data-val=">94%">SpO2 >94%</button>
                         </div>
+                        <div id="calc_spo2_target_hint" class="calc-target-hint"></div>
                     </div>
                     <div class="adds-calc-score-wrapper">
                         <span class="adds-calc-score-label">Score</span>
@@ -372,6 +380,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('input[name="calc_o2_mode"]').forEach(r => r.addEventListener('change', runCalc));
 
+    // Both live outside the calculator but decide whether the target hint applies, so the
+    // panel has to be told when they move or the hint goes stale while it is open.
+    ['spo2_target', 'chk_use_mods'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', runCalc);
+    });
+
     document.querySelectorAll('#calc_avpu .select-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('#calc_avpu .select-btn').forEach(b => b.classList.remove('active'));
@@ -509,6 +523,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return { s: 0, m: false };
     }
 
+    // The calculator always scores on the standard scale, whatever target the patient is
+    // managed to, because this total has to match the observation chart the ward is keeping -
+    // a tool that quietly computed a different number would put the handover line at odds
+    // with the obs. That leaves a real quirk: a patient on an 88-92% target sitting at 90 is
+    // exactly where the treating team wants them and still scores 2, and will keep scoring 2
+    // at every set of obs until a MODS is signed. Most of these patients have no MODS, because
+    // it needs a consultant signature while the target itself is often only on the oxygen
+    // prescription or written in the notes.
+    //
+    // So the score stands and the hint suggests the paperwork - which is worth prompting for
+    // twice over, since the recurring score is noise for the home team and the pressure to
+    // answer it is pressure to give oxygen the patient should not have.
+    function updateSpo2TargetHint(rawSpo2, spo2Score) {
+        const hint = document.getElementById('calc_spo2_target_hint');
+        if (!hint) return;
+        const target = document.getElementById('spo2_target')?.value;
+        const modsInUse = document.getElementById('chk_use_mods')?.checked;
+        const n = parseVal(rawSpo2, 'spo2');
+        const atTarget = !isNaN(n) && n >= 88 && n <= 92;
+
+        if (target === '88_92' && atTarget && spo2Score > 0 && !modsInUse) {
+            hint.textContent = `SpO2 ${n}% is within the 88-92% target but still scores `
+                + `${spo2Score} here. Consider suggesting the team document a MODS.`;
+            hint.style.display = 'block';
+        } else {
+            hint.textContent = '';
+            hint.style.display = 'none';
+        }
+    }
+
     function runCalc() {
         let total = 0;
         let isM = false;
@@ -538,6 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('score_rr').innerText = rR.m ? 'M' : rR.s;
         document.getElementById('score_spo2').innerText = rSp.m ? 'M' : rSp.s;
+        updateSpo2TargetHint(spo2, rSp.s);
         document.getElementById('score_o2').innerText = rO2.s;
         document.getElementById('score_sbp').innerText = rBp.m ? 'M' : rBp.s;
         document.getElementById('score_hr').innerText = rHr.m ? 'M' : rHr.s;

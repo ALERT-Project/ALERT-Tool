@@ -48,11 +48,12 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     let demo = [];
     if (s.ptAge) demo.push(`Age: ${s.ptAge}`);
     if (s.ptWeight) demo.push(`Weight: ${s.ptWeight}kg`);
-    // Only what was actually chosen. The tool reads an unset target as 94%, but printing that
-    // would put a target in the record that nobody set - and on a COPD patient the next
+    // Only the lower target is written down. The tool reads anything else as 94%, and printing
+    // that would put a target in the record that nobody set - on a COPD patient the next
     // reviewer would import it and inherit a wrong one as though it had been documented.
-    if (s.spo2_target === '94') demo.push('SpO2 target: 94%');
-    else if (s.spo2_target === '88_92') demo.push('SpO2 target: 88-92%');
+    // 88-92% is the exception worth carrying: it is the one that changes how the saturation
+    // should be read, and the one that is easy to lose between notes.
+    if (s.spo2_target === '88_92') demo.push('SpO2 target: 88-92%');
     if (demo.length) lines.push(demo.join(', '));
 
     lines.push(`Time of review: ${s.reviewTime || nowTimeStr()}`);
@@ -473,9 +474,12 @@ export function generateHandoverLine(s, activeIssuesList = [], cat = null, red =
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
     // Upper-cased on read: the field only *displays* uppercase, via CSS, so the stored value
     // is whatever was typed and this column is scanned by eye.
-    const initials = (s.reviewerInitials || '').toUpperCase() || '--';
+    // Omitted rather than stubbed when it wasn't entered: this line is pasted into a shared
+    // sheet, and a column of '--' reads as a reviewer nobody can trace rather than as a field
+    // left blank.
+    const initials = (s.reviewerInitials || '').toUpperCase();
     const time = s.reviewTime || nowTimeStr();
-    const parts = [`${dateStr} ${time} ${initials}.`];
+    const parts = [initials ? `${dateStr} ${time} ${initials}.` : `${dateStr} ${time}.`];
 
     // Upper case because this is the column people scan when deciding whether a patient has
     // actually been laid eyes on - a CAT 3 discharge shouldn't rest on chart reviews alone,
