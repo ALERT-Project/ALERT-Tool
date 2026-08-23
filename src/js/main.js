@@ -134,10 +134,18 @@ function initialize() {
         if (initialsBox) initialsBox.style.display = askInitials ? 'block' : 'none';
         if (methodActions) methodActions.style.display = askMethod ? 'flex' : 'none';
         if (continueActions) continueActions.style.display = askMethod ? 'none' : 'flex';
+
+        // With one question to ask, the title asks it. With two, the title stops being a
+        // question - a heading that asks about the review method with an initials box under
+        // it reads as though the box were the answer to it - and names what the dialog is
+        // instead, with each question labelled beneath.
+        const bothAsked = askMethod && askInitials;
+        const methodLabel = $('review_prompt_method_label');
+        if (methodLabel) methodLabel.style.display = bothAsked ? 'block' : 'none';
         if (title) {
-            title.textContent = askMethod
-                ? 'How did you review this patient?'
-                : 'Sign this note?';
+            if (bothAsked) title.textContent = 'Helpful hints';
+            else if (askMethod) title.textContent = 'How did you review this patient?';
+            else title.textContent = 'Sign this note?';
         }
         const box = $('promptReviewerInitials');
         if (box) box.value = ($('reviewerInitials')?.value || '');

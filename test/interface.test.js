@@ -1781,3 +1781,52 @@ test('a COPD patient at target still scores, and the calculator says so', async 
     assert.equal(hint(), '', 'no point suggesting what is already in place');
     close();
 });
+
+test('the DMR prompt stops being a question when it has two to ask', async () => {
+    // A heading reading "How did you review this patient?" with an initials box directly under
+    // it reads as though the box were the answer to it. The initials cannot move below the
+    // buttons either - those dismiss the dialog - so the title gives way instead.
+    const shape = (document) => ({
+        title: document.getElementById('review_prompt_title').textContent,
+        initials: document.getElementById('review_prompt_initials').style.display !== 'none',
+        methodQ: document.getElementById('review_prompt_method_label').style.display !== 'none',
+        buttons: document.getElementById('review_prompt_method_actions').style.display !== 'none'
+    });
+
+    {
+        const { window, document, close } = await loadTool();
+        type(window, 'ptName', 'ABC');
+        await tick(window);
+        click(window, '#btn_generate_summary');
+        const s = shape(document);
+        assert.equal(s.title, 'Helpful hints', 'the title stops asking');
+        assert.ok(s.initials && s.methodQ && s.buttons, 'and both questions are labelled');
+        close();
+    }
+
+    // One question left, and the title asks it - no second heading repeating it underneath.
+    {
+        const { window, document, close } = await loadTool();
+        type(window, 'ptName', 'ABC');
+        type(window, 'reviewerInitials', 'CB');
+        await tick(window);
+        click(window, '#btn_generate_summary');
+        const s = shape(document);
+        assert.equal(s.title, 'How did you review this patient?');
+        assert.ok(!s.initials, 'nothing to ask about the signature');
+        assert.ok(!s.methodQ, 'and the title is not echoed above the buttons');
+        close();
+    }
+
+    {
+        const { window, document, close } = await loadTool();
+        type(window, 'ptName', 'ABC');
+        click(window, 'input[name="reviewModeType"][value="chart"]');
+        await tick(window);
+        click(window, '#btn_generate_summary');
+        const s = shape(document);
+        assert.equal(s.title, 'Sign this note?');
+        assert.ok(s.initials && !s.buttons);
+        close();
+    }
+});

@@ -303,12 +303,12 @@ header h1 .logo-em {
 }
 .rs-field-reviewer.reviewer-missing .rs-required { display: inline; }
 
-/* The initials half of the DMR prompt. Deliberately quieter than the buttons under it: it is
-   a reminder to sign, not the question being asked. */
-.prompt-initials { margin: 0 0 14px; text-align: left; }
+/* The initials half of the DMR prompt. Centred like everything else in this dialog, and sized
+   to what it holds - a full-width box for three characters read as a comment field. */
+.prompt-initials { margin: 0 0 18px; text-align: center; }
 .prompt-initials label {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   font-size: var(--fs-xs);
   font-weight: var(--fw-semibold);
   text-transform: uppercase;
@@ -316,19 +316,24 @@ header h1 .logo-em {
   color: var(--muted);
 }
 .prompt-initials input {
-  width: 100%;
+  width: 5.5em;
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--input-bg);
   color: var(--ink);
-  font-size: var(--fs-base);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.15em;
+  text-align: center;
   box-sizing: border-box;
 }
-.prompt-initials-hint {
-  margin-top: 4px;
-  font-size: var(--fs-xs);
-  color: var(--muted);
+/* The second question, when the title is no longer able to be one. */
+.prompt-question {
+  margin: 0 0 10px;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
 }
 .rs-field-reviewer.reviewer-missing input {
   border-color: var(--amber);

@@ -2169,11 +2169,15 @@
             <div class="modal-confirm-icon">🩺</div>
             <h3 id="review_prompt_title" class="modal-confirm-title">How did you review this patient?</h3>
             <div id="review_prompt_initials" class="prompt-initials">
-                <label for="promptReviewerInitials">Your initials</label>
+                <label for="promptReviewerInitials">Your initials (reviewer)</label>
                 <input id="promptReviewerInitials" type="text" maxlength="3" autocomplete="off"
                     style="text-transform:uppercase" />
-                <div class="prompt-initials-hint">Optional - left blank, the note is unsigned.</div>
             </div>
+            <!-- Carries the method question when the title is covering both halves, so each
+                 answer sits directly under the question it answers. The initials have to come
+                 first despite being the lesser question: these buttons dismiss the dialog, so
+                 anything below them can never be filled in. -->
+            <div id="review_prompt_method_label" class="prompt-question">How did you review this patient?</div>
             <div class="modal-confirm-actions" id="review_prompt_method_actions">
                 <button id="btn_method_physical" class="btn small btn-confirm-yes">Physical r/v</button>
                 <button id="btn_method_chart" class="btn small">Chart review</button>
