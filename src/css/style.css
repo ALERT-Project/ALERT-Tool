@@ -315,7 +315,9 @@ header h1 .logo-em {
   letter-spacing: 0.5px;
   color: var(--muted);
 }
-.prompt-initials input {
+/* The type selector is needed to outrank the global input[type="text"] width further down:
+   a bare .prompt-initials input ties with it on specificity and loses on order. */
+.prompt-initials input[type="text"] {
   width: 5.5em;
   padding: 8px 10px;
   border: 1px solid var(--line);
