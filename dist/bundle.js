@@ -3300,11 +3300,13 @@
       if (continueActions) continueActions.style.display = askMethod ? "none" : "flex";
       const bothAsked = askMethod && askInitials;
       const methodLabel = $("review_prompt_method_label");
+      const initialsLabel = $("review_prompt_initials_label");
       if (methodLabel) methodLabel.style.display = bothAsked ? "block" : "none";
+      if (initialsLabel) initialsLabel.style.display = bothAsked ? "block" : "none";
       if (title) {
         if (bothAsked) title.textContent = "Helpful hints";
         else if (askMethod) title.textContent = "How did you review this patient?";
-        else title.textContent = "Sign this note?";
+        else title.textContent = "Initials for Excel handover";
       }
       const box = $("promptReviewerInitials");
       if (box) box.value = $("reviewerInitials")?.value || "";

@@ -474,9 +474,9 @@ export function generateHandoverLine(s, activeIssuesList = [], cat = null, red =
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
     // Upper-cased on read: the field only *displays* uppercase, via CSS, so the stored value
     // is whatever was typed and this column is scanned by eye.
-    // Omitted rather than stubbed when it wasn't entered: this line is pasted into a shared
-    // sheet, and a column of '--' reads as a reviewer nobody can trace rather than as a field
-    // left blank.
+    // The one place the reviewer's initials go. Omitted rather than stubbed when they were not
+    // entered: this line is pasted into a shared sheet, and a column of '--' reads as a
+    // reviewer nobody can trace rather than as a field left blank.
     const initials = (s.reviewerInitials || '').toUpperCase();
     const time = s.reviewTime || nowTimeStr();
     const parts = [initials ? `${dateStr} ${time} ${initials}.` : `${dateStr} ${time}.`];

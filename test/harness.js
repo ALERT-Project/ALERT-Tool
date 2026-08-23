@@ -65,11 +65,11 @@ export function click(window, selectorOrEl) {
     return el;
 }
 
-// Generating the note asks how the patient was reviewed, and who is signing it, if those have
-// not been answered yet - so a test that just clicks the button gets the prompt instead of a
-// note. Answers it the way a clinician would and lets the click carry on. Pass 'chart' where
-// the method is the point, and `initials` where the signature is; leaving initials undefined
-// dismisses that half unsigned, which is what most tests want.
+// Generating the note asks how the patient was reviewed, and whose initials go on the Excel
+// handover line, if those have not been answered yet - so a test that just clicks the button
+// gets the prompt instead of a note. Answers it the way a clinician would and lets the click
+// carry on. Pass 'chart' where the method is the point, and `initials` where the reviewer is;
+// leaving initials undefined dismisses that half, which is what most tests want.
 export function generateNote(window, method = 'physical', initials) {
     click(window, '#btn_generate_summary');
     const prompt = window.document.getElementById('reviewMethodPrompt');

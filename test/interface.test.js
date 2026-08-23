@@ -363,18 +363,18 @@ test('the device dwell line reports days without calling them long', async () =>
     close();
 });
 
-test('the reviewer field marks itself until it is signed', async () => {
+test('the reviewer field marks itself until a reviewer is named', async () => {
     const { window, document, close } = await loadTool();
     const field = document.querySelector('.rs-field-reviewer');
     assert.ok(field, 'the reviewer field is its own marked block');
 
     type(window, 'ptName', 'ABC');
     await tick(window);
-    assert.ok(field.classList.contains('reviewer-missing'), 'unsigned notes say so');
+    assert.ok(field.classList.contains('reviewer-missing'), 'an empty box says so');
 
     type(window, 'reviewerInitials', 'CB');
     await tick(window);
-    assert.ok(!field.classList.contains('reviewer-missing'), 'and stop once signed');
+    assert.ok(!field.classList.contains('reviewer-missing'), 'and stops once filled');
     close();
 });
 
@@ -1474,8 +1474,8 @@ test('the note cannot be generated until the review method is answered', async (
 });
 
 test('a review method already chosen on the strip is not asked about again', async () => {
-    // The prompt asks about the signature too, so with both answered up front there is
-    // nothing left to interrupt for.
+    // The prompt asks for the reviewer's initials too, so with both answered up front there
+    // is nothing left to interrupt for.
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
     type(window, 'reviewerInitials', 'CB');
@@ -1639,9 +1639,9 @@ test('the version in the footer matches the one in the file banner', () => {
 });
 
 test('the DMR prompt asks for initials without demanding them', async () => {
-    // Signing the note is a reminder, not a gate. A reviewer who has decided not to sign has
-    // to be able to write the note anyway, or the tool stops being usable at the one moment
-    // it matters - and the handover line then carries no initials rather than a stub.
+    // A reminder, not a gate. A reviewer who would rather not name themselves has to be able
+    // to write the note anyway, or the tool stops being usable at the one moment it matters -
+    // and the handover line then carries no initials rather than a stub.
     {
         const { window, document, close } = await loadTool();
         type(window, 'ptName', 'ABC');
@@ -1652,7 +1652,7 @@ test('the DMR prompt asks for initials without demanding them', async () => {
         assert.notEqual(document.getElementById('review_prompt_initials').style.display, 'none',
             'and asks for initials, because none were entered');
 
-        // Straight past it, unsigned.
+        // Straight past it, naming nobody.
         click(window, '#btn_method_physical');
         await tick(window);
         assert.ok(document.getElementById('summary').value.length > 0, 'the note still generates');
@@ -1679,13 +1679,13 @@ test('the DMR prompt asks for initials without demanding them', async () => {
 
 test('an empty reviewer box is asked about every time, and Continue waves it past', async () => {
     // This was once suppressed after the first refusal, which made the prompt depend on state
-    // nothing on screen showed: skipping the signature on one patient silenced it for the next
+    // nothing on screen showed: skipping the initials on one patient silenced it for the next
     // one too, unless Clear Data happened to have been pressed in between.
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
     await tick(window);
 
-    generateNote(window);              // answers method, declines to sign
+    generateNote(window);              // answers method, declines to give initials
     await tick(window);
     assert.ok(document.getElementById('summary').value.length > 0, 'the note is written');
 
@@ -1695,13 +1695,13 @@ test('an empty reviewer box is asked about every time, and Continue waves it pas
     click(window, '#btn_generate_summary');
     assert.equal(document.getElementById('reviewMethodPrompt').style.display, 'flex',
         'still asked, because the box is still empty');
-    assert.equal(document.getElementById('review_prompt_title').textContent, 'Sign this note?',
-        'and only about the signature, the method having been answered already');
+    assert.equal(document.getElementById('review_prompt_title').textContent, 'Initials for Excel handover',
+        'and only about the initials, the method having been answered already');
 
     click(window, '#btn_prompt_continue');
     await tick(window);
     assert.ok(document.getElementById('summary').value.length > 0, 'Continue writes the note');
-    assert.equal(document.getElementById('reviewerInitials').value, '', 'and signs nothing');
+    assert.equal(document.getElementById('reviewerInitials').value, '', 'and names nobody');
 
     // Two letters end it for good.
     type(window, 'reviewerInitials', 'CB');
@@ -1712,7 +1712,7 @@ test('an empty reviewer box is asked about every time, and Continue waves it pas
     close();
 });
 
-test('with the method already chosen, the prompt asks only for the signature', async () => {
+test('with the method already chosen, the prompt asks only for the initials', async () => {
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
     click(window, 'input[name="reviewModeType"][value="chart"]');
@@ -1809,6 +1809,7 @@ test('the DMR prompt stops being a question when it has two to ask', async () =>
         title: document.getElementById('review_prompt_title').textContent,
         initials: document.getElementById('review_prompt_initials').style.display !== 'none',
         methodQ: document.getElementById('review_prompt_method_label').style.display !== 'none',
+        initialsQ: document.getElementById('review_prompt_initials_label').style.display !== 'none',
         buttons: document.getElementById('review_prompt_method_actions').style.display !== 'none'
     });
 
@@ -1832,7 +1833,7 @@ test('the DMR prompt stops being a question when it has two to ask', async () =>
         click(window, '#btn_generate_summary');
         const s = shape(document);
         assert.equal(s.title, 'How did you review this patient?');
-        assert.ok(!s.initials, 'nothing to ask about the signature');
+        assert.ok(!s.initials, 'nothing to ask about the initials');
         assert.ok(!s.methodQ, 'and the title is not echoed above the buttons');
         close();
     }
@@ -1844,8 +1845,10 @@ test('the DMR prompt stops being a question when it has two to ask', async () =>
         await tick(window);
         click(window, '#btn_generate_summary');
         const s = shape(document);
-        assert.equal(s.title, 'Sign this note?');
+        assert.equal(s.title, 'Initials for Excel handover',
+            'the wording never implies a stored, signed record - it is one spreadsheet cell');
         assert.ok(s.initials && !s.buttons);
+        assert.ok(!s.initialsQ, 'the title carries it, so the label does not repeat it');
         close();
     }
 });

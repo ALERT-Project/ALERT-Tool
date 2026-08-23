@@ -114,7 +114,7 @@ function initialize() {
     };
 
     // An empty box is the whole test. This was once suppressed after the first time it was
-    // waved away, which made the prompt depend on state nothing on screen showed: skip signing
+    // waved away, which made the prompt depend on state nothing on screen showed: skip it on
     // one patient and the next patient got no prompt at all, unless Clear Data happened to
     // have been pressed in between. Asking every time costs one press of Continue, and typing
     // two letters ends it for good.
@@ -132,17 +132,23 @@ function initialize() {
         if (methodActions) methodActions.style.display = askMethod ? 'flex' : 'none';
         if (continueActions) continueActions.style.display = askMethod ? 'none' : 'flex';
 
-        // With one question to ask, the title asks it. With two, the title stops being a
-        // question - a heading that asks about the review method with an initials box under
-        // it reads as though the box were the answer to it - and names what the dialog is
-        // instead, with each question labelled beneath.
+        // With one question to ask, the title asks it and the label for that half is hidden
+        // rather than repeating it directly underneath. With two, the title stops being a
+        // question - a heading asking about the review method with an initials box under it
+        // reads as though the box were the answer - and both halves carry their own label.
+        //
+        // Never phrased as signing: nothing in this tool is recorded anywhere, and initials
+        // that read as a signature imply a stored record that does not exist. They reach the
+        // Excel handover line and nothing else, so that is what the wording says.
         const bothAsked = askMethod && askInitials;
         const methodLabel = $('review_prompt_method_label');
+        const initialsLabel = $('review_prompt_initials_label');
         if (methodLabel) methodLabel.style.display = bothAsked ? 'block' : 'none';
+        if (initialsLabel) initialsLabel.style.display = bothAsked ? 'block' : 'none';
         if (title) {
             if (bothAsked) title.textContent = 'Helpful hints';
             else if (askMethod) title.textContent = 'How did you review this patient?';
-            else title.textContent = 'Sign this note?';
+            else title.textContent = 'Initials for Excel handover';
         }
         const box = $('promptReviewerInitials');
         if (box) box.value = ($('reviewerInitials')?.value || '');

@@ -16,11 +16,12 @@ disagreement inside the tool that is now settled.
 * **Two options, not three:** `Default: ≥94%` and `88-92%`. An explicitly-chosen 94% read identically to the default and printed identically, so the third option only asked you to tell two identical states apart. "COPD" has come off the label - the target is the fact, whatever the diagnosis.
 * **Only 88-92% is written into the note.** It is the one that changes how the saturation should be read and the one that is easy to lose between notes. Notes carrying the old `SpO2 target: 94%` still import, and land on the default.
 
-### ✍️ Signing the note
+### ✍️ Initials for the Excel handover
 
 * **The DMR prompt now asks for your initials** if the Reviewer box is still empty when you press it, in the same dialog that asks how you reviewed the patient. Only the halves still unanswered appear, so filling both in up front skips it entirely.
-* **It is a reminder, not a gate.** Every button in that dialog writes the note whether or not you filled the box, and it is asked once per patient rather than on every regenerate. The field label now says *recommended* instead of *required*, which is what it always actually was.
-* **An unsigned note leaves the initials out of the handover line** rather than printing `--`. A column of stubs reads as a reviewer nobody can trace, rather than as a field left blank.
+* **It is a reminder, not a gate.** Every button in that dialog writes the note whether or not you filled the box, and **Continue** waves it past. It asks whenever the box is empty, so nothing is remembered between patients - typing your initials is the only thing that stops it.
+* **Left blank, the handover line carries no initials** rather than printing `--`. A column of stubs reads as a reviewer nobody can trace, rather than as a field left blank.
+* **Deliberately not called signing.** Nothing in this tool is recorded anywhere - the initials reach the Excel handover line and nothing else, and wording that reads as a signature implies a stored record that does not exist. The field label drops the word *required*, which it never was.
 
 # ALERT Tool Changelog: A9.1 (22 August 2026)
 
