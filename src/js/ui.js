@@ -684,15 +684,21 @@ export function refreshAddsOverrideUI() {
     }
 }
 
-export function toggleAddsOverride() {
+// The MODS state has one home - the hidden addsManual field - and two ways in: the "Enter
+// MODS" button on the risk card and the "MODS in place?" checkbox down in A-E. The checkbox
+// used to set only its own .checked, which refreshAddsOverrideUI then overwrote from
+// addsManual on the very next keystroke, so ticking it silently untucked itself and the note
+// went on printing ADDS. Both controls now go through here.
+export function setAddsOverride(manual, { focus = false } = {}) {
     const field = $('addsManual');
     if (!field) return;
-    const manual = field.value !== 'true';
     field.value = String(manual);
 
     if (manual) {
-        $('adds')?.focus();
-        $('adds')?.select();
+        if (focus) {
+            $('adds')?.focus();
+            $('adds')?.select();
+        }
     } else {
         // Switching back to ADDS hands the field to the calculator again and clears the MODS
         // record, so a stale MODS score can't linger in the summary.
@@ -707,6 +713,10 @@ export function toggleAddsOverride() {
         const details = $('mods_details'); if (details) details.value = '';
     }
     refreshAddsOverrideUI();
+}
+
+export function toggleAddsOverride() {
+    setAddsOverride($('addsManual')?.value !== 'true', { focus: true });
 }
 
 // "From the last review" used to be rendered here: a card that listed the same carried gates

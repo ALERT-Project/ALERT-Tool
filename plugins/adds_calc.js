@@ -598,7 +598,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // (e.g. the consultant modified the observation parameters).
         const manualAdds = document.getElementById('addsManual')?.value === 'true';
         const mainAdds = document.getElementById('adds');
-        if (mainAdds && !manualAdds) {
+        // An empty calculator scores 0, and runCalc fires for things outside it - the MODS
+        // checkbox, the SpO2 target - so writing that 0 through wiped a score the clinician
+        // had typed or imported. Nothing entered here means nothing to say about the score.
+        const calcHasEntry = [rr, spo2, o2Val, sbp, dbp, hr, temp].some(v => String(v || '').trim() !== '')
+            || avpu !== 'A';
+        if (mainAdds && !manualAdds && calcHasEntry) {
             mainAdds.value = total;
             mainAdds.dispatchEvent(new Event('input'));
         }

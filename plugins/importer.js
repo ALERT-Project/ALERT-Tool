@@ -18,17 +18,65 @@ document.addEventListener('DOMContentLoaded', () => {
         closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
     }
 
+    const overwriteModal = document.getElementById('importOverwriteModal');
+    let pendingImport = null;
+
+    // Whether this form is already holding a review. Identifiers first, then the things a
+    // second import would silently inherit: the device list, and any staged issue or gate the
+    // previous note put there.
+    function formHoldsPatient() {
+        const filled = ['ptName', 'ptMrn', 'ptAge', 'ptWeight', 'ptBed', 'ptAdmissionReason', 'icuLos',
+            'allergies_note', 'goc_note', 'pmh_note', 'ae_mobility', 'ae_diet', 'adds', 'mods_score']
+            .some(id => (document.getElementById(id)?.value || '').trim() !== '');
+        if (filled) return true;
+        if (document.querySelector('.device-entry')) return true;
+        if (document.querySelector('.input-box.carried-forward')) return true;
+        const ward = document.getElementById('ptWard');
+        if (ward && ward.value && ward.value !== '') return true;
+        return false;
+    }
+
+    // Every import starts from a clean form. The importer writes only what its note mentions,
+    // so anything the note is silent about would otherwise stay on screen and be read - and
+    // written into the next DMR - as the imported patient's own.
+    function runImport(data) {
+        if (window.clearFormForImport) window.clearFormForImport();
+        processDMR(data);
+        modal.style.display = 'none';
+        if (overwriteModal) overwriteModal.style.display = 'none';
+        // Trigger generic input event to update calculations
+        const ptName = document.getElementById('ptName');
+        if (ptName) ptName.dispatchEvent(new Event('input'));
+    }
+
     if (runBtn) {
         runBtn.addEventListener('click', () => {
             const data = txt.value;
             if (!data) return;
-            processDMR(data);
-            modal.style.display = 'none';
-            // Trigger generic input event to update calculations
-            const ptName = document.getElementById('ptName');
-            if (ptName) ptName.dispatchEvent(new Event('input'));
+            // The clear is not silent when there is something to lose.
+            if (formHoldsPatient() && overwriteModal) {
+                pendingImport = data;
+                modal.style.display = 'none';
+                overwriteModal.style.display = 'flex';
+                return;
+            }
+            runImport(data);
         });
     }
+
+    document.getElementById('confirmImportOverwrite')?.addEventListener('click', () => {
+        const data = pendingImport;
+        pendingImport = null;
+        if (overwriteModal) overwriteModal.style.display = 'none';
+        if (data) runImport(data);
+    });
+
+    document.getElementById('cancelImportOverwrite')?.addEventListener('click', () => {
+        pendingImport = null;
+        if (overwriteModal) overwriteModal.style.display = 'none';
+        // Back to the import box with the pasted note still in it, rather than losing it.
+        if (modal) modal.style.display = 'flex';
+    });
 
     // The note prints '--' wherever a field was blank when it was written. Importing that back
     // puts a literal '--' in Initials or Bed, which then reads as data - so it's dropped.
@@ -190,6 +238,10 @@ document.addEventListener('DOMContentLoaded', () => {
             window.flagPreviousRecommendation(detail ? detail[1].trim().replace(/[.\s]+$/, '') : '');
         }
     }
+
+    // Lines that are assessment answers, not devices. Each is read into its own field by the
+    // passes above, so it must never also become a device entry.
+    const NON_DEVICE_LINE = /^(Mobility|Diet|Nutrition|Sleep|Psychological issues|Post ICU Syndrome|Bowels|Anticoagulation|VTE Prophylaxis|Infusions|Allergies|GOC|PICS Assessment|Weight|Age|SpO2 target|ADDS|MODS)\s*:/i;
 
     function processDMR(text) {
         // --- 0. RESET ---
@@ -538,7 +590,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 6. DEVICES ---
         if (carryForward) {
             // Device header: handle both 'LINES, DRAINS, DEVICES & WOUNDS:' and 'Lines Drains Devices and Wounds:'
-            const devSection = text.match(/(?:^LINES[,\s]+DRAINS.*?DEVICES.*?:|^DEVICES:)([\s\S]*?)(?:IDENTIFIED|GOC:|PICS:|PLAN:|^Other:)/im);
+            // PATIENT FACTORS was missing from the terminators, and it is the section that
+            // immediately follows the devices in every note this tool writes - so mobility,
+            // diet, sleep and the psych answer were swallowed by the device block and each
+            // came back as an "Other Device". They are read into their own fields elsewhere.
+            const devSection = text.match(/(?:^LINES[,\s]+DRAINS.*?DEVICES.*?:|^DEVICES:)([\s\S]*?)(?:^PATIENT FACTORS:|IDENTIFIED|GOC:|PICS:|PLAN:|^Checks:|^Other:)/im);
             if (devSection && devSection[1]) {
                 openAccordion('panel_devices', '[aria-controls="panel_devices"]');
                 // Split on newlines, then also split any remaining lines that contain ' -' (inline entries)
@@ -557,6 +613,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Remove leading dash if present
                     let txt = line.startsWith('-') ? line.substring(1).trim() : line;
                     if (txt.toLowerCase().includes('nil')) return;
+                    // Second guard, for notes typed by hand or written by an older version,
+                    // where these lines can sit inside the device block with no PATIENT
+                    // FACTORS heading to stop at. A device is not a labelled assessment
+                    // answer, and every one of these already has a field of its own.
+                    if (NON_DEVICE_LINE.test(txt)) return;
 
                     let type = "Other Device";
                     let det = txt;

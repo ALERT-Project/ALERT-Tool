@@ -2008,14 +2008,15 @@
       }
     }
   }
-  function toggleAddsOverride() {
+  function setAddsOverride(manual, { focus = false } = {}) {
     const field = $("addsManual");
     if (!field) return;
-    const manual = field.value !== "true";
     field.value = String(manual);
     if (manual) {
-      $("adds")?.focus();
-      $("adds")?.select();
+      if (focus) {
+        $("adds")?.focus();
+        $("adds")?.select();
+      }
     } else {
       const calcTotal = $("calc_total_display")?.textContent?.trim();
       const addsInput = $("adds");
@@ -2031,6 +2032,9 @@
       if (details) details.value = "";
     }
     refreshAddsOverrideUI();
+  }
+  function toggleAddsOverride() {
+    setAddsOverride($("addsManual")?.value !== "true", { focus: true });
   }
   var newRiskLog = [];
   function showNewRiskAlert(newRed = [], newAmber = []) {
@@ -3267,6 +3271,7 @@
       });
     };
     window.refreshAddsOverrideUI = refreshAddsOverrideUI;
+    window.clearFormForImport = clearData;
     const getReviewMethod = () => document.querySelector('input[name="reviewModeType"]:checked')?.value || "";
     const setReviewMethod = (value) => {
       const radio = document.querySelector(`input[name="reviewModeType"][value="${value}"]`);
@@ -4077,7 +4082,8 @@
       if (yes && !yes.classList.contains("active")) yes.click();
     });
     $("chk_use_mods")?.addEventListener("change", () => {
-      $("mods_inputs").style.display = $("chk_use_mods").checked ? "block" : "none";
+      const manual = $("addsManual")?.value === "true";
+      if ($("chk_use_mods").checked !== manual) setAddsOverride(!manual);
       compute();
     });
     $("chk_aperients")?.addEventListener("change", compute);
@@ -4416,6 +4422,20 @@
     });
     $("adds")?.addEventListener("input", refreshAddsOverrideUI);
     $("addsOverrideNote")?.addEventListener("input", refreshAddsOverrideUI);
+    $("mods_score")?.addEventListener("input", () => {
+      if ($("addsManual")?.value !== "true") return;
+      const adds = $("adds");
+      if (adds && adds.value !== $("mods_score").value) {
+        adds.value = $("mods_score").value;
+        adds.dispatchEvent(new Event("input"));
+      }
+    });
+    $("mods_details")?.addEventListener("input", () => {
+      if ($("addsManual")?.value !== "true") return;
+      const note = $("addsOverrideNote");
+      if (note) note.value = $("mods_details").value;
+      compute();
+    });
     $("btnDeviceMore")?.addEventListener("click", (e) => {
       const group = document.querySelector(".device-add-group");
       if (!group) return;

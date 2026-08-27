@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--
-  ALERT Nursing Risk Assessment Tool A9.2  (23 August 2026)
+  ALERT Nursing Risk Assessment Tool A9.3  (28 August 2026)
   Copyright © 2025-2026 Casey Bond
   Developed for ALERT at South Metropolitan Health Service, WA, Australia
   Licensed under MIT License
@@ -187,6 +187,28 @@
                 <div class="modal-actions">
                     <button class="btn small" id="closeClearModal">Cancel</button>
                     <button class="btn danger small" id="confirmClearData">Clear Data & Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raised when an import would land on a form that already holds a patient. The
+             importer only ever wrote what the note mentioned, so anything the note was silent
+             about - weight, allergies, PMH, devices, previous bloods - stayed on screen under
+             the new patient's name. -->
+        <div id="importOverwriteModal" class="modal-overlay">
+            <div class="modal-content">
+                <h3 style="margin:0; color:var(--ink);">&#9888;&#65039; This form already holds a patient</h3>
+                <p style="margin:18px 0; color:var(--ink); font-size:var(--fs-base); line-height:1.5;">Importing a
+                    note starts a new review. The current patient's data will be cleared first, so nothing of theirs
+                    can carry into the imported note.<br><strong>This cannot be undone.</strong></p>
+                <div
+                    style="background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:12px; margin-bottom:16px;">
+                    <div style="font-size:var(--fs-sm); color:var(--muted);">&#128161; Copy the current summary to DMR
+                        before continuing if you still need it.</div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn small" id="cancelImportOverwrite">Cancel</button>
+                    <button class="btn danger small" id="confirmImportOverwrite">Clear &amp; Import</button>
                 </div>
             </div>
         </div>
@@ -2110,7 +2132,7 @@
             style="text-align:center; padding:32px 20px 20px 20px; font-size:var(--fs-hint); color:var(--muted); line-height:1.6; word-wrap:break-word; overflow-wrap:break-word;">
             <!-- Kept in step with the banner comment at the top of this file by a test; the
                  two drifted apart once already and nobody noticed until a release. -->
-            <div>ALERT Tool A9.2 (23 August 2026) © 2025-2026 Casey Bond</div>
+            <div>ALERT Tool A9.3 (28 August 2026) © 2025-2026 Casey Bond</div>
             <div>Developed for ALERT at South Metropolitan Health Service, WA, Australia</div>
             <div><a href="https://opensource.org/licenses/MIT" target="_blank"
                     style="color:var(--accent); text-decoration:none;">MIT License</a></div>

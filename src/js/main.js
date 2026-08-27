@@ -22,7 +22,7 @@ import {
     handleUnknownBLODate, showClearDataModal, hideClearDataModal, syncComorbsToPMH, clearData,
     enableQuickReviewMode, exitQuickReviewMode, showQuickReviewPrompt, openMobileNav, closeMobileNav,
     handleSegmentClick, toggleBowelDate, updateAgeMitigationUI, updateLosMitigationUI, openAccordion, closeAccordion,
-    setBloodsOverlay, closeQuickOverlays, toggleAddsOverride, refreshAddsOverrideUI, setPanelOpen,
+    setBloodsOverlay, closeQuickOverlays, toggleAddsOverride, setAddsOverride, refreshAddsOverrideUI, setPanelOpen,
     markCopiedOnExit, applyAppIcons
 } from './ui.js';
 
@@ -81,6 +81,12 @@ function initialize() {
     };
     // plugins/adds_calc.js pings this after each recalculation.
     window.refreshAddsOverrideUI = refreshAddsOverrideUI;
+
+    // plugins/importer.js resets the form before it applies a note. The importer only ever
+    // wrote the fields its note mentioned, so importing a second patient over the first left
+    // everything the new note was silent about - weight, allergies, PMH, every device, the
+    // previous bloods, the carried gates - on screen under the new patient's name.
+    window.clearFormForImport = clearData;
 
     // The review method shapes what the note claims was done, and a wrong one is only
     // discoverable after it has been pasted into DMR. Rather than pre-tick a default, the
@@ -1020,7 +1026,14 @@ function initialize() {
         if (yes && !yes.classList.contains('active')) yes.click();
     });
 
-    $('chk_use_mods')?.addEventListener('change', () => { $('mods_inputs').style.display = $('chk_use_mods').checked ? 'block' : 'none'; compute(); });
+    // The checkbox is the same switch as the "Enter MODS" button on the risk card, so it moves
+    // the same state rather than only its own tick - which used to be undone the moment the
+    // ADDS calculator wrote to #adds, leaving MODS out of the note entirely.
+    $('chk_use_mods')?.addEventListener('change', () => {
+        const manual = $('addsManual')?.value === 'true';
+        if ($('chk_use_mods').checked !== manual) setAddsOverride(!manual);
+        compute();
+    });
     $('chk_aperients')?.addEventListener('change', compute);
     $('chk_bloods_nil_sig')?.addEventListener('change', (e) => {
         const bloodsGrid = document.querySelector('.bloods-grid');
@@ -1335,6 +1348,23 @@ function initialize() {
     $('btnAddsOverride')?.addEventListener('click', () => { toggleAddsOverride(); compute(); });
     $('adds')?.addEventListener('input', refreshAddsOverrideUI);
     $('addsOverrideNote')?.addEventListener('input', refreshAddsOverrideUI);
+    // The A-E MODS boxes mirror back to #adds, which is what the rules score and what
+    // refreshAddsOverrideUI copies forward. Without this a MODS typed in A-E never reached the
+    // category, and was overwritten by the empty #adds on the next refresh.
+    $('mods_score')?.addEventListener('input', () => {
+        if ($('addsManual')?.value !== 'true') return;
+        const adds = $('adds');
+        if (adds && adds.value !== $('mods_score').value) {
+            adds.value = $('mods_score').value;
+            adds.dispatchEvent(new Event('input'));
+        }
+    });
+    $('mods_details')?.addEventListener('input', () => {
+        if ($('addsManual')?.value !== 'true') return;
+        const note = $('addsOverrideNote');
+        if (note) note.value = $('mods_details').value;
+        compute();
+    });
 
     $('btnDeviceMore')?.addEventListener('click', (e) => {
         const group = document.querySelector('.device-add-group');

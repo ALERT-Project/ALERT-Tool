@@ -341,7 +341,11 @@ test('a manual category selection is not annotated in the DMR note', async () =>
 
 test('the device dwell line reports days without calling them long', async () => {
     const { window, document, close } = await loadTool();
-    const old = new Date(Date.now() - 12 * 86400000).toISOString().slice(0, 10);
+    // Built from local parts, not toISOString: the app counts dwell in local days, so a UTC
+    // date string made this test read 13d for anyone running it west of Greenwich in the
+    // morning.
+    const d = new Date(Date.now() - 12 * 86400000);
+    const old = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     click(window, '.device-add-group .btn[data-device-type="PIVC"]');
     await tick(window);
     const dateEl = document.querySelector('#devices-container .device-date');
@@ -1851,4 +1855,137 @@ test('the DMR prompt stops being a question when it has two to ask', async () =>
         assert.ok(!s.initialsQ, 'the title carries it, so the label does not repeat it');
         close();
     }
+});
+
+// --- The score the note reports ------------------------------------------------------------
+
+test('the MODS checkbox records MODS, and the note reports it', async () => {
+    // "MODS in place?" set only its own .checked. refreshAddsOverrideUI drives that box from
+    // the hidden addsManual field, and the calculator's own change listener wrote to #adds the
+    // instant the box moved - so the tick was undone on the same gesture that made it, and
+    // every MODS patient's note went on printing an ADDS of 0.
+    const { window, document, close } = await loadTool();
+    const chk = document.getElementById('chk_use_mods');
+    chk.checked = true;
+    chk.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await tick(window);
+    assert.equal(chk.checked, true, 'the box stays ticked');
+    assert.equal(document.getElementById('addsManual').value, 'true', 'and moves the state behind it');
+
+    type(window, 'mods_score', '4');
+    type(window, 'mods_details', 'parameters modified');
+    await tick(window);
+    assert.equal(document.getElementById('adds').value, '4', 'the score reaches what the rules read');
+
+    generateNote(window);
+    await tick(window);
+    const note = document.getElementById('summary').value;
+    assert.match(note, /MODS: 4 \(parameters modified\)/, 'the note reports MODS');
+    assert.doesNotMatch(note, /^ADDS:/m, 'and not ADDS');
+    assert.match(document.getElementById('handoverLine').value, /MODS 4\./);
+    close();
+});
+
+test('an untouched calculator does not wipe a score that was entered', async () => {
+    // runCalc fires for things outside the calculator - the MODS box, the SpO2 target - and
+    // wrote its total through unconditionally. An empty calculator totals 0, so those wrote a
+    // 0 over whatever the clinician had typed.
+    const { window, document, close } = await loadTool();
+    type(window, 'adds', '5');
+    await tick(window);
+    const target = document.getElementById('spo2_target');
+    target.value = '88_92';
+    target.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await tick(window);
+    assert.equal(document.getElementById('adds').value, '5', 'the typed score survives');
+
+    // A calculator that has actually been filled in still owns the score.
+    type(window, 'calc_rr', '30');
+    await tick(window);
+    assert.equal(document.getElementById('adds').value, '3');
+    close();
+});
+
+// --- Importing over a form that is not empty -----------------------------------------------
+
+const twoPatientNote = (name, extras) => [
+    'ALERT CNS post ICU review - Physical review',
+    `Patient: ${name} | URN: ...123 | Location: 3A, Room: 24B`,
+    ...(extras || []),
+    '',
+    'LINES, DRAINS, DEVICES & WOUNDS:',
+    ...(extras ? ['- CVC - RIJ'] : ['- PIVC - left ACF']),
+    '',
+    'PATIENT FACTORS:',
+    '- Mobility: 2x assist with sara steady',
+    '- Diet: Sips water',
+    '- Sleep: Poor',
+    '- Psychological issues: Delirium',
+    '',
+    'IDENTIFIED ICU READMISSION RISK FACTORS:',
+    '- None identified',
+    '',
+    'PLAN:',
+    '- ALERT nursing post ICU reviews continue.'
+].join('\n');
+
+test('the sections after the device list do not arrive as devices', async () => {
+    // PATIENT FACTORS was missing from the device block's terminators, and it is the section
+    // that follows the devices in every note the tool writes - so mobility, diet, sleep and the
+    // psych answer were all read back as "Other Device".
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, twoPatientNote('ABC', ['Age: 71']));
+    const devices = [...document.querySelectorAll('.device-entry')]
+        .map(e => `${e.dataset.type}: ${e.querySelector('.device-textarea')?.value || ''}`);
+    assert.deepEqual(devices, ['CVC: RIJ'], 'only the device is a device');
+    assert.equal(document.getElementById('ae_mobility').value, '2x assist with sara steady',
+        'mobility still lands in its own field');
+    assert.equal(document.getElementById('ae_diet').value, 'Sips water');
+    close();
+});
+
+test('importing a second patient does not inherit the first', async () => {
+    // The importer wrote only the fields its note mentioned, so everything the new note was
+    // silent about - weight, allergies, PMH, the whole device list, the previous bloods, the
+    // carried gates - stayed on screen under the second patient's name.
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, twoPatientNote('ABC', [
+        'Age: 71, Weight: 80kg', 'Allergies: Penicillin', 'GOC: For full active treatment'
+    ]));
+    assert.equal(document.getElementById('ptWeight').value, '80', 'first patient is loaded');
+
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = twoPatientNote('XYZ');
+    click(window, '#runImport');
+    await tick(window, 300);
+    assert.equal(document.getElementById('importOverwriteModal').style.display, 'flex',
+        'a second import over a live form asks first');
+    assert.equal(document.getElementById('ptName').value, 'ABC', 'and changes nothing until answered');
+
+    click(window, '#confirmImportOverwrite');
+    await tick(window, 900);
+    assert.equal(document.getElementById('ptName').value, 'XYZ');
+    assert.equal(document.getElementById('ptWeight').value, '', 'the first patient\'s weight is gone');
+    assert.equal(document.getElementById('allergies_note').value, '');
+    assert.equal(document.getElementById('goc_note').value, '');
+    assert.deepEqual([...document.querySelectorAll('.device-entry')].map(e => e.dataset.type), ['PIVC'],
+        'and their devices with them');
+    close();
+});
+
+test('cancelling the overwrite keeps both the form and the pasted note', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, twoPatientNote('ABC', ['Age: 71']));
+
+    click(window, '#btnOpenImport');
+    document.getElementById('importText').value = twoPatientNote('XYZ');
+    click(window, '#runImport');
+    await tick(window, 300);
+    click(window, '#cancelImportOverwrite');
+    await tick(window, 300);
+
+    assert.equal(document.getElementById('ptName').value, 'ABC', 'nothing was cleared');
+    assert.equal(document.getElementById('importModal').style.display, 'flex', 'back at the import box');
+    assert.match(document.getElementById('importText').value, /XYZ/, 'with the note still in it');
+    close();
 });

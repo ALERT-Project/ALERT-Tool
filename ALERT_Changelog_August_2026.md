@@ -1,3 +1,27 @@
+# ALERT Tool Changelog: A9.3 (28 August 2026)
+
+A bug-fix release. Three faults found from ward use, one of which could put one patient's
+details into another patient's note.
+
+**Everyone needs to hard-refresh once** (Ctrl+Shift+R, or Cmd+Shift+R on a Mac) to pick this up.
+
+### ⚠️ Read this first: importing a note no longer inherits the previous patient
+
+* **Importing a DMR note now clears the form first.** The importer wrote only the fields its note actually mentioned and reset nothing else, so importing a second patient over a first left everything the new note was silent about on screen under the new patient's name - weight, allergies, GOC, past medical history, mobility, diet, the previous bloods, and the risk gates carried from the first patient's note. Devices were worse: they are appended, never replaced, so the first patient's lines stayed in the list with the second patient's added underneath.
+* **It was hard to see.** Name, URN, age, ward, bed, reason and LOS are all named in every note, so they overwrote correctly - the top of the form said the right patient while the rest of it did not.
+* **Where there is something to lose, it asks.** Importing onto a form that already holds a patient raises a confirmation naming what is about to happen. **Cancel** returns you to the import box with the pasted note still in it.
+* **"Clear Data / Next Patient" was working correctly** and is unchanged. The fault was in the path around it, not in the button - which is why pressing it religiously would have avoided this, and why the fix does not depend on remembering to.
+
+### 📊 The score in the note
+
+* **"MODS in place?" now stays ticked.** The checkbox set only its own tick, while the state behind it lives elsewhere and is what the note reads. The ADDS calculator wrote to the score field the instant the box moved, and that write drove the box straight back off - so the tick undid itself in the same gesture that made it, and MODS patients' notes reported **ADDS: 0**. Both controls - the checkbox in A-E and **Enter MODS** on the risk card - now move the one state.
+* **A MODS typed into A-E reaches the category.** The MODS score and details mirror back to the score the rules actually read, so entering it in either place scores the patient. It reads as `MODS: 4 (details)` in the note and `MODS 4.` on the handover line.
+* **An untouched calculator no longer wipes a score you entered.** The calculator recalculates when things outside it move - the MODS box, the SpO2 target - and an empty calculator totals zero, which it was writing straight over whatever had been typed.
+
+### 🔧 Lines, drains and wounds
+
+* **The sections below the device list are no longer read back as devices.** On import, everything after the device block up to the next recognised heading was treated as a device - and `PATIENT FACTORS` was not one of the headings it stopped at. Mobility, diet, sleep and the psychological answer each came back as an **Other Device**, on top of landing correctly in their own fields. Notes typed by hand are guarded too: a labelled assessment answer can no longer become a device wherever it appears.
+
 # ALERT Tool Changelog: A9.2 (23 August 2026)
 
 A small point release on top of A9.1: three refinements from ward use, and one genuine
