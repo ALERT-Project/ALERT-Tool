@@ -149,18 +149,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // carried risks by another route and has to apply exactly the same rule.
     const SELF_DERIVED_RISK = window.SELF_DERIVED_RISK;
 
-    // "- Awaiting dietitian review (carried 3)" -> text plus the count to continue from, and
     // "(mitigated: known CKD...)" -> a risk that was considered and discounted, which has to
-    // come back saying so rather than as a live risk.
+    // come back saying so rather than as a live risk. Notes written before the carry count was
+    // retired end some lines in "(carried 3)"; that is stripped and not continued.
+    // "(mitigated):" is matched too - that is how the line reads once someone has tidied it by
+    // hand, and missing it brought a discounted risk back as a live one.
     function readCarriedLine(rawTxt) {
-        let text = rawTxt;
-        let carried = 1;
-        const m = text.match(/\s*\(carried (\d+)\)\s*$/i);
-        if (m) {
-            carried = parseInt(m[1], 10) || 1;
-            text = text.slice(0, m.index).trim();
-        }
-        return { text, carried: carried + 1, mitigated: /\(mitigated:/i.test(text) };
+        const text = rawTxt.replace(/\s*\(carried \d+\)\s*$/i, '').trim();
+        return { text, mitigated: /\(mitigated\)?:/i.test(text) };
+    }
+
+    // The lines of a section, with whatever bullet they arrived with taken off. DMR does not
+    // always keep the tool's "- ": a note copied back out of it can come with the dash gone and
+    // an invisible character in its place, and a section read only by its dashes then imported
+    // as empty.
+    function sectionItems(block) {
+        return block.split('\n')
+            .map(l => l.trim().replace(/^[-\u2022*]\s*/, '').trim())
+            .filter(Boolean);
+    }
+
+    // Characters DMR and word processors put into pasted text that look like the tool's own
+    // but are not: zero-width spaces, non-breaking spaces and hyphens, en and em dashes. Every
+    // pattern in this file is written against the plain ones.
+    function normaliseNote(text) {
+        return String(text || '')
+            .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
+            .replace(/\u00A0/g, ' ')
+            .replace(/[\u2010-\u2015\u2212]/g, '-');
     }
 
     // Returns true when the line was folded into a gate, so the caller can skip staging it as
@@ -244,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const NON_DEVICE_LINE = /^(Mobility|Diet|Nutrition|Sleep|Psychological issues|Post ICU Syndrome|Bowels|Anticoagulation(?:\s*\/\s*VTE)?|VTE Prophylaxis|Infusions|Allergies|GOC|PICS Assessment|Weight|Age|SpO2 target|ADDS|MODS)\s*:/i;
 
     function processDMR(text) {
+        text = normaliseNote(text);
         // --- 0. RESET ---
         window.prevBloods = {};
         const carryForward = true; // Always carry forward stable sections
@@ -300,8 +317,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const losMatch = text.match(/ICU LOS:\s*([\d.]+)/i);
         if (losMatch) setVal('icuLos', losMatch[1]);
 
-        const reasonMatch = text.match(/Reason for ICU Admission:\s*(.*)/i);
-        if (reasonMatch) setVal('ptAdmissionReason', reasonMatch[1]);
+        // The field is a multi-line box - a procedure list often runs to several lines - and this
+        // used to take the first line only, so everything after it was lost at every import.
+        // It runs to the blank line the note always leaves after it, or to the next heading if
+        // the blank line has been lost in transit.
+        const reasonMatch = text.match(/Reason for ICU Admission:[ \t]*([^\n]*(?:\n(?![ \t]*\n)(?![ \t]*(?:ICU Course Summary|ALERT Nursing Review|Time since stepdown|ICU LOS|A-E ASSESSMENT|PATIENT FACTORS|IDENTIFIED|PLAN:))[^\n]*)*)/i);
+        if (reasonMatch) setVal('ptAdmissionReason', reasonMatch[1].trim());
 
         // Fix: Date parsing handles DD/MM/YYYY and converts to YYYY-MM-DD for input
         const dateMatch = text.match(/(?:Discharge|Stepdown) Date:\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/i);
@@ -521,10 +542,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (risksSection && risksSection[1]) {
-            const riskLines = risksSection[1].split('\n').map(l => l.trim()).filter(l => l.startsWith('-'));
+            const riskLines = sectionItems(risksSection[1]);
             if (riskLines.length > 0 && !riskLines[0].toLowerCase().includes('none identified')) {
-                riskLines.forEach((line, idx) => {
-                    const rawTxt = line.substring(1).trim();
+                riskLines.forEach((rawTxt, idx) => {
                     const lower = rawTxt.toLowerCase();
 
                     // --- PREV TEXT UPDATES ---
@@ -542,13 +562,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     // turn a discounted risk into a live one - the mitigation destroyed by the
                     // act of reading it - and the self-derived filter below would swallow the
                     // ones whose wording it recognises. Neither applies to a mitigated line.
+                    // The exception is one today's rules re-read from today's numbers - see
+                    // NUMBER_DERIVED_RISK: they write their own mitigated line, in today's score.
                     const mitigatedLine = readCarriedLine(rawTxt);
                     if (mitigatedLine.mitigated) {
+                        if (window.NUMBER_DERIVED_RISK?.test(mitigatedLine.text)) return;
                         if (window.addActiveIssue) {
                             window.addActiveIssue({
                                 text: mitigatedLine.text, source: 'scraped', severity: 'amber',
                                 key: `scraped_risk_${idx}_${mitigatedLine.text.slice(0, 20)}`,
-                                list: 'risks', carried: mitigatedLine.carried, mitigated: true
+                                list: 'risks', mitigated: true
                             });
                         }
                         return;
@@ -567,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.addActiveIssue({
                             text: line.text, source: 'scraped', severity: 'amber',
                             key: `scraped_risk_${idx}_${line.text.slice(0, 20)}`, list: 'risks',
-                            carried: line.carried, mitigated: line.mitigated
+                            mitigated: line.mitigated
                         });
                     }
                 });
@@ -582,19 +605,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // starting again from whatever this import happens to recognise.
         const factorsSection = text.match(/PATIENT FACTORS:([\s\S]*?)(?:IDENTIFIED|PLAN:)/i);
         if (factorsSection && factorsSection[1] && window.addActiveIssue) {
-            factorsSection[1].split('\n')
-                .map(l => l.trim())
-                .filter(l => l.startsWith('-'))
+            sectionItems(factorsSection[1])
                 .forEach((l, idx) => {
-                    const line = readCarriedLine(l.substring(1).trim());
+                    const line = readCarriedLine(l);
                     if (!line.text) return;
                     // Regenerated from its own field every review - the setPrev/setVal passes
                     // above have already read it into one - so it must not also become text.
                     if (window.FIELD_BACKED_FACTOR?.test(line.text)) return;
                     window.addActiveIssue({
                         text: line.text, source: 'scraped', severity: 'info',
-                        key: `scraped_factor_${idx}_${line.text.slice(0, 20)}`, list: 'factors',
-                        carried: line.carried
+                        key: `scraped_factor_${idx}_${line.text.slice(0, 20)}`, list: 'factors'
                     });
                 });
             if (window.renderScrapedIssuesList) window.renderScrapedIssuesList();

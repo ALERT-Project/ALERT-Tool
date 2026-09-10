@@ -55,7 +55,7 @@ function defaultListFor(source, severity) {
     return severity === 'info' ? 'factors' : 'risks';
 }
 
-export function addActiveIssue({ text, source, severity, key, list, carried, mitigated, scoresAs, gateId }) {
+export function addActiveIssue({ text, source, severity, key, list, mitigated, scoresAs, gateId }) {
     // A tick the clinician made still counts as a match, so a risk that is still firing
     // updates that entry instead of reappearing as a second, unticked copy. Entries retired
     // by reconcileAutoIssues() are not matched, so a genuine recurrence still arrives as new.
@@ -71,9 +71,6 @@ export function addActiveIssue({ text, source, severity, key, list, carried, mit
     const issue = {
         id: `ai_${++_activeIssueCounter}`, text, source, severity, key,
         list: list || defaultListFor(source, severity),
-        // 1 means raised this review. The importer passes a higher number when it reads a
-        // "(carried N)" back off the previous note.
-        carried: carried || 1,
         // A risk the previous note recorded as considered and discounted. It comes back
         // carrying its reason rather than as a live risk, so the mitigation isn't silently
         // lost the moment the note is re-imported.
@@ -172,18 +169,15 @@ export function getUnresolvedActiveIssues() { return activeIssues.filter(i => !i
 // below it.
 const MIRRORS_AN_ASSESSMENT_FIELD = new Set(['ae_mobility', 'ae_diet']);
 
-// How long a line has been riding along, written into the note so the next import can read it
-// back and keep counting. A list that only grows stops being read; by day five a line nobody
-// has pruned looks exactly like one raised this morning, and this is what tells them apart.
-function withCarry(issue) {
-    return issue.carried > 1 ? `${issue.text} (carried ${issue.carried})` : issue.text;
-}
-
+// Written as the line itself, with no "(carried N)" count after it. The count was meant to tell
+// a line nobody had pruned from one raised this morning, but in the record it read as clutter,
+// and as a second copy of the risk whenever today's assessment raised the same one. The
+// importer still strips the suffix off notes written before it went.
 export function getFactorsForNote() {
     return activeIssues
         .filter(i => i.list === 'factors' && !i.resolved)
         .filter(i => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key))
-        .map(withCarry);
+        .map(i => i.text);
 }
 
 // Computed risks are excluded here and supplied by the caller from the rules' own red/amber/
@@ -197,7 +191,9 @@ export function getRisksForNote() {
         // because they score - see getScoringListRisks(). Letting them through here as well
         // would print each of them twice.
         .filter(i => !i.scoresAs)
-        .map(withCarry);
+        // Where each line came from travels with it: the note drops a line from the last note
+        // when today's rules have written the same risk, and never one typed today.
+        .map(i => ({ text: i.text, fromLastNote: i.source === 'scraped' }));
 }
 
 // Risks that were released from a gate and have been left standing on the list.
@@ -219,7 +215,7 @@ export function getDeletedRiskKeys() {
 export function getScoringListRisks() {
     return activeIssues
         .filter(i => i.scoresAs && !i.resolved)
-        .map(i => ({ text: withCarry(i), severity: i.scoresAs, gateId: i.gateId }));
+        .map(i => ({ text: i.text, severity: i.scoresAs, gateId: i.gateId }));
 }
 
 export function getChecksForNote() {
@@ -311,7 +307,6 @@ function renderOneList(listName) {
         <div class="scraped-issue-row${issue.resolved ? ' resolved' : ''}" data-id="${issue.id}">
             <span class="scraped-issue-text" data-id="${issue.id}" title="Click to edit">${issue.text}</span>
             ${issue.mitigated ? '<span class="scraped-issue-note-tag" title="Considered and discounted last review">mitigated</span>' : ''}
-            ${issue.carried > 1 ? `<span class="scraped-issue-carried" title="On this list for ${issue.carried} reviews">carried ${issue.carried}</span>` : ''}
             <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}"
                 title="Edit" aria-label="Edit">&#9998;</button>
             <button type="button" class="scraped-issue-resolve" data-id="${issue.id}"

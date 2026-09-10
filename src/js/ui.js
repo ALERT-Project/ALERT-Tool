@@ -184,6 +184,26 @@ export function updateReviewTypeVisibility() {
 
     if (type === 'pre') { const c = $('chk_discharge_alert'); if (c) c.checked = false; }
 
+    // Pre-Stepdown is always a physical review - a chart review is never acceptable there - so
+    // the choice is taken away and the answer set. Going back to Post-Stepdown hands the
+    // question back unanswered, but only if this is what answered it: a physical review someone
+    // chose themselves stays chosen, and one set here must not stand as a claim nobody made.
+    const methodWrapper = $('reviewModeTypeWrapper');
+    const physical = document.querySelector('input[name="reviewModeType"][value="physical"]');
+    if (methodWrapper && physical) {
+        methodWrapper.style.display = (type === 'pre') ? 'none' : '';
+        if (type === 'pre') {
+            if (!physical.checked) {
+                document.querySelectorAll('input[name="reviewModeType"]').forEach(r => r.checked = false);
+                physical.checked = true;
+                methodWrapper.dataset.forced = 'true';
+            }
+        } else if (methodWrapper.dataset.forced === 'true') {
+            physical.checked = false;
+            delete methodWrapper.dataset.forced;
+        }
+    }
+
     updateReviewerRoleVisibility();
 }
 
@@ -638,6 +658,9 @@ export function clearData() {
     if (handoverEl) handoverEl.value = '';
     const handoverActions = $('handover_actions');
     if (handoverActions) handoverActions.style.display = 'none';
+    // The DMR dialog asks about empty bloods once per patient; the next patient is asked afresh.
+    const bloodsPrompt = $('review_prompt_bloods');
+    if (bloodsPrompt) delete bloodsPrompt.dataset.asked;
     window.dismissedDischarge = false;
 
     const now = new Date();
@@ -953,6 +976,8 @@ export function renderQuickChips(s) {
         setChip('qrChipBloods', '✓ Improving');
     } else if (s.bloods_status === 'not_checked') {
         setChip('qrChipBloods', '✓ Not checked');
+    } else if (s.bloods_status === 'no_comment') {
+        setChip('qrChipBloods', '✓ No comment required');
     } else {
         // Counted off the note's own map, so the chip can never promise a result the note
         // then leaves out.

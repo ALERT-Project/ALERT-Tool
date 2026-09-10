@@ -1741,6 +1741,7 @@
                     <button type="button" class="seg-btn" data-value="nil_sig">Nil significant</button>
                     <button type="button" class="seg-btn" data-value="improving">Improving</button>
                     <button type="button" class="seg-btn" data-value="not_checked">Not checked</button>
+                    <button type="button" class="seg-btn" data-value="no_comment">No comment required</button>
                 </div>
                 <button type="button" id="btnBloodsDetailsToggle" class="btn small">Details</button>
             </div>
@@ -2255,6 +2256,21 @@
                 <label id="review_prompt_initials_label" for="promptReviewerInitials">Initials for Excel handover</label>
                 <input id="promptReviewerInitials" type="text" maxlength="3" autocomplete="off"
                     style="text-transform:uppercase" />
+            </div>
+            <!-- Asked only when no bloods have been entered and no answer given for them. Easy to
+                 check and then forget to write down, and the note otherwise says nothing about
+                 them at all. An answer picked here is set as the Bloods card's own answer; none
+                 at all is fine, and the note still generates. "Enter bloods" goes to the card
+                 instead of generating. Above the buttons below, which dismiss the dialog. -->
+            <div id="review_prompt_bloods" class="prompt-bloods">
+                <div id="review_prompt_bloods_label" class="prompt-question">No bloods entered</div>
+                <div class="prompt-bloods-actions">
+                    <button type="button" id="btn_prompt_bloods_enter" class="btn small">Enter bloods</button>
+                    <button type="button" class="btn small prompt-bloods-status" data-value="nil_sig">Nil significant</button>
+                    <button type="button" class="btn small prompt-bloods-status" data-value="improving">Improving</button>
+                    <button type="button" class="btn small prompt-bloods-status" data-value="not_checked">Not checked</button>
+                    <button type="button" class="btn small prompt-bloods-status" data-value="no_comment">No comment required</button>
+                </div>
             </div>
             <!-- Carries the method question when the title is covering both halves, so each
                  answer sits directly under the question it answers. The initials have to come

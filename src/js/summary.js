@@ -8,6 +8,16 @@
 import { $, nowTimeStr, todayDateStr, formatDateDDMMYYYY, num, toDmrSafeText, wardLabel } from './utils.js';
 import { comorbMap, NOTE_BLOOD_LABELS } from './config.js';
 
+// What a risk line is about: the label before the first bracket, colon or " - ". Used to tell
+// a line carried from the last note from today's copy of the same risk, whatever numbers or
+// punctuation each carries. See the risk section of generateSummary.
+function riskIdentity(t) {
+    return String(t || '')
+        .replace(/\s*\(carried \d+\)\s*$/i, '')
+        .split(/\s*\(|:|\s+-\s+/)[0]
+        .toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
 export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, lists = {}) {
 
     const sum = $('summary');
@@ -26,8 +36,10 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     // be read, so it sits in the heading rather than buried further down.
     const methodName = (s.reviewModeType === 'chart') ? 'Chart review' : 'Physical review';
 
+    // Pre-Stepdown is always a physical review in ICU - a chart review is not an acceptable
+    // one - so the heading does not name a method there.
     if (s.reviewType === 'pre') {
-        lines.push(`${role} Pre-Stepdown Review - ${methodName}`);
+        lines.push(`${role} Pre-Stepdown Review`);
     } else {
         lines.push(`${role} ${reviewName} - ${methodName}`);
     }
@@ -273,6 +285,8 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         addLine('Bloods: Improving trend');
     } else if (s.bloods_status === 'not_checked') {
         addLine('Bloods: Not checked this review');
+    } else if (s.bloods_status === 'no_comment') {
+        addLine('Bloods: No comment required');
     } else {
         const blLines = [];
         Object.keys(blMap).forEach(key => {
@@ -405,46 +419,41 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     // Computed risks come first, in the rules' own wording, because they are what drove the
     // category. Carried and typed risks follow: they belong under this heading so they survive
     // into the next note, which they did not when they were loose bullets further up.
-    // sectionLines deduplicates on the exact string, which is not enough here. A risk the
-    // previous note recorded as mitigated deliberately bypasses the gates on import - carrying
-    // it to a gate would turn a discounted risk back into a live one - so it stages as a list
-    // entry and arrives with " (carried 2)" on the end. When today's assessment reaches the
-    // same conclusion, the rules emit their own copy, and the two differ by that suffix alone:
+    // sectionLines deduplicates on the exact string, which is not enough here. The previous
+    // note's lines come back onto the list, and when today's assessment reaches the same risk
+    // the rules write their own copy - which differs from the carried one by yesterday's numbers
+    // at least, and by more once the line has been tidied by hand in DMR:
     //
-    //   - Infection risk (mitigated: infection markers downtrending, ADDS 0)
-    //   - Infection risk (mitigated: infection markers downtrending, ADDS 0) (carried 2)
+    //   - Infection risk (mitigated: infection markers downtrending, ADDS 1)
+    //   - Infection risk (mitigated): infection markers downtrending, ADDS 2)
     //
-    // They can differ by more than the suffix, because the reason carries yesterday's numbers:
-    // one line says ADDS 1 and the other ADDS 2 about the same patient on the same morning,
-    // which reads as two findings that disagree.
-    //
-    // So risks are matched on what they are about - the label in front of "(mitigated:" - and
-    // said once. Today's wording is the one kept, because today is what the note is recording,
-    // and the carry count moves onto it rather than being lost with the line it arrived on: it
-    // is how the next reviewer knows this is the third morning running.
-    const carriedSuffix = /\s*\(carried (\d+)\)\s*$/i;
-    const riskIdentity = (t) => {
-        const bare = t.replace(carriedSuffix, '').trim();
-        const mitigated = bare.match(/^(.*?)\s*\(mitigated:/i);
-        return (mitigated ? mitigated[1] : bare).toLowerCase().replace(/\s+/g, ' ').trim();
-    };
+    // So list lines are matched on what they are about - the label before the first bracket,
+    // colon or " - " - and a list line whose label today's rules have already written is left
+    // out: today's wording is the one kept, because today is what the note is recording. The
+    // rules' own lines are only ever deduplicated exactly; two of them sharing a label are two
+    // findings.
+    const clean = (raw) => (raw || '').trim().replace(/^[-\u2022]\s*/, '').trim();
 
     const riskLines = [];
-    const riskSeen = new Map();
-    [...red, ...amber, ...suppressed, ...(lists.risks || [])].forEach(raw => {
-        const txt = (raw || '').trim().replace(/^[-\u2022]\s*/, '');
-        const identity = riskIdentity(txt);
-        if (!txt || !identity) return;
-        if (!riskSeen.has(identity)) {
-            riskSeen.set(identity, riskLines.length);
-            riskLines.push(txt);
-            return;
-        }
-        const at = riskSeen.get(identity);
-        const kept = riskLines[at].match(carriedSuffix);
-        const dropped = txt.match(carriedSuffix);
-        const carried = Math.max(kept ? Number(kept[1]) : 1, dropped ? Number(dropped[1]) : 1);
-        if (carried > 1) riskLines[at] = `${riskLines[at].replace(carriedSuffix, '')} (carried ${carried})`;
+    const seenText = new Set();
+    const seenIdentity = new Set();
+    [...red, ...amber, ...suppressed].map(clean).forEach(txt => {
+        if (!txt || seenText.has(txt.toLowerCase())) return;
+        seenText.add(txt.toLowerCase());
+        seenIdentity.add(riskIdentity(txt));
+        riskLines.push(txt);
+    });
+    // Only lines from the last note are matched by label. Anything typed today is the
+    // clinician's own and is never dropped for resembling a computed line, and against each
+    // other list lines are deduplicated exactly: two typed lines that both start "Plan:" are
+    // two different things.
+    (lists.risks || []).forEach(entry => {
+        const txt = clean(typeof entry === 'string' ? entry : entry.text);
+        const fromLastNote = typeof entry === 'string' ? true : entry.fromLastNote;
+        if (!txt || seenText.has(txt.toLowerCase())) return;
+        if (fromLastNote && seenIdentity.has(riskIdentity(txt))) return;
+        seenText.add(txt.toLowerCase());
+        riskLines.push(txt);
     });
     if (riskLines.length) { riskLines.forEach(r => lines.push(`- ${r}`)); }
     else { lines.push('- None identified'); }
@@ -502,8 +511,8 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 // --- Excel handover line -----------------------------------------------------
 // One terse line for the handover spreadsheet, identical in full and Quick Review since both
 // modes feed the same computed risks:
-//   "30/7 05:30 CB. Physical r/v. ADDS 4. Bloods: Cr 180, Mg 0.4. CAT 1 - Renal concern,
-//    Infection risk (improving)."
+//   "30/7 05:30 CB. PHYSICAL R/V. ADDS 4. Bloods: Alb 22. CAT 1 - Renal - Cr 180;
+//    Electrolyte concern - low Mg 0.4."
 // Time and initials lead, then the score, then what was actually found.
 
 // Risk wording is written for the DMR note, which is wordier than a spreadsheet cell needs.
@@ -533,7 +542,12 @@ export function generateHandoverLine(s, activeIssuesList = [], cat = null, red =
     // Upper case because this is the column people scan when deciding whether a patient has
     // actually been laid eyes on - a CAT 3 discharge shouldn't rest on chart reviews alone,
     // and the spreadsheet is where that history lives.
-    parts.push(s.reviewModeType === 'chart' ? 'CHART R/V.' : 'PHYSICAL R/V.');
+    //
+    // A Pre-Stepdown review says so instead, and says where the patient is. It is always done
+    // in person in ICU, so the method adds nothing - and "PHYSICAL R/V" on this sheet reads as
+    // a ward review, which had people taking a patient still in ICU as already seen by ALERT.
+    if (s.reviewType === 'pre') parts.push('PRE-STEPDOWN (IN ICU).');
+    else parts.push(s.reviewModeType === 'chart' ? 'CHART R/V.' : 'PHYSICAL R/V.');
     // Omitted rather than stubbed when there is no score, for the same reason the initials are:
     // this line is pasted into a shared sheet that is read by scanning down a column, and
     // "ADDS --" occupies the space of a score while saying nothing. A reader cannot tell a
@@ -544,17 +558,6 @@ export function generateHandoverLine(s, activeIssuesList = [], cat = null, red =
         parts.push(`${s.chk_use_mods ? 'MODS' : 'ADDS'} ${String(scoreVal).trim()}.`);
     }
 
-    if (s.chk_bloods_nil_sig || s.bloods_status === 'nil_sig') parts.push('Bloods nil sig.');
-    else if (s.bloods_status === 'improving') parts.push('Bloods improving.');
-    else if (s.bloods_status === 'not_checked') parts.push('Bloods not checked.');
-    else {
-        const abnormal = activeIssuesList
-            .filter(i => (i.key || '').startsWith('bl_'))
-            .map(i => i.text.replace(/^Abnormal /, ''));
-        if (abnormal.length) parts.push(`Bloods: ${abnormal.join(', ')}.`);
-        else if (Object.keys(s).some(k => k.startsWith('bl_') && s[k])) parts.push('Bloods reviewed.');
-    }
-
     // The computed flags are the risks; manual and scraped list entries are added after them
     // so anything typed during the review is handed over too. Notes are context, not risks.
     // The score is already stated up front, so its own flag would just repeat it.
@@ -562,13 +565,36 @@ export function generateHandoverLine(s, activeIssuesList = [], cat = null, red =
         .filter(r => !/^(Elevated )?(ADDS|MODS) \d/.test(r))
         .map(trimRiskForHandover);
     const seen = new Set(risks.map(r => r.toLowerCase()));
+    const computedIdentity = new Set([...red, ...amber].map(riskIdentity));
     activeIssuesList.forEach(issue => {
         if (issue.severity === 'info' || issue.source === 'auto' || issue.source === 'bloods') return;
+        // A mitigated line is a risk that was considered and discounted. The note keeps it so the
+        // reasoning is on record; the handover sheet is a list of what to watch, and it isn't one.
+        if (issue.mitigated || /\(mitigated\)?:/i.test(issue.text)) return;
+        // Same rule as the note: a line from the last note gives way to today's copy of the risk.
+        if (issue.source === 'scraped' && computedIdentity.has(riskIdentity(issue.text))) return;
         const txt = trimRiskForHandover(issue.text);
         if (seen.has(txt.toLowerCase())) return;
         seen.add(txt.toLowerCase());
         risks.push(txt);
     });
+
+    if (s.chk_bloods_nil_sig || s.bloods_status === 'nil_sig') parts.push('Bloods nil sig.');
+    else if (s.bloods_status === 'improving') parts.push('Bloods improving.');
+    else if (s.bloods_status === 'not_checked') parts.push('Bloods not checked.');
+    else if (s.bloods_status === 'no_comment') parts.push('Bloods no comment.');
+    else {
+        // A value a risk already quotes is left out here - "Bloods: Cr 180. CAT 1 - Renal - Cr
+        // 180" said it twice in one cell. What's left are the abnormal results no risk names.
+        const riskText = risks.join(' ').toLowerCase();
+        const abnormal = activeIssuesList
+            .filter(i => (i.key || '').startsWith('bl_'))
+            .map(i => i.text.replace(/^Abnormal /, ''));
+        const quoted = (b) => new RegExp(`${b.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\d.])`).test(riskText);
+        const unnamed = abnormal.filter(b => !quoted(b));
+        if (unnamed.length) parts.push(`Bloods: ${unnamed.join(', ')}.`);
+        else if (!abnormal.length && Object.keys(s).some(k => k.startsWith('bl_') && s[k])) parts.push('Bloods reviewed.');
+    }
 
     const catText = cat?.text || $('catText')?.textContent || '';
     // Semicolons between risks: a typed entry can contain commas of its own.

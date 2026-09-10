@@ -61,7 +61,7 @@ export function computeAll() {
             if (isNew && issue.source === 'auto') maybeToastNewRisk(issue.key, issue.text);
         });
 
-        if (s.bloods_status !== 'nil_sig' && s.bloods_status !== 'not_checked' && !s.chk_bloods_nil_sig) {
+        if (!['nil_sig', 'not_checked', 'no_comment'].includes(s.bloods_status) && !s.chk_bloods_nil_sig) {
             applyTrendArrows(s, window.prevBloods);
         }
         updatePrevBloodsHint();
@@ -429,7 +429,7 @@ export function checkCompleteness(s, comorbCount) {
         setNotice('scraped-review', {
             priority: NOTICE_PRIORITY.SCRAPED_REVIEW,
             tone: 'info',
-            html: `<div class="notice-title">${unreviewed} ${unreviewed === 1 ? 'line' : 'lines'} carried from the last note - edit or delete as appropriate for today's review</div>`
+            html: `<div class="notice-title">${unreviewed} ${unreviewed === 1 ? 'line' : 'lines'} from the last note - edit or delete as appropriate for today's review</div>`
         });
     } else {
         clearNotice('scraped-review');

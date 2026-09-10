@@ -7,7 +7,7 @@
 
 import { $, debounce, showToast, disableAutofill, timeHHMM } from './utils.js';
 import { setNotice, clearNotice, NOTICE_PRIORITY } from './notices.js';
-import { ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs, SELF_DERIVED_RISK, FIELD_BACKED_FACTOR} from './config.js';
+import { ACCORDION_KEY, staticInputs, segmentedInputs, toggleInputs, SELF_DERIVED_RISK, NUMBER_DERIVED_RISK, FIELD_BACKED_FACTOR} from './config.js';
 import {
     getState, saveState, loadState, restoreState, previousCategoryData, updateLastSaved,
     isQuickReviewMode, setQuickReviewDismissed, addActiveIssue, addManualIssue,
@@ -64,6 +64,7 @@ function initialize() {
     // The importer is a plain script rather than a module, so the pattern it shares with the
     // Quick Review gate release reaches it this way.
     window.SELF_DERIVED_RISK = SELF_DERIVED_RISK;
+    window.NUMBER_DERIVED_RISK = NUMBER_DERIVED_RISK;
     window.FIELD_BACKED_FACTOR = FIELD_BACKED_FACTOR;
     window.renderScrapedIssuesList = renderScrapedIssuesList;
 
@@ -126,8 +127,20 @@ function initialize() {
     // two letters ends it for good.
     const needsInitials = () => !($('reviewerInitials')?.value || '').trim();
 
-    // Shows only the halves still unanswered, and titles itself after whichever they are.
-    const openReviewPrompt = (askMethod, askInitials) => {
+    // Nothing entered on the Bloods card and no answer given for it. Bloods are nearly always
+    // looked at and then easily left out of the note, so the dialog asks, alongside the other
+    // questions rather than as another dialog of its own. Once per patient, unlike the
+    // initials: the note is regenerated over and over during a review, and being asked about
+    // the same empty card at every regenerate would be a nag. Clear Data and an import reset it.
+    const needsBloods = () => {
+        if ($('review_prompt_bloods')?.dataset.asked === 'true') return false;
+        const s = getState();
+        if (s.chk_bloods_nil_sig || s.bloods_status) return false;
+        return !Object.keys(s).some(k => k.startsWith('bl_') && String(s[k] ?? '').trim());
+    };
+
+    // Shows only the parts still unanswered, and titles itself after whichever they are.
+    const openReviewPrompt = (askMethod, askInitials, askBloods = false) => {
         const modal = $('reviewMethodPrompt');
         if (!modal) return;
         const initialsBox = $('review_prompt_initials');
@@ -135,6 +148,12 @@ function initialize() {
         const continueActions = $('review_prompt_continue_actions');
         const title = $('review_prompt_title');
         if (initialsBox) initialsBox.style.display = askInitials ? 'block' : 'none';
+        const bloodsBox = $('review_prompt_bloods');
+        if (bloodsBox) {
+            bloodsBox.style.display = askBloods ? 'block' : 'none';
+            if (askBloods) bloodsBox.dataset.asked = 'true';
+        }
+        document.querySelectorAll('.prompt-bloods-status').forEach(b => b.classList.remove('active'));
         if (methodActions) methodActions.style.display = askMethod ? 'flex' : 'none';
         if (continueActions) continueActions.style.display = askMethod ? 'none' : 'flex';
 
@@ -146,14 +165,17 @@ function initialize() {
         // Never phrased as signing: nothing in this tool is recorded anywhere, and initials
         // that read as a signature imply a stored record that does not exist. They reach the
         // Excel handover line and nothing else, so that is what the wording says.
-        const bothAsked = askMethod && askInitials;
+        const bothAsked = [askMethod, askInitials, askBloods].filter(Boolean).length > 1;
         const methodLabel = $('review_prompt_method_label');
         const initialsLabel = $('review_prompt_initials_label');
+        const bloodsLabel = $('review_prompt_bloods_label');
         if (methodLabel) methodLabel.style.display = bothAsked ? 'block' : 'none';
         if (initialsLabel) initialsLabel.style.display = bothAsked ? 'block' : 'none';
+        if (bloodsLabel) bloodsLabel.style.display = bothAsked ? 'block' : 'none';
         if (title) {
             if (bothAsked) title.textContent = 'Helpful hints';
             else if (askMethod) title.textContent = 'How did you review this patient?';
+            else if (askBloods) title.textContent = 'No bloods entered';
             else title.textContent = 'Initials for Excel handover';
         }
         const box = $('promptReviewerInitials');
@@ -165,7 +187,17 @@ function initialize() {
     // Resumes the generate that raised the dialog, and tells it not to ask again: the questions
     // have just been answered, and one of the answers is allowed to be "nothing", which is not
     // something the fields themselves can record.
+    // A bloods answer picked in the dialog becomes the Bloods card's own answer, set through its
+    // own button so everything downstream sees it exactly as if it had been pressed there.
+    const commitPromptBloods = () => {
+        const picked = document.querySelector('.prompt-bloods-status.active')?.dataset.value;
+        if (!picked) return;
+        const btn = document.querySelector(`#seg_bloods_status .seg-btn[data-value="${picked}"]`);
+        if (btn && !btn.classList.contains('active')) btn.click();
+    };
+
     const resumeAfterPrompt = () => {
+        commitPromptBloods();
         hideReviewMethodPrompt();
         const resume = pendingAfterReviewMethod;
         pendingAfterReviewMethod = null;
@@ -178,6 +210,26 @@ function initialize() {
         resumeAfterPrompt();
     };
 
+    // One answer at a time, and pressing the chosen one again takes it back.
+    document.querySelectorAll('.prompt-bloods-status').forEach(btn => btn.addEventListener('click', () => {
+        const wasActive = btn.classList.contains('active');
+        document.querySelectorAll('.prompt-bloods-status').forEach(b => b.classList.remove('active'));
+        if (!wasActive) btn.classList.add('active');
+    }));
+
+    // Goes to the bloods instead of generating: the note is generated again once they're in.
+    // Initials typed meanwhile are kept; the method, if it was asked, is simply asked again.
+    $('btn_prompt_bloods_enter')?.addEventListener('click', () => {
+        commitPromptInitials();
+        hideReviewMethodPrompt();
+        pendingAfterReviewMethod = null;
+        openAccordion('panel_bloods', '[aria-controls="panel_bloods"]');
+        setBloodsOverlay(true);
+        const section = $('section-bloods');
+        section?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+        section?.querySelector('input')?.focus?.({ preventScroll: true });
+    });
+
     $('btn_method_physical')?.addEventListener('click', () => chooseReviewMethod('physical'));
     $('btn_method_chart')?.addEventListener('click', () => chooseReviewMethod('chart'));
     $('btn_prompt_continue')?.addEventListener('click', () => {
@@ -188,9 +240,10 @@ function initialize() {
     function triggerGenerate({ justAsked = false } = {}) {
         const askMethod = !getReviewMethod();
         const askInitials = !justAsked && needsInitials();
-        if (askMethod || askInitials) {
+        const askBloods = !justAsked && needsBloods();
+        if (askMethod || askInitials || askBloods) {
             pendingAfterReviewMethod = () => triggerGenerate({ justAsked: true });
-            openReviewPrompt(askMethod, askInitials);
+            openReviewPrompt(askMethod, askInitials, askBloods);
             return;
         }
 

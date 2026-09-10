@@ -698,8 +698,8 @@ test('an updated assessment answer replaces the carried one rather than joining 
 
     assert.match(note, /- Mobility: independent with frame/, "today's answer is the one stated");
     assert.ok(!/assist x1 with frame/.test(note), 'and yesterday\'s is not stated beside it');
-    assert.match(note, /- Son visiting daily \(carried 2\)/,
-        'a factor with no field of its own still carries across');
+    assert.match(note, /^- Son visiting daily$/m,
+        'a factor with no field of its own still carries across, with no count after it');
     close();
 });
 
@@ -725,13 +725,14 @@ test('a carried line nobody has looked at raises one quiet nudge', async () => {
     // the single notice region rather than as a banner of its own.
     const region = document.getElementById('noticeRegion');
     assert.ok(!region.hidden, 'the nudge is raised');
-    assert.match(region.textContent, /carried from the last note/);
+    assert.match(region.textContent, /from the last note/);
+    assert.ok(!/carried/i.test(region.textContent), 'without calling the line carried');
     assert.match(region.textContent, /edit or delete/);
 
     // Acting on the line is what counts as having reviewed it.
     click(window, '#scraped_issues_list .scraped-issue-resolve');
     await tick(window);
-    assert.ok(!/carried from the last note/.test(region.textContent),
+    assert.ok(!/from the last note/.test(region.textContent),
         'and it goes as soon as the last one has been dealt with');
     close();
 });
@@ -1239,12 +1240,14 @@ test('both list sections survive the trip out to the note and back', async () =>
     assert.match(risks, /Awaiting dietitian review/, 'and risks into theirs');
     assert.ok(!/Son visiting daily/.test(risks), 'neither lands in the other');
 
-    // A line that has been riding along says so, so a list that only grows can still be pruned.
+    // Both reach the note as the lines themselves. The "(carried N)" count is gone from the
+    // tool: it read as clutter in the record.
     generateNote(window);
     await tick(window);
     const note = document.getElementById('summary').value;
-    assert.match(note, /- Son visiting daily \(carried 2\)/, 'the count continues in the note');
-    assert.match(note, /- Awaiting dietitian review \(carried 2\)/);
+    assert.match(note, /^- Son visiting daily$/m);
+    assert.match(note, /^- Awaiting dietitian review$/m);
+    assert.ok(!/carried/i.test(note), 'no carry count anywhere in the note');
     close();
 });
 
@@ -1484,6 +1487,7 @@ test('a review method already chosen on the strip is not asked about again', asy
     type(window, 'ptName', 'ABC');
     type(window, 'reviewerInitials', 'CB');
     click(window, 'input[name="reviewModeType"][value="physical"]');
+    click(window, '#seg_bloods_status .seg-btn[data-value="nil_sig"]');
     await tick(window);
 
     click(window, '#btn_generate_summary');
@@ -1687,6 +1691,7 @@ test('an empty reviewer box is asked about every time, and Continue waves it pas
     // one too, unless Clear Data happened to have been pressed in between.
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
+    click(window, '#seg_bloods_status .seg-btn[data-value="nil_sig"]');
     await tick(window);
 
     generateNote(window);              // answers method, declines to give initials
@@ -1833,6 +1838,7 @@ test('the DMR prompt stops being a question when it has two to ask', async () =>
         const { window, document, close } = await loadTool();
         type(window, 'ptName', 'ABC');
         type(window, 'reviewerInitials', 'CB');
+        click(window, '#seg_bloods_status .seg-btn[data-value="nil_sig"]');
         await tick(window);
         click(window, '#btn_generate_summary');
         const s = shape(document);
@@ -1846,6 +1852,7 @@ test('the DMR prompt stops being a question when it has two to ask', async () =>
         const { window, document, close } = await loadTool();
         type(window, 'ptName', 'ABC');
         click(window, 'input[name="reviewModeType"][value="chart"]');
+        click(window, '#seg_bloods_status .seg-btn[data-value="nil_sig"]');
         await tick(window);
         click(window, '#btn_generate_summary');
         const s = shape(document);
@@ -2041,7 +2048,8 @@ test('an ICU CNC pre-stepdown review says so at the head of the note', async () 
     generateNote(window, 'physical', 'CB');
     await tick(window, 600);
     const note = window.document.getElementById('summary').value;
-    assert.match(note.split('\n')[0], /^ICU CNC Pre-Stepdown Review - Physical review$/);
+    // Always a physical review in ICU, so the heading does not name a method.
+    assert.equal(note.split('\n')[0], 'ICU CNC Pre-Stepdown Review');
     close();
 });
 
@@ -2422,14 +2430,14 @@ test('a risk carried into a Full Review is on screen before it is in the note', 
     const card = document.getElementById('scraped_risks_wrapper');
     assert.equal(card.hidden, false, 'the card carrying the line is on the page');
     assert.match(card.textContent, /Difficult IV access/);
-    assert.match(document.getElementById('noticeRegion').textContent, /carried from the last note/,
+    assert.match(document.getElementById('noticeRegion').textContent, /from the last note/,
         'and the nudge now points at something the reviewer can reach');
 
-    // The note prints it as carried, which is a claim that it was reviewed today. That claim is
-    // only honest if the row was visible while it was being made.
+    // The note prints it, which is a claim that it was reviewed today. That claim is only
+    // honest if the row was visible while it was being made.
     generateNote(window, 'physical', 'CB');
     await tick(window, 600);
-    assert.match(document.getElementById('summary').value, /- Difficult IV access.*\(carried 2\)/);
+    assert.match(document.getElementById('summary').value, /^- Difficult IV access, discussed with vascular access team$/m);
     close();
 });
 
@@ -2516,56 +2524,16 @@ test('the handover line omits the score rather than stubbing it', async () => {
 
 // --- A carried risk and today's assessment are one finding, not two ------------------------
 //
-// A risk the previous note recorded as mitigated deliberately bypasses the gates on import -
-// carrying it to a gate would turn a discounted risk back into a live one - so it stages as a
-// list entry and comes back with "(carried 2)" on the end. When today's assessment reaches the
-// same conclusion the rules emit their own copy, and the note printed both.
+// A risk the previous note recorded as mitigated bypasses the gates on import - carrying it to
+// a gate would turn a discounted risk back into a live one - so it stages as a list entry. When
+// today's assessment reaches the same risk the rules write their own copy, and the note printed
+// both.
 
-test('a mitigated risk confirmed again today is stated once, keeping its carry count', async () => {
+test('a mitigated infection line is not carried in; today\'s assessment writes its own', async () => {
+    // The rules re-read infection from today's markers and score, so yesterday's mitigated line
+    // carried in beside today's read as one risk written twice, with two scores that disagreed.
     const { window, document, close } = await loadTool();
-    click(window, '#btnOpenImport');
-    document.getElementById('importText').value = [
-        'ALERT CNS post ICU review - Physical review',
-        'Patient: ABC | URN: ...123',
-        '',
-        'IDENTIFIED ICU READMISSION RISK FACTORS:',
-        '- Infection risk (mitigated: infection markers downtrending, ADDS 0)',
-        '',
-        'PLAN:',
-        '- ALERT nursing post ICU reviews continue.'
-    ].join('\n');
-    click(window, '#runImport');
-    await tick(window, 900);
-
-    // The reviewer confirms the same picture on the form today.
-    click(window, '#seg_infection .seg-btn[data-value="true"]');
-    await tick(window, 400);
-    click(window, '#seg_infection_downtrend .seg-btn[data-value="true"]');
-    await tick(window, 400);
-    type(window, 'adds', '0');
-    await tick(window, 700);
-
-    generateNote(window, 'physical', 'CB');
-    await tick(window, 700);
-    const note = document.getElementById('summary').value;
-    const section = note.slice(note.indexOf('IDENTIFIED ICU READMISSION'), note.indexOf('PLAN:'));
-    const infectionLines = section.split('\n').filter(l => /Infection risk/i.test(l));
-
-    assert.equal(infectionLines.length, 1, `said twice:\n${section.trim()}`);
-    // Today's wording is what the note records, and the carry count moves onto it rather than
-    // going with the line it arrived on - it is how the next reviewer knows how long this has
-    // been running.
-    assert.match(infectionLines[0], /\(mitigated: infection markers downtrending, ADDS 0\)/);
-    assert.match(infectionLines[0], /\(carried 2\)$/);
-    close();
-});
-
-test('the reason may disagree between the two copies, and today\'s is the one kept', async () => {
-    // The carried line holds yesterday's numbers. Matching on the whole string would leave both
-    // in, reading as two findings that contradict each other about the same morning.
-    const { window, document, close } = await loadTool();
-    click(window, '#btnOpenImport');
-    document.getElementById('importText').value = [
+    await importNote(window, document, [
         'ALERT CNS post ICU review - Physical review',
         'Patient: ABC | URN: ...123',
         '',
@@ -2574,9 +2542,10 @@ test('the reason may disagree between the two copies, and today\'s is the one ke
         '',
         'PLAN:',
         '- ALERT nursing post ICU reviews continue.'
-    ].join('\n');
-    click(window, '#runImport');
-    await tick(window, 900);
+    ].join('\n'));
+    assert.ok(!/Infection risk/.test(document.getElementById('scraped_issues_list').textContent),
+        'not staged on the list');
+
     click(window, '#seg_infection .seg-btn[data-value="true"]');
     await tick(window, 400);
     click(window, '#seg_infection_downtrend .seg-btn[data-value="true"]');
@@ -2588,9 +2557,225 @@ test('the reason may disagree between the two copies, and today\'s is the one ke
     await tick(window, 700);
     const note = document.getElementById('summary').value;
     const infectionLines = note.split('\n').filter(l => /Infection risk/i.test(l));
-    assert.equal(infectionLines.length, 1, `said twice:\n${infectionLines.join('\n')}`);
-    assert.match(infectionLines[0], /ADDS 1/, "today's numbers");
-    assert.ok(!/ADDS 2/.test(infectionLines[0]), 'not yesterday\'s');
-    assert.match(infectionLines[0], /\(carried 3\)$/, 'and the count keeps climbing');
+    assert.deepEqual(infectionLines, ['- Infection risk (mitigated: infection markers downtrending, ADDS 1)']);
+    assert.ok(!/carried/i.test(note));
+    close();
+});
+
+test('a note that has been through DMR is read however its bullets and brackets came back', async () => {
+    // Casey's example: the dashes gone, zero-width spaces in their place, and the mitigated
+    // line tidied by hand to "(mitigated):". Read only by its dashes, the section imported empty.
+    const zw = '​';
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: ABC | URN: ...123',
+        '',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        `${zw}Respiratory concern: Oxygen requirement - 4LNP`,
+        `${zw}Infection risk (mitigated): infection markers downtrending, ADDS 1`,
+        `${zw}Comorbidities: HTN, likely undx diabetes (carried 2)`,
+        `${zw}Infection risk (mitigated): infection markers downtrending, ADDS 2) (carried 2)`,
+        `${zw}Renal concern (mitigated: known CKD and Cr/urine output around baseline)`,
+        '',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n'));
+
+    assert.ok(document.querySelector('#seg_resp_concern .seg-btn[data-value="true"]').classList.contains('active'),
+        'the respiratory concern still reaches its gate');
+    const list = document.getElementById('scraped_issues_list').textContent;
+    assert.match(list, /Comorbidities: HTN, likely undx diabetes/);
+    assert.ok(!/Infection risk/.test(list), "yesterday's infection lines, both copies, are not carried");
+    assert.match(list, /Renal concern \(mitigated: known CKD/,
+        'a mitigation the rules cannot re-read from numbers still comes back');
+    assert.ok(!/carried/i.test(list));
+    close();
+});
+
+test('after-hours is never carried as text, however the last note spelt it', async () => {
+    // It is worked out from the stepdown date every review and drops off after 24 hours. A
+    // spelling the importer did not recognise staged it as plain text instead, and it then
+    // rode along on the list indefinitely.
+    for (const line of ['Discharged after-hours', 'Discharged after‑hours', 'Discharged after hours']) {
+        const { window, document, close } = await loadTool();
+        await importNote(window, document, [
+            'ALERT CNS post ICU review - Physical review',
+            'Patient: ABC | URN: ...123',
+            'ICU Discharge Date: 01/08/2026',
+            '',
+            'IDENTIFIED ICU READMISSION RISK FACTORS:',
+            `- ${line}`,
+            '',
+            'PLAN:',
+            '- ALERT nursing post ICU reviews continue.'
+        ].join('\n'));
+        assert.ok(!/after.hours/i.test(document.getElementById('scraped_issues_list').textContent), line);
+        generateNote(window, 'physical', 'CB');
+        await tick(window, 600);
+        const note = document.getElementById('summary').value;
+        const risks = note.slice(note.indexOf('IDENTIFIED ICU READMISSION'), note.indexOf('PLAN:'));
+        assert.ok(!/after.hours/i.test(risks), `${line}: not in the note well past 24 hours`);
+        close();
+    }
+});
+
+test('a reason for admission over several lines comes back whole', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: ABC | URN: ...123',
+        'Time of review: 09:00',
+        'ICU Discharge Date: 01/08/2026',
+        '',
+        'ICU LOS: 3 days',
+        'Reason for ICU Admission: Elective AVR + CABG x3',
+        'Complicated by post-op AF and return to theatre for bleeding',
+        '',
+        'ALERT Nursing Review Category - CAT 2'
+    ].join('\n'));
+    assert.equal(document.getElementById('ptAdmissionReason').value,
+        'Elective AVR + CABG x3\nComplicated by post-op AF and return to theatre for bleeding');
+    close();
+});
+
+// --- The handover line says each thing once ------------------------------------------------
+
+test('the handover line does not repeat a blood a risk already quotes', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'bl_mg', '0.5');
+    type(window, 'bl_na', '132');
+    await tick(window, 700);
+    generateNote(window, 'physical', 'CB');
+    await tick(window, 600);
+    const line = document.getElementById('handoverLine').value;
+    assert.match(line, /low Mg 0\.5/, 'the risk names it');
+    assert.match(line, /Bloods: Na 132\./, 'the bloods list only what no risk names');
+    assert.equal(line.match(/Mg 0\.5/g).length, 1, line);
+    close();
+});
+
+test('a mitigated line is not handed over as a risk', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, [
+        'ALERT CNS post ICU review - Physical review',
+        'Patient: ABC | URN: ...123',
+        '',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        '- Renal concern (mitigated: known CKD and Cr/urine output around baseline)',
+        '- Awaiting dietitian review',
+        '',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n'));
+    generateNote(window, 'physical', 'CB');
+    await tick(window, 600);
+    const line = document.getElementById('handoverLine').value;
+    assert.match(line, /Awaiting dietitian review/);
+    assert.ok(!/mitigated|Renal/i.test(line), line);
+    assert.match(document.getElementById('summary').value, /Renal concern \(mitigated: known CKD/,
+        'the note still records it');
+    close();
+});
+
+// --- Pre-Stepdown is always a physical review ----------------------------------------------
+
+test('a pre-stepdown review cannot be a chart review, and the handover line says where the patient is', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, 'input[name="reviewType"][value="pre"]');
+    await tick(window);
+    assert.equal(document.getElementById('reviewModeTypeWrapper').style.display, 'none', 'no method to choose');
+    type(window, 'ptName', 'ABC');
+    type(window, 'reviewerInitials', 'CB');
+    click(window, '#seg_bloods_status .seg-btn[data-value="nil_sig"]');
+    await tick(window, 600);
+    click(window, '#btn_generate_summary');
+    await tick(window, 600);
+    assert.notEqual(document.getElementById('reviewMethodPrompt').style.display, 'flex', 'and nothing asked');
+    const line = document.getElementById('handoverLine').value;
+    assert.match(line, /PRE-STEPDOWN \(IN ICU\)\./);
+    assert.ok(!/R\/V/.test(line), `it must not read as a ward review: ${line}`);
+
+    // Back to Post-Stepdown: the method set on the way in was not anyone's answer.
+    click(window, 'input[name="reviewType"][value="post"]');
+    await tick(window);
+    assert.equal(document.getElementById('reviewModeTypeWrapper').style.display, '');
+    assert.equal(document.querySelector('input[name="reviewModeType"]:checked'), null);
+    close();
+});
+
+// --- Bloods asked about in the DMR dialog ---------------------------------------------------
+
+test('empty bloods are asked about once, and the answer is the Bloods card\'s own', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'reviewerInitials', 'CB');
+    click(window, 'input[name="reviewModeType"][value="physical"]');
+    await tick(window);
+
+    click(window, '#btn_generate_summary');
+    assert.equal(document.getElementById('reviewMethodPrompt').style.display, 'flex');
+    assert.equal(document.getElementById('review_prompt_title').textContent, 'No bloods entered');
+    click(window, '.prompt-bloods-status[data-value="improving"]');
+    click(window, '#btn_prompt_continue');
+    await tick(window, 600);
+    assert.ok(document.querySelector('#seg_bloods_status .seg-btn[data-value="improving"]').classList.contains('active'));
+    assert.match(document.getElementById('summary').value, /Bloods: Improving trend/);
+    assert.match(document.getElementById('handoverLine').value, /Bloods improving\./);
+    close();
+});
+
+test('waving the bloods question past still writes the note, and it is not asked again', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'reviewerInitials', 'CB');
+    click(window, 'input[name="reviewModeType"][value="physical"]');
+    await tick(window);
+    click(window, '#btn_generate_summary');
+    click(window, '#btn_prompt_continue');
+    await tick(window, 600);
+    assert.ok(document.getElementById('summary').value.length > 0);
+    click(window, '#btn_generate_summary');
+    assert.notEqual(document.getElementById('reviewMethodPrompt').style.display, 'flex', 'regenerating does not nag');
+    close();
+});
+
+test('"Enter bloods" goes to the card instead of writing the note', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'reviewerInitials', 'CB');
+    click(window, 'input[name="reviewModeType"][value="physical"]');
+    await tick(window);
+    click(window, '#btn_generate_summary');
+    click(window, '#btn_prompt_bloods_enter');
+    await tick(window);
+    assert.notEqual(document.getElementById('reviewMethodPrompt').style.display, 'flex');
+    assert.equal(document.getElementById('summary').value, '', 'no note yet');
+    assert.ok(document.getElementById('panel_bloods').classList.contains('open'));
+    close();
+});
+
+test('bloods already entered, or answered, are not asked about', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    type(window, 'reviewerInitials', 'CB');
+    click(window, 'input[name="reviewModeType"][value="physical"]');
+    type(window, 'bl_wcc', '8');
+    await tick(window);
+    click(window, '#btn_generate_summary');
+    assert.notEqual(document.getElementById('reviewMethodPrompt').style.display, 'flex');
+    close();
+});
+
+test('"No comment required" is recorded as its own answer', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'ptName', 'ABC');
+    click(window, '#seg_bloods_status .seg-btn[data-value="no_comment"]');
+    await tick(window, 600);
+    generateNote(window, 'physical', 'CB');
+    await tick(window, 600);
+    assert.match(document.getElementById('summary').value, /Bloods: No comment required/);
+    assert.match(document.getElementById('handoverLine').value, /Bloods no comment\./);
     close();
 });

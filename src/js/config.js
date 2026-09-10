@@ -170,12 +170,27 @@ export const QUICK_REVIEW_SCORING_IDS = [
 //
 // Gate-shaped concerns are deliberately absent. In Full Review the gate carries them; in Quick
 // Review nothing else would raise them at all, so they do need to travel as text.
-export const SELF_DERIVED_RISK = new RegExp([
-    'prolonged icu stay', 'deconditioning risk', 'after-hours', '^age \\d',
+//
+// "after hours" is matched with a space or any dash as well as the tool's own hyphen: a line
+// retyped by hand, or passed through DMR, that missed this test was staged as plain text and
+// then rode along on the list long after the 24 hours the rule itself allows it.
+const DATE_DERIVED = [
+    'prolonged icu stay', 'deconditioning risk', 'after[\\s-]*hours', '^age \\d'
+];
+const NUMBER_DERIVED = [
     '^(elevated )?(adds|mods) \\d', '^lactate \\d', '^(low|high) bsl',
     '^low platelets', '^electrolyte concern', '^infection risk',
     '^worsening cr', '^rising crp'
-].join('|'), 'i');
+];
+export const SELF_DERIVED_RISK = new RegExp([...DATE_DERIVED, ...NUMBER_DERIVED].join('|'), 'i');
+
+// The second group on its own. A risk from it that the last note recorded as mitigated is not
+// carried either: "Infection risk (mitigated: markers downtrending, ADDS 2)" is yesterday's
+// score and yesterday's trend, and today's rules write their own mitigated line from today's -
+// the two side by side read as one risk written twice, with two scores that disagree.
+// Age and length of stay are left out on purpose: their mitigation is the clinician's
+// judgement, not a number the rules can re-read, so dropping it would turn it live again.
+export const NUMBER_DERIVED_RISK = new RegExp(NUMBER_DERIVED.join('|'), 'i');
 
 
 // Patient-factor lines the note writes from an assessment field every review. The importer

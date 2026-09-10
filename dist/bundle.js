@@ -475,11 +475,13 @@
     "override_red",
     "override_amber"
   ];
-  var SELF_DERIVED_RISK = new RegExp([
+  var DATE_DERIVED = [
     "prolonged icu stay",
     "deconditioning risk",
-    "after-hours",
-    "^age \\d",
+    "after[\\s-]*hours",
+    "^age \\d"
+  ];
+  var NUMBER_DERIVED = [
     "^(elevated )?(adds|mods) \\d",
     "^lactate \\d",
     "^(low|high) bsl",
@@ -488,7 +490,9 @@
     "^infection risk",
     "^worsening cr",
     "^rising crp"
-  ].join("|"), "i");
+  ];
+  var SELF_DERIVED_RISK = new RegExp([...DATE_DERIVED, ...NUMBER_DERIVED].join("|"), "i");
+  var NUMBER_DERIVED_RISK = new RegExp(NUMBER_DERIVED.join("|"), "i");
   var FIELD_BACKED_FACTOR = /^(mobility|diet|nutrition|post icu syndrome|sleep|psychological issues)\s*:/i;
   var GATE_RISK_ID = {
     seg_resp_concern: "seg_resp_concern",
@@ -636,7 +640,7 @@
       if (isModified(param)) addCheck(`${txt} - MODS in use (${s.mods_details.trim()}); confirm within modification`, `mod_${id}`);
       else add(list, txt, id, type);
     };
-    const bloodsReviewed = !s.chk_bloods_nil_sig && s.bloods_status !== "nil_sig" && s.bloods_status !== "not_checked";
+    const bloodsReviewed = !s.chk_bloods_nil_sig && !["nil_sig", "not_checked", "no_comment"].includes(s.bloods_status);
     const crTrend = computeTrend("cr_review", s.bl_cr_review, prevBloods.cr_review);
     const crpTrend = computeTrend("crp", s.bl_crp, prevBloods.crp);
     const wccTrend = computeTrend("wcc", s.bl_wcc, prevBloods.wcc);
@@ -1146,7 +1150,7 @@
         const { isNew } = addActiveIssue(issue);
         if (isNew && issue.source === "auto") maybeToastNewRisk(issue.key, issue.text);
       });
-      if (s.bloods_status !== "nil_sig" && s.bloods_status !== "not_checked" && !s.chk_bloods_nil_sig) {
+      if (!["nil_sig", "not_checked", "no_comment"].includes(s.bloods_status) && !s.chk_bloods_nil_sig) {
         applyTrendArrows(s, window.prevBloods);
       }
       updatePrevBloodsHint();
@@ -1439,7 +1443,7 @@
       setNotice("scraped-review", {
         priority: NOTICE_PRIORITY.SCRAPED_REVIEW,
         tone: "info",
-        html: `<div class="notice-title">${unreviewed} ${unreviewed === 1 ? "line" : "lines"} carried from the last note - edit or delete as appropriate for today's review</div>`
+        html: `<div class="notice-title">${unreviewed} ${unreviewed === 1 ? "line" : "lines"} from the last note - edit or delete as appropriate for today's review</div>`
       });
     } else {
       clearNotice("scraped-review");
@@ -1593,6 +1597,21 @@
     if (type === "pre") {
       const c = $("chk_discharge_alert");
       if (c) c.checked = false;
+    }
+    const methodWrapper = $("reviewModeTypeWrapper");
+    const physical = document.querySelector('input[name="reviewModeType"][value="physical"]');
+    if (methodWrapper && physical) {
+      methodWrapper.style.display = type === "pre" ? "none" : "";
+      if (type === "pre") {
+        if (!physical.checked) {
+          document.querySelectorAll('input[name="reviewModeType"]').forEach((r) => r.checked = false);
+          physical.checked = true;
+          methodWrapper.dataset.forced = "true";
+        }
+      } else if (methodWrapper.dataset.forced === "true") {
+        physical.checked = false;
+        delete methodWrapper.dataset.forced;
+      }
     }
     updateReviewerRoleVisibility();
   }
@@ -2016,6 +2035,8 @@
     if (handoverEl) handoverEl.value = "";
     const handoverActions = $("handover_actions");
     if (handoverActions) handoverActions.style.display = "none";
+    const bloodsPrompt = $("review_prompt_bloods");
+    if (bloodsPrompt) delete bloodsPrompt.dataset.asked;
     window.dismissedDischarge = false;
     const now = /* @__PURE__ */ new Date();
     now.setMinutes(Math.round(now.getMinutes() / 15) * 15);
@@ -2223,6 +2244,8 @@
       setChip("qrChipBloods", "\u2713 Improving");
     } else if (s.bloods_status === "not_checked") {
       setChip("qrChipBloods", "\u2713 Not checked");
+    } else if (s.bloods_status === "no_comment") {
+      setChip("qrChipBloods", "\u2713 No comment required");
     } else {
       const n = Object.keys(NOTE_BLOOD_LABELS).filter((k) => s[`bl_${k}`]).length;
       setChip("qrChipBloods", n ? `\u2713 ${n} result${n === 1 ? "" : "s"} entered` : "");
@@ -2569,7 +2592,7 @@
   function defaultListFor(source, severity) {
     return severity === "info" ? "factors" : "risks";
   }
-  function addActiveIssue({ text, source, severity, key, list, carried, mitigated, scoresAs, gateId }) {
+  function addActiveIssue({ text, source, severity, key, list, mitigated, scoresAs, gateId }) {
     const existing = activeIssues.find((i) => i.key === key && (!i.resolved || i.resolvedByUser));
     if (existing) {
       existing.text = text;
@@ -2584,9 +2607,6 @@
       severity,
       key,
       list: list || defaultListFor(source, severity),
-      // 1 means raised this review. The importer passes a higher number when it reads a
-      // "(carried N)" back off the previous note.
-      carried: carried || 1,
       // A risk the previous note recorded as considered and discounted. It comes back
       // carrying its reason rather than as a live risk, so the mitigation isn't silently
       // lost the moment the note is re-imported.
@@ -2641,20 +2661,17 @@
     return activeIssues.filter((i) => !i.resolved);
   }
   var MIRRORS_AN_ASSESSMENT_FIELD = /* @__PURE__ */ new Set(["ae_mobility", "ae_diet"]);
-  function withCarry(issue) {
-    return issue.carried > 1 ? `${issue.text} (carried ${issue.carried})` : issue.text;
-  }
   function getFactorsForNote() {
-    return activeIssues.filter((i) => i.list === "factors" && !i.resolved).filter((i) => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key)).map(withCarry);
+    return activeIssues.filter((i) => i.list === "factors" && !i.resolved).filter((i) => !MIRRORS_AN_ASSESSMENT_FIELD.has(i.key)).map((i) => i.text);
   }
   function getRisksForNote() {
-    return activeIssues.filter((i) => i.list === "risks" && !i.resolved).filter((i) => i.source !== "auto").filter((i) => !i.scoresAs).map(withCarry);
+    return activeIssues.filter((i) => i.list === "risks" && !i.resolved).filter((i) => i.source !== "auto").filter((i) => !i.scoresAs).map((i) => ({ text: i.text, fromLastNote: i.source === "scraped" }));
   }
   function getDeletedRiskKeys() {
     return new Set(activeIssues.filter((i) => i.source === "auto" && i.resolvedByUser).map((i) => i.key));
   }
   function getScoringListRisks() {
-    return activeIssues.filter((i) => i.scoresAs && !i.resolved).map((i) => ({ text: withCarry(i), severity: i.scoresAs, gateId: i.gateId }));
+    return activeIssues.filter((i) => i.scoresAs && !i.resolved).map((i) => ({ text: i.text, severity: i.scoresAs, gateId: i.gateId }));
   }
   function getChecksForNote() {
     return getActiveChecks().map((i) => i.text);
@@ -2707,7 +2724,6 @@
         <div class="scraped-issue-row${issue.resolved ? " resolved" : ""}" data-id="${issue.id}">
             <span class="scraped-issue-text" data-id="${issue.id}" title="Click to edit">${issue.text}</span>
             ${issue.mitigated ? '<span class="scraped-issue-note-tag" title="Considered and discounted last review">mitigated</span>' : ""}
-            ${issue.carried > 1 ? `<span class="scraped-issue-carried" title="On this list for ${issue.carried} reviews">carried ${issue.carried}</span>` : ""}
             <button type="button" class="scraped-issue-edit-btn" data-id="${issue.id}"
                 title="Edit" aria-label="Edit">&#9998;</button>
             <button type="button" class="scraped-issue-resolve" data-id="${issue.id}"
@@ -3010,6 +3026,9 @@
   }
 
   // src/js/summary.js
+  function riskIdentity(t) {
+    return String(t || "").replace(/\s*\(carried \d+\)\s*$/i, "").split(/\s*\(|:|\s+-\s+/)[0].toLowerCase().replace(/\s+/g, " ").trim();
+  }
   function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, activeComorbsKeys, lists = {}) {
     const sum = $("summary");
     window.devicesModifiedSinceLastSummary = false;
@@ -3024,7 +3043,7 @@
     const reviewName = s.reviewType === "pre" ? "Pre-Stepdown" : "post ICU review";
     const methodName = s.reviewModeType === "chart" ? "Chart review" : "Physical review";
     if (s.reviewType === "pre") {
-      lines.push(`${role} Pre-Stepdown Review - ${methodName}`);
+      lines.push(`${role} Pre-Stepdown Review`);
     } else {
       lines.push(`${role} ${reviewName} - ${methodName}`);
     }
@@ -3210,6 +3229,8 @@
       addLine("Bloods: Improving trend");
     } else if (s.bloods_status === "not_checked") {
       addLine("Bloods: Not checked this review");
+    } else if (s.bloods_status === "no_comment") {
+      addLine("Bloods: No comment required");
     } else {
       const blLines = [];
       Object.keys(blMap).forEach((key) => {
@@ -3306,28 +3327,23 @@
       pushBlank();
     }
     lines.push("IDENTIFIED ICU READMISSION RISK FACTORS:");
-    const carriedSuffix = /\s*\(carried (\d+)\)\s*$/i;
-    const riskIdentity = (t) => {
-      const bare = t.replace(carriedSuffix, "").trim();
-      const mitigated = bare.match(/^(.*?)\s*\(mitigated:/i);
-      return (mitigated ? mitigated[1] : bare).toLowerCase().replace(/\s+/g, " ").trim();
-    };
+    const clean = (raw) => (raw || "").trim().replace(/^[-\u2022]\s*/, "").trim();
     const riskLines = [];
-    const riskSeen = /* @__PURE__ */ new Map();
-    [...red, ...amber, ...suppressed, ...lists.risks || []].forEach((raw) => {
-      const txt = (raw || "").trim().replace(/^[-\u2022]\s*/, "");
-      const identity = riskIdentity(txt);
-      if (!txt || !identity) return;
-      if (!riskSeen.has(identity)) {
-        riskSeen.set(identity, riskLines.length);
-        riskLines.push(txt);
-        return;
-      }
-      const at = riskSeen.get(identity);
-      const kept = riskLines[at].match(carriedSuffix);
-      const dropped = txt.match(carriedSuffix);
-      const carried = Math.max(kept ? Number(kept[1]) : 1, dropped ? Number(dropped[1]) : 1);
-      if (carried > 1) riskLines[at] = `${riskLines[at].replace(carriedSuffix, "")} (carried ${carried})`;
+    const seenText = /* @__PURE__ */ new Set();
+    const seenIdentity = /* @__PURE__ */ new Set();
+    [...red, ...amber, ...suppressed].map(clean).forEach((txt) => {
+      if (!txt || seenText.has(txt.toLowerCase())) return;
+      seenText.add(txt.toLowerCase());
+      seenIdentity.add(riskIdentity(txt));
+      riskLines.push(txt);
+    });
+    (lists.risks || []).forEach((entry) => {
+      const txt = clean(typeof entry === "string" ? entry : entry.text);
+      const fromLastNote = typeof entry === "string" ? true : entry.fromLastNote;
+      if (!txt || seenText.has(txt.toLowerCase())) return;
+      if (fromLastNote && seenIdentity.has(riskIdentity(txt))) return;
+      seenText.add(txt.toLowerCase());
+      riskLines.push(txt);
     });
     if (riskLines.length) {
       riskLines.forEach((r) => lines.push(`- ${r}`));
@@ -3380,28 +3396,36 @@
     const initials = (s.reviewerInitials || "").toUpperCase();
     const time = s.reviewTime || nowTimeStr();
     const parts = [initials ? `${dateStr} ${time} ${initials}.` : `${dateStr} ${time}.`];
-    parts.push(s.reviewModeType === "chart" ? "CHART R/V." : "PHYSICAL R/V.");
+    if (s.reviewType === "pre") parts.push("PRE-STEPDOWN (IN ICU).");
+    else parts.push(s.reviewModeType === "chart" ? "CHART R/V." : "PHYSICAL R/V.");
     const scoreVal = s.chk_use_mods ? s.mods_score : s.adds;
     if (scoreVal !== void 0 && String(scoreVal).trim() !== "") {
       parts.push(`${s.chk_use_mods ? "MODS" : "ADDS"} ${String(scoreVal).trim()}.`);
     }
-    if (s.chk_bloods_nil_sig || s.bloods_status === "nil_sig") parts.push("Bloods nil sig.");
-    else if (s.bloods_status === "improving") parts.push("Bloods improving.");
-    else if (s.bloods_status === "not_checked") parts.push("Bloods not checked.");
-    else {
-      const abnormal = activeIssuesList.filter((i) => (i.key || "").startsWith("bl_")).map((i) => i.text.replace(/^Abnormal /, ""));
-      if (abnormal.length) parts.push(`Bloods: ${abnormal.join(", ")}.`);
-      else if (Object.keys(s).some((k) => k.startsWith("bl_") && s[k])) parts.push("Bloods reviewed.");
-    }
     const risks = [...red, ...amber].filter((r) => !/^(Elevated )?(ADDS|MODS) \d/.test(r)).map(trimRiskForHandover);
     const seen = new Set(risks.map((r) => r.toLowerCase()));
+    const computedIdentity = new Set([...red, ...amber].map(riskIdentity));
     activeIssuesList.forEach((issue) => {
       if (issue.severity === "info" || issue.source === "auto" || issue.source === "bloods") return;
+      if (issue.mitigated || /\(mitigated\)?:/i.test(issue.text)) return;
+      if (issue.source === "scraped" && computedIdentity.has(riskIdentity(issue.text))) return;
       const txt = trimRiskForHandover(issue.text);
       if (seen.has(txt.toLowerCase())) return;
       seen.add(txt.toLowerCase());
       risks.push(txt);
     });
+    if (s.chk_bloods_nil_sig || s.bloods_status === "nil_sig") parts.push("Bloods nil sig.");
+    else if (s.bloods_status === "improving") parts.push("Bloods improving.");
+    else if (s.bloods_status === "not_checked") parts.push("Bloods not checked.");
+    else if (s.bloods_status === "no_comment") parts.push("Bloods no comment.");
+    else {
+      const riskText = risks.join(" ").toLowerCase();
+      const abnormal = activeIssuesList.filter((i) => (i.key || "").startsWith("bl_")).map((i) => i.text.replace(/^Abnormal /, ""));
+      const quoted = (b) => new RegExp(`${b.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\d.])`).test(riskText);
+      const unnamed = abnormal.filter((b) => !quoted(b));
+      if (unnamed.length) parts.push(`Bloods: ${unnamed.join(", ")}.`);
+      else if (!abnormal.length && Object.keys(s).some((k) => k.startsWith("bl_") && s[k])) parts.push("Bloods reviewed.");
+    }
     const catText = cat?.text || $("catText")?.textContent || "";
     if (catText) parts.push(risks.length ? `${catText} - ${risks.join("; ")}.` : `${catText} - nil risks.`);
     if (s.stepdown_suitable === false) parts.push("Not suitable for stepdown.");
@@ -3450,6 +3474,7 @@
     window.previousCategoryData = previousCategoryData;
     window.addActiveIssue = addActiveIssue;
     window.SELF_DERIVED_RISK = SELF_DERIVED_RISK;
+    window.NUMBER_DERIVED_RISK = NUMBER_DERIVED_RISK;
     window.FIELD_BACKED_FACTOR = FIELD_BACKED_FACTOR;
     window.renderScrapedIssuesList = renderScrapedIssuesList;
     window.flagPreviousRecommendation = (detail) => {
@@ -3484,7 +3509,13 @@
       }
     };
     const needsInitials = () => !($("reviewerInitials")?.value || "").trim();
-    const openReviewPrompt = (askMethod, askInitials) => {
+    const needsBloods = () => {
+      if ($("review_prompt_bloods")?.dataset.asked === "true") return false;
+      const s = getState();
+      if (s.chk_bloods_nil_sig || s.bloods_status) return false;
+      return !Object.keys(s).some((k) => k.startsWith("bl_") && String(s[k] ?? "").trim());
+    };
+    const openReviewPrompt = (askMethod, askInitials, askBloods = false) => {
       const modal = $("reviewMethodPrompt");
       if (!modal) return;
       const initialsBox = $("review_prompt_initials");
@@ -3492,16 +3523,25 @@
       const continueActions = $("review_prompt_continue_actions");
       const title = $("review_prompt_title");
       if (initialsBox) initialsBox.style.display = askInitials ? "block" : "none";
+      const bloodsBox = $("review_prompt_bloods");
+      if (bloodsBox) {
+        bloodsBox.style.display = askBloods ? "block" : "none";
+        if (askBloods) bloodsBox.dataset.asked = "true";
+      }
+      document.querySelectorAll(".prompt-bloods-status").forEach((b) => b.classList.remove("active"));
       if (methodActions) methodActions.style.display = askMethod ? "flex" : "none";
       if (continueActions) continueActions.style.display = askMethod ? "none" : "flex";
-      const bothAsked = askMethod && askInitials;
+      const bothAsked = [askMethod, askInitials, askBloods].filter(Boolean).length > 1;
       const methodLabel = $("review_prompt_method_label");
       const initialsLabel = $("review_prompt_initials_label");
+      const bloodsLabel = $("review_prompt_bloods_label");
       if (methodLabel) methodLabel.style.display = bothAsked ? "block" : "none";
       if (initialsLabel) initialsLabel.style.display = bothAsked ? "block" : "none";
+      if (bloodsLabel) bloodsLabel.style.display = bothAsked ? "block" : "none";
       if (title) {
         if (bothAsked) title.textContent = "Helpful hints";
         else if (askMethod) title.textContent = "How did you review this patient?";
+        else if (askBloods) title.textContent = "No bloods entered";
         else title.textContent = "Initials for Excel handover";
       }
       const box = $("promptReviewerInitials");
@@ -3509,7 +3549,14 @@
       modal.style.display = "flex";
       if (askInitials) box?.focus();
     };
+    const commitPromptBloods = () => {
+      const picked = document.querySelector(".prompt-bloods-status.active")?.dataset.value;
+      if (!picked) return;
+      const btn = document.querySelector(`#seg_bloods_status .seg-btn[data-value="${picked}"]`);
+      if (btn && !btn.classList.contains("active")) btn.click();
+    };
     const resumeAfterPrompt = () => {
+      commitPromptBloods();
       hideReviewMethodPrompt();
       const resume = pendingAfterReviewMethod;
       pendingAfterReviewMethod = null;
@@ -3520,6 +3567,21 @@
       commitPromptInitials();
       resumeAfterPrompt();
     };
+    document.querySelectorAll(".prompt-bloods-status").forEach((btn) => btn.addEventListener("click", () => {
+      const wasActive = btn.classList.contains("active");
+      document.querySelectorAll(".prompt-bloods-status").forEach((b) => b.classList.remove("active"));
+      if (!wasActive) btn.classList.add("active");
+    }));
+    $("btn_prompt_bloods_enter")?.addEventListener("click", () => {
+      commitPromptInitials();
+      hideReviewMethodPrompt();
+      pendingAfterReviewMethod = null;
+      openAccordion("panel_bloods", '[aria-controls="panel_bloods"]');
+      setBloodsOverlay(true);
+      const section = $("section-bloods");
+      section?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      section?.querySelector("input")?.focus?.({ preventScroll: true });
+    });
     $("btn_method_physical")?.addEventListener("click", () => chooseReviewMethod("physical"));
     $("btn_method_chart")?.addEventListener("click", () => chooseReviewMethod("chart"));
     $("btn_prompt_continue")?.addEventListener("click", () => {
@@ -3529,9 +3591,10 @@
     function triggerGenerate({ justAsked = false } = {}) {
       const askMethod = !getReviewMethod();
       const askInitials = !justAsked && needsInitials();
-      if (askMethod || askInitials) {
+      const askBloods = !justAsked && needsBloods();
+      if (askMethod || askInitials || askBloods) {
         pendingAfterReviewMethod = () => triggerGenerate({ justAsked: true });
-        openReviewPrompt(askMethod, askInitials);
+        openReviewPrompt(askMethod, askInitials, askBloods);
         return;
       }
       const summaryEl = $("summary");

@@ -340,6 +340,9 @@ header h1 .logo-em {
   font-weight: var(--fw-semibold);
   color: var(--ink);
 }
+.prompt-bloods { margin: 0 0 18px; text-align: center; }
+.prompt-bloods-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.prompt-bloods-status.active { background: var(--accent); color: white; border-color: var(--accent); }
 .rs-field-reviewer.reviewer-missing input {
   border-color: var(--amber);
   background: rgba(245, 158, 11, 0.08);
@@ -618,7 +621,7 @@ body.quick-review-active .device-add-group { margin-bottom: 0; }
   box-shadow: inset 0 0 0 1px var(--quick);
 }
 .input-box.carried-forward::before {
-  content: '↻ Carried forward - confirm or clear';
+  content: '↻ From last note - confirm or clear';
   display: block;
   margin-bottom: 6px;
   font-size: var(--fs-hint);
@@ -902,20 +905,6 @@ body.quick-review-active #alert_actions_section { margin-top: 12px; padding-top:
 }
 /* Resolving an entry means "dealt with", not "gone" - it stays readable and reversible. */
 .scraped-issue-row.resolved .scraped-issue-text { text-decoration: line-through; color: var(--muted); }
-/* How long a line has been riding along. A list that only ever grows stops being read, and by
-   day five a carried entry nobody has pruned looks exactly like one raised this morning. Shown
-   from the second review onward, quietly - it is a reason to look, not a warning. */
-.scraped-issue-carried {
-  flex: none;
-  font-size: var(--fs-hint);
-  font-weight: var(--fw-semibold);
-  color: var(--muted);
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 1px 8px;
-  white-space: nowrap;
-}
 /* The tool's reading of today's numbers, above the risks it isn't. No controls: these apply
    or they don't, and they change the moment the value does. */
 .checks-strip {
