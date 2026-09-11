@@ -3230,7 +3230,6 @@
     } else if (s.bloods_status === "not_checked") {
       addLine("Bloods: Not checked this review");
     } else if (s.bloods_status === "no_comment") {
-      addLine("Bloods: Not required");
     } else {
       const blLines = [];
       Object.keys(blMap).forEach((key) => {
@@ -3417,8 +3416,8 @@
     if (s.chk_bloods_nil_sig || s.bloods_status === "nil_sig") parts.push("Bloods nil sig.");
     else if (s.bloods_status === "improving") parts.push("Bloods improving.");
     else if (s.bloods_status === "not_checked") parts.push("Bloods not checked.");
-    else if (s.bloods_status === "no_comment") parts.push("Bloods not required.");
-    else {
+    else if (s.bloods_status === "no_comment") {
+    } else {
       const riskText = risks.join(" ").toLowerCase();
       const abnormal = activeIssuesList.filter((i) => (i.key || "").startsWith("bl_")).map((i) => i.text.replace(/^Abnormal /, ""));
       const quoted = (b) => new RegExp(`${b.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\d.])`).test(riskText);

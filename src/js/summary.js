@@ -286,7 +286,8 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     } else if (s.bloods_status === 'not_checked') {
         addLine('Bloods: Not checked this review');
     } else if (s.bloods_status === 'no_comment') {
-        addLine('Bloods: Not required');
+        // "Not required" means the bloods are not part of this review: nothing is written about
+        // them at all - not a line saying so, and not any values that happen to be entered.
     } else {
         const blLines = [];
         Object.keys(blMap).forEach(key => {
@@ -582,7 +583,7 @@ export function generateHandoverLine(s, activeIssuesList = [], cat = null, red =
     if (s.chk_bloods_nil_sig || s.bloods_status === 'nil_sig') parts.push('Bloods nil sig.');
     else if (s.bloods_status === 'improving') parts.push('Bloods improving.');
     else if (s.bloods_status === 'not_checked') parts.push('Bloods not checked.');
-    else if (s.bloods_status === 'no_comment') parts.push('Bloods not required.');
+    else if (s.bloods_status === 'no_comment') { /* not mentioned - see the note's bloods line */ }
     else {
         // A value a risk already quotes is left out here - "Bloods: Cr 180. CAT 1 - Renal - Cr
         // 180" said it twice in one cell. What's left are the abnormal results no risk names.

@@ -2783,14 +2783,14 @@ test('bloods already entered, or answered, are not asked about', async () => {
     close();
 });
 
-test('"Not required" is recorded as its own answer', async () => {
+test('"Not required" leaves bloods out of the note and the handover line', async () => {
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
     click(window, '#seg_bloods_status .seg-btn[data-value="no_comment"]');
     await tick(window, 600);
     generateNote(window, 'physical', 'CB');
     await tick(window, 600);
-    assert.match(document.getElementById('summary').value, /^Bloods: Not required$/m);
-    assert.match(document.getElementById('handoverLine').value, /Bloods not required\./);
+    assert.ok(!/Bloods/i.test(document.getElementById('summary').value), 'bloods not mentioned in the note');
+    assert.ok(!/Bloods/i.test(document.getElementById('handoverLine').value), 'nor on the handover line');
     close();
 });
