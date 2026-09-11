@@ -286,7 +286,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     } else if (s.bloods_status === 'not_checked') {
         addLine('Bloods: Not checked this review');
     } else if (s.bloods_status === 'no_comment') {
-        addLine('Bloods: No comment required');
+        addLine('Bloods: No comment');
     } else {
         const blLines = [];
         Object.keys(blMap).forEach(key => {

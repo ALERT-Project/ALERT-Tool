@@ -2245,7 +2245,7 @@
     } else if (s.bloods_status === "not_checked") {
       setChip("qrChipBloods", "\u2713 Not checked");
     } else if (s.bloods_status === "no_comment") {
-      setChip("qrChipBloods", "\u2713 No comment required");
+      setChip("qrChipBloods", "\u2713 No comment");
     } else {
       const n = Object.keys(NOTE_BLOOD_LABELS).filter((k) => s[`bl_${k}`]).length;
       setChip("qrChipBloods", n ? `\u2713 ${n} result${n === 1 ? "" : "s"} entered` : "");
@@ -3230,7 +3230,7 @@
     } else if (s.bloods_status === "not_checked") {
       addLine("Bloods: Not checked this review");
     } else if (s.bloods_status === "no_comment") {
-      addLine("Bloods: No comment required");
+      addLine("Bloods: No comment");
     } else {
       const blLines = [];
       Object.keys(blMap).forEach((key) => {

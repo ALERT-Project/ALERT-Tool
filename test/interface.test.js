@@ -2783,14 +2783,14 @@ test('bloods already entered, or answered, are not asked about', async () => {
     close();
 });
 
-test('"No comment required" is recorded as its own answer', async () => {
+test('"No comment" is recorded as its own answer', async () => {
     const { window, document, close } = await loadTool();
     type(window, 'ptName', 'ABC');
     click(window, '#seg_bloods_status .seg-btn[data-value="no_comment"]');
     await tick(window, 600);
     generateNote(window, 'physical', 'CB');
     await tick(window, 600);
-    assert.match(document.getElementById('summary').value, /Bloods: No comment required/);
+    assert.match(document.getElementById('summary').value, /^Bloods: No comment$/m);
     assert.match(document.getElementById('handoverLine').value, /Bloods no comment\./);
     close();
 });

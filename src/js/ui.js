@@ -977,7 +977,7 @@ export function renderQuickChips(s) {
     } else if (s.bloods_status === 'not_checked') {
         setChip('qrChipBloods', '✓ Not checked');
     } else if (s.bloods_status === 'no_comment') {
-        setChip('qrChipBloods', '✓ No comment required');
+        setChip('qrChipBloods', '✓ No comment');
     } else {
         // Counted off the note's own map, so the chip can never promise a result the note
         // then leaves out.
