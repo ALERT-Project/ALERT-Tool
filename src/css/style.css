@@ -333,6 +333,9 @@ header h1 .logo-em {
 .prompt-row-label { font-size: var(--fs-base); font-weight: var(--fw-semibold); color: var(--ink); }
 .prompt-row-hint { display: block; margin-top: 2px; font-size: var(--fs-sm); font-weight: normal; color: var(--muted); }
 .prompt-row-wide { grid-column: 2 / -1; }
+/* A small box sits beside its label rather than out at the far edge of the dialog. */
+.prompt-row-inline { grid-template-columns: 36px auto 1fr; }
+.prompt-row-inline > input { justify-self: start; margin-left: 8px; }
 .prompt-row-actions { display: flex; gap: 8px; }
 .prompt-row-link {
   background: none;
