@@ -148,7 +148,7 @@ export function evaluateRisks(s, ctx = {}) {
     };
 
     // Nothing derived from bloods fires when the clinician has said they weren't checked.
-    // "No comment required" reads like "not checked" to the rules: the clinician has said the
+    // "Not required" reads like "not checked" to the rules: the clinician has said the
     // bloods are not part of this review's findings - often because the home team has them in
     // hand - so nothing is flagged from them.
     const bloodsReviewed = !s.chk_bloods_nil_sig && !['nil_sig', 'not_checked', 'no_comment'].includes(s.bloods_status);
