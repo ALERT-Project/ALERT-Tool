@@ -1729,7 +1729,7 @@ test('with the method already chosen, the prompt asks only for the initials', as
 
     click(window, '#btn_generate_summary');
     assert.equal(document.getElementById('reviewMethodPrompt').style.display, 'flex');
-    assert.equal(document.getElementById('review_prompt_method_actions').style.display, 'none',
+    assert.equal(document.getElementById('review_prompt_method').style.display, 'none',
         'the answered half is not asked again');
     assert.equal(document.getElementById('review_prompt_continue_actions').style.display, 'flex');
 
@@ -1810,16 +1810,15 @@ test('a COPD patient at target still scores, and the calculator says so', async 
     close();
 });
 
-test('the DMR prompt stops being a question when it has two to ask', async () => {
-    // A heading reading "How did you review this patient?" with an initials box directly under
-    // it reads as though the box were the answer to it. The initials cannot move below the
-    // buttons either - those dismiss the dialog - so the title gives way instead.
+test('the DMR prompt shows a row for each question still open, and titles itself to fit', async () => {
+    // One question: the title asks it. Several: the title steps back to a heading and each row
+    // carries its own label. Rows already answered are not shown at all.
     const shape = (document) => ({
         title: document.getElementById('review_prompt_title').textContent,
         initials: document.getElementById('review_prompt_initials').style.display !== 'none',
-        methodQ: document.getElementById('review_prompt_method_label').style.display !== 'none',
-        initialsQ: document.getElementById('review_prompt_initials_label').style.display !== 'none',
-        buttons: document.getElementById('review_prompt_method_actions').style.display !== 'none'
+        bloods: document.getElementById('review_prompt_bloods').style.display !== 'none',
+        method: document.getElementById('review_prompt_method').style.display !== 'none',
+        writeNote: document.getElementById('review_prompt_continue_actions').style.display !== 'none'
     });
 
     {
@@ -1828,12 +1827,12 @@ test('the DMR prompt stops being a question when it has two to ask', async () =>
         await tick(window);
         click(window, '#btn_generate_summary');
         const s = shape(document);
-        assert.equal(s.title, 'Helpful hints', 'the title stops asking');
-        assert.ok(s.initials && s.methodQ && s.buttons, 'and both questions are labelled');
+        assert.equal(s.title, 'Helpful hints');
+        assert.ok(s.initials && s.bloods && s.method, 'all three rows');
+        assert.ok(!s.writeNote, 'the method buttons write the note');
         close();
     }
 
-    // One question left, and the title asks it - no second heading repeating it underneath.
     {
         const { window, document, close } = await loadTool();
         type(window, 'ptName', 'ABC');
@@ -1843,8 +1842,7 @@ test('the DMR prompt stops being a question when it has two to ask', async () =>
         click(window, '#btn_generate_summary');
         const s = shape(document);
         assert.equal(s.title, 'How did you review this patient?');
-        assert.ok(!s.initials, 'nothing to ask about the initials');
-        assert.ok(!s.methodQ, 'and the title is not echoed above the buttons');
+        assert.ok(!s.initials && !s.bloods && s.method);
         close();
     }
 
@@ -1858,8 +1856,7 @@ test('the DMR prompt stops being a question when it has two to ask', async () =>
         const s = shape(document);
         assert.equal(s.title, 'Initials for Excel handover',
             'the wording never implies a stored, signed record - it is one spreadsheet cell');
-        assert.ok(s.initials && !s.buttons);
-        assert.ok(!s.initialsQ, 'the title carries it, so the label does not repeat it');
+        assert.ok(s.initials && !s.method && s.writeNote);
         close();
     }
 });
@@ -2702,6 +2699,24 @@ test('a pre-stepdown review cannot be a chart review, and the handover line says
     await tick(window);
     assert.equal(document.getElementById('reviewModeTypeWrapper').style.display, '');
     assert.equal(document.querySelector('input[name="reviewModeType"]:checked'), null);
+    close();
+});
+
+test('an ICU pre-stepdown review is never asked how the patient was reviewed', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, 'input[name="reviewType"][value="pre"]');
+    await tick(window);
+    click(window, 'input[name="reviewTeam"][value="ICU"]');
+    await tick(window);
+    click(window, 'input[name="clinicianGrade"][value="CNC"]');
+    type(window, 'ptName', 'ABC');
+    // Even with the radios blanked behind the form's back.
+    document.querySelectorAll('input[name="reviewModeType"]').forEach(r => r.checked = false);
+    await tick(window);
+    click(window, '#btn_generate_summary');
+    assert.equal(document.getElementById('review_prompt_method').style.display, 'none',
+        'no method row - neither the buttons nor the question');
+    assert.notEqual(document.getElementById('review_prompt_title').textContent, 'How did you review this patient?');
     close();
 });
 

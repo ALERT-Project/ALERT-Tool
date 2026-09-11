@@ -81,8 +81,8 @@ export function generateNote(window, method = 'physical', initials) {
     }
     // Only the halves still unanswered are on show, so the method buttons are not always the
     // way out of this dialog.
-    const methodActions = window.document.getElementById('review_prompt_method_actions');
-    if (methodActions && methodActions.style.display === 'none') {
+    const methodRow = window.document.getElementById('review_prompt_method');
+    if (methodRow && methodRow.style.display === 'none') {
         click(window, '#btn_prompt_continue');
     } else {
         click(window, method === 'chart' ? '#btn_method_chart' : '#btn_method_physical');

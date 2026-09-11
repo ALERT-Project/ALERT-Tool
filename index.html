@@ -2249,40 +2249,49 @@
          line carries no initials. Deliberately not called signing: nothing here is recorded
          anywhere, and the initials reach the Excel handover line and nothing else. -->
     <div id="reviewMethodPrompt" class="modal-overlay">
-        <div class="modal-content modal-confirm">
-            <div class="modal-confirm-icon">🩺</div>
+        <div class="modal-content modal-confirm review-prompt">
             <h3 id="review_prompt_title" class="modal-confirm-title">How did you review this patient?</h3>
-            <div id="review_prompt_initials" class="prompt-initials">
-                <label id="review_prompt_initials_label" for="promptReviewerInitials">Initials for Excel handover</label>
-                <input id="promptReviewerInitials" type="text" maxlength="3" autocomplete="off"
-                    style="text-transform:uppercase" />
-            </div>
-            <!-- Asked only when no bloods have been entered and no answer given for them. Easy to
-                 check and then forget to write down, and the note otherwise says nothing about
-                 them at all. An answer picked here is set as the Bloods card's own answer; none
-                 at all is fine, and the note still generates. "Enter bloods" goes to the card
-                 instead of generating. Above the buttons below, which dismiss the dialog. -->
-            <div id="review_prompt_bloods" class="prompt-bloods">
-                <div id="review_prompt_bloods_label" class="prompt-question">No bloods entered</div>
-                <div class="prompt-bloods-actions">
-                    <button type="button" id="btn_prompt_bloods_enter" class="btn small">Enter bloods</button>
-                    <button type="button" class="btn small prompt-bloods-status" data-value="nil_sig">Nil significant</button>
-                    <button type="button" class="btn small prompt-bloods-status" data-value="improving">Improving</button>
-                    <button type="button" class="btn small prompt-bloods-status" data-value="not_checked">Not checked</button>
-                    <button type="button" class="btn small prompt-bloods-status" data-value="no_comment">No comment required</button>
+            <!-- One row per question, each on its own line. The method comes last on purpose: its
+                 buttons write the note and close the dialog, so anything below them could never
+                 be answered. Only the rows still unanswered are shown. -->
+            <div class="prompt-rows">
+                <div id="review_prompt_initials" class="prompt-row">
+                    <span class="prompt-row-icon" aria-hidden="true">✍️</span>
+                    <label id="review_prompt_initials_label" class="prompt-row-label" for="promptReviewerInitials">
+                        Initials<span class="prompt-row-hint">Excel handover line only</span>
+                    </label>
+                    <input id="promptReviewerInitials" class="prompt-row-initials" type="text" maxlength="3"
+                        autocomplete="off" style="text-transform:uppercase" />
+                </div>
+                <!-- Asked only when no bloods have been entered and no answer given for them - easy
+                     to check and then forget to write down. A choice here becomes the Bloods card's
+                     own answer; none at all is fine. "Enter bloods" goes to the card instead. -->
+                <div id="review_prompt_bloods" class="prompt-row">
+                    <span class="prompt-row-icon" aria-hidden="true">🩸</span>
+                    <div id="review_prompt_bloods_label" class="prompt-row-label">
+                        Bloods<span class="prompt-row-hint">None entered yet</span>
+                    </div>
+                    <button type="button" id="btn_prompt_bloods_enter" class="prompt-row-link">Enter bloods →</button>
+                    <div class="prompt-seg prompt-row-wide" role="group" aria-label="Bloods">
+                        <button type="button" class="prompt-bloods-status" data-value="nil_sig">Nil sig</button>
+                        <button type="button" class="prompt-bloods-status" data-value="improving">Improving</button>
+                        <button type="button" class="prompt-bloods-status" data-value="not_checked">Not checked</button>
+                        <button type="button" class="prompt-bloods-status" data-value="no_comment">No comment</button>
+                    </div>
+                </div>
+                <div id="review_prompt_method" class="prompt-row">
+                    <span class="prompt-row-icon" aria-hidden="true">🩺</span>
+                    <div id="review_prompt_method_label" class="prompt-row-label">
+                        Review method<span class="prompt-row-hint">Tap one to write the note</span>
+                    </div>
+                    <div class="prompt-row-actions" id="review_prompt_method_actions">
+                        <button id="btn_method_physical" class="btn small btn-confirm-yes">Physical r/v</button>
+                        <button id="btn_method_chart" class="btn small">Chart review</button>
+                    </div>
                 </div>
             </div>
-            <!-- Carries the method question when the title is covering both halves, so each
-                 answer sits directly under the question it answers. The initials have to come
-                 first despite being the lesser question: these buttons dismiss the dialog, so
-                 anything below them can never be filled in. -->
-            <div id="review_prompt_method_label" class="prompt-question">How did you review this patient?</div>
-            <div class="modal-confirm-actions" id="review_prompt_method_actions">
-                <button id="btn_method_physical" class="btn small btn-confirm-yes">Physical r/v</button>
-                <button id="btn_method_chart" class="btn small">Chart review</button>
-            </div>
             <div class="modal-confirm-actions" id="review_prompt_continue_actions">
-                <button id="btn_prompt_continue" class="btn small btn-confirm-yes">Continue</button>
+                <button id="btn_prompt_continue" class="btn small btn-confirm-yes">Write note</button>
             </div>
         </div>
     </div>

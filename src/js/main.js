@@ -143,37 +143,27 @@ function initialize() {
     const openReviewPrompt = (askMethod, askInitials, askBloods = false) => {
         const modal = $('reviewMethodPrompt');
         if (!modal) return;
-        const initialsBox = $('review_prompt_initials');
-        const methodActions = $('review_prompt_method_actions');
         const continueActions = $('review_prompt_continue_actions');
         const title = $('review_prompt_title');
-        if (initialsBox) initialsBox.style.display = askInitials ? 'block' : 'none';
-        const bloodsBox = $('review_prompt_bloods');
-        if (bloodsBox) {
-            bloodsBox.style.display = askBloods ? 'block' : 'none';
-            if (askBloods) bloodsBox.dataset.asked = 'true';
-        }
+        // A row per question, and only the rows still unanswered. The method row's buttons write
+        // the note, so with no method to ask the footer button does it instead.
+        const showRow = (id, on) => { const row = $(id); if (row) row.style.display = on ? '' : 'none'; };
+        showRow('review_prompt_initials', askInitials);
+        showRow('review_prompt_bloods', askBloods);
+        showRow('review_prompt_method', askMethod);
+        if (askBloods) $('review_prompt_bloods').dataset.asked = 'true';
         document.querySelectorAll('.prompt-bloods-status').forEach(b => b.classList.remove('active'));
-        if (methodActions) methodActions.style.display = askMethod ? 'flex' : 'none';
         if (continueActions) continueActions.style.display = askMethod ? 'none' : 'flex';
 
-        // With one question to ask, the title asks it and the label for that half is hidden
-        // rather than repeating it directly underneath. With two, the title stops being a
-        // question - a heading asking about the review method with an initials box under it
-        // reads as though the box were the answer - and both halves carry their own label.
+        // Each row carries its own short label, so with one question the title can ask it
+        // outright and with several it steps back to a heading.
         //
         // Never phrased as signing: nothing in this tool is recorded anywhere, and initials
         // that read as a signature imply a stored record that does not exist. They reach the
         // Excel handover line and nothing else, so that is what the wording says.
-        const bothAsked = [askMethod, askInitials, askBloods].filter(Boolean).length > 1;
-        const methodLabel = $('review_prompt_method_label');
-        const initialsLabel = $('review_prompt_initials_label');
-        const bloodsLabel = $('review_prompt_bloods_label');
-        if (methodLabel) methodLabel.style.display = bothAsked ? 'block' : 'none';
-        if (initialsLabel) initialsLabel.style.display = bothAsked ? 'block' : 'none';
-        if (bloodsLabel) bloodsLabel.style.display = bothAsked ? 'block' : 'none';
+        const several = [askMethod, askInitials, askBloods].filter(Boolean).length > 1;
         if (title) {
-            if (bothAsked) title.textContent = 'Helpful hints';
+            if (several) title.textContent = 'Helpful hints';
             else if (askMethod) title.textContent = 'How did you review this patient?';
             else if (askBloods) title.textContent = 'No bloods entered';
             else title.textContent = 'Initials for Excel handover';
@@ -238,7 +228,12 @@ function initialize() {
     });
 
     function triggerGenerate({ justAsked = false } = {}) {
-        const askMethod = !getReviewMethod();
+        // Pre-Stepdown is only ever a physical review, so it is never asked - and is set here as
+        // well as when the stage is chosen, so no path that leaves the radios blank can bring
+        // the question back.
+        const isPre = document.querySelector('input[name="reviewType"]:checked')?.value === 'pre';
+        if (isPre && getReviewMethod() !== 'physical') setReviewMethod('physical');
+        const askMethod = !isPre && !getReviewMethod();
         const askInitials = !justAsked && needsInitials();
         const askBloods = !justAsked && needsBloods();
         if (askMethod || askInitials || askBloods) {
