@@ -462,6 +462,12 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
 
     lines.push('PLAN:');
 
+    // Said again here as well as under the category: the plan is the part of a Pre-Stepdown
+    // note the ward reads for what happens next.
+    if (s.stepdown_suitable === true && s.reviewType === 'pre') {
+        lines.push('- Patient is suitable for ward stepdown.');
+    }
+
     if (s.stepdown_suitable === false) {
         lines.push(`- ICU senior review requested - patient not currently suitable for ward stepdown.`);
         lines.push(`- Please contact ALERT for review when appropriate.`);

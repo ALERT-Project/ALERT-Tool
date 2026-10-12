@@ -2794,3 +2794,112 @@ test('"Not required" leaves bloods out of the note and the handover line', async
     assert.ok(!/Bloods/i.test(document.getElementById('handoverLine').value), 'nor on the handover line');
     close();
 });
+
+// A note typed straight into DMR, with the tool's headings in its own order: PATIENT FACTORS
+// above Bloods and Lines. The factors section used to run on to IDENTIFIED and brought every
+// blood result and device into the list. Shortened from a real report, de-identified.
+const HAND_WRITTEN_NOTE = [
+    'ALERT CNS Pre-Stepdown Review',
+    'Time of review: 0200Hrs',
+    'ICU LOS: 4 days',
+    'ALERT Nursing Review Category - CAT 1',
+    'PMH:',
+    '-ESRF - Anuric on PD',
+    '-T2DM',
+    'A-E ASSESSMENT:',
+    'ADDS = 1',
+    'B: RR 15-20, SpO2 100%, 4LNP',
+    'PATIENT FACTORS:',
+    '- Normal D+F',
+    '- 1.5L Fluid Restriction.',
+    'Bloods (11/10/2026 0716Hrs):',
+    'Hb 117,',
+    'K 3.7',
+    'LINES, DRAINS, DEVICES & WOUNDS:',
+    '- PICC - R) Forearm - inserted 8/10/26',
+    'IDENTIFIED ICU READMISSION RISK FACTORS:',
+    '- Discharged after-hours',
+    'PLAN:',
+    '- ALERT nursing post ICU reviews continue.'
+].join('\n');
+
+const factorRows = document => [...document.querySelectorAll('#patient_factors_list .scraped-issue-text')]
+    .map(e => e.textContent);
+
+test('patient factors stop at the next heading, whatever order the note is in', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'importText', HAND_WRITTEN_NOTE);
+    click(window, '#runImport');
+    await tick(window);
+    assert.deepEqual(factorRows(document), ['Normal D+F', '1.5L Fluid Restriction.']);
+    close();
+});
+
+test('a note the tool did not write says so until the note is generated', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'importText', HAND_WRITTEN_NOTE);
+    click(window, '#runImport');
+    await tick(window);
+    const region = document.getElementById('noticeRegion');
+    assert.ok(!region.hidden && /Non-standard ALERT note imported/.test(region.textContent));
+
+    generateNote(window, 'physical', 'CB');
+    await tick(window);
+    assert.ok(!/Non-standard/.test(region.textContent), 'gone once the note is generated');
+    close();
+});
+
+test('wrapped factor lines are rejoined, bare subheadings dropped, and a tool note raises no warning', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'importText', [
+        'Time of review: 10:00',
+        'ALERT Nursing Review Category - CAT 1',
+        'A-E ASSESSMENT:',
+        'ADDS: 4',
+        'LINES, DRAINS, DEVICES & WOUNDS:',
+        '- PIVC - L) hand - inserted 12/10/26',
+        'PATIENT FACTORS:',
+        '- Sleep: No sleep issues identified',
+        '- Hx:',
+        '- CVA following cessation of',
+        'anticoagulation for lung biopsy',
+        '- Cardiomyopathy - EF recovered to',
+        '50-55% 2021',
+        '- COPD',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        '- Discharged after-hours',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n'));
+    click(window, '#runImport');
+    await tick(window);
+    // "identified" inside an item used to end the section there, losing everything after it.
+    assert.deepEqual(factorRows(document), [
+        'CVA following cessation of anticoagulation for lung biopsy',
+        'Cardiomyopathy - EF recovered to 50-55% 2021',
+        'COPD'
+    ]);
+    assert.ok(!/Non-standard/.test(document.getElementById('noticeRegion').textContent));
+    close();
+});
+
+test('Pre-Stepdown chosen before an import stays Pre-Stepdown, and the plan says suitable', async () => {
+    const { window, document, close } = await loadTool();
+    click(window, 'input[name="reviewType"][value="pre"]');
+    await tick(window);
+    type(window, 'importText', HAND_WRITTEN_NOTE);
+    click(window, '#runImport');
+    await tick(window);
+    assert.equal(document.querySelector('input[name="reviewType"]:checked').value, 'pre');
+
+    click(window, '#seg_stepdown_suitable .seg-btn[data-value="true"]');
+    await tick(window);
+    generateNote(window, 'physical', 'CB');
+    await tick(window);
+    const note = document.getElementById('summary').value;
+    const plan = note.slice(note.indexOf('PLAN:'));
+    assert.match(plan, /^- Patient is suitable for ward stepdown\.$/m);
+    assert.match(note.slice(0, note.indexOf('PLAN:')), /^Patient is suitable for ward stepdown\.$/m,
+        'still under the category as well');
+    close();
+});

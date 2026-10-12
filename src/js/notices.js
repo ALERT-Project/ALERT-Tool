@@ -26,6 +26,7 @@ const TONE_CLASS = { red: 'notice-red', amber: 'notice-amber', info: 'notice-inf
 // renumbering everything.
 export const NOTICE_PRIORITY = {
     NEW_RISK: 10,
+    NON_STANDARD_IMPORT: 15,
     HANDOVER: 20,
     DISCHARGE: 30,
     SCRAPED_REVIEW: 40,

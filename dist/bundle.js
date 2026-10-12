@@ -125,6 +125,7 @@
   var TONE_CLASS = { red: "notice-red", amber: "notice-amber", info: "notice-info" };
   var NOTICE_PRIORITY = {
     NEW_RISK: 10,
+    NON_STANDARD_IMPORT: 15,
     HANDOVER: 20,
     DISCHARGE: 30,
     SCRAPED_REVIEW: 40,
@@ -1984,6 +1985,7 @@
     if (qrPrompt) qrPrompt.style.display = "none";
     clearActiveIssues();
     clearNewRiskAlert();
+    clearNotice("non-standard-import");
     const bloodsGrid = document.querySelector(".bloods-grid");
     if (bloodsGrid) bloodsGrid.style.display = "";
     const gatesToHide = [
@@ -3351,6 +3353,9 @@
     }
     pushBlank();
     lines.push("PLAN:");
+    if (s.stepdown_suitable === true && s.reviewType === "pre") {
+      lines.push("- Patient is suitable for ward stepdown.");
+    }
     if (s.stepdown_suitable === false) {
       lines.push(`- ICU senior review requested - patient not currently suitable for ward stepdown.`);
       lines.push(`- Please contact ALERT for review when appropriate.`);
@@ -3483,6 +3488,14 @@
         html: `<div class="notice-title">\u{1F4CB} Previous review recommended discharge pending next bloods</div>
                    ${detail ? `<div class="notice-foot">Bloods being followed: ${detail}</div>` : ""}`,
         actions: [{ id: "dismiss-handover", label: "Dismiss", onClick: () => clearNotice("handover") }]
+      });
+    };
+    window.flagNonStandardImport = () => {
+      setNotice("non-standard-import", {
+        priority: NOTICE_PRIORITY.NON_STANDARD_IMPORT,
+        tone: "amber",
+        html: `<div class="notice-title">\u26A0 Non-standard ALERT note imported</div>
+                   <div class="notice-foot">Check the scraped information carefully, as it may not have imported accurately.</div>`
       });
     };
     window.refreshAddsOverrideUI = refreshAddsOverrideUI;
@@ -3621,6 +3634,7 @@
       );
       const handoverActions = $("handover_actions");
       if (handoverActions) handoverActions.style.display = "block";
+      clearNotice("non-standard-import");
       saveState(true);
     }
     $("btn_generate_summary")?.addEventListener("click", () => triggerGenerate());

@@ -627,6 +627,7 @@ export function clearData() {
     if (qrPrompt) qrPrompt.style.display = 'none';
     clearActiveIssues();
     clearNewRiskAlert();
+    clearNotice('non-standard-import');
     // Bloods must come back as a true null state, not 'nil significant' with the grid hidden.
     const bloodsGrid = document.querySelector('.bloods-grid');
     if (bloodsGrid) bloodsGrid.style.display = '';

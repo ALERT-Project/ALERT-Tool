@@ -39,9 +39,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Every import starts from a clean form. The importer writes only what its note mentions,
     // so anything the note is silent about would otherwise stay on screen and be read - and
     // written into the next DMR - as the imported patient's own.
-    function runImport(data) {
+    //
+    // The clear puts the review type back to Post-Stepdown, which is right when the form held
+    // the last patient. On an empty form the type was chosen for this import - Pre-Stepdown
+    // first, then paste - and resetting it hid the suitability question, so "Patient is
+    // suitable for ward stepdown" silently never reached the note.
+    function runImport(data, keepReviewType) {
+        const chosenType = document.querySelector('input[name="reviewType"]:checked')?.value;
         if (window.clearFormForImport) window.clearFormForImport();
+        if (keepReviewType && chosenType && chosenType !== 'post') {
+            const radio = document.querySelector(`input[name="reviewType"][value="${chosenType}"]`);
+            if (radio) {
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
         processDMR(data);
+        if (looksNonStandard(normaliseNote(data)) && window.flagNonStandardImport) window.flagNonStandardImport();
         modal.style.display = 'none';
         if (overwriteModal) overwriteModal.style.display = 'none';
         // Trigger generic input event to update calculations
@@ -60,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 overwriteModal.style.display = 'flex';
                 return;
             }
-            runImport(data);
+            runImport(data, true);
         });
     }
 
@@ -163,10 +177,67 @@ document.addEventListener('DOMContentLoaded', () => {
     // always keep the tool's "- ": a note copied back out of it can come with the dash gone and
     // an invisible character in its place, and a section read only by its dashes then imported
     // as empty.
+    //
+    // A line can also arrive broken in two - DMR, or whatever the note travelled through, wraps
+    // long lines - and each half used to come back as a row of its own. In a section that has
+    // bullets, a line without one that starts lower case, with a digit or with punctuation is
+    // the tail of the line above and is put back on it. A line starting with a capital is left
+    // as its own item: a hand-written list that has lost some of its dashes looks like that.
+    //
+    // A bare label - "Hx:" on a line of its own - is a subheading someone typed over the items,
+    // not an item, and is dropped.
     function sectionItems(block) {
-        return block.split('\n')
-            .map(l => l.trim().replace(/^[-\u2022*]\s*/, '').trim())
-            .filter(Boolean);
+        const raw = block.split('\n').map(l => l.trim()).filter(Boolean);
+        const bullet = /^[-\u2022*]\s*/;
+        const hasBullets = raw.some(l => bullet.test(l));
+        const items = [];
+        raw.forEach(l => {
+            if (hasBullets && items.length && !bullet.test(l) && /^[a-z0-9(\[,;.&/%-]/.test(l)) {
+                items[items.length - 1] += ` ${l}`;
+                return;
+            }
+            const text = l.replace(bullet, '').trim();
+            if (!text || BARE_LABEL.test(text)) return;
+            items.push(text);
+        });
+        return items;
+    }
+
+    const BARE_LABEL = /^[A-Za-z][\w /&+-]{0,30}:$/;
+
+    // Where a section stops when it is not where this tool would have put it. A note typed
+    // straight into DMR can carry the tool's headings in its own order - PATIENT FACTORS above
+    // Bloods and Lines - and a section read only up to IDENTIFIED or PLAN then swallowed the
+    // bloods and every device after it. Anchored to the start of a line, so the same words
+    // inside an item ("Sleep: No sleep issues identified") do not end the section early.
+    const NEXT_SECTION = /^[ \t]*(?:Bloods\b|LINES[,\s]+DRAINS|DEVICES:|Checks:|A-E ASSESSMENT|PMH:|Significant Past Medical History|PICS Assessment|GOC:|Allergies:|Other:|IDENTIFIED|PLAN:|ICU Course Summary|Reason for ICU Admission|ALERT Nursing Review)/im;
+
+    function sectionAfter(text, heading) {
+        const start = text.match(heading);
+        if (!start) return null;
+        const rest = text.slice(start.index + start[0].length);
+        const end = rest.search(NEXT_SECTION);
+        return end === -1 ? rest : rest.slice(0, end);
+    }
+
+    // Whether the pasted note looks like one this tool wrote. Anything else is still imported -
+    // there is nothing to decide, the clinician pasted it because they want it in - but it is
+    // read with patterns written for the tool's own notes, so the form says so and keeps saying
+    // so until the note is generated. Deliberately only the markers the tool has always written
+    // the same way: its section order, "ADDS: n" and an HH:MM review time.
+    function looksNonStandard(text) {
+        const order = [
+            /^[ \t]*PMH:/im, /^[ \t]*A-E ASSESSMENT/im, /^[ \t]*Bloods\b/im,
+            /^[ \t]*(?:LINES[,\s]+DRAINS|DEVICES:)/im, /^[ \t]*PATIENT FACTORS:/im,
+            /^[ \t]*IDENTIFIED/im, /^[ \t]*PLAN:/im
+        ].map(re => text.search(re)).filter(i => i >= 0);
+        if (order.some((at, i) => i > 0 && at < order[i - 1])) return true;
+        if (!/^[ \t]*A-E ASSESSMENT/im.test(text) && !/^[ \t]*IDENTIFIED/im.test(text)) return true;
+        const time = text.match(/Time of review:[ \t]*(\S+)/i);
+        if (time && !/^\d{1,2}:\d{2}$/.test(time[1])) return true;
+        const adds = text.match(/^[ \t]*ADDS\b(.*)$/im);
+        if (adds && !/^:\s*\d/.test(adds[1])) return true;
+        return false;
     }
 
     // Characters DMR and word processors put into pasted text that look like the tool's own
@@ -603,9 +674,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // factors list comes back into it, so a note that has been through several reviews
         // still carries the context that has been travelling with the patient rather than
         // starting again from whatever this import happens to recognise.
-        const factorsSection = text.match(/PATIENT FACTORS:([\s\S]*?)(?:IDENTIFIED|PLAN:)/i);
-        if (factorsSection && factorsSection[1] && window.addActiveIssue) {
-            sectionItems(factorsSection[1])
+        const factorsSection = sectionAfter(text, /^[ \t]*PATIENT FACTORS:/im);
+        if (factorsSection && window.addActiveIssue) {
+            sectionItems(factorsSection)
                 .forEach((l, idx) => {
                     const line = readCarriedLine(l);
                     if (!line.text) return;

@@ -80,6 +80,17 @@ function initialize() {
             actions: [{ id: 'dismiss-handover', label: 'Dismiss', onClick: () => clearNotice('handover') }]
         });
     };
+    // Raised by plugins/importer.js when the pasted note does not look like one this tool wrote.
+    // No dismiss button: it stays until the note is generated, which is the point at which the
+    // imported information has either been checked or is about to go into DMR unchecked.
+    window.flagNonStandardImport = () => {
+        setNotice('non-standard-import', {
+            priority: NOTICE_PRIORITY.NON_STANDARD_IMPORT,
+            tone: 'amber',
+            html: `<div class="notice-title">⚠ Non-standard ALERT note imported</div>
+                   <div class="notice-foot">Check the scraped information carefully, as it may not have imported accurately.</div>`
+        });
+    };
     // plugins/adds_calc.js pings this after each recalculation.
     window.refreshAddsOverrideUI = refreshAddsOverrideUI;
 
@@ -279,6 +290,7 @@ function initialize() {
         );
         const handoverActions = $('handover_actions');
         if (handoverActions) handoverActions.style.display = 'block';
+        clearNotice('non-standard-import');
 
         saveState(true);
     }
