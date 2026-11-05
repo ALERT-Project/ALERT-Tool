@@ -1890,6 +1890,72 @@ test('the MODS checkbox records MODS, and the note reports it', async () => {
     close();
 });
 
+test('clearing the form puts the MODS controls away for the next patient', async () => {
+    // The clear reset the MODS state but not what it draws: the next patient opened with the
+    // last one's MODS boxes on screen and a button saying the calculator was not applied.
+    const { window, document, close } = await loadTool();
+    click(window, '#btnAddsOverride');
+    await tick(window);
+    type(window, 'adds', '5');
+    type(window, 'addsOverrideNote', 'HR<120');
+    await tick(window);
+    assert.equal(document.getElementById('mods_inputs').style.display, 'block', 'sanity: MODS is showing');
+
+    click(window, '#clearDataBtnTop');
+    click(window, '#confirmClearData');
+    await tick(window);
+    assert.equal(document.getElementById('adds_override_box').style.display, 'none');
+    assert.equal(document.getElementById('mods_inputs').style.display, 'none');
+    assert.equal(document.getElementById('btnAddsOverride').textContent, 'Enter MODS');
+    assert.equal(document.getElementById('btnAddsOverride').getAttribute('aria-pressed'), 'false');
+    assert.equal(document.getElementById('chk_use_mods').checked, false);
+    assert.equal(document.getElementById('adds').value, '');
+    close();
+});
+
+test('switching MODS off takes the MODS score with it', async () => {
+    // With the calculator unused, the MODS number stayed in the score box and was then
+    // reported as an ADDS - "Elevated ADDS 5" for a patient nobody had scored on ADDS.
+    const { window, document, close } = await loadTool();
+    click(window, '#btnAddsOverride');
+    await tick(window);
+    type(window, 'adds', '5');
+    await tick(window);
+    click(window, '#btnAddsOverride');
+    await tick(window);
+    assert.equal(document.getElementById('addsManual').value, 'false');
+    assert.equal(document.getElementById('adds').value, '', 'the score box is empty');
+    assert.equal(document.getElementById('atoe_adds').value, '', 'and so is its A-E twin');
+    assert.doesNotMatch(document.getElementById('scraped_issues_list').textContent, /ADDS 5/);
+    assert.equal(document.getElementById('catText').textContent, 'CAT 3');
+    close();
+});
+
+test('switching MODS off hands the score back to a calculator that is in use', async () => {
+    const { window, document, close } = await loadTool();
+    type(window, 'calc_rr', '30');
+    await tick(window);
+    assert.equal(document.getElementById('adds').value, '3', 'sanity: the calculator scores');
+    click(window, '#btnAddsOverride');
+    await tick(window);
+    type(window, 'adds', '6');
+    await tick(window);
+    click(window, '#btnAddsOverride');
+    await tick(window);
+    assert.equal(document.getElementById('adds').value, '3', 'the calculator total, not the MODS 6');
+    close();
+});
+
+test('the bloods grid shows units beside each range', async () => {
+    const { document, close } = await loadTool();
+    const range = id => document.getElementById(id).closest('.blood-item').querySelector('.range-subtext').textContent;
+    assert.match(range('bl_k'), /mmol\/L/);
+    assert.match(range('bl_hb'), /g\/L/);
+    assert.match(range('bl_cr_review'), /µmol\/L/);
+    assert.match(range('bl_aptt'), /\bs\)/);
+    close();
+});
+
 test('an untouched calculator does not wipe a score that was entered', async () => {
     // runCalc fires for things outside the calculator - the MODS box, the SpO2 target - and
     // wrote its total through unconditionally. An empty calculator totals 0, so those wrote a

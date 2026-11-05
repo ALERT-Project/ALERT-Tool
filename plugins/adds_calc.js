@@ -418,6 +418,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Switching MODS off hands the score back to the calculator. runCalc decides whether it has
+    // anything to say - an unused calculator writes nothing, so the score stays empty.
+    document.addEventListener('rerunAddsCalc', () => runCalc());
+
     // Reset Logic
     document.addEventListener('resetAddsCalc', () => {
         inputs.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });

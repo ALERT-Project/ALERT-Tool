@@ -69,7 +69,7 @@ The dead `adds >= 6` branch is collapsed into R-01 — there is no third ADDS ti
 | A-12 | After-hours stepdown, within 24h | intentionally drops off after 24h — home team reviews next day shift |
 | A-13 | Comorbidities: ≥3 → red, 1–2 → amber | |
 | A-14 | Any clinician-set gate answered Yes | resp, neuro, renal, infection, electrolyte, immobility, HAC, vasoactive, frailty, PICS, psych |
-| A-15 | PO4 <0.32 | moved down from R-14; 0.32–0.5 becomes a replacement prompt instead |
+| A-15 | PO4 <0.32 | moved down from R-14; 0.32–0.5 becomes a replacement prompt instead (C-08) |
 | A-16 | Na <125 or >155 → red | **bug fix.** Sodium was described inside the electrolyte gate but never opened it, so a Na of 122 with a normal potassium produced nothing at all. Found by the fixture suite |
 
 **Rhythm wording (A-02, A-03):** where `c_hr_rhythm` is recorded, the flag reads
@@ -91,8 +91,15 @@ Staged as `severity: 'info'` in the Review List and carried in the handover line
 | C-02 | INR abnormal, no target recorded | `INR 3.2 — target not documented` |
 | C-03 | APTT, as above | requires adding `aptt` to `GATE_LINKED_BLOODS` — it currently has no rule at all |
 | C-04 | Cr raised | `Cr 250 — confirm against baseline`. Safety net now that Cr no longer auto-opens the renal gate |
-| C-05 | Mg 0.7–1.0 | `Mg 0.85 — consider replacement`. Keeps Mg visible to 1.0 without scoring |
+| C-05 | Mg 0.7–0.8 | `Mg 0.75 - replace if not already given, then repeat level`. **Changed Nov 2026:** the band ran to 1.0 and said "consider replacement", so a Mg of 0.93 - inside the reference range - asked for replacement |
 | C-06 | Existing abnormal gate-linked bloods | unchanged |
+| C-07 | K 3.0–3.5 | `K+ 3.3 - replace if not already given, then repeat level` |
+| C-08 | PO4 0.32–0.5 | `PO4 0.4 - replace if not already given, then repeat level` |
+
+**Replacement wording (C-05, C-07, C-08):** by the time ALERT reviews, the team has often
+already replaced a low K or Mg, so a bare "consider replacement" asked them to do it again.
+All three prompts now read "replace if not already given, then repeat level" - the follow-up
+test is the point.
 
 New per-marker **target** fields beside INR and APTT, printed in the bloods line as
 `INR 3.2 (target 2-3)`.

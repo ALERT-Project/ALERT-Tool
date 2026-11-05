@@ -686,6 +686,12 @@ export function clearData() {
     const resetEv = new CustomEvent('resetAddsCalc');
     document.dispatchEvent(resetEv);
 
+    // The sweeps above reset the MODS state - the hidden field and the checkbox - but not what
+    // it draws, so the next patient opened with the last one's MODS boxes still on screen and
+    // a button saying the calculator was not applied.
+    const addsManual = $('addsManual'); if (addsManual) addsManual.value = 'false';
+    refreshAddsOverrideUI();
+
     // These are driven by the debounced compute() in main.js, not by computeAll, so clearing
     // the form left both mitigator boxes open on the next patient with the previous patient's
     // reason still in them.
@@ -824,12 +830,18 @@ export function setAddsOverride(manual, { focus = false } = {}) {
     } else {
         // Switching back to ADDS hands the field to the calculator again and clears the MODS
         // record, so a stale MODS score can't linger in the summary.
-        const calcTotal = $('calc_total_display')?.textContent?.trim();
+        //
+        // The score is emptied first and the calculator then asked to write its own total. It
+        // used to be overwritten only when the calculator showed something other than 0 - so
+        // with the calculator unused, the MODS number stayed in the box and was reported as an
+        // ADDS. The calculator already knows whether it has entries; asking it keeps that test
+        // in one place, and it writes the number rather than its "3 (M)" display text.
         const addsInput = $('adds');
-        if (addsInput && calcTotal && calcTotal !== '0') {
-            addsInput.value = calcTotal;
+        if (addsInput && addsInput.value !== '') {
+            addsInput.value = '';
             addsInput.dispatchEvent(new Event('input'));
         }
+        document.dispatchEvent(new CustomEvent('rerunAddsCalc'));
         const note = $('addsOverrideNote'); if (note) note.value = '';
         const score = $('mods_score'); if (score) score.value = '';
         const details = $('mods_details'); if (details) details.value = '';

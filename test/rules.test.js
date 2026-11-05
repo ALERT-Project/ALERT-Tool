@@ -88,7 +88,15 @@ test('dangerous electrolytes are red', () => {
 test('PO4 below 0.32 is amber, 0.32-0.5 is only a check', () => {
     assert.equal(catOf({ bl_phos: '0.28' }), 'CAT 2');
     assert.equal(catOf({ bl_phos: '0.40' }), 'CAT 3');
-    assert.ok(hasCheck({ bl_phos: '0.40' }, 'PO4 0.4 - replacement indicated'));
+    assert.ok(hasCheck({ bl_phos: '0.40' }, 'PO4 0.4 - replace if not already given, then repeat level'));
+});
+
+test('a low K prompts replacement only if not already given, and asks for the repeat level', () => {
+    // Often the team has already replaced it by the time ALERT reviews. "Consider replacement"
+    // told them to do it again; the follow-up they need is the repeat level.
+    assert.equal(catOf({ bl_k: '3.3' }), 'CAT 3');
+    assert.ok(hasCheck({ bl_k: '3.3' }, 'K+ 3.3 - replace if not already given, then repeat level'));
+    assert.ok(!hasCheck({ bl_k: '3.3' }, 'consider replacement'));
 });
 
 test('lactate above 4 is red, 2 to 4 is amber', () => {
@@ -117,10 +125,19 @@ test('recorded rhythm rides along in the wording', () => {
     assert.ok(hasFlag({ c_hr: '118', c_hr_rhythm: 'AF' }, 'Tachycardia HR 118 (AF)'));
 });
 
-test('magnesium flags below 0.7 and prompts replacement between 0.7 and 1.0', () => {
+test('magnesium flags below 0.7 and prompts replacement between 0.7 and 0.8', () => {
     assert.equal(catOf({ bl_mg: '0.62' }), 'CAT 2');
-    assert.equal(catOf({ bl_mg: '0.85' }), 'CAT 3');
-    assert.ok(hasCheck({ bl_mg: '0.85' }, 'Mg 0.85 - consider replacement'));
+    assert.equal(catOf({ bl_mg: '0.75' }), 'CAT 3');
+    assert.ok(hasCheck({ bl_mg: '0.75' }, 'Mg 0.75 - replace if not already given, then repeat level'));
+});
+
+test('a magnesium of 0.8 or above prompts nothing', () => {
+    // The band used to run to 1.0, so a Mg of 0.93 - inside the reference range - asked for
+    // replacement.
+    for (const mg of ['0.8', '0.85', '0.93']) {
+        assert.ok(!evaluate({ bl_mg: mg }).issues.some(i => i.key === 'chk_mg'), `Mg ${mg}`);
+        assert.equal(catOf({ bl_mg: mg }), 'CAT 3');
+    }
 });
 
 test('platelets flag under 20, not under 100', () => {
@@ -224,7 +241,8 @@ test('falling Hb adds context to a tachycardia without naming a cause', () => {
 test('interpretive blood rules stand down when bloods were not checked', () => {
     assert.equal(catOf({ bl_wcc: '18', bloods_status: 'not_checked' }), 'CAT 3');
     assert.equal(catOf({ bl_wcc: '18', chk_bloods_nil_sig: true }), 'CAT 3');
-    assert.ok(!hasCheck({ bl_mg: '0.85', bloods_status: 'not_checked' }, 'consider replacement'));
+    assert.ok(hasCheck({ bl_mg: '0.75' }, 'Mg 0.75 - replace'), 'sanity: it fires when checked');
+    assert.ok(!hasCheck({ bl_mg: '0.75', bloods_status: 'not_checked' }, 'Mg 0.75 - replace'));
 });
 
 test('life-threatening electrolytes fire regardless of the bloods status', () => {

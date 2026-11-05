@@ -448,6 +448,11 @@ export function evaluateRisks(s, ctx = {}) {
     // still - below 0.32 is where respiratory muscle weakness appears. The gentler end of each
     // becomes a replacement prompt instead. High ends are dropped: outside renal failure they
     // rarely change management, and the renal gate owns that picture.
+    //
+    // The prompt does not assume nothing has been done. By the time ALERT sees a low K or Mg the
+    // team has often already replaced it, and telling them to replace it again was wrong - what
+    // they need then is the repeat level. So it asks for both, conditionally.
+    const REPLACE_PROMPT = 'replace if not already given, then repeat level';
     const k = num(s.bl_k);
     const na = num(s.bl_na);
     const mg = num(s.bl_mg);
@@ -463,15 +468,17 @@ export function evaluateRisks(s, ctx = {}) {
         // risk. Potassium joins magnesium and phosphate here - between the risk threshold of
         // 3.0 and the bottom of the reference range there was previously nothing at all, so a
         // K of 3.2 produced no prompt of any kind.
-        if (k !== null && k >= 3.0 && k < normalRanges.k.low) addCheck(`K+ ${k} - consider replacement`, 'chk_k');
-        if (mg !== null && mg >= normalRanges.mg.low && mg < 1.0) addCheck(`Mg ${mg} - consider replacement`, 'chk_mg');
-        if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - replacement indicated`, 'chk_phos');
+        //
+        // Magnesium stops at 0.8, not 1.0. A prompt at 0.93 - comfortably inside the reference
+        // range - was being read as the tool not knowing what a normal magnesium is.
+        if (k !== null && k >= 3.0 && k < normalRanges.k.low) addCheck(`K+ ${k} - ${REPLACE_PROMPT}`, 'chk_k');
+        if (mg !== null && mg >= normalRanges.mg.low && mg < 0.8) addCheck(`Mg ${mg} - ${REPLACE_PROMPT}`, 'chk_mg');
+        if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - ${REPLACE_PROMPT}`, 'chk_phos');
         // Sodium is worth naming and not worth prompting on. Between the risk thresholds and
         // the reference range there was nothing at all, yet a sodium in that band is often a
         // diagnosis in its own right rather than a number to top up - and correcting it is the
         // treating team's call, not ALERT's. So it is stated, with who owns it, and no action
-        // is suggested. The other three say "consider replacement"; this one deliberately
-        // does not.
+        // is suggested. The other three prompt replacement; this one deliberately does not.
         if (na !== null && na >= 125 && na < normalRanges.na.low) {
             addCheck(`Na ${na} - hyponatraemia; correction directed by the treating team`, 'chk_na');
         } else if (na !== null && na > normalRanges.na.high && na <= 155) {

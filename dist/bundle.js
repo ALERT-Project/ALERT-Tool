@@ -864,6 +864,7 @@
       const isRed = s.neuroConcern === "severe";
       add(isRed ? red : amber, sentenceCase(txt), "neuroConcern", isRed ? "red" : "amber", s.neuroType_note);
     }
+    const REPLACE_PROMPT = "replace if not already given, then repeat level";
     const k = num(s.bl_k);
     const na = num(s.bl_na);
     const mg = num(s.bl_mg);
@@ -872,9 +873,9 @@
     const phosAbnormal = phos !== null && phos < 0.32;
     const naAbnormal = na !== null && (na < 125 || na > 155);
     if (bloodsReviewed) {
-      if (k !== null && k >= 3 && k < normalRanges.k.low) addCheck(`K+ ${k} - consider replacement`, "chk_k");
-      if (mg !== null && mg >= normalRanges.mg.low && mg < 1) addCheck(`Mg ${mg} - consider replacement`, "chk_mg");
-      if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - replacement indicated`, "chk_phos");
+      if (k !== null && k >= 3 && k < normalRanges.k.low) addCheck(`K+ ${k} - ${REPLACE_PROMPT}`, "chk_k");
+      if (mg !== null && mg >= normalRanges.mg.low && mg < 0.8) addCheck(`Mg ${mg} - ${REPLACE_PROMPT}`, "chk_mg");
+      if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - ${REPLACE_PROMPT}`, "chk_phos");
       if (na !== null && na >= 125 && na < normalRanges.na.low) {
         addCheck(`Na ${na} - hyponatraemia; correction directed by the treating team`, "chk_na");
       } else if (na !== null && na > normalRanges.na.high && na <= 155) {
@@ -2062,6 +2063,9 @@
     if (orClear) orClear.style.display = "none";
     const resetEv = new CustomEvent("resetAddsCalc");
     document.dispatchEvent(resetEv);
+    const addsManual = $("addsManual");
+    if (addsManual) addsManual.value = "false";
+    refreshAddsOverrideUI();
     updateAgeMitigationUI();
     updateLosMitigationUI();
     computeAll();
@@ -2158,12 +2162,12 @@
         $("adds")?.select();
       }
     } else {
-      const calcTotal = $("calc_total_display")?.textContent?.trim();
       const addsInput = $("adds");
-      if (addsInput && calcTotal && calcTotal !== "0") {
-        addsInput.value = calcTotal;
+      if (addsInput && addsInput.value !== "") {
+        addsInput.value = "";
         addsInput.dispatchEvent(new Event("input"));
       }
+      document.dispatchEvent(new CustomEvent("rerunAddsCalc"));
       const note = $("addsOverrideNote");
       if (note) note.value = "";
       const score = $("mods_score");
