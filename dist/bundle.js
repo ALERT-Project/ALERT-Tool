@@ -873,9 +873,11 @@
     const phosAbnormal = phos !== null && phos < 0.32;
     const naAbnormal = na !== null && (na < 125 || na > 155);
     if (bloodsReviewed) {
-      if (k !== null && k >= 3 && k < normalRanges.k.low) addCheck(`K+ ${k} - ${REPLACE_PROMPT}`, "chk_k");
-      if (mg !== null && mg >= normalRanges.mg.low && mg < 0.8) addCheck(`Mg ${mg} - ${REPLACE_PROMPT}`, "chk_mg");
-      if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - ${REPLACE_PROMPT}`, "chk_phos");
+      const toReplace = [];
+      if (k !== null && k >= 3 && k < normalRanges.k.low) toReplace.push(`K+ ${k}`);
+      if (mg !== null && mg >= normalRanges.mg.low && mg < 0.8) toReplace.push(`Mg ${mg}`);
+      if (phos !== null && phos >= 0.32 && phos < 0.5) toReplace.push(`PO4 ${phos}`);
+      if (toReplace.length) addCheck(`${toReplace.join(", ")} - ${REPLACE_PROMPT}`, "chk_replace");
       if (na !== null && na >= 125 && na < normalRanges.na.low) {
         addCheck(`Na ${na} - hyponatraemia; correction directed by the treating team`, "chk_na");
       } else if (na !== null && na > normalRanges.na.high && na <= 155) {

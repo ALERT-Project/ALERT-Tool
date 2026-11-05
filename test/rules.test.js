@@ -131,11 +131,20 @@ test('magnesium flags below 0.7 and prompts replacement between 0.7 and 0.8', ()
     assert.ok(hasCheck({ bl_mg: '0.75' }, 'Mg 0.75 - replace if not already given, then repeat level'));
 });
 
+test('several low electrolytes share one check, with the prompt said once', () => {
+    // As three checks the note's Checks line read "K+ 3.3 - replace if not already given, then
+    // repeat level; Mg 0.75 - replace if not ..." - the same instruction three times over.
+    const checks = evaluate({ bl_k: '3.3', bl_mg: '0.75', bl_phos: '0.40' }).issues
+        .filter(i => i.list === 'checks');
+    assert.deepEqual(checks.map(c => c.text),
+        ['K+ 3.3, Mg 0.75, PO4 0.4 - replace if not already given, then repeat level']);
+});
+
 test('a magnesium of 0.8 or above prompts nothing', () => {
     // The band used to run to 1.0, so a Mg of 0.93 - inside the reference range - asked for
     // replacement.
     for (const mg of ['0.8', '0.85', '0.93']) {
-        assert.ok(!evaluate({ bl_mg: mg }).issues.some(i => i.key === 'chk_mg'), `Mg ${mg}`);
+        assert.ok(!evaluate({ bl_mg: mg }).issues.some(i => i.key === 'chk_replace'), `Mg ${mg}`);
         assert.equal(catOf({ bl_mg: mg }), 'CAT 3');
     }
 });

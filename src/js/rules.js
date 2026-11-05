@@ -471,9 +471,14 @@ export function evaluateRisks(s, ctx = {}) {
         //
         // Magnesium stops at 0.8, not 1.0. A prompt at 0.93 - comfortably inside the reference
         // range - was being read as the tool not knowing what a normal magnesium is.
-        if (k !== null && k >= 3.0 && k < normalRanges.k.low) addCheck(`K+ ${k} - ${REPLACE_PROMPT}`, 'chk_k');
-        if (mg !== null && mg >= normalRanges.mg.low && mg < 0.8) addCheck(`Mg ${mg} - ${REPLACE_PROMPT}`, 'chk_mg');
-        if (phos !== null && phos >= 0.32 && phos < 0.5) addCheck(`PO4 ${phos} - ${REPLACE_PROMPT}`, 'chk_phos');
+        //
+        // One check for all of them, with the prompt said once. As three separate checks the
+        // note's Checks line repeated the same instruction three times over.
+        const toReplace = [];
+        if (k !== null && k >= 3.0 && k < normalRanges.k.low) toReplace.push(`K+ ${k}`);
+        if (mg !== null && mg >= normalRanges.mg.low && mg < 0.8) toReplace.push(`Mg ${mg}`);
+        if (phos !== null && phos >= 0.32 && phos < 0.5) toReplace.push(`PO4 ${phos}`);
+        if (toReplace.length) addCheck(`${toReplace.join(', ')} - ${REPLACE_PROMPT}`, 'chk_replace');
         // Sodium is worth naming and not worth prompting on. Between the risk thresholds and
         // the reference range there was nothing at all, yet a sodium in that band is often a
         // diagnosis in its own right rather than a number to top up - and correcting it is the

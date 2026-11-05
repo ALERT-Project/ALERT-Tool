@@ -99,7 +99,9 @@ Staged as `severity: 'info'` in the Review List and carried in the handover line
 **Replacement wording (C-05, C-07, C-08):** by the time ALERT reviews, the team has often
 already replaced a low K or Mg, so a bare "consider replacement" asked them to do it again.
 All three prompts now read "replace if not already given, then repeat level" - the follow-up
-test is the point.
+test is the point. When more than one is low they share a single check with the prompt said
+once - `K+ 3.3, Mg 0.75, PO4 0.4 - replace if not already given, then repeat level` - rather
+than repeating the instruction for each.
 
 New per-marker **target** fields beside INR and APTT, printed in the bloods line as
 `INR 3.2 (target 2-3)`.
