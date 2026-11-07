@@ -210,7 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bloods and Lines - and a section read only up to IDENTIFIED or PLAN then swallowed the
     // bloods and every device after it. Anchored to the start of a line, so the same words
     // inside an item ("Sleep: No sleep issues identified") do not end the section early.
-    const NEXT_SECTION = /^[ \t]*(?:Bloods\b|LINES[,\s]+DRAINS|DEVICES:|Checks:|A-E ASSESSMENT|PMH:|Significant Past Medical History|PICS Assessment|GOC:|Allergies:|Other:|IDENTIFIED|PLAN:|ICU Course Summary|Reason for ICU Admission|ALERT Nursing Review)/im;
+    //
+    // The score and the A-E letters are here too: a note that has lost its "A-E ASSESSMENT:"
+    // heading goes straight from PMH to "ADDS=1" and "A: Patent", and nothing else stops there.
+    const NEXT_SECTION = /^[ \t]*(?:Bloods\b|LINES[,\s]+DRAINS|DEVICES:|Checks:|A-E ASSESSMENT|PMH:|Significant Past Medical History|PICS Assessment|GOC:|Allergies:|Other:|IDENTIFIED|PLAN:|ICU Course Summary|Reason for ICU Admission|ALERT Nursing Review|PATIENT FACTORS:|ADDS\b|MODS\b|[A-E]:)/im;
 
     function sectionAfter(text, heading) {
         const start = text.match(heading);
@@ -220,11 +223,51 @@ document.addEventListener('DOMContentLoaded', () => {
         return end === -1 ? rest : rest.slice(0, end);
     }
 
+    // The note's opening lines. Not sections, but nothing runs on past one of them either.
+    const HEADER_LINE = /^[ \t]*(?:Patient:|Location:|Room:|Age:|Weight:|Time of review|Time since stepdown|ICU LOS|ICU Discharge|Stepdown (?:Date|Time)|Discharge (?:Date|Time))/i;
+
+    // The text of a box that prints on its heading's own line - "Reason for ICU Admission:",
+    // "Allergies:", "GOC:" - and runs on for as many lines as were typed into it. It ends at
+    // the blank line the tool always leaves after it, or at the next heading, which is all
+    // there is once a note has lost its blank lines in DMR. Read only to a blank line, the
+    // reason in such a note ran on through PMH, A-E, bloods and every device, and allergies
+    // and GOC kept their first line and dropped the rest.
+    //
+    // The heading can sit on a line of its own with its text below. A line DMR has wrapped
+    // comes back starting lower case and is put back on the end of the line above.
+    function blockAfter(text, heading) {
+        const start = text.match(heading);
+        if (!start) return '';
+        const lines = text.slice(start.index + start[0].length).split('\n');
+        const out = [];
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) {
+                if (out.length) break;
+                continue;
+            }
+            if (i > 0 && (NEXT_SECTION.test(lines[i]) || HEADER_LINE.test(lines[i]))) break;
+            if (out.length && /^[a-z]/.test(line)) out[out.length - 1] += ` ${line}`;
+            else out.push(line);
+        }
+        return out.join('\n');
+    }
+
+    // Belongs near the top, but a note that has passed through other hands can carry it
+    // anywhere. One came back with it in Patient Factors just above PLAN, as a bullet, and the
+    // next note carried it as a factor. It is read on its own, below, wherever it sits.
+    const CATEGORY_LINE = /^[ \t]*(?:[-\u2022*][ \t]*)?ALERT Nursing Review Category\b.*$/gim;
+
     // Whether the pasted note looks like one this tool wrote. Anything else is still imported -
     // there is nothing to decide, the clinician pasted it because they want it in - but it is
     // read with patterns written for the tool's own notes, so the form says so and keeps saying
-    // so until the note is generated. Deliberately only the markers the tool has always written
-    // the same way: its section order, "ADDS: n" and an HH:MM review time.
+    // so until the note is generated. Only what changes how the note is read: its section
+    // order, and the headings the sections are found by.
+    //
+    // It used to check the review time and the ADDS line for the tool's exact wording too.
+    // Clinicians retype both in DMR - "Time of review: 2115", "ADDS 5 for oxygen use" - and
+    // neither changes what is imported (the time is not read back at all), so tool-written
+    // notes were being called non-standard for a hand edit that cost nothing.
     function looksNonStandard(text) {
         const order = [
             /^[ \t]*PMH:/im, /^[ \t]*A-E ASSESSMENT/im, /^[ \t]*Bloods\b/im,
@@ -233,10 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ].map(re => text.search(re)).filter(i => i >= 0);
         if (order.some((at, i) => i > 0 && at < order[i - 1])) return true;
         if (!/^[ \t]*A-E ASSESSMENT/im.test(text) && !/^[ \t]*IDENTIFIED/im.test(text)) return true;
-        const time = text.match(/Time of review:[ \t]*(\S+)/i);
-        if (time && !/^\d{1,2}:\d{2}$/.test(time[1])) return true;
-        const adds = text.match(/^[ \t]*ADDS\b(.*)$/im);
-        if (adds && !/^:\s*\d/.test(adds[1])) return true;
         return false;
     }
 
@@ -244,10 +283,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // but are not: zero-width spaces, non-breaking spaces and hyphens, en and em dashes. Every
     // pattern in this file is written against the plain ones.
     function normaliseNote(text) {
-        return String(text || '')
+        return undoDoubleSpacing(String(text || '')
+            .replace(/\r\n?/g, '\n')
             .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
             .replace(/\u00A0/g, ' ')
-            .replace(/[\u2010-\u2015\u2212]/g, '-');
+            .replace(/[\u2010-\u2015\u2212]/g, '-'));
+    }
+
+    // A note that arrives with a blank line after every line - the way one comes out of some
+    // documents and mail clients - is put back to single spacing. A blank line is where the
+    // reason, allergies and GOC boxes end, and in such a note every line looked like the end.
+    // Only when no two lines of text sit next to each other anywhere: a note the tool wrote,
+    // or one copied out of DMR, has dozens. The section breaks survive as single blank lines.
+    function undoDoubleSpacing(text) {
+        const lines = text.split('\n');
+        const filled = lines.filter(l => l.trim()).length;
+        const adjacent = lines.filter((l, i) => i > 0 && l.trim() && lines[i - 1].trim()).length;
+        if (filled < 6 || adjacent > filled * 0.1) return text;
+        return text.replace(/\n[ \t]*\n/g, '\n');
     }
 
     // Returns true when the line was folded into a gate, so the caller can skip staging it as
@@ -388,14 +441,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const losMatch = text.match(/ICU LOS:\s*([\d.]+)/i);
         if (losMatch) setVal('icuLos', losMatch[1]);
 
-        // The field is a multi-line box - a procedure list often runs to several lines - and this
-        // used to take the first line only, so everything after it was lost at every import.
-        // It runs to the blank line the note always leaves after it, or to the next heading if
-        // the blank line has been lost in transit.
-        const reasonMatch = text.match(/Reason for ICU Admission:[ \t]*([^\n]*(?:\n(?![ \t]*\n)(?![ \t]*(?:ICU Course Summary|ALERT Nursing Review|Time since stepdown|ICU LOS|A-E ASSESSMENT|PATIENT FACTORS|IDENTIFIED|PLAN:))[^\n]*)*)/i);
-        if (reasonMatch) setVal('ptAdmissionReason', reasonMatch[1].trim());
+        // The field is a multi-line box - a procedure list often runs to several lines, and
+        // clinicians put the HPC in it too - so it is read to the next heading, not one line.
+        const reason = blockAfter(text, /Reason for ICU Admission[ \t]*:?[ \t]*/i);
+        if (reason) setVal('ptAdmissionReason', reason);
 
         // Fix: Date parsing handles DD/MM/YYYY and converts to YYYY-MM-DD for input
+        // A Pre-Stepdown note's "Stepdown Date: Today (20/10/2026)" is deliberately not read.
+        // It is the day of the review in ICU, not the day the patient left - which can be the
+        // next day or later - and with the time defaulting to 16:00 it would put the patient
+        // on the ward for longer than they have been, and bring Quick Review in before 24h.
         const dateMatch = text.match(/(?:Discharge|Stepdown) Date:\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/i);
         if (dateMatch) {
             const day = dateMatch[1].padStart(2, '0');
@@ -418,19 +473,23 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 2. CONTEXT ---
         if (carryForward) {
             let contextFound = false;
-            const gocMatch = text.match(/GOC:\s*[\(]?(.*?)[\)]?$/m) || text.match(/GOC:\s*(.*)/i);
-            if (gocMatch) { setVal('goc_note', gocMatch[1].replace(/^\(|\)$/g, '')); contextFound = true; }
+            // Both are multi-line boxes. One line was all that came back of a numbered allergy
+            // list - "(1) Adhesive: Rash" kept, "(2) Lactose: ..." gone.
+            const goc = blockAfter(text, /GOC:[ \t]*/i);
+            if (goc) { setVal('goc_note', goc.replace(/^\(|\)$/g, '')); contextFound = true; }
 
-            const allergiesMatch = text.match(/Allergies:\s*(.*)/i);
-            if (allergiesMatch) { setVal('allergies_note', allergiesMatch[1]); contextFound = true; }
+            const allergies = blockAfter(text, /Allergies:[ \t]*/i);
+            if (allergies) { setVal('allergies_note', allergies); contextFound = true; }
 
             const picsMatch = text.match(/PICS Assessment:\s*[\(]?(.*?)[\)]?$/m) || text.match(/PICS Assessment:\s*(.*)/i);
             if (picsMatch) { setVal('pics_note', picsMatch[1].replace(/^\(|\)$/g, '')); contextFound = true; }
 
-            // Regex Improvement: PMH (captures lines starting with - until next section)
-            const pmhSection = text.match(/(?:PMH|Significant Past Medical History):([\s\S]*?)(?:A-E ASSESSMENT|PICS|GOC)/i);
-            if (pmhSection && pmhSection[1]) {
-                const rawPmh = pmhSection[1].split('\n')
+            // The dashed lines under PMH, to the next heading. It used to need an A-E, PICS or
+            // GOC heading somewhere after it, and a note with none of the three imported no
+            // PMH at all.
+            const pmhSection = sectionAfter(text, /^[ \t]*(?:PMH|Significant Past Medical History):/im);
+            if (pmhSection) {
+                const rawPmh = pmhSection.split('\n')
                     .map(l => l.trim())
                     .filter(l => l.startsWith('-'))
                     .map(l => l.substring(1).trim())
@@ -450,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (aeBlock[1]) openAccordion('panel_ae', '[aria-controls="panel_ae"]');
 
         if (aeText) {
-            const addsMatch = aeText.match(/ADDS\s*[:]?\s*(\d+)/i);
+            const addsMatch = aeText.match(/ADDS\s*[:=]?\s*(\d+)/i);
             if (addsMatch) setPrev('prev_adds', addsMatch[1]);
 
             // Use 'A:' (colon only) to avoid matching 'a ' inside words like 'Afebrile', 'ADDS:', etc.
@@ -463,7 +522,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const spo2Match = aeText.match(/SpO2\s*(?:above\s*|>)?\s*(\d+%?)/i) || aeText.match(/(\d+%?)\s*SpO2/i);
             if (spo2Match) setPrev('prev_spo2', spo2Match[1]);
 
-            const o2Match = aeText.match(/(RA|(?:\d+L)?NP|HFNP|NIV|Trache)/i);
+            // From the B line where there is one, and only as a whole word. Matched anywhere,
+            // "RA" was found in "heart rate" and "Trache" in a tracheostomy in the reason, and a
+            // patient on 2L NP or Airvo came back as previously on room air.
+            const bLine = (aeText.match(/^B:[ \t]*(.*)$/m) || [])[1];
+            const o2Match = (bLine || aeText).match(/\b(RA|HFNP|HFNC|Airvo|NIV|BiPAP|CPAP|\d+\s*L\s*\/\s*\d+%|\d+\s*L\s*NP|NP\s*\d+\s*L|NP|Trache\w*)(?![A-Za-z])/i);
             if (o2Match) setPrev('prev_o2_dev', o2Match[1]);
 
             const hrMatch = aeText.match(/HR\s*(\d+s?)/i);
@@ -472,10 +535,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const bpMatch = aeText.match(/NIBP\s*(\d+\/\d+)/i);
             if (bpMatch) setPrev('prev_bp', bpMatch[1]);
 
-            const tempMatch = aeText.match(/E[:\s]\s*(Afebrile|[\d\.]+)/i);
+            // "E:" and "D:" as the letters, with their colon, at the start of a line or after a
+            // space. Any "e" or "d" followed by a space or colon used to do, so "Date: 18/10"
+            // gave a temperature of 18 and "increased heart rate" a D line of "heart rat". The
+            // tool writes "E: Temp 36.5", which the old pattern never read at all.
+            const tempMatch = aeText.match(/(?:^|\s)E:[ \t]*(?:[Tt]emp(?:erature)?[ \t]*:?[ \t]*)?([Aa]febrile|\d+(?:\.\d+)?)/m);
             if (tempMatch) setPrev('prev_temp', tempMatch[1]);
 
-            const alertMatch = aeText.match(/D[:\s]\s*(.*?)(?=\n|E[:\s])/i);
+            const alertMatch = aeText.match(/(?:^|\s)D:[ \t]*(.+?)(?=\s+E:|$)/m);
             if (alertMatch) setPrev('prev_alert', alertMatch[1]);
         }
 
@@ -570,7 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             getB(/Hb\s*(\d+)/i, 'prev_bl_hb', 'hb');
             getB(/WCC\s*([\d\.]+)/i, 'prev_bl_wcc', 'wcc');
-            getB(/CRP\s*(\d+)/i, 'prev_bl_crp', 'crp');
+            getB(/CRP\s*(\d+(?:\.\d+)?)/i, 'prev_bl_crp', 'crp');
             getB(/Cr\s*(\d+)/i, 'prev_bl_cr_review', 'cr_review');
             getB(/eGFR\s*(\d+)/i, 'prev_bl_egfr', 'egfr');
             getB(/Lac\s*([\d\.]+)/i, 'prev_bl_lac_review', 'lac_review');
@@ -585,7 +652,8 @@ document.addEventListener('DOMContentLoaded', () => {
             getB(/Bili\s*(\d+)/i, 'prev_bl_bili', 'bili');
             getB(/ALT\s*(\d+)/i, 'prev_bl_alt', 'alt');
             getB(/INR\s*([\d\.]+)/i, 'prev_bl_inr', 'inr');
-            getB(/APTT\s*(\d+)/i, 'prev_bl_aptt', 'aptt');
+            // Decimals kept: "APTT 29.8" came back as 29.
+            getB(/APTT\s*(\d+(?:\.\d+)?)/i, 'prev_bl_aptt', 'aptt');
 
             // When the previous note recorded when its results were taken, keep it: the gap
             // between two results is what makes a trend mean anything, and the clinician
@@ -605,7 +673,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- 5. RISKS ---
-        const risksSection = text.match(/(?:IDENTIFIED ICU READMISSION RISK FACTORS|IDENTIFIED RISK FACTORS):([\s\S]*?)PLAN:/i);
+        // Both lists are read with the category line taken out, wherever it has been put.
+        const listsText = text.replace(CATEGORY_LINE, '');
+        const risksSection = listsText.match(/(?:IDENTIFIED ICU READMISSION RISK FACTORS|IDENTIFIED RISK FACTORS):([\s\S]*?)PLAN:/i);
 
         ['resp', 'neuro', 'renal', 'elec', 'ah', 'pressors', 'immob', 'inf'].forEach(k => {
             const el = document.getElementById(`prev_risk_${k}`);
@@ -674,7 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // factors list comes back into it, so a note that has been through several reviews
         // still carries the context that has been travelling with the patient rather than
         // starting again from whatever this import happens to recognise.
-        const factorsSection = sectionAfter(text, /^[ \t]*PATIENT FACTORS:/im);
+        const factorsSection = sectionAfter(listsText, /^[ \t]*PATIENT FACTORS:/im);
         if (factorsSection && window.addActiveIssue) {
             sectionItems(factorsSection)
                 .forEach((l, idx) => {
@@ -698,11 +768,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // immediately follows the devices in every note this tool writes - so mobility,
             // diet, sleep and the psych answer were swallowed by the device block and each
             // came back as an "Other Device". They are read into their own fields elsewhere.
-            const devSection = text.match(/(?:^LINES[,\s]+DRAINS.*?DEVICES.*?:|^DEVICES:)([\s\S]*?)(?:^PATIENT FACTORS:|IDENTIFIED|GOC:|PICS:|PLAN:|^Checks:|^Other:)/im);
-            if (devSection && devSection[1]) {
+            //
+            // It ends at the next heading at the start of a line. It used to end at the words
+            // anywhere, so "- Wound - nil concerns identified" or "- Drain - plan: remove"
+            // cut the list off there and every device below it was lost.
+            const devSection = sectionAfter(text, /^[ \t]*(?:LINES[,\s]+DRAINS.*?DEVICES.*?:|DEVICES:)/im);
+            if (devSection) {
                 openAccordion('panel_devices', '[aria-controls="panel_devices"]');
                 // Split on newlines, then also split any remaining lines that contain ' -' (inline entries)
-                const rawLines = devSection[1].split('\n');
+                const rawLines = devSection.split('\n');
                 const devLines = [];
                 rawLines.forEach(raw => {
                     const trimmed = raw.trim();
@@ -716,7 +790,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 devLines.forEach(line => {
                     // Remove leading dash if present
                     let txt = line.startsWith('-') ? line.substring(1).trim() : line;
-                    if (txt.toLowerCase().includes('nil')) return;
+                    // "Nil", "Nil lines" - not a device. Only at the start: "nil" anywhere in the
+                    // line dropped "Wound - staple line, nil concerns" and "PIVC - nil phlebitis".
+                    if (/^nil\b/i.test(txt)) return;
                     // Second guard, for notes typed by hand or written by an older version,
                     // where these lines can sit inside the device block with no PATIENT
                     // FACTORS heading to stop at. A device is not a labelled assessment
@@ -851,8 +927,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // - Pre-stepdown DMR import: Only offer for CAT 3 (patient hasn't been on ward yet)
                 // - Post-stepdown DMR import: Offer for CAT 2 or CAT 3 (indicates follow-up review)
                 // - CAT 1 (red): Never offer quick review (always needs full assessment)
+                //
+                // And never before 24 hours on the ward, whatever the category: Quick Review is
+                // for a patient who has been out of ICU a day. This path used to need only more
+                // than zero hours, so a note imported six hours after stepdown offered it.
                 let shouldOfferQuickReview = false;
-                if (category === 'red') {
+                if (currentHoursOnWard <= 24) {
+                    shouldOfferQuickReview = false;
+                } else if (category === 'red') {
                     shouldOfferQuickReview = false; // CAT 1 always needs full review
                 } else if (isPreStepdownImport) {
                     // Pre-stepdown import: only CAT 3 gets quick review

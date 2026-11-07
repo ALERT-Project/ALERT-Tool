@@ -494,7 +494,7 @@
   ];
   var SELF_DERIVED_RISK = new RegExp([...DATE_DERIVED, ...NUMBER_DERIVED].join("|"), "i");
   var NUMBER_DERIVED_RISK = new RegExp(NUMBER_DERIVED.join("|"), "i");
-  var FIELD_BACKED_FACTOR = /^(mobility|diet|nutrition|post icu syndrome|sleep|psychological issues)\s*:/i;
+  var FIELD_BACKED_FACTOR = /^(mobility|diet|nutrition|post icu syndrome|sleep|psychological issues|bowels|anticoagulation(?:\s*\/\s*vte)?|vte prophylaxis)\s*:/i;
   var GATE_RISK_ID = {
     seg_resp_concern: "seg_resp_concern",
     seg_neuro_gate: "neuroConcern",

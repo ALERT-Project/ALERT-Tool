@@ -197,7 +197,10 @@ export const NUMBER_DERIVED_RISK = new RegExp(NUMBER_DERIVED.join('|'), 'i');
 // reads them back into those fields, so staging them as list text too would print today's
 // answer beside yesterday's - "Mobility: assist x2" under "Mobility: assist x1 with frame" -
 // the moment the clinician updated one. Same principle as SELF_DERIVED_RISK, one section over.
-export const FIELD_BACKED_FACTOR = /^(mobility|diet|nutrition|post icu syndrome|sleep|psychological issues)\s*:/i;
+// Bowels and anticoagulation print under A-E, not here, but a note edited in DMR can move them
+// into Patient Factors - and "Bowels: BO multiple times today" then came back as a factor and
+// went into the next day's note as though it were still today.
+export const FIELD_BACKED_FACTOR = /^(mobility|diet|nutrition|post icu syndrome|sleep|psychological issues|bowels|anticoagulation(?:\s*\/\s*vte)?|vte prophylaxis)\s*:/i;
 
 
 // The gate control a carried risk was folded into -> the id the rules use for the risk that

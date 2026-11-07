@@ -2969,3 +2969,196 @@ test('Pre-Stepdown chosen before an import stays Pre-Stepdown, and the plan says
         'still under the category as well');
     close();
 });
+
+// Real notes from November 2026, shortened and de-identified. Each had passed through DMR,
+// which takes out the blank lines the tool leaves between sections, and each had been edited
+// by hand on the way.
+const NO_BLANK_LINES_NOTE = [
+    'ALERT CNS post ICU review - Chart review',
+    'Time of review: 02:45',
+    'ICU Discharge Date: 18/10/2026',
+    'ALERT Nursing Review Category - CAT 1',
+    'Reason for ICU Admission: ',
+    'Tracheostomy + Left hemiglossectomy + Neck dissection + Free flap + Full ',
+    'thickness skin graft 15/10',
+    'PMH:',
+    '-Hypothyroidism',
+    '-Hypertension',
+    'ADDS=1',
+    'A: Tracheostomy - cuff inflated.',
+    'B: RR 12-14, SpO2 94%, Airvo 30L/21% - for humidification.',
+    'C: HR 60s, NIBP 156/80.',
+    'D: Alert. GCS: E4, Vt, M6.',
+    'E: Temp afebrile. On Cefazolin.',
+    'Bloods: Checked, nil significant',
+    'LINES, DRAINS, DEVICES & WOUNDS:',
+    '- IDC - inserted 15/10/26',
+    '- Nil drains',
+    '- Wound - Staple line around neck, nil concerns identified',
+    '- Drain - Left neck, plan: remove tomorrow',
+    '- Tracheostomy',
+    'PATIENT FACTORS:',
+    '- Mobility: SOEOB with assistance',
+    '- Lives alone',
+    '- ALERT Nursing Review Category - CAT 2',
+    '- Bowels: BO multiple times today',
+    '- Anticoagulation: Heparin 5000u TDS',
+    'PLAN:',
+    '- ALERT nursing post ICU reviews continue.'
+].join('\n');
+
+test('with its blank lines gone, the reason stops at PMH and every section lands in its own place', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, NO_BLANK_LINES_NOTE);
+    const v = id => document.getElementById(id).value;
+    const prev = id => document.getElementById(id).textContent;
+    // The reason used to run on through PMH, A-E, bloods and every device, to PATIENT FACTORS.
+    // The line DMR wrapped is put back together.
+    assert.equal(v('ptAdmissionReason'),
+        'Tracheostomy + Left hemiglossectomy + Neck dissection + Free flap + Full thickness skin graft 15/10');
+    // PMH needed an A-E, PICS or GOC heading after it, and this note has none.
+    assert.equal(v('pmh_note'), 'Hypothyroidism\nHypertension');
+    assert.match(prev('prev_adds'), /Prev: 1\)/, '"ADDS=1" is a score');
+    // Read off the B line: "Trache" used to come from the tracheostomy in the reason.
+    assert.match(prev('prev_o2_dev'), /Prev: Airvo\)/);
+    // "Date: 18/10" was a temperature of 18, and "with ..." from the PMH was the D line.
+    assert.match(prev('prev_temp'), /Prev: afebrile\)/);
+    assert.match(prev('prev_alert'), /Prev: Alert\. GCS/);
+    close();
+});
+
+test('a device line that says "nil", "identified" or "plan:" is still a device, and so is the rest', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, NO_BLANK_LINES_NOTE);
+    const types = [...document.querySelectorAll('.device-entry')].map(e => e.dataset.type);
+    assert.deepEqual(types, ['IDC', 'Wound', 'Drain', 'Other Device']);
+    close();
+});
+
+test('the category, bowels and anticoagulation are not carried as patient factors', async () => {
+    // One nurse moved the category line to just above PLAN, as a bullet, and the next note
+    // carried it as a factor. Bowels and anticoagulation have fields of their own and print
+    // under A-E; carried as text, yesterday's "BO multiple times today" went into today's note.
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, NO_BLANK_LINES_NOTE);
+    // Mobility is on the list by design - it is kept off the note a second time elsewhere.
+    assert.deepEqual(factorRows(document), ['Mobility: SOEOB with assistance', 'Lives alone']);
+    assert.match(document.getElementById('prev_bowels').textContent, /BO multiple times today/,
+        'still offered as the previous answer');
+    assert.match(document.getElementById('prev_anticoag').textContent, /Heparin 5000u TDS/);
+    close();
+});
+
+// A note the tool wrote, with the time and the score retyped in DMR. Neither changes what is
+// imported, and both used to raise the non-standard warning.
+const RETYPED_TOOL_NOTE = [
+    'ALERT CNS post ICU review - Physical review',
+    'Location: 4C, Room: 454',
+    'Age: 79, Weight: 89kg',
+    'Time of review: 2115',
+    'Stepdown Date: Today (20/10/2026)',
+    'Reason for ICU Admission: CABG x 3 + Ascending aortic replacement + right axillary ',
+    'cannulation',
+    'HOPX: ',
+    'BIBA for worsening abdominal pain.',
+    'ALERT Nursing Review Category - CAT 2',
+    'Allergies: ',
+    '(1) Adhesive: Rash',
+    '(2) Lactose: Abdominal Pain, Diarrhoea',
+    'GOC: Nil Documented',
+    'A-E ASSESSMENT:',
+    'ADDS 5 for oxygen use, increased heart rate and increased temperature',
+    'A: Patent',
+    'B: RR 15-20, SpO2 >94%, NP 2L, WOB: Normal',
+    'E: 38.1 @ 2000 - Blood cultures sent',
+    'Bloods (taken 20/10/2026): Lac 1.1, Hb 90, APTT 29.8',
+    'LINES, DRAINS, DEVICES & WOUNDS:',
+    '- CVC - R) IJ',
+    'PATIENT FACTORS:',
+    '- Mobility: 2x assist',
+    'IDENTIFIED ICU READMISSION RISK FACTORS:',
+    '- Respiratory concern - Oxygen requirement - 2LNP',
+    'PLAN:',
+    '- ALERT nursing post ICU reviews continue.'
+].join('\n');
+
+test('a tool note with the time and the score retyped raises no warning', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, RETYPED_TOOL_NOTE);
+    assert.ok(!/Non-standard/.test(document.getElementById('noticeRegion').textContent));
+    close();
+});
+
+test('multi-line boxes come back whole, and a Pre-Stepdown date is not taken as the stepdown', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, RETYPED_TOOL_NOTE);
+    const v = id => document.getElementById(id).value;
+    const prev = id => document.getElementById(id).textContent;
+    // The HPC typed into the reason box travels with it; the wrapped line is rejoined.
+    assert.equal(v('ptAdmissionReason'),
+        'CABG x 3 + Ascending aortic replacement + right axillary cannulation\nHOPX:\nBIBA for worsening abdominal pain.');
+    // Only the first allergy used to come back.
+    assert.equal(v('allergies_note'), '(1) Adhesive: Rash\n(2) Lactose: Abdominal Pain, Diarrhoea');
+    assert.equal(v('goc_note'), 'Nil Documented');
+    // The day of the review in ICU, not the day the patient left. Read as the stepdown, it
+    // overstated time on the ward and could bring Quick Review in before 24 hours.
+    assert.equal(v('stepdownDate'), '');
+    assert.match(prev('prev_adds'), /Prev: 5\)/);
+    // "RA" used to be found in "heart rate".
+    assert.match(prev('prev_o2_dev'), /Prev: NP 2L\)/);
+    assert.match(prev('prev_temp'), /Prev: 38\.1\)/);
+    assert.match(prev('prev_bl_aptt'), /Prev: 29\.8\)/);
+    close();
+});
+
+test('a note pasted with a blank line after every line imports as if single-spaced', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, RETYPED_TOOL_NOTE.split('\n').join(' \n \n'));
+    const v = id => document.getElementById(id).value;
+    assert.equal(v('ptAdmissionReason'),
+        'CABG x 3 + Ascending aortic replacement + right axillary cannulation\nHOPX:\nBIBA for worsening abdominal pain.');
+    assert.equal(v('allergies_note'), '(1) Adhesive: Rash\n(2) Lactose: Abdominal Pain, Diarrhoea');
+    assert.ok(!/Non-standard/.test(document.getElementById('noticeRegion').textContent));
+    close();
+});
+
+// Quick Review is for a patient who has been on the ward more than 24 hours. The import had a
+// route of its own to the offer, which needed only a stepdown in the past and a flagged risk,
+// so a CAT 2 note imported six hours after stepdown offered it. After 24 hours it is offered
+// to every patient on the ward, CAT 1 included - Casey's rule, November 2026.
+const followUpNote = (hoursAgo, category = 'CAT 2') => {
+    const at = new Date(Date.now() - hoursAgo * 3600000);
+    const pad = n => String(n).padStart(2, '0');
+    return [
+        'ALERT CNS post ICU review - Physical review',
+        `ICU Discharge Date: ${pad(at.getDate())}/${pad(at.getMonth() + 1)}/${at.getFullYear()}`,
+        `Stepdown Time: ${pad(at.getHours())}:${pad(at.getMinutes())}`,
+        `ALERT Nursing Review Category - ${category}`,
+        'A-E ASSESSMENT:',
+        'ADDS: 2',
+        'IDENTIFIED ICU READMISSION RISK FACTORS:',
+        '- Respiratory concern - Oxygen requirement - 2LNP',
+        'PLAN:',
+        '- ALERT nursing post ICU reviews continue.'
+    ].join('\n');
+};
+
+test('importing a note never offers Quick Review before 24 hours on the ward', async () => {
+    const { window, document, close } = await loadTool();
+    await importNote(window, document, followUpNote(6));
+    await tick(window, 1200);
+    assert.notEqual(document.getElementById('quickReviewPrompt').style.display, 'flex', 'not at 6 hours');
+    close();
+
+    const later = await loadTool();
+    await importNote(later.window, later.document, followUpNote(30));
+    await tick(later.window, 1200);
+    assert.equal(later.document.getElementById('quickReviewPrompt').style.display, 'flex', 'offered at 30 hours');
+    later.close();
+
+    const cat1 = await loadTool();
+    await importNote(cat1.window, cat1.document, followUpNote(30, 'CAT 1'));
+    await tick(cat1.window, 1200);
+    assert.equal(cat1.document.getElementById('quickReviewPrompt').style.display, 'flex', 'CAT 1 too, after 24 hours');
+    cat1.close();
+});
