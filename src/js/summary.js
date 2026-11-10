@@ -88,9 +88,9 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     pushBlank();
 
     if (s.stepdown_suitable === false) {
-        lines.push(`ALERT Nursing Review Category - Not suitable for stepdown`);
+        lines.push(`ALERT Nursing Review Category - Not suitable for stepdown from a nursing standpoint`);
         pushBlank();
-        lines.push('Assessed as not presently suitable for ward stepdown.');
+        lines.push('Assessed as not presently suitable for ward stepdown from a nursing standpoint.');
         lines.push(`Reason: ${s.unsuitable_note || 'Clinical concerns (see notes)'}`);
         pushBlank();
         lines.push('--- FULL ASSESSMENT BELOW ---');
@@ -101,7 +101,7 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
         // it reads as second-guessing the clinician who made it, and the flags that produced the
         // auto-calculated category are listed below regardless.
         if (s.stepdown_suitable === true && s.reviewType === 'pre') {
-            lines.push('Patient is suitable for ward stepdown.');
+            lines.push('Suitable for ward stepdown from a nursing standpoint.');
         }
         pushBlank();
     }
@@ -465,11 +465,11 @@ export function generateSummary(s, cat, wardTimeTxt, red, amber, suppressed, act
     // Said again here as well as under the category: the plan is the part of a Pre-Stepdown
     // note the ward reads for what happens next.
     if (s.stepdown_suitable === true && s.reviewType === 'pre') {
-        lines.push('- Patient is suitable for ward stepdown.');
+        lines.push('- Suitable for ward stepdown from a nursing standpoint.');
     }
 
     if (s.stepdown_suitable === false) {
-        lines.push(`- ICU senior review requested - patient not currently suitable for ward stepdown.`);
+        lines.push(`- ICU senior review requested - not currently suitable for ward stepdown from a nursing standpoint.`);
         lines.push(`- Please contact ALERT for review when appropriate.`);
     } else if (s.chk_discharge_alert) {
         lines.push(`- Discharged from the ALERT nursing list. Please contact ALERT if further support is required.`);
@@ -607,7 +607,7 @@ export function generateHandoverLine(s, activeIssuesList = [], cat = null, red =
     // Semicolons between risks: a typed entry can contain commas of its own.
     if (catText) parts.push(risks.length ? `${catText} - ${risks.join('; ')}.` : `${catText} - nil risks.`);
 
-    if (s.stepdown_suitable === false) parts.push('Not suitable for stepdown.');
+    if (s.stepdown_suitable === false) parts.push('Not suitable for stepdown from a nursing standpoint.');
     else if (s.chk_discharge_alert) parts.push('D/C from ALERT.');
     else if (s.chk_discharge_pending_bloods) parts.push('D/C pending bloods.');
     // Continuing ALERT is not stated: a patient still on this sheet is still being reviewed,

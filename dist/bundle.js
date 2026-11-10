@@ -3083,9 +3083,9 @@
     }
     pushBlank();
     if (s.stepdown_suitable === false) {
-      lines.push(`ALERT Nursing Review Category - Not suitable for stepdown`);
+      lines.push(`ALERT Nursing Review Category - Not suitable for stepdown from a nursing standpoint`);
       pushBlank();
-      lines.push("Assessed as not presently suitable for ward stepdown.");
+      lines.push("Assessed as not presently suitable for ward stepdown from a nursing standpoint.");
       lines.push(`Reason: ${s.unsuitable_note || "Clinical concerns (see notes)"}`);
       pushBlank();
       lines.push("--- FULL ASSESSMENT BELOW ---");
@@ -3093,7 +3093,7 @@
     } else {
       lines.push(`ALERT Nursing Review Category - ${cat.text}`);
       if (s.stepdown_suitable === true && s.reviewType === "pre") {
-        lines.push("Patient is suitable for ward stepdown.");
+        lines.push("Suitable for ward stepdown from a nursing standpoint.");
       }
       pushBlank();
     }
@@ -3360,10 +3360,10 @@
     pushBlank();
     lines.push("PLAN:");
     if (s.stepdown_suitable === true && s.reviewType === "pre") {
-      lines.push("- Patient is suitable for ward stepdown.");
+      lines.push("- Suitable for ward stepdown from a nursing standpoint.");
     }
     if (s.stepdown_suitable === false) {
-      lines.push(`- ICU senior review requested - patient not currently suitable for ward stepdown.`);
+      lines.push(`- ICU senior review requested - not currently suitable for ward stepdown from a nursing standpoint.`);
       lines.push(`- Please contact ALERT for review when appropriate.`);
     } else if (s.chk_discharge_alert) {
       lines.push(`- Discharged from the ALERT nursing list. Please contact ALERT if further support is required.`);
@@ -3438,7 +3438,7 @@
     }
     const catText = cat?.text || $("catText")?.textContent || "";
     if (catText) parts.push(risks.length ? `${catText} - ${risks.join("; ")}.` : `${catText} - nil risks.`);
-    if (s.stepdown_suitable === false) parts.push("Not suitable for stepdown.");
+    if (s.stepdown_suitable === false) parts.push("Not suitable for stepdown from a nursing standpoint.");
     else if (s.chk_discharge_alert) parts.push("D/C from ALERT.");
     else if (s.chk_discharge_pending_bloods) parts.push("D/C pending bloods.");
     if (s.chk_medical_rounding) parts.push("+ Medical rounding.");

@@ -2964,8 +2964,8 @@ test('Pre-Stepdown chosen before an import stays Pre-Stepdown, and the plan says
     await tick(window);
     const note = document.getElementById('summary').value;
     const plan = note.slice(note.indexOf('PLAN:'));
-    assert.match(plan, /^- Patient is suitable for ward stepdown\.$/m);
-    assert.match(note.slice(0, note.indexOf('PLAN:')), /^Patient is suitable for ward stepdown\.$/m,
+    assert.match(plan, /^- Suitable for ward stepdown from a nursing standpoint\.$/m);
+    assert.match(note.slice(0, note.indexOf('PLAN:')), /^Suitable for ward stepdown from a nursing standpoint\.$/m,
         'still under the category as well');
     close();
 });
